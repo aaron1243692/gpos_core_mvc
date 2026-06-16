@@ -56,22 +56,17 @@ namespace gpos.ViewComponents
                 return "Transactions";
             }
 
-            if (Is(controller, "Inventory") && IsDailyStockAction(action))
-            {
-                return "Reports";
-            }
-
-            if (Is(controller, "Inventory"))
-            {
-                return "Inventory";
-            }
-
             if (Is(controller, "Reports"))
             {
                 return "Reports";
             }
 
-            if (Is(controller, "Users") || Is(controller, "Employees") || Is(controller, "Customers") || Is(controller, "Suppliers") || Is(controller, "Roles") || Is(controller, "Permissions") || IsLegacySetupUsers(action))
+            if (Is(controller, "Users") || Is(controller, "Employees") || Is(controller, "Suppliers") || Is(controller, "Roles") || Is(controller, "Permissions") || IsLegacySetupUsers(action))
+            {
+                return "Configuration";
+            }
+
+            if (Is(controller, "Customers"))
             {
                 return "Users";
             }
@@ -101,11 +96,6 @@ namespace gpos.ViewComponents
                 return "Salesman.POS";
             }
 
-            if (Is(controller, "Inventory"))
-            {
-                return $"Inventory.{MapInventoryAction(action)}";
-            }
-
             if (Is(controller, "Reports"))
             {
                 return $"Reports.{MapReportAction(action)}";
@@ -121,8 +111,11 @@ namespace gpos.ViewComponents
                 return action switch
                 {
                     "Products" => "Configuration.Products",
+                    "DisplayProducts" => "Configuration.DisplayProducts",
+                    "WarehouseProducts" => "Configuration.WarehouseProducts",
                     "Categories" => "Configuration.ProductCategories",
                     "ItemUnits" => "Configuration.ItemUnits",
+                    "Fuels" => "Configuration.Fuels",
                     "FuelTypes" => "Configuration.FuelTypes",
                     "FuelUnits" => "Configuration.FuelUnits",
                     "FuelPriceHistory" => "Configuration.FuelPrices",
@@ -130,9 +123,13 @@ namespace gpos.ViewComponents
                     "PumpUnits" => "Configuration.PumpUnits",
                     "FuelTanks" => "Configuration.Tanks",
                     "Discounts" => "Configuration.Discounts",
+                    "Members" => "Configuration.Members",
+                    "Rebate" => "Configuration.Rebate",
                     "Users" => "Users.Index",
-                    "Customers" => "Customers.Index",
+                    "Employees" => "Employees.Index",
                     "Suppliers" => "Suppliers.Index",
+                    "Roles" => "Roles.Index",
+                    "Permissions" => "Permissions.Index",
                     _ => string.Empty
                 };
             }
@@ -152,14 +149,6 @@ namespace gpos.ViewComponents
             return string.Empty;
         }
 
-        private static string MapInventoryAction(string action) => action switch
-        {
-            "WarehouseInventory" => "WarehouseStock",
-            "DisplayInventory" => "DisplayStock",
-            "FuelInventoryMovement" => "FuelInventory",
-            _ => action
-        };
-
         private static string MapReportAction(string action) => action switch
         {
             "DailySalesReport" => "DailySales",
@@ -170,11 +159,9 @@ namespace gpos.ViewComponents
             _ => action
         };
 
-        private static bool IsLegacySetupConfiguration(string action) => action is "Products" or "Categories" or "ItemUnits" or "FuelTypes" or "FuelUnits" or "FuelPriceHistory" or "Pumps" or "PumpUnits" or "FuelTanks" or "Discounts";
+        private static bool IsLegacySetupConfiguration(string action) => action is "Products" or "DisplayProducts" or "WarehouseProducts" or "Categories" or "ItemUnits" or "Fuels" or "FuelTypes" or "FuelUnits" or "FuelPriceHistory" or "Pumps" or "PumpUnits" or "FuelTanks" or "Discounts" or "Members" or "Rebate";
 
-        private static bool IsLegacySetupUsers(string action) => action is "Users" or "Customers" or "Suppliers";
-
-        private static bool IsDailyStockAction(string action) => action is "WarehouseDailyStock" or "DisplayDailyStock" or "TankDailyStock";
+        private static bool IsLegacySetupUsers(string action) => action is "Users" or "Employees" or "Suppliers" or "Roles" or "Permissions";
 
         private static bool Is(string left, string right) => string.Equals(left, right, StringComparison.OrdinalIgnoreCase);
     }

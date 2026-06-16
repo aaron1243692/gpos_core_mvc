@@ -5,22 +5,22 @@
                 <li class="breadcrumb-item">GPOS</li>
                 <li class="breadcrumb-item">Setup</li>
                 <li class="breadcrumb-item">Products</li>
-                <li class="breadcrumb-item active" aria-current="page">Categories</li>
+                <li class="breadcrumb-item active" aria-current="page">Display</li>
             </ol>
         </nav>
-        <h1>Product Categories</h1>
-        <p class="page-subtitle">Manage product category records.</p>
+        <h1>Display Products</h1>
+        <p class="page-subtitle">Manage products available on display.</p>
     </div>
 </div>
 
 <section class="card content-card mb-4">
     <div class="d-flex justify-content-between align-items-center gap-2 flex-wrap mb-3">
         <div class="products-search-wrap">
-            <label class="visually-hidden" for="product-category-search">Search categories</label>
-            <input class="form-control form-control-sm products-search" id="product-category-search" type="search" placeholder="Search categories" autocomplete="off" />
+            <label class="visually-hidden" for="display-product-search">Search display products</label>
+            <input class="form-control form-control-sm products-search" id="display-product-search" type="search" placeholder="Search display products" autocomplete="off" />
         </div>
         <div class="col-12 col-sm-auto ms-sm-auto">
-            <button class="btn btn-primary btn-sm w-100" type="button">Add Category</button>
+            <button class="btn btn-primary btn-sm w-100" type="button">Add Product</button>
         </div>
     </div>
 
@@ -30,13 +30,19 @@
                 <tr>
                     <th scope="col">No</th>
                     <th scope="col">ID</th>
+                    <th scope="col">Batch</th>
                     <th scope="col">Name</th>
+                    <th scope="col">Supplier</th>
+                    <th scope="col">Category</th>
+                    <th scope="col">Cost</th>
+                    <th scope="col">Selling Price</th>
+                    <th scope="col">Quantity</th>
                     <th scope="col">Action</th>
                 </tr>
             </thead>
             <tbody>
-                <tr data-product-category-empty-row>
-                    <td class="text-center text-muted fw-bold" colspan="4">No product categories yet.</td>
+                <tr data-display-product-empty-row>
+                    <td class="text-center text-muted fw-bold" colspan="10">No display products yet.</td>
                 </tr>
             </tbody>
         </table>
@@ -45,9 +51,9 @@
 
 <script>
     document.addEventListener("DOMContentLoaded", () => {
-        const searchInput = document.getElementById("product-category-search");
-        const categoryRows = Array.from(document.querySelectorAll("[data-product-category-row]"));
-        const emptyRow = document.querySelector("[data-product-category-empty-row]");
+        const searchInput = document.getElementById("display-product-search");
+        const productRows = Array.from(document.querySelectorAll("[data-display-product-row]"));
+        const emptyRow = document.querySelector("[data-display-product-empty-row]");
 
         if (!searchInput || !emptyRow) {
             return;
@@ -57,8 +63,8 @@
             const query = searchInput.value.trim().toLowerCase();
             let visibleCount = 0;
 
-            for (let index = 0; index < categoryRows.length; index += 1) {
-                const row = categoryRows[index];
+            for (let index = 0; index < productRows.length; index += 1) {
+                const row = productRows[index];
                 const isVisible = !query || row.textContent.toLowerCase().includes(query);
                 row.classList.toggle("d-none", !isVisible);
 
@@ -67,7 +73,7 @@
                 }
             }
 
-            emptyRow.classList.toggle("d-none", categoryRows.length > 0 && visibleCount > 0);
+            emptyRow.classList.toggle("d-none", productRows.length > 0 && visibleCount > 0);
         });
     });
 </script>

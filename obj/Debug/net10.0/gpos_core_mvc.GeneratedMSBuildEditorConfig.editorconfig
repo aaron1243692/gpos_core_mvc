@@ -35,8 +35,16 @@ build_property.EnableCodeStyleSeverity =
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcQ29uZmlndXJhdGlvblxEaXNjb3VudHMuY3NodG1s
 build_metadata.AdditionalFiles.CssScope = 
 
+[C:/project/gpos_core_mvc/Views/Configuration/DisplayProducts.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcQ29uZmlndXJhdGlvblxEaXNwbGF5UHJvZHVjdHMuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
 [C:/project/gpos_core_mvc/Views/Configuration/FuelPrices.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcQ29uZmlndXJhdGlvblxGdWVsUHJpY2VzLmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/project/gpos_core_mvc/Views/Configuration/Fuels.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcQ29uZmlndXJhdGlvblxGdWVscy5jc2h0bWw=
 build_metadata.AdditionalFiles.CssScope = 
 
 [C:/project/gpos_core_mvc/Views/Configuration/FuelTypes.cshtml]
@@ -49,6 +57,10 @@ build_metadata.AdditionalFiles.CssScope =
 
 [C:/project/gpos_core_mvc/Views/Configuration/ItemUnits.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcQ29uZmlndXJhdGlvblxJdGVtVW5pdHMuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/project/gpos_core_mvc/Views/Configuration/Members.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcQ29uZmlndXJhdGlvblxNZW1iZXJzLmNzaHRtbA==
 build_metadata.AdditionalFiles.CssScope = 
 
 [C:/project/gpos_core_mvc/Views/Configuration/ProductCategories.cshtml]
@@ -67,8 +79,16 @@ build_metadata.AdditionalFiles.CssScope =
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcQ29uZmlndXJhdGlvblxQdW1wVW5pdHMuY3NodG1s
 build_metadata.AdditionalFiles.CssScope = 
 
+[C:/project/gpos_core_mvc/Views/Configuration/Rebate.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcQ29uZmlndXJhdGlvblxSZWJhdGUuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
 [C:/project/gpos_core_mvc/Views/Configuration/Tanks.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcQ29uZmlndXJhdGlvblxUYW5rcy5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/project/gpos_core_mvc/Views/Configuration/WarehouseProducts.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcQ29uZmlndXJhdGlvblxXYXJlaG91c2VQcm9kdWN0cy5jc2h0bWw=
 build_metadata.AdditionalFiles.CssScope = 
 
 [C:/project/gpos_core_mvc/Views/Customers/Index.cshtml]
@@ -89,82 +109,6 @@ build_metadata.AdditionalFiles.CssScope =
 
 [C:/project/gpos_core_mvc/Views/Home/Privacy.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcSG9tZVxQcml2YWN5LmNzaHRtbA==
-build_metadata.AdditionalFiles.CssScope = 
-
-[C:/project/gpos_core_mvc/Views/Inventory/DailyStock.cshtml]
-build_metadata.AdditionalFiles.TargetPath = Vmlld3NcSW52ZW50b3J5XERhaWx5U3RvY2suY3NodG1s
-build_metadata.AdditionalFiles.CssScope = 
-
-[C:/project/gpos_core_mvc/Views/Inventory/DisplayDailyStock.cshtml]
-build_metadata.AdditionalFiles.TargetPath = Vmlld3NcSW52ZW50b3J5XERpc3BsYXlEYWlseVN0b2NrLmNzaHRtbA==
-build_metadata.AdditionalFiles.CssScope = 
-
-[C:/project/gpos_core_mvc/Views/Inventory/DisplayInventory.cshtml]
-build_metadata.AdditionalFiles.TargetPath = Vmlld3NcSW52ZW50b3J5XERpc3BsYXlJbnZlbnRvcnkuY3NodG1s
-build_metadata.AdditionalFiles.CssScope = 
-
-[C:/project/gpos_core_mvc/Views/Inventory/DisplayStock.cshtml]
-build_metadata.AdditionalFiles.TargetPath = Vmlld3NcSW52ZW50b3J5XERpc3BsYXlTdG9jay5jc2h0bWw=
-build_metadata.AdditionalFiles.CssScope = 
-
-[C:/project/gpos_core_mvc/Views/Inventory/FuelBatches.cshtml]
-build_metadata.AdditionalFiles.TargetPath = Vmlld3NcSW52ZW50b3J5XEZ1ZWxCYXRjaGVzLmNzaHRtbA==
-build_metadata.AdditionalFiles.CssScope = 
-
-[C:/project/gpos_core_mvc/Views/Inventory/FuelDelivery.cshtml]
-build_metadata.AdditionalFiles.TargetPath = Vmlld3NcSW52ZW50b3J5XEZ1ZWxEZWxpdmVyeS5jc2h0bWw=
-build_metadata.AdditionalFiles.CssScope = 
-
-[C:/project/gpos_core_mvc/Views/Inventory/FuelInventory.cshtml]
-build_metadata.AdditionalFiles.TargetPath = Vmlld3NcSW52ZW50b3J5XEZ1ZWxJbnZlbnRvcnkuY3NodG1s
-build_metadata.AdditionalFiles.CssScope = 
-
-[C:/project/gpos_core_mvc/Views/Inventory/FuelInventoryMovement.cshtml]
-build_metadata.AdditionalFiles.TargetPath = Vmlld3NcSW52ZW50b3J5XEZ1ZWxJbnZlbnRvcnlNb3ZlbWVudC5jc2h0bWw=
-build_metadata.AdditionalFiles.CssScope = 
-
-[C:/project/gpos_core_mvc/Views/Inventory/ItemBatches.cshtml]
-build_metadata.AdditionalFiles.TargetPath = Vmlld3NcSW52ZW50b3J5XEl0ZW1CYXRjaGVzLmNzaHRtbA==
-build_metadata.AdditionalFiles.CssScope = 
-
-[C:/project/gpos_core_mvc/Views/Inventory/ItemInventoryMovement.cshtml]
-build_metadata.AdditionalFiles.TargetPath = Vmlld3NcSW52ZW50b3J5XEl0ZW1JbnZlbnRvcnlNb3ZlbWVudC5jc2h0bWw=
-build_metadata.AdditionalFiles.CssScope = 
-
-[C:/project/gpos_core_mvc/Views/Inventory/LowStockItems.cshtml]
-build_metadata.AdditionalFiles.TargetPath = Vmlld3NcSW52ZW50b3J5XExvd1N0b2NrSXRlbXMuY3NodG1s
-build_metadata.AdditionalFiles.CssScope = 
-
-[C:/project/gpos_core_mvc/Views/Inventory/ProductsStock.cshtml]
-build_metadata.AdditionalFiles.TargetPath = Vmlld3NcSW52ZW50b3J5XFByb2R1Y3RzU3RvY2suY3NodG1s
-build_metadata.AdditionalFiles.CssScope = 
-
-[C:/project/gpos_core_mvc/Views/Inventory/StockAdjustment.cshtml]
-build_metadata.AdditionalFiles.TargetPath = Vmlld3NcSW52ZW50b3J5XFN0b2NrQWRqdXN0bWVudC5jc2h0bWw=
-build_metadata.AdditionalFiles.CssScope = 
-
-[C:/project/gpos_core_mvc/Views/Inventory/StockReceiving.cshtml]
-build_metadata.AdditionalFiles.TargetPath = Vmlld3NcSW52ZW50b3J5XFN0b2NrUmVjZWl2aW5nLmNzaHRtbA==
-build_metadata.AdditionalFiles.CssScope = 
-
-[C:/project/gpos_core_mvc/Views/Inventory/StockTransfer.cshtml]
-build_metadata.AdditionalFiles.TargetPath = Vmlld3NcSW52ZW50b3J5XFN0b2NrVHJhbnNmZXIuY3NodG1s
-build_metadata.AdditionalFiles.CssScope = 
-
-[C:/project/gpos_core_mvc/Views/Inventory/TankDailyStock.cshtml]
-build_metadata.AdditionalFiles.TargetPath = Vmlld3NcSW52ZW50b3J5XFRhbmtEYWlseVN0b2NrLmNzaHRtbA==
-build_metadata.AdditionalFiles.CssScope = 
-
-[C:/project/gpos_core_mvc/Views/Inventory/WarehouseDailyStock.cshtml]
-build_metadata.AdditionalFiles.TargetPath = Vmlld3NcSW52ZW50b3J5XFdhcmVob3VzZURhaWx5U3RvY2suY3NodG1s
-build_metadata.AdditionalFiles.CssScope = 
-
-[C:/project/gpos_core_mvc/Views/Inventory/WarehouseInventory.cshtml]
-build_metadata.AdditionalFiles.TargetPath = Vmlld3NcSW52ZW50b3J5XFdhcmVob3VzZUludmVudG9yeS5jc2h0bWw=
-build_metadata.AdditionalFiles.CssScope = 
-
-[C:/project/gpos_core_mvc/Views/Inventory/WarehouseStock.cshtml]
-build_metadata.AdditionalFiles.TargetPath = Vmlld3NcSW52ZW50b3J5XFdhcmVob3VzZVN0b2NrLmNzaHRtbA==
 build_metadata.AdditionalFiles.CssScope = 
 
 [C:/project/gpos_core_mvc/Views/Logs/ActivityLogs.cshtml]
@@ -205,6 +149,10 @@ build_metadata.AdditionalFiles.CssScope =
 
 [C:/project/gpos_core_mvc/Views/Reports/DiscountReport.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcUmVwb3J0c1xEaXNjb3VudFJlcG9ydC5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/project/gpos_core_mvc/Views/Reports/DisplayDailyStock.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcUmVwb3J0c1xEaXNwbGF5RGFpbHlTdG9jay5jc2h0bWw=
 build_metadata.AdditionalFiles.CssScope = 
 
 [C:/project/gpos_core_mvc/Views/Reports/DisplayStockReport.cshtml]
@@ -267,8 +215,16 @@ build_metadata.AdditionalFiles.CssScope =
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcUmVwb3J0c1xTdG9ja1RyYW5zZmVyUmVwb3J0LmNzaHRtbA==
 build_metadata.AdditionalFiles.CssScope = 
 
+[C:/project/gpos_core_mvc/Views/Reports/TankDailyStock.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcUmVwb3J0c1xUYW5rRGFpbHlTdG9jay5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
 [C:/project/gpos_core_mvc/Views/Reports/VoidTransactionReport.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcUmVwb3J0c1xWb2lkVHJhbnNhY3Rpb25SZXBvcnQuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/project/gpos_core_mvc/Views/Reports/WarehouseDailyStock.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcUmVwb3J0c1xXYXJlaG91c2VEYWlseVN0b2NrLmNzaHRtbA==
 build_metadata.AdditionalFiles.CssScope = 
 
 [C:/project/gpos_core_mvc/Views/Reports/WarehouseStockReport.cshtml]

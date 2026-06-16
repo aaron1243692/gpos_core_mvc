@@ -26,5 +26,8 @@ namespace gpos.Controllers
         public IActionResult ItemBatchReport() => View();
         public IActionResult CashDifferenceReport() => View();
         public IActionResult VoidTransactionReport() => View();
+        public IActionResult WarehouseDailyStock() => View();
+        public IActionResult DisplayDailyStock() => View();
+        public IActionResult TankDailyStock() => View();
     }
 }
