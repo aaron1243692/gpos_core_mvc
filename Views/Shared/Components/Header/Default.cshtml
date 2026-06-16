@@ -1,0 +1,191 @@
+@model gpos.Models.ViewModels.HeaderViewModel
+
+<header class="eg-rb" data-gpos-ribbon aria-label="Primary navigation">
+    <div class="eg-rb-top">
+        <a class="eg-rb-brand" asp-controller="Dashboard" asp-action="Index" aria-label="GPOS dashboard">
+            <span class="eg-rb-brand-mark" aria-hidden="true">G</span>
+            <span>GPOS / Gas Station POS</span>
+        </a>
+
+        <nav class="eg-rb-tabs" aria-label="Main page groups">
+            <a class="eg-rb-tab dashboard-tab @(Model.ActiveTab == "Dashboard" ? "is-active" : "")" asp-controller="Dashboard" asp-action="Index">Dashboard</a>
+            <button class="eg-rb-tab @(Model.ActiveTab == "Configuration" ? "is-active" : "")" type="button" data-gpos-tab="Configuration" aria-controls="gposHeaderPanel-Configuration" aria-selected="@(Model.ActiveTab == "Configuration" ? "true" : "false")">Configuration</button>
+            <button class="eg-rb-tab @(Model.ActiveTab == "Transactions" ? "is-active" : "")" type="button" data-gpos-tab="Transactions" aria-controls="gposHeaderPanel-Transactions" aria-selected="@(Model.ActiveTab == "Transactions" ? "true" : "false")">Transactions</button>
+            <button class="eg-rb-tab @(Model.ActiveTab == "Inventory" ? "is-active" : "")" type="button" data-gpos-tab="Inventory" aria-controls="gposHeaderPanel-Inventory" aria-selected="@(Model.ActiveTab == "Inventory" ? "true" : "false")">Inventory</button>
+            <button class="eg-rb-tab @(Model.ActiveTab == "Reports" ? "is-active" : "")" type="button" data-gpos-tab="Reports" aria-controls="gposHeaderPanel-Reports" aria-selected="@(Model.ActiveTab == "Reports" ? "true" : "false")">Reports</button>
+            <button class="eg-rb-tab @(Model.ActiveTab == "Users" ? "is-active" : "")" type="button" data-gpos-tab="Users" aria-controls="gposHeaderPanel-Users" aria-selected="@(Model.ActiveTab == "Users" ? "true" : "false")">Users</button>
+        </nav>
+
+        <details class="eg-rb-user" id="gposUserDropdown">
+            <summary class="eg-rb-userbtn" aria-controls="gposUserMenu">
+                <span class="eg-rb-avatar" aria-hidden="true">@Model.UserInitials</span>
+                <span class="eg-rb-userlabel">@Model.Username</span>
+                <span class="eg-rb-usercaret" aria-hidden="true"></span>
+            </summary>
+            <div class="eg-rb-usermenu" id="gposUserMenu" role="menu">
+                <div class="eg-rb-usercaption">Signed in as</div>
+                <div class="eg-rb-username">@Model.Username</div>
+                <form asp-controller="SignIn" asp-action="Logout" method="post">
+                    @Html.AntiForgeryToken()
+                    <button class="eg-rb-usermenu-link eg-rb-usermenu-link--danger" type="submit" role="menuitem">Logout</button>
+                </form>
+            </div>
+        </details>
+    </div>
+
+    <div class="eg-rb-ribbon">
+        <section class="eg-rb-pages-panel @(Model.ActiveTab == "Configuration" ? "is-active" : "")" id="gposHeaderPanel-Configuration" data-gpos-panel="Configuration" aria-label="Configuration pages">
+            <div class="eg-rb-group-title">Configuration</div>
+            <div class="eg-rb-subgroups">
+                <section class="eg-rb-page-card">
+                    <div class="eg-rb-subgroup-title">Products</div>
+                    <nav class="eg-rb-items" aria-label="Product configuration pages">
+                        <a class="eg-rb-tile @(Model.ActivePage == "Configuration.Products" ? "is-active" : "")" asp-controller="Configuration" asp-action="Products"><span>Products</span></a>
+                        <a class="eg-rb-tile @(Model.ActivePage == "Configuration.ProductCategories" ? "is-active" : "")" asp-controller="Configuration" asp-action="ProductCategories"><span>Product Categories</span></a>
+                        <a class="eg-rb-tile @(Model.ActivePage == "Configuration.ItemUnits" ? "is-active" : "")" asp-controller="Configuration" asp-action="ItemUnits"><span>Item Units</span></a>
+                    </nav>
+                </section>
+                <section class="eg-rb-page-card">
+                    <div class="eg-rb-subgroup-title">Fuel</div>
+                    <nav class="eg-rb-items" aria-label="Fuel configuration pages">
+                        <a class="eg-rb-tile @(Model.ActivePage == "Configuration.FuelTypes" ? "is-active" : "")" asp-controller="Configuration" asp-action="FuelTypes"><span>Fuel Types</span></a>
+                        <a class="eg-rb-tile @(Model.ActivePage == "Configuration.FuelUnits" ? "is-active" : "")" asp-controller="Configuration" asp-action="FuelUnits"><span>Fuel Units</span></a>
+                        <a class="eg-rb-tile @(Model.ActivePage == "Configuration.FuelPrices" ? "is-active" : "")" asp-controller="Configuration" asp-action="FuelPrices"><span>Fuel Prices</span></a>
+                    </nav>
+                </section>
+                <section class="eg-rb-page-card">
+                    <div class="eg-rb-subgroup-title">Pumps and Tanks</div>
+                    <nav class="eg-rb-items" aria-label="Pump and tank configuration pages">
+                        <a class="eg-rb-tile @(Model.ActivePage == "Configuration.Pumps" ? "is-active" : "")" asp-controller="Configuration" asp-action="Pumps"><span>Pumps</span></a>
+                        <a class="eg-rb-tile @(Model.ActivePage == "Configuration.PumpUnits" ? "is-active" : "")" asp-controller="Configuration" asp-action="PumpUnits"><span>Pump Units</span></a>
+                        <a class="eg-rb-tile @(Model.ActivePage == "Configuration.Tanks" ? "is-active" : "")" asp-controller="Configuration" asp-action="Tanks"><span>Tanks</span></a>
+                    </nav>
+                </section>
+                <section class="eg-rb-page-card">
+                    <div class="eg-rb-subgroup-title">Discounts</div>
+                    <nav class="eg-rb-items" aria-label="Discount configuration pages">
+                        <a class="eg-rb-tile @(Model.ActivePage == "Configuration.Discounts" ? "is-active" : "")" asp-controller="Configuration" asp-action="Discounts"><span>Discounts</span></a>
+                    </nav>
+                </section>
+            </div>
+        </section>
+
+        <section class="eg-rb-pages-panel @(Model.ActiveTab == "Transactions" ? "is-active" : "")" id="gposHeaderPanel-Transactions" data-gpos-panel="Transactions" aria-label="Transactions pages">
+            <div class="eg-rb-group-title">Transactions</div>
+            <div class="eg-rb-subgroups">
+                <section class="eg-rb-page-card">
+                    <div class="eg-rb-subgroup-title">Sales</div>
+                    <nav class="eg-rb-items" aria-label="Sales transaction pages">
+                        <a class="eg-rb-tile @(Model.ActivePage == "Salesman.POS" ? "is-active" : "")" asp-controller="Salesman" asp-action="POS"><span>POS</span></a>
+                        <a class="eg-rb-tile @(Model.ActivePage == "Transactions.FuelTransactions" ? "is-active" : "")" asp-controller="Transactions" asp-action="FuelTransactions"><span>Fuel Transactions</span></a>
+                        <a class="eg-rb-tile @(Model.ActivePage == "Transactions.ProductSales" ? "is-active" : "")" asp-controller="Transactions" asp-action="ProductSales"><span>Product Sales</span></a>
+                    </nav>
+                </section>
+                <section class="eg-rb-page-card">
+                    <div class="eg-rb-subgroup-title">Shift</div>
+                    <nav class="eg-rb-items" aria-label="Shift transaction pages">
+                        <a class="eg-rb-tile @(Model.ActivePage == "Transactions.OpenShift" ? "is-active" : "")" asp-controller="Transactions" asp-action="OpenShift"><span>Open Shift</span></a>
+                        <a class="eg-rb-tile @(Model.ActivePage == "Transactions.CloseShift" ? "is-active" : "")" asp-controller="Transactions" asp-action="CloseShift"><span>Close Shift</span></a>
+                    </nav>
+                </section>
+                <section class="eg-rb-page-card">
+                    <div class="eg-rb-subgroup-title">Cash</div>
+                    <nav class="eg-rb-items" aria-label="Cash transaction pages">
+                        <a class="eg-rb-tile @(Model.ActivePage == "Transactions.CashIn" ? "is-active" : "")" asp-controller="Transactions" asp-action="CashIn"><span>Cash In</span></a>
+                        <a class="eg-rb-tile @(Model.ActivePage == "Transactions.CashOut" ? "is-active" : "")" asp-controller="Transactions" asp-action="CashOut"><span>Cash Out</span></a>
+                    </nav>
+                </section>
+            </div>
+        </section>
+
+        <section class="eg-rb-pages-panel @(Model.ActiveTab == "Inventory" ? "is-active" : "")" id="gposHeaderPanel-Inventory" data-gpos-panel="Inventory" aria-label="Inventory pages">
+            <div class="eg-rb-group-title">Inventory</div>
+            <div class="eg-rb-subgroups">
+                <section class="eg-rb-page-card">
+                    <div class="eg-rb-subgroup-title">Product Stock</div>
+                    <nav class="eg-rb-items" aria-label="Product stock pages">
+                        <a class="eg-rb-tile @(Model.ActivePage == "Inventory.ProductsStock" ? "is-active" : "")" asp-controller="Inventory" asp-action="ProductsStock"><span>Products Stock</span></a>
+                        <a class="eg-rb-tile @(Model.ActivePage == "Inventory.WarehouseStock" ? "is-active" : "")" asp-controller="Inventory" asp-action="WarehouseStock"><span>Warehouse Stock</span></a>
+                        <a class="eg-rb-tile @(Model.ActivePage == "Inventory.DisplayStock" ? "is-active" : "")" asp-controller="Inventory" asp-action="DisplayStock"><span>Display Stock</span></a>
+                    </nav>
+                </section>
+                <section class="eg-rb-page-card">
+                    <div class="eg-rb-subgroup-title">Stock Movement</div>
+                    <nav class="eg-rb-items" aria-label="Stock movement pages">
+                        <a class="eg-rb-tile @(Model.ActivePage == "Inventory.StockTransfer" ? "is-active" : "")" asp-controller="Inventory" asp-action="StockTransfer"><span>Stock Transfer</span></a>
+                        <a class="eg-rb-tile @(Model.ActivePage == "Inventory.StockAdjustment" ? "is-active" : "")" asp-controller="Inventory" asp-action="StockAdjustment"><span>Stock Adjustment</span></a>
+                    </nav>
+                </section>
+                <section class="eg-rb-page-card">
+                    <div class="eg-rb-subgroup-title">Fuel Stock</div>
+                    <nav class="eg-rb-items" aria-label="Fuel stock pages">
+                        <a class="eg-rb-tile @(Model.ActivePage == "Inventory.FuelInventory" ? "is-active" : "")" asp-controller="Inventory" asp-action="FuelInventory"><span>Fuel Inventory</span></a>
+                        <a class="eg-rb-tile @(Model.ActivePage == "Inventory.FuelDelivery" ? "is-active" : "")" asp-controller="Inventory" asp-action="FuelDelivery"><span>Fuel Delivery</span></a>
+                    </nav>
+                </section>
+            </div>
+        </section>
+
+        <section class="eg-rb-pages-panel @(Model.ActiveTab == "Reports" ? "is-active" : "")" id="gposHeaderPanel-Reports" data-gpos-panel="Reports" aria-label="Reports pages">
+            <div class="eg-rb-group-title">Reports</div>
+            <div class="eg-rb-subgroups">
+                <section class="eg-rb-page-card">
+                    <div class="eg-rb-subgroup-title">Sales Reports</div>
+                    <nav class="eg-rb-items" aria-label="Sales report pages">
+                        <a class="eg-rb-tile @(Model.ActivePage == "Reports.DailySales" ? "is-active" : "")" asp-controller="Reports" asp-action="DailySales"><span>Daily Sales</span></a>
+                        <a class="eg-rb-tile @(Model.ActivePage == "Reports.FuelSales" ? "is-active" : "")" asp-controller="Reports" asp-action="FuelSales"><span>Fuel Sales</span></a>
+                        <a class="eg-rb-tile @(Model.ActivePage == "Reports.ProductSales" ? "is-active" : "")" asp-controller="Reports" asp-action="ProductSales"><span>Product Sales</span></a>
+                    </nav>
+                </section>
+                <section class="eg-rb-page-card">
+                    <div class="eg-rb-subgroup-title">Shift and Cash Reports</div>
+                    <nav class="eg-rb-items" aria-label="Shift and cash report pages">
+                        <a class="eg-rb-tile @(Model.ActivePage == "Reports.ShiftReport" ? "is-active" : "")" asp-controller="Reports" asp-action="ShiftReport"><span>Shift Report</span></a>
+                        <a class="eg-rb-tile @(Model.ActivePage == "Reports.CashReport" ? "is-active" : "")" asp-controller="Reports" asp-action="CashReport"><span>Cash Report</span></a>
+                    </nav>
+                </section>
+                <section class="eg-rb-page-card">
+                    <div class="eg-rb-subgroup-title">Inventory Reports</div>
+                    <nav class="eg-rb-items" aria-label="Inventory report pages">
+                        <a class="eg-rb-tile @(Model.ActivePage == "Reports.InventoryReport" ? "is-active" : "")" asp-controller="Reports" asp-action="InventoryReport"><span>Inventory Report</span></a>
+                    </nav>
+                </section>
+                <section class="eg-rb-page-card">
+                    <div class="eg-rb-subgroup-title">Daily Stock</div>
+                    <nav class="eg-rb-items" aria-label="Daily stock pages">
+                        <a class="eg-rb-tile @(Model.ActivePage == "Inventory.WarehouseDailyStock" ? "is-active" : "")" asp-controller="Inventory" asp-action="WarehouseDailyStock"><span>Warehouse Inventory Count</span></a>
+                        <a class="eg-rb-tile @(Model.ActivePage == "Inventory.DisplayDailyStock" ? "is-active" : "")" asp-controller="Inventory" asp-action="DisplayDailyStock"><span>Display Inventory Count</span></a>
+                        <a class="eg-rb-tile @(Model.ActivePage == "Inventory.TankDailyStock" ? "is-active" : "")" asp-controller="Inventory" asp-action="TankDailyStock"><span>Tanks Liters Count</span></a>
+                    </nav>
+                </section>
+            </div>
+        </section>
+
+        <section class="eg-rb-pages-panel @(Model.ActiveTab == "Users" ? "is-active" : "")" id="gposHeaderPanel-Users" data-gpos-panel="Users" aria-label="Users pages">
+            <div class="eg-rb-group-title">Users</div>
+            <div class="eg-rb-subgroups">
+                <section class="eg-rb-page-card">
+                    <div class="eg-rb-subgroup-title">Accounts</div>
+                    <nav class="eg-rb-items" aria-label="Account pages">
+                        <a class="eg-rb-tile @(Model.ActivePage == "Users.Index" ? "is-active" : "")" asp-controller="Users" asp-action="Index"><span>Users</span></a>
+                        <a class="eg-rb-tile @(Model.ActivePage == "Employees.Index" ? "is-active" : "")" asp-controller="Employees" asp-action="Index"><span>Employees</span></a>
+                    </nav>
+                </section>
+                <section class="eg-rb-page-card">
+                    <div class="eg-rb-subgroup-title">People</div>
+                    <nav class="eg-rb-items" aria-label="People pages">
+                        <a class="eg-rb-tile @(Model.ActivePage == "Customers.Index" ? "is-active" : "")" asp-controller="Customers" asp-action="Index"><span>Customers</span></a>
+                        <a class="eg-rb-tile @(Model.ActivePage == "Suppliers.Index" ? "is-active" : "")" asp-controller="Suppliers" asp-action="Index"><span>Suppliers</span></a>
+                    </nav>
+                </section>
+                <section class="eg-rb-page-card">
+                    <div class="eg-rb-subgroup-title">Access</div>
+                    <nav class="eg-rb-items" aria-label="Access pages">
+                        <a class="eg-rb-tile @(Model.ActivePage == "Roles.Index" ? "is-active" : "")" asp-controller="Roles" asp-action="Index"><span>Roles</span></a>
+                        <a class="eg-rb-tile @(Model.ActivePage == "Permissions.Index" ? "is-active" : "")" asp-controller="Permissions" asp-action="Index"><span>Permissions</span></a>
+                    </nav>
+                </section>
+            </div>
+        </section>
+    </div>
+</header>

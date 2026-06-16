@@ -1,0 +1,144 @@
+<div class="page-header">
+    <div class="page-heading">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item">GPOS</li>
+                <li class="breadcrumb-item">Inventory</li>
+                <li class="breadcrumb-item">Daily Stock</li>
+                <li class="breadcrumb-item active" aria-current="page">Tanks</li>
+            </ol>
+        </nav>
+        <h1>Tanks Liters Count</h1>
+        <p class="page-subtitle">Track beginning and ending tank liters count.</p>
+    </div>
+    <div class="page-actions">
+        <span class="status-pill">Frontend only</span>
+        <button class="btn btn-primary btn-sm" type="button" disabled>Record Count</button>
+    </div>
+</div>
+
+<section class="card content-card mb-4">
+    <div class="card-title-row">
+        <div>
+            <h2>Filters</h2>
+            <p>Filter controls are placeholders for reviewing the tank liters count layout.</p>
+        </div>
+    </div>
+    <div class="row g-3">
+        <div class="col-12 col-md-6 col-xl-3">
+            <label class="form-label" for="tank-count-date">Date</label>
+            <input class="form-control" id="tank-count-date" type="date" disabled />
+        </div>
+        <div class="col-12 col-md-6 col-xl-3">
+            <label class="form-label" for="tank-count-tank">Tank</label>
+            <select class="form-select" id="tank-count-tank" disabled>
+                <option>All tanks</option>
+                <option>Diesel Tank 1</option>
+                <option>Gasoline Tank 1</option>
+                <option>Premium Tank 1</option>
+            </select>
+        </div>
+        <div class="col-12 col-md-6 col-xl-3">
+            <label class="form-label" for="tank-count-fuel-type">Fuel Type</label>
+            <select class="form-select" id="tank-count-fuel-type" disabled>
+                <option>All fuel types</option>
+                <option>Diesel</option>
+                <option>Gasoline</option>
+                <option>Premium</option>
+            </select>
+        </div>
+        <div class="col-12 col-md-6 col-xl-3">
+            <label class="form-label" for="tank-count-status">Status</label>
+            <select class="form-select" id="tank-count-status" disabled>
+                <option>All statuses</option>
+                <option>Balanced</option>
+                <option>Short</option>
+                <option>Over</option>
+            </select>
+        </div>
+    </div>
+</section>
+
+<section class="card content-card mb-4">
+    <div class="card-title-row">
+        <div>
+            <h2>Tank Liters Entry</h2>
+            <p>Static fields for future beginning and ending tank liters recording.</p>
+        </div>
+    </div>
+    <div class="row g-3">
+        <div class="col-12 col-md-6 col-xl-3">
+            <label class="form-label" for="tank-date">Date</label>
+            <input class="form-control" id="tank-date" type="date" disabled />
+        </div>
+        <div class="col-12 col-md-6 col-xl-3">
+            <label class="form-label" for="tank-name">Tank</label>
+            <select class="form-select" id="tank-name" disabled>
+                <option>Select tank</option>
+                <option>Diesel Tank 1</option>
+                <option>Gasoline Tank 1</option>
+                <option>Premium Tank 1</option>
+            </select>
+        </div>
+        <div class="col-12 col-md-6 col-xl-3">
+            <label class="form-label" for="tank-fuel-type">Fuel Type</label>
+            <select class="form-select" id="tank-fuel-type" disabled>
+                <option>Select fuel type</option>
+                <option>Diesel</option>
+                <option>Gasoline</option>
+                <option>Premium</option>
+            </select>
+        </div>
+        <div class="col-12 col-md-6 col-xl-3">
+            <label class="form-label" for="tank-beginning">Beginning Tank Liters</label>
+            <input class="form-control" id="tank-beginning" placeholder="0.00" disabled />
+        </div>
+        <div class="col-12 col-md-6 col-xl-4">
+            <label class="form-label" for="tank-ending">Ending Tank Liters</label>
+            <input class="form-control" id="tank-ending" placeholder="0.00" disabled />
+        </div>
+        <div class="col-12 col-md-6 col-xl-4">
+            <label class="form-label" for="tank-difference">Difference</label>
+            <input class="form-control" id="tank-difference" placeholder="0.00" disabled />
+        </div>
+        <div class="col-12 col-md-6 col-xl-4">
+            <label class="form-label" for="tank-status">Status</label>
+            <select class="form-select" id="tank-status" disabled>
+                <option>Balanced</option>
+                <option>Short</option>
+                <option>Over</option>
+            </select>
+        </div>
+    </div>
+</section>
+
+<section class="card content-card mb-4">
+    <div class="card-title-row">
+        <div>
+            <h2>Tanks Liters Count</h2>
+            <p>Compact preview table for tank daily liters count records.</p>
+        </div>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-sm table-hover align-middle mb-0">
+            <thead>
+                <tr>
+                    <th scope="col">No</th>
+                    <th scope="col">Date</th>
+                    <th scope="col">Tank</th>
+                    <th scope="col">Fuel Type</th>
+                    <th scope="col">Beginning Tank Liters</th>
+                    <th scope="col">Ending Tank Liters</th>
+                    <th scope="col">Difference</th>
+                    <th scope="col">Status</th>
+                    <th scope="col">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td class="text-center text-muted fw-bold" colspan="9">No records yet.</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</section>

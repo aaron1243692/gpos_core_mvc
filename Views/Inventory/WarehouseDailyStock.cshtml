@@ -1,0 +1,125 @@
+<div class="page-header">
+    <div class="page-heading">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item">GPOS</li>
+                <li class="breadcrumb-item">Inventory</li>
+                <li class="breadcrumb-item">Daily Stock</li>
+                <li class="breadcrumb-item active" aria-current="page">Warehouse</li>
+            </ol>
+        </nav>
+        <h1>Warehouse Inventory Count</h1>
+        <p class="page-subtitle">Track beginning and ending warehouse stock count.</p>
+    </div>
+    <div class="page-actions">
+        <span class="status-pill">Frontend only</span>
+        <button class="btn btn-primary btn-sm" type="button" disabled>Record Count</button>
+    </div>
+</div>
+
+<section class="card content-card mb-4">
+    <div class="card-title-row">
+        <div>
+            <h2>Filters</h2>
+            <p>Filter controls are placeholders for reviewing the warehouse count layout.</p>
+        </div>
+    </div>
+    <div class="row g-3">
+        <div class="col-12 col-md-6 col-xl-4">
+            <label class="form-label" for="warehouse-count-date">Date</label>
+            <input class="form-control" id="warehouse-count-date" type="date" disabled />
+        </div>
+        <div class="col-12 col-md-6 col-xl-4">
+            <label class="form-label" for="warehouse-count-product">Product</label>
+            <select class="form-select" id="warehouse-count-product" disabled>
+                <option>All products</option>
+                <option>Engine Oil 1L</option>
+                <option>Coolant 1L</option>
+                <option>Brake Fluid</option>
+            </select>
+        </div>
+        <div class="col-12 col-md-6 col-xl-4">
+            <label class="form-label" for="warehouse-count-status">Status</label>
+            <select class="form-select" id="warehouse-count-status" disabled>
+                <option>All statuses</option>
+                <option>Balanced</option>
+                <option>Short</option>
+                <option>Over</option>
+            </select>
+        </div>
+    </div>
+</section>
+
+<section class="card content-card mb-4">
+    <div class="card-title-row">
+        <div>
+            <h2>Warehouse Count Entry</h2>
+            <p>Static fields for future beginning and ending warehouse count recording.</p>
+        </div>
+    </div>
+    <div class="row g-3">
+        <div class="col-12 col-md-6 col-xl-4">
+            <label class="form-label" for="warehouse-date">Date</label>
+            <input class="form-control" id="warehouse-date" type="date" disabled />
+        </div>
+        <div class="col-12 col-md-6 col-xl-4">
+            <label class="form-label" for="warehouse-product">Product</label>
+            <select class="form-select" id="warehouse-product" disabled>
+                <option>Select product</option>
+                <option>Engine Oil 1L</option>
+                <option>Coolant 1L</option>
+                <option>Brake Fluid</option>
+            </select>
+        </div>
+        <div class="col-12 col-md-6 col-xl-4">
+            <label class="form-label" for="warehouse-beginning">Beginning Warehouse Count</label>
+            <input class="form-control" id="warehouse-beginning" placeholder="0" disabled />
+        </div>
+        <div class="col-12 col-md-6 col-xl-4">
+            <label class="form-label" for="warehouse-ending">Ending Warehouse Count</label>
+            <input class="form-control" id="warehouse-ending" placeholder="0" disabled />
+        </div>
+        <div class="col-12 col-md-6 col-xl-4">
+            <label class="form-label" for="warehouse-difference">Difference</label>
+            <input class="form-control" id="warehouse-difference" placeholder="0" disabled />
+        </div>
+        <div class="col-12 col-md-6 col-xl-4">
+            <label class="form-label" for="warehouse-status">Status</label>
+            <select class="form-select" id="warehouse-status" disabled>
+                <option>Balanced</option>
+                <option>Short</option>
+                <option>Over</option>
+            </select>
+        </div>
+    </div>
+</section>
+
+<section class="card content-card mb-4">
+    <div class="card-title-row">
+        <div>
+            <h2>Warehouse Inventory Count</h2>
+            <p>Compact preview table for warehouse daily count records.</p>
+        </div>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-sm table-hover align-middle mb-0">
+            <thead>
+                <tr>
+                    <th scope="col">No</th>
+                    <th scope="col">Date</th>
+                    <th scope="col">Product</th>
+                    <th scope="col">Beginning Warehouse Count</th>
+                    <th scope="col">Ending Warehouse Count</th>
+                    <th scope="col">Difference</th>
+                    <th scope="col">Status</th>
+                    <th scope="col">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td class="text-center text-muted fw-bold" colspan="8">No records yet.</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</section>

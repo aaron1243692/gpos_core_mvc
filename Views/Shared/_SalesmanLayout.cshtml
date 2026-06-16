@@ -1,0 +1,101 @@
+@{
+    var currentAction = (ViewContext.RouteData.Values["action"]?.ToString() ?? string.Empty);
+    var title = ViewData["Title"]?.ToString() ?? "Dashboard";
+    var module = ViewData["Section"]?.ToString() ?? "Salesman";
+    var username = Context.Session.GetString("EmployeeName")
+        ?? Context.Session.GetString("EmployeeUsername")
+        ?? Context.Session.GetString("Username")
+        ?? Context.Session.GetString("Name")
+        ?? User.Identity?.Name
+        ?? "Salesman";
+
+    bool IsActive(string action) => string.Equals(currentAction, action, StringComparison.OrdinalIgnoreCase);
+
+    string UserInitials(string name)
+    {
+        var parts = name.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+        if (parts.Length >= 2)
+        {
+            return string.Concat(parts[0][0], parts[1][0]).ToUpperInvariant();
+        }
+
+        return name.Length > 0 ? name[0].ToString().ToUpperInvariant() : "S";
+    }
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@title - GPOS Salesman</title>
+    <script type="importmap"></script>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/gpos.styles.css" asp-append-version="true" />
+</head>
+<body class="salesman-shell">
+    <nav class="mobile-topbar navbar navbar-dark d-lg-none">
+        <div class="container-fluid">
+            <a class="navbar-brand fw-bold" asp-controller="Salesman" asp-action="Dashboard">GPOS Sales</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="offcanvas" data-bs-target="#salesmanSidebar" aria-controls="salesmanSidebar" aria-label="Open navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+        </div>
+    </nav>
+
+    <div class="salesman-layout">
+        <aside class="salesman-sidebar offcanvas-lg offcanvas-start" tabindex="-1" id="salesmanSidebar" aria-labelledby="salesmanSidebarLabel">
+            <div class="sidebar-header">
+                <div class="brand-lockup">
+                    <span class="brand-mark" aria-hidden="true">S</span>
+                    <div>
+                        <a class="sidebar-brand" asp-controller="Salesman" asp-action="Dashboard" id="salesmanSidebarLabel">GPOS Sales</a>
+                        <div class="sidebar-subtitle">Salesman Workspace</div>
+                    </div>
+                </div>
+                <button type="button" class="btn-close btn-close-white d-lg-none" data-bs-dismiss="offcanvas" data-bs-target="#salesmanSidebar" aria-label="Close"></button>
+            </div>
+
+            <nav class="salesman-nav">
+                <a class="salesman-nav-link @(IsActive("Dashboard") ? "active" : "")" asp-controller="Salesman" asp-action="Dashboard">Dashboard</a>
+                <a class="salesman-nav-link @(IsActive("OpenShift") ? "active" : "")" asp-controller="Salesman" asp-action="OpenShift">Open Shift</a>
+                <a class="salesman-nav-link @(IsActive("BeginningCash") ? "active" : "")" asp-controller="Salesman" asp-action="BeginningCash">Beginning Cash</a>
+                <a class="salesman-nav-link @(IsActive("PumpTransaction") ? "active" : "")" asp-controller="Salesman" asp-action="PumpTransaction">Pump Transaction</a>
+                <a class="salesman-nav-link @(IsActive("POS") ? "active" : "")" asp-controller="Salesman" asp-action="POS">POS Sale</a>
+                <a class="salesman-nav-link @(IsActive("CustomerSearch") ? "active" : "")" asp-controller="Salesman" asp-action="CustomerSearch">Customer Search</a>
+                <a class="salesman-nav-link @(IsActive("MySales") ? "active" : "")" asp-controller="Salesman" asp-action="MySales">My Sales</a>
+                <a class="salesman-nav-link @(IsActive("CloseShift") ? "active" : "")" asp-controller="Salesman" asp-action="CloseShift">Close Shift</a>
+                <a class="salesman-nav-link salesman-logout-link" href="/Salesman/Logout">Logout</a>
+            </nav>
+        </aside>
+
+        <main class="salesman-main">
+            <header class="top-navbar">
+                <nav class="top-location" aria-label="Current location">
+                    <span class="top-location-module">@module</span>
+                    <span class="top-location-separator" aria-hidden="true">/</span>
+                    <span class="top-location-page">@title</span>
+                </nav>
+                <div class="top-user dropdown">
+                    <button class="profile-toggle dropdown-toggle" type="button" id="salesmanProfileMenuButton" data-bs-toggle="dropdown" aria-expanded="false">
+                        <span class="profile-avatar" aria-hidden="true">@UserInitials(username)</span>
+                        <span class="profile-name">@username</span>
+                    </button>
+                    <div class="dropdown-menu dropdown-menu-end profile-menu" aria-labelledby="salesmanProfileMenuButton">
+                        <a class="dropdown-item profile-menu-item" href="/Salesman/Logout">Logout</a>
+                    </div>
+                </div>
+            </header>
+            <div class="app-content">
+                @RenderBody()
+            </div>
+        </main>
+    </div>
+
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

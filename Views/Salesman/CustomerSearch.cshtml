@@ -1,0 +1,90 @@
+@{
+    ViewData["Title"] = "Customer Search";
+    ViewData["Section"] = "Salesman";
+}
+
+<section class="salesman-page">
+    <section class="content-card">
+        <div class="card-title-row">
+            <div>
+                <h2>Customer Search</h2>
+                <p>Search customer accounts for points, pump transactions, and POS sales.</p>
+            </div>
+        </div>
+        <div class="row g-3 mb-3">
+            <div class="col-12 col-md-3"><input class="form-control customer-filter" data-field="code" placeholder="Customer code" /></div>
+            <div class="col-12 col-md-3"><input class="form-control customer-filter" data-field="name" placeholder="Name" /></div>
+            <div class="col-12 col-md-3"><input class="form-control customer-filter" data-field="phone" placeholder="Contact number" /></div>
+            <div class="col-12 col-md-3"><input class="form-control customer-filter" data-field="plate" placeholder="Plate number" /></div>
+        </div>
+        <div class="table-responsive">
+            <table class="table app-table">
+                <thead><tr><th>Customer code</th><th>Name</th><th>Contact number</th><th>Plate number</th><th>Points balance</th><th>Status</th><th>Action</th></tr></thead>
+                <tbody id="customerTable"></tbody>
+            </table>
+        </div>
+    </section>
+
+    <section class="content-card" id="customerDetail">
+        <div class="card-title-row">
+            <div>
+                <h2>Customer Detail</h2>
+                <p>Select a customer to view account details.</p>
+            </div>
+        </div>
+        <div class="empty-preview">
+            <span class="empty-preview-icon">i</span>
+            <div><strong>No customer selected</strong><span>Recent purchases will appear here as a placeholder.</span></div>
+        </div>
+    </section>
+</section>
+
+@section Scripts {
+    <script>
+        const customers = [
+            { code: "CUST-001", name: "Juan Dela Cruz", phone: "09171234567", plate: "ABC-1234", points: 120, address: "Quezon City", status: "Active" },
+            { code: "CUST-002", name: "Maria Santos", phone: "09981234567", plate: "XYZ-5678", points: 80, address: "Makati City", status: "Active" },
+            { code: "CUST-003", name: "Pedro Reyes", phone: "09221234567", plate: "GAS-2026", points: 30, address: "Pasig City", status: "Active" }
+        ];
+
+        const table = document.getElementById("customerTable");
+        const detail = document.getElementById("customerDetail");
+        const filters = [...document.querySelectorAll(".customer-filter")];
+
+        function renderCustomers() {
+            const values = Object.fromEntries(filters.map(input => [input.dataset.field, input.value.trim().toLowerCase()]));
+            const rows = customers.filter(customer =>
+                (!values.code || customer.code.toLowerCase().includes(values.code)) &&
+                (!values.name || customer.name.toLowerCase().includes(values.name)) &&
+                (!values.phone || customer.phone.includes(values.phone)) &&
+                (!values.plate || customer.plate.toLowerCase().includes(values.plate)));
+
+            table.innerHTML = rows.map(customer => `
+                <tr>
+                    <td>${customer.code}</td><td>${customer.name}</td><td>${customer.phone}</td><td>${customer.plate}</td>
+                    <td>${customer.points} pts</td><td><span class="status-badge">${customer.status}</span></td>
+                    <td>
+                        <button class="btn btn-outline-secondary btn-sm" onclick="showCustomer('${customer.code}')">View</button>
+                        <a class="btn btn-outline-secondary btn-sm" href="/Salesman/PumpTransaction">Use in Pump</a>
+                        <a class="btn btn-outline-secondary btn-sm" href="/Salesman/POS">Use in POS</a>
+                    </td>
+                </tr>`).join("");
+        }
+
+        function showCustomer(code) {
+            const customer = customers.find(item => item.code === code);
+            detail.innerHTML = `
+                <div class="card-title-row"><div><h2>${customer.name}</h2><p>${customer.code}</p></div><span class="status-badge">${customer.status}</span></div>
+                <div class="salesman-summary-list salesman-summary-grid">
+                    <div><span>Contact number</span><strong>${customer.phone}</strong></div>
+                    <div><span>Address</span><strong>${customer.address}</strong></div>
+                    <div><span>Plate number</span><strong>${customer.plate}</strong></div>
+                    <div><span>Points balance</span><strong>${customer.points} pts</strong></div>
+                </div>
+                <div class="empty-preview mt-3"><span class="empty-preview-icon">i</span><div><strong>Recent purchases placeholder</strong><span>Purchase history will be connected later.</span></div></div>`;
+        }
+
+        filters.forEach(input => input.addEventListener("input", renderCustomers));
+        renderCustomers();
+    </script>
+}

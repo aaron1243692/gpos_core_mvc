@@ -1,0 +1,38 @@
+@model gpos.Models.SalesmanLoginViewModel
+
+@{
+    Layout = "_LandingLayout";
+    ViewData["Title"] = "Salesman Login";
+}
+
+<main class="salesman-login-wrap">
+    <section class="salesman-login-card" aria-labelledby="salesmanLoginTitle">
+        <div class="home-brand-mark" aria-hidden="true">S</div>
+        <span class="pos-eyebrow">Salesman POS</span>
+        <h1 id="salesmanLoginTitle">Sign in to POS</h1>
+        <p>Use your employee account to open the point of sale workspace.</p>
+
+        <form asp-controller="SalesmanAuth" asp-action="Login" method="post" novalidate>
+            @Html.AntiForgeryToken()
+            <div asp-validation-summary="ModelOnly" class="salesman-login-error"></div>
+
+            <div class="mb-3">
+                <label asp-for="Username" class="form-label"></label>
+                <input asp-for="Username" class="form-control" autocomplete="username" />
+                <span asp-validation-for="Username" class="salesman-login-error"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="Password" class="form-label"></label>
+                <input asp-for="Password" class="form-control" autocomplete="current-password" />
+                <span asp-validation-for="Password" class="salesman-login-error"></span>
+            </div>
+
+            <button class="btn btn-primary w-100" type="submit">Sign In</button>
+        </form>
+    </section>
+</main>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

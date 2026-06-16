@@ -1,0 +1,101 @@
+<div class="page-header">
+    <div class="page-heading">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item">GPOS</li>
+                <li class="breadcrumb-item">Configuration</li>
+                <li class="breadcrumb-item active" aria-current="page">Products</li>
+            </ol>
+        </nav>
+        <h1>Products</h1>
+        <p class="page-subtitle">Manage product pricing and current product quantities.</p>
+    </div>
+    <div class="page-actions">
+        <span class="status-pill">Frontend only</span>
+        <button class="btn btn-primary btn-sm" type="button" disabled>Add Product</button>
+    </div>
+</div>
+
+<section class="card content-card mb-4">
+    <div class="card-title-row">
+        <div>
+            <h2>Product List</h2>
+            <p>Search and review products in a compact table layout.</p>
+        </div>
+        <button class="btn btn-primary btn-sm" type="button" disabled>Add Product</button>
+    </div>
+
+    <div class="row g-3 align-items-end mb-3">
+        <div class="col-12 col-md-7 col-xl-5">
+            <label class="form-label" for="product-search">Search</label>
+            <input class="form-control form-control-sm" id="product-search" type="search" placeholder="Search products" disabled />
+        </div>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-sm table-hover align-middle mb-0">
+            <thead>
+                <tr>
+                    <th scope="col">No</th>
+                    <th scope="col">ID</th>
+                    <th scope="col">Batch #</th>
+                    <th scope="col">Name</th>
+                    <th scope="col">Cost Price</th>
+                    <th scope="col">Selling Price</th>
+                    <th scope="col">Quantity</th>
+                    <th scope="col">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>1</td>
+                    <td>PRD-001</td>
+                    <td>IB-024</td>
+                    <td>Engine Oil 1L</td>
+                    <td>&#8369;220.00</td>
+                    <td>&#8369;320.00</td>
+                    <td>48</td>
+                    <td>
+                        <div class="d-flex flex-wrap gap-1">
+                            <button class="btn btn-outline-secondary btn-sm" type="button" disabled>Edit</button>
+                            <button class="btn btn-outline-danger btn-sm" type="button" disabled>Delete</button>
+                        </div>
+                    </td>
+                </tr>
+                <tr>
+                    <td>2</td>
+                    <td>PRD-002</td>
+                    <td>IB-025</td>
+                    <td>Coolant 1L</td>
+                    <td>&#8369;110.00</td>
+                    <td>&#8369;180.00</td>
+                    <td>36</td>
+                    <td>
+                        <div class="d-flex flex-wrap gap-1">
+                            <button class="btn btn-outline-secondary btn-sm" type="button" disabled>Edit</button>
+                            <button class="btn btn-outline-danger btn-sm" type="button" disabled>Delete</button>
+                        </div>
+                    </td>
+                </tr>
+                <tr>
+                    <td>3</td>
+                    <td>PRD-003</td>
+                    <td>IB-026</td>
+                    <td>Brake Fluid</td>
+                    <td>&#8369;145.00</td>
+                    <td>&#8369;210.00</td>
+                    <td>24</td>
+                    <td>
+                        <div class="d-flex flex-wrap gap-1">
+                            <button class="btn btn-outline-secondary btn-sm" type="button" disabled>Edit</button>
+                            <button class="btn btn-outline-danger btn-sm" type="button" disabled>Delete</button>
+                        </div>
+                    </td>
+                </tr>
+                <tr class="d-none">
+                    <td class="text-center text-muted fw-bold" colspan="8">No products found.</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</section>

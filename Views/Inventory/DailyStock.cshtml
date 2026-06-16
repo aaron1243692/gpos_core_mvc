@@ -1,0 +1,150 @@
+<div class="page-header">
+    <div class="page-heading">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item">GPOS</li>
+                <li class="breadcrumb-item">Inventory</li>
+                <li class="breadcrumb-item active" aria-current="page">Daily Stock</li>
+            </ol>
+        </nav>
+        <h1>Daily Stock</h1>
+        <p class="page-subtitle">Track daily beginning and ending stock for warehouse, display, and tanks.</p>
+    </div>
+    <div class="page-actions">
+        <span class="status-pill">Frontend only</span>
+        <button class="btn btn-primary btn-sm" type="button" disabled>Record Daily Stock</button>
+    </div>
+</div>
+
+<section class="card content-card mb-4">
+    <div class="card-title-row">
+        <div>
+            <h2>Filters</h2>
+            <p>Use these readonly controls to preview the future daily stock search layout.</p>
+        </div>
+    </div>
+    <div class="row g-3">
+        <div class="col-12 col-md-6 col-xl-3">
+            <label class="form-label" for="daily-stock-date">Date</label>
+            <input class="form-control" id="daily-stock-date" type="date" disabled />
+        </div>
+        <div class="col-12 col-md-6 col-xl-3">
+            <label class="form-label" for="daily-stock-product">Product</label>
+            <select class="form-select" id="daily-stock-product" disabled>
+                <option>All products</option>
+                <option>Engine Oil 1L</option>
+                <option>Coolant 1L</option>
+                <option>Brake Fluid</option>
+            </select>
+        </div>
+        <div class="col-12 col-md-6 col-xl-3">
+            <label class="form-label" for="daily-stock-tank">Tank</label>
+            <select class="form-select" id="daily-stock-tank" disabled>
+                <option>All tanks</option>
+                <option>Diesel Tank 1</option>
+                <option>Gasoline Tank 1</option>
+                <option>Premium Tank 1</option>
+            </select>
+        </div>
+        <div class="col-12 col-md-6 col-xl-3">
+            <label class="form-label" for="daily-stock-fuel-type">Fuel Type</label>
+            <select class="form-select" id="daily-stock-fuel-type" disabled>
+                <option>All fuel types</option>
+                <option>Diesel</option>
+                <option>Gasoline</option>
+                <option>Premium</option>
+            </select>
+        </div>
+    </div>
+</section>
+
+<section class="card content-card mb-4">
+    <div class="card-title-row">
+        <div>
+            <h2>Warehouse Stock</h2>
+            <p>Beginning and ending stock recorded for warehouse inventory.</p>
+        </div>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-sm table-hover align-middle mb-0">
+            <thead>
+                <tr>
+                    <th scope="col">No</th>
+                    <th scope="col">Date</th>
+                    <th scope="col">Product</th>
+                    <th scope="col">Beginning Warehouse Stock</th>
+                    <th scope="col">Ending Warehouse Stock</th>
+                    <th scope="col">Difference</th>
+                    <th scope="col">Status</th>
+                    <th scope="col">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td class="text-center text-muted fw-bold" colspan="8">No warehouse stock records yet.</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<section class="card content-card mb-4">
+    <div class="card-title-row">
+        <div>
+            <h2>Display Stock</h2>
+            <p>Beginning and ending stock recorded for display inventory.</p>
+        </div>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-sm table-hover align-middle mb-0">
+            <thead>
+                <tr>
+                    <th scope="col">No</th>
+                    <th scope="col">Date</th>
+                    <th scope="col">Product</th>
+                    <th scope="col">Beginning Display Stock</th>
+                    <th scope="col">Ending Display Stock</th>
+                    <th scope="col">Difference</th>
+                    <th scope="col">Status</th>
+                    <th scope="col">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td class="text-center text-muted fw-bold" colspan="8">No display stock records yet.</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<section class="card content-card mb-4">
+    <div class="card-title-row">
+        <div>
+            <h2>Tank Stock</h2>
+            <p>Beginning and ending stock recorded for fuel tanks.</p>
+        </div>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-sm table-hover align-middle mb-0">
+            <thead>
+                <tr>
+                    <th scope="col">No</th>
+                    <th scope="col">Date</th>
+                    <th scope="col">Tank</th>
+                    <th scope="col">Fuel Type</th>
+                    <th scope="col">Beginning Tank Stock</th>
+                    <th scope="col">Ending Tank Stock</th>
+                    <th scope="col">Difference</th>
+                    <th scope="col">Status</th>
+                    <th scope="col">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td class="text-center text-muted fw-bold" colspan="9">No tank stock records yet.</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</section>

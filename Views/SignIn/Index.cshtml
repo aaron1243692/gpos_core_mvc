@@ -1,0 +1,158 @@
+@model gpos.Models.SignInViewModel
+
+@{
+    Layout = null;
+    ViewData["Title"] = "Sign In";
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - gpos</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/gpos.styles.css" asp-append-version="true" />
+    <style>
+        body {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #eef4ff 0%, #f8fbff 45%, #e8f7f0 100%);
+        }
+
+        .signin-page {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem 1rem;
+        }
+
+        .signin-card {
+            width: 100%;
+            max-width: 430px;
+            padding: 2rem;
+            border: 1px solid rgba(15, 23, 42, 0.08);
+            border-radius: 1rem;
+            background: rgba(255, 255, 255, 0.96);
+            box-shadow: 0 1.25rem 3rem rgba(15, 23, 42, 0.12);
+        }
+
+        .signin-title {
+            color: #172033;
+            font-weight: 700;
+            letter-spacing: 0;
+        }
+
+        .signin-subtitle {
+            color: #667085;
+        }
+
+        .signin-card .form-label {
+            margin-bottom: 0.45rem;
+            color: #344054;
+            font-weight: 600;
+        }
+
+        .signin-card .form-control {
+            min-height: 3rem;
+            border-radius: 0.75rem;
+            border-color: #d0d5dd;
+            transition: border-color 0.18s ease, box-shadow 0.18s ease;
+        }
+
+        .signin-card .form-control:hover {
+            border-color: #98a2b3;
+        }
+
+        .signin-card .form-control:focus {
+            border-color: #2f80ed;
+            box-shadow: 0 0 0 0.22rem rgba(47, 128, 237, 0.16);
+        }
+
+        .signin-card .form-check-input:focus {
+            box-shadow: 0 0 0 0.18rem rgba(47, 128, 237, 0.16);
+        }
+
+        .signin-card a {
+            color: #2f6fed;
+            font-weight: 600;
+        }
+
+        .signin-card a:hover {
+            color: #1b56c5;
+        }
+
+        .signin-button {
+            min-height: 3rem;
+            border: 0;
+            border-radius: 0.75rem;
+            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+            font-weight: 700;
+            box-shadow: 0 0.75rem 1.5rem rgba(37, 99, 235, 0.22);
+            transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+        }
+
+        .signin-button:hover,
+        .signin-button:focus {
+            background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
+            box-shadow: 0 0.9rem 1.8rem rgba(37, 99, 235, 0.28);
+            transform: translateY(-1px);
+        }
+
+        .signin-card .text-danger,
+        .signin-card .validation-summary-errors {
+            color: #b42318 !important;
+            font-size: 0.92rem;
+        }
+
+        @@media (max-width: 575.98px) {
+            .signin-card {
+                padding: 1.5rem;
+                border-radius: 0.85rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <main class="signin-page">
+        <section class="signin-card">
+            <div class="mb-4 text-center">
+                <h1 class="signin-title h3 mb-2">Sign In</h1>
+                <p class="signin-subtitle mb-0">Access your GPOS account.</p>
+            </div>
+
+            <form method="post" asp-controller="SignIn" asp-action="Index">
+                @Html.AntiForgeryToken()
+                <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+                <div class="mb-3">
+                    <label asp-for="Login" class="form-label">Email or Username</label>
+                    <input asp-for="Login" type="text" class="form-control" placeholder="Enter your email or username" autocomplete="username" required />
+                    <span asp-validation-for="Login" class="text-danger"></span>
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="Password" class="form-label">Password</label>
+                    <input asp-for="Password" type="password" class="form-control" autocomplete="current-password" required />
+                    <span asp-validation-for="Password" class="text-danger"></span>
+                </div>
+
+                <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center mb-4">
+                    <div class="form-check">
+                        <input asp-for="RememberMe" class="form-check-input" type="checkbox" />
+                        <label asp-for="RememberMe" class="form-check-label">Remember me</label>
+                    </div>
+                </div>
+
+                <button type="submit" class="signin-button btn btn-primary w-100">Sign In</button>
+            </form>
+        </section>
+    </main>
+
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+    @await Html.PartialAsync("_ValidationScriptsPartial")
+</body>
+</html>

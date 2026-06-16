@@ -1,0 +1,378 @@
+@{
+    ViewData["Title"] = "POS";
+    ViewData["Section"] = "Transactions";
+
+    var salesmanName = Context.Session.GetString("EmployeeName")
+        ?? Context.Session.GetString("EmployeeUsername")
+        ?? Context.Session.GetString("Username")
+        ?? Context.Session.GetString("Name")
+        ?? User.Identity?.Name
+        ?? "Salesman";
+}
+
+<section class="salesman-pos-page">
+    <form id="posSaleForm" method="post" class="salesman-pos-card">
+        <div class="salesman-pos-panels">
+            <section class="salesman-pos-panel gas-panel">
+                <div class="pos-section-header">
+                    <div>
+                        <span class="pos-eyebrow">Gas</span>
+                        <h2>Gas Purchase</h2>
+                    </div>
+                    <span class="status-badge">Cash Sale</span>
+                </div>
+
+                <div class="fuel-type-grid">
+                    <label class="fuel-option">
+                        <input class="form-check-input fuel-choice" type="radio" name="FuelType" value="Diesel" data-price="65" checked />
+                        <span>Diesel <small>PHP 65.00/L</small></span>
+                    </label>
+                    <label class="fuel-option">
+                        <input class="form-check-input fuel-choice" type="radio" name="FuelType" value="Gasoline" data-price="68" />
+                        <span>Gasoline <small>PHP 68.00/L</small></span>
+                    </label>
+                    <label class="fuel-option">
+                        <input class="form-check-input fuel-choice" type="radio" name="FuelType" value="Premium" data-price="72" />
+                        <span>Premium <small>PHP 72.00/L</small></span>
+                    </label>
+                </div>
+                
+                <div class="row g-3 mt-1">
+                    <div class="col-12">
+                        <label class="form-label" for="fuelCashAmount">Cash amount</label>
+                        <div class="input-group input-group-lg">
+                            <span class="input-group-text">PHP</span>
+                            <input class="form-control pos-total-input" id="fuelCashAmount" name="FuelCashAmount" type="number" min="0" step="0.01" placeholder="0.00" />
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label" for="fuelLiters">Liters</label>
+                        <input class="form-control form-control-lg" id="fuelLiters" name="FuelLiters" type="number" min="0" step="0.01" value="0.00" readonly />
+                    </div>
+                    <div class="col-12 col-sm-6">
+                        <label class="form-label" for="paymentMethod">Payment method</label>
+                        <select class="form-select form-select-lg" id="paymentMethod" name="PaymentMethod">
+                            <option>Cash</option>
+                            <option>GCash</option>
+                            <option>Card</option>
+                        </select>
+                    </div>
+                    <div class="col-12 col-sm-6">
+                        <label class="form-label" for="referenceNumber">Customer Code</label>
+                        <input class="form-control form-control-lg" id="referenceNumber" name="ReferenceNumber" placeholder="Customer code" />
+                    </div>
+                </div>
+            </section>
+
+            <section class="salesman-pos-panel product-panel">
+                <div class="pos-section-header">
+                    <div>
+                        <span class="pos-eyebrow">Products</span>
+                        <h2>Products Purchase</h2>
+                    </div>
+                    <span class="status-badge">In Store</span>
+                </div>
+
+                <div class="mb-2">
+                    <label class="form-label" for="productSearch">Search products</label>
+                    <input class="form-control form-control-sm" id="productSearch" type="search" placeholder="Search by product name" autocomplete="off" />
+                </div>
+
+                <div class="salesman-product-table-wrap">
+                    <table class="table app-table salesman-product-table align-middle">
+                        <thead>
+                            <tr>
+                                <th scope="col">No</th>
+                                <th scope="col">Name</th>
+                                <th scope="col">Quantity</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr data-product-name="premium lubricant">
+                                <td>LUB-001</td>
+                                <td>Premium Lubricant</td>
+                                <td>
+                                    <input class="form-control product-quantity-input" id="productQuantity_LUB001" name="Products[0].Quantity" type="number" min="0" value="0" data-price="530" aria-label="Premium Lubricant quantity" />
+                                    <input type="hidden" name="Products.Index" value="0" />
+                                    <input type="hidden" name="Products[0].Code" value="LUB-001" />
+                                    <input type="hidden" name="Products[0].Name" value="Premium Lubricant" />
+                                </td>
+                            </tr>
+                            <tr data-product-name="engine coolant">
+                                <td>CLT-001</td>
+                                <td>Engine Coolant</td>
+                                <td>
+                                    <input class="form-control product-quantity-input" id="productQuantity_CLT001" name="Products[1].Quantity" type="number" min="0" value="0" data-price="280" aria-label="Engine Coolant quantity" />
+                                    <input type="hidden" name="Products.Index" value="1" />
+                                    <input type="hidden" name="Products[1].Code" value="CLT-001" />
+                                    <input type="hidden" name="Products[1].Name" value="Engine Coolant" />
+                                </td>
+                            </tr>
+                            <tr data-product-name="brake fluid">
+                                <td>BRK-001</td>
+                                <td>Brake Fluid</td>
+                                <td>
+                                    <input class="form-control product-quantity-input" id="productQuantity_BRK001" name="Products[2].Quantity" type="number" min="0" value="0" data-price="190" aria-label="Brake Fluid quantity" />
+                                    <input type="hidden" name="Products.Index" value="2" />
+                                    <input type="hidden" name="Products[2].Code" value="BRK-001" />
+                                    <input type="hidden" name="Products[2].Name" value="Brake Fluid" />
+                                </td>
+                            </tr>
+                            <tr data-product-name="wiper fluid">
+                                <td>WPR-001</td>
+                                <td>Wiper Fluid</td>
+                                <td>
+                                    <input class="form-control product-quantity-input" id="productQuantity_WPR001" name="Products[3].Quantity" type="number" min="0" value="0" data-price="160" aria-label="Wiper Fluid quantity" />
+                                    <input type="hidden" name="Products.Index" value="3" />
+                                    <input type="hidden" name="Products[3].Code" value="WPR-001" />
+                                    <input type="hidden" name="Products[3].Name" value="Wiper Fluid" />
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </div>
+
+        <section class="salesman-pos-bottom-bar" aria-label="POS checkout summary">
+            <div>
+                <span>Total</span>
+                <strong id="posGrandTotal">PHP 0.00</strong>
+            </div>
+            <button class="btn btn-primary btn-lg px-5" id="checkoutButton" type="button">Checkout</button>
+        </section>
+
+        <section class="salesman-receipt-preview" id="receiptPreview" hidden aria-live="polite">
+            <div class="salesman-receipt-print" id="receiptPrintArea">
+                <div class="receipt-title">
+                    <h2>GPOS Main Station</h2>
+                    <p>Sales Receipt Preview</p>
+                </div>
+
+                <div class="receipt-meta">
+                    <div><span>Date / Time</span><strong id="receiptDateTime"></strong></div>
+                    <div><span>Salesman</span><strong id="receiptSalesman"></strong></div>
+                    <div><span>Customer Code</span><strong id="receiptCustomerCode"></strong></div>
+                </div>
+
+                <div class="receipt-block">
+                    <h3>Gas / Fuel</h3>
+                    <div class="receipt-line"><span>Fuel type</span><strong id="receiptFuelType"></strong></div>
+                    <div class="receipt-line"><span>Cash amount</span><strong id="receiptFuelAmount"></strong></div>
+                    <div class="receipt-line"><span>Liters</span><strong id="receiptFuelLiters"></strong></div>
+                </div>
+
+                <div class="receipt-block">
+                    <h3>Products</h3>
+                    <table class="receipt-product-table">
+                        <thead>
+                            <tr>
+                                <th>No</th>
+                                <th>Name</th>
+                                <th>Quantity</th>
+                            </tr>
+                        </thead>
+                        <tbody id="receiptProductRows">
+                            <tr><td colspan="3">No selected products.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="receipt-total-line">
+                    <span>Total</span>
+                    <strong id="receiptTotalAmount">PHP 0.00</strong>
+                </div>
+            </div>
+
+            <div class="salesman-receipt-actions">
+                <button class="btn btn-outline-secondary" id="printReceiptButton" type="button">Print</button>
+                <button class="btn btn-primary" id="submitSaleButton" type="submit">Submit</button>
+                <button class="btn btn-outline-secondary" id="newSaleButton" type="button">New Sale</button>
+            </div>
+        </section>
+    </form>
+</section>
+
+@section Scripts {
+    <script>
+        (() => {
+            const peso = new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP" });
+            const salesmanName = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(salesmanName));
+            const form = document.getElementById("posSaleForm");
+            const productQuantityInputs = Array.from(document.querySelectorAll(".product-quantity-input"));
+            const totalInputs = Array.from(document.querySelectorAll(".pos-total-input"));
+            const fuelChoices = Array.from(document.querySelectorAll(".fuel-choice"));
+            const fuelAmountInput = document.getElementById("fuelCashAmount");
+            const fuelLitersInput = document.getElementById("fuelLiters");
+            const customerCodeInput = document.getElementById("referenceNumber");
+            const grandTotal = document.getElementById("posGrandTotal");
+            const productSearch = document.getElementById("productSearch");
+            const productRows = Array.from(document.querySelectorAll(".salesman-product-table tbody tr"));
+            const checkoutButton = document.getElementById("checkoutButton");
+            const receiptPreview = document.getElementById("receiptPreview");
+            const receiptDateTime = document.getElementById("receiptDateTime");
+            const receiptSalesman = document.getElementById("receiptSalesman");
+            const receiptCustomerCode = document.getElementById("receiptCustomerCode");
+            const receiptFuelType = document.getElementById("receiptFuelType");
+            const receiptFuelAmount = document.getElementById("receiptFuelAmount");
+            const receiptFuelLiters = document.getElementById("receiptFuelLiters");
+            const receiptProductRows = document.getElementById("receiptProductRows");
+            const receiptTotalAmount = document.getElementById("receiptTotalAmount");
+            const printReceiptButton = document.getElementById("printReceiptButton");
+            const newSaleButton = document.getElementById("newSaleButton");
+
+            function numericValue(input) {
+                return Number.parseFloat(input.value) || 0;
+            }
+
+            function selectedFuelType() {
+                return fuelChoices.find(choice => choice.checked)?.value || "Fuel";
+            }
+
+            function selectedFuelPrice() {
+                const selected = fuelChoices.find(choice => choice.checked);
+                return selected ? Number.parseFloat(selected.dataset.price) || 0 : 0;
+            }
+
+            function calculatedLiters() {
+                const price = selectedFuelPrice();
+                const amount = Math.max(0, numericValue(fuelAmountInput));
+
+                return Number.isFinite(price) && price > 0 ? amount / price : 0;
+            }
+
+            function updateLiters() {
+                fuelLitersInput.value = calculatedLiters().toFixed(2);
+            }
+
+            function selectedProducts() {
+                return productQuantityInputs.reduce((products, input) => {
+                    const quantity = Math.max(0, numericValue(input));
+                    const row = input.closest("tr");
+
+                    if (numericValue(input) < 0) {
+                        input.value = 0;
+                    }
+
+                    if (quantity > 0 && row) {
+                        products.push({
+                            no: row.cells[0].textContent.trim(),
+                            name: row.cells[1].textContent.trim(),
+                            quantity,
+                            price: Number.parseFloat(input.dataset.price) || 0
+                        });
+                    }
+
+                    return products;
+                }, []);
+            }
+
+            function totalAmount() {
+                const productTotal = selectedProducts().reduce((total, product) => {
+                    return total + (product.quantity * product.price);
+                }, 0);
+                const fuelTotal = Math.max(0, numericValue(fuelAmountInput));
+
+                if (numericValue(fuelAmountInput) < 0) {
+                    fuelAmountInput.value = 0;
+                }
+
+                return productTotal + fuelTotal;
+            }
+
+            function updateTotal() {
+                updateLiters();
+                grandTotal.textContent = peso.format(totalAmount());
+
+                if (!receiptPreview.hidden) {
+                    renderReceipt();
+                }
+            }
+
+            function renderReceipt() {
+                const products = selectedProducts();
+                const fuelAmount = Math.max(0, numericValue(fuelAmountInput));
+
+                receiptDateTime.textContent = new Date().toLocaleString();
+                receiptSalesman.textContent = salesmanName;
+                receiptCustomerCode.textContent = customerCodeInput.value.trim() || "Walk-in";
+                receiptFuelType.textContent = selectedFuelType();
+                receiptFuelAmount.textContent = peso.format(fuelAmount);
+                receiptFuelLiters.textContent = `${calculatedLiters().toFixed(2)} L`;
+                receiptTotalAmount.textContent = peso.format(totalAmount());
+                receiptProductRows.innerHTML = products.length
+                    ? products.map(product => `<tr><td>${product.no}</td><td>${product.name}</td><td>${product.quantity}</td></tr>`).join("")
+                    : `<tr><td colspan="3">No selected products.</td></tr>`;
+            }
+
+            function showReceipt() {
+                updateTotal();
+                renderReceipt();
+
+                receiptPreview.hidden = false;
+                receiptPreview.scrollIntoView({ behavior: "smooth", block: "start" });
+            }
+
+            function restoreProductSubmitFields() {
+                productRows.forEach(row => {
+                    Array.from(row.querySelectorAll("input")).forEach(input => {
+                        input.disabled = false;
+                    });
+                });
+            }
+
+            function disableZeroQuantityProducts() {
+                productQuantityInputs.forEach(input => {
+                    const rowInputs = Array.from(input.closest("tr").querySelectorAll("input"));
+                    const shouldSubmit = Math.max(0, numericValue(input)) > 0;
+
+                    rowInputs.forEach(rowInput => {
+                        rowInput.disabled = !shouldSubmit;
+                    });
+                });
+            }
+
+            function resetSale() {
+                form.reset();
+                restoreProductSubmitFields();
+                productSearch.value = "";
+                productRows.forEach(row => {
+                    row.hidden = false;
+                });
+                productQuantityInputs.forEach(input => {
+                    input.value = 0;
+                });
+                fuelChoices[0].checked = true;
+                fuelLitersInput.value = "0.00";
+                receiptPreview.hidden = true;
+                updateTotal();
+            }
+
+            productQuantityInputs.forEach(input => input.addEventListener("input", updateTotal));
+            totalInputs.forEach(input => input.addEventListener("input", updateTotal));
+            customerCodeInput.addEventListener("input", () => {
+                if (!receiptPreview.hidden) {
+                    renderReceipt();
+                }
+            });
+            fuelChoices.forEach(choice => choice.addEventListener("change", () => {
+                updateTotal();
+            }));
+            productSearch.addEventListener("input", () => {
+                const query = productSearch.value.trim().toLowerCase();
+
+                productRows.forEach(row => {
+                    row.hidden = query.length > 0 && !row.dataset.productName.includes(query);
+                });
+            });
+            checkoutButton.addEventListener("click", showReceipt);
+            printReceiptButton.addEventListener("click", () => window.print());
+            newSaleButton.addEventListener("click", resetSale);
+            form.addEventListener("submit", () => {
+                disableZeroQuantityProducts();
+            });
+            window.addEventListener("pageshow", restoreProductSubmitFields);
+            updateTotal();
+        })();
+    </script>
+}
