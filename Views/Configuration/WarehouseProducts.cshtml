@@ -1,3 +1,5 @@
+@model gpos.Models.ViewModels.ProductStockPageViewModel
+
 <div class="page-header">
     <div class="page-heading">
         <nav aria-label="breadcrumb">
@@ -15,12 +17,12 @@
 
 <section class="card content-card mb-4">
     <div class="d-flex justify-content-between align-items-center gap-2 flex-wrap mb-3">
-        <div class="products-search-wrap">
+        <form class="products-search-wrap" asp-action="WarehouseProducts" method="get">
             <label class="visually-hidden" for="warehouse-product-search">Search warehouse products</label>
-            <input class="form-control form-control-sm products-search" id="warehouse-product-search" type="search" placeholder="Search warehouse products" autocomplete="off" />
-        </div>
+            <input class="form-control form-control-sm products-search" id="warehouse-product-search" name="search" value="@Model.Search" type="search" placeholder="Search warehouse products" autocomplete="off" />
+        </form>
         <div class="col-12 col-sm-auto ms-sm-auto">
-            <button class="btn btn-primary btn-sm w-100" type="button">Add Product</button>
+            <button class="btn btn-primary btn-sm w-100" type="button" data-bs-toggle="modal" data-bs-target="#warehouseProductModal">Add Product</button>
         </div>
     </div>
 
@@ -30,50 +32,114 @@
                 <tr>
                     <th scope="col">No</th>
                     <th scope="col">ID</th>
-                    <th scope="col">Batch</th>
+                    <th scope="col">Batch #</th>
                     <th scope="col">Name</th>
-                    <th scope="col">Supplier</th>
                     <th scope="col">Category</th>
-                    <th scope="col">Cost</th>
+                    <th scope="col">Cost Price</th>
                     <th scope="col">Selling Price</th>
                     <th scope="col">Quantity</th>
                     <th scope="col">Action</th>
                 </tr>
             </thead>
             <tbody>
-                <tr data-warehouse-product-empty-row>
-                    <td class="text-center text-muted fw-bold" colspan="10">No warehouse products yet.</td>
-                </tr>
+                @if (Model.WarehouseStocks.Count == 0)
+                {
+                    <tr>
+                        <td class="text-center text-muted fw-bold" colspan="9">No warehouse products yet.</td>
+                    </tr>
+                }
+                @for (var index = 0; index < Model.WarehouseStocks.Count; index += 1)
+                {
+                    <tr>
+                        <td>@(index + 1)</td>
+                        <td>@Model.WarehouseStocks[index].Id</td>
+                        <td>@(Model.WarehouseStocks[index].Batch?.BatchNo ?? "-")</td>
+                        <td>@(Model.WarehouseStocks[index].Product?.Name ?? "-")</td>
+                        <td>@(Model.WarehouseStocks[index].Product?.Category?.Name ?? "-")</td>
+                        <td>&#8369;@(Model.WarehouseStocks[index].Batch?.CostPrice.ToString("N2") ?? "0.00")</td>
+                        <td>&#8369;@(Model.WarehouseStocks[index].Batch?.SellingPrice.ToString("N2") ?? "0.00")</td>
+                        <td>@Model.WarehouseStocks[index].Quantity.ToString("N2")</td>
+                        <td>
+                            <button class="btn btn-outline-secondary btn-sm" type="button" disabled>Edit</button>
+                        </td>
+                    </tr>
+                }
             </tbody>
         </table>
     </div>
 </section>
 
-<script>
-    document.addEventListener("DOMContentLoaded", () => {
-        const searchInput = document.getElementById("warehouse-product-search");
-        const productRows = Array.from(document.querySelectorAll("[data-warehouse-product-row]"));
-        const emptyRow = document.querySelector("[data-warehouse-product-empty-row]");
+<div class="modal fade" id="warehouseProductModal" tabindex="-1" aria-labelledby="warehouseProductModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <form asp-action="SaveWarehouseProduct" method="post">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="search" value="@Model.Search" />
+                <div class="modal-header">
+                    <h2 class="modal-title fs-5" id="warehouseProductModalLabel">Add Warehouse Product</h2>
+                    <button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="d-grid gap-3">
+                        <div>
+                            <label class="form-label" asp-for="StockForm.CategoryId">Category</label>
+                            <select class="form-select" asp-for="StockForm.CategoryId" asp-items="Model.CategoryOptions">
+                                <option value="0">Select category</option>
+                            </select>
+                            <span class="text-danger small" asp-validation-for="StockForm.CategoryId"></span>
+                        </div>
+                        <div>
+                            <label class="form-label" asp-for="StockForm.ProductName">Product Name</label>
+                            <input class="form-control" asp-for="StockForm.ProductName" autocomplete="off" />
+                            <span class="text-danger small" asp-validation-for="StockForm.ProductName"></span>
+                        </div>
+                        <div>
+                            <label class="form-label" asp-for="StockForm.CostPrice">Cost Price</label>
+                            <input class="form-control" asp-for="StockForm.CostPrice" type="number" min="0" step="0.01" />
+                            <span class="text-danger small" asp-validation-for="StockForm.CostPrice"></span>
+                        </div>
+                        <div>
+                            <label class="form-label" asp-for="StockForm.SellingPrice">Selling Price</label>
+                            <input class="form-control" asp-for="StockForm.SellingPrice" type="number" min="0" step="0.01" />
+                            <span class="text-danger small" asp-validation-for="StockForm.SellingPrice"></span>
+                        </div>
+                        <div>
+                            <label class="form-label" asp-for="StockForm.Quantity">Quantity</label>
+                            <input class="form-control" asp-for="StockForm.Quantity" type="number" min="0" step="0.01" />
+                            <span class="text-danger small" asp-validation-for="StockForm.Quantity"></span>
+                        </div>
+                        <div>
+                            <label class="form-check">
+                                <input class="form-check-input" asp-for="StockForm.IsActive" />
+                                <span class="form-check-label">Active</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button>
+                    <button class="btn btn-primary" type="submit">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 
-        if (!searchInput || !emptyRow) {
-            return;
-        }
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            const activeModalId = "@Model.ActiveModalId";
 
-        searchInput.addEventListener("input", () => {
-            const query = searchInput.value.trim().toLowerCase();
-            let visibleCount = 0;
-
-            for (let index = 0; index < productRows.length; index += 1) {
-                const row = productRows[index];
-                const isVisible = !query || row.textContent.toLowerCase().includes(query);
-                row.classList.toggle("d-none", !isVisible);
-
-                if (isVisible) {
-                    visibleCount += 1;
-                }
+            if (!activeModalId || !window.bootstrap) {
+                return;
             }
 
-            emptyRow.classList.toggle("d-none", productRows.length > 0 && visibleCount > 0);
+            const activeModal = document.getElementById(activeModalId);
+
+            if (activeModal) {
+                bootstrap.Modal.getOrCreateInstance(activeModal).show();
+            }
         });
-    });
-</script>
+    </script>
+}

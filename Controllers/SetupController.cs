@@ -11,7 +11,6 @@ namespace gpos.Controllers
         public IActionResult Customers() => View();
         public IActionResult Categories() => View();
         public IActionResult ItemUnits() => View();
-        public IActionResult FuelUnits() => View();
         public IActionResult Products() => View();
         public IActionResult FuelTypes() => View();
         public IActionResult FuelPriceHistory() => View();

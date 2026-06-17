@@ -1223,6 +1223,84 @@ textarea.form-control {
   width: 15rem;
 }
 
+.fuel-toolbar {
+  justify-content: space-between;
+  gap: 1rem;
+  width: 100%;
+}
+
+.fuel-toolbar-search {
+  width: 100%;
+  max-width: 260px;
+}
+
+.fuel-toolbar-search .form-control {
+  width: 100%;
+}
+
+.setup-crud-card {
+  display: grid;
+  gap: 1rem;
+}
+
+.setup-crud-form {
+  display: grid;
+  gap: 1rem;
+}
+
+.setup-form-grid {
+  display: grid;
+  gap: 0.85rem;
+  align-items: start;
+}
+
+.setup-form-grid-3 {
+  grid-template-columns: repeat(2, minmax(180px, 1fr)) minmax(110px, 0.35fr);
+}
+
+.setup-form-grid-5 {
+  grid-template-columns: repeat(4, minmax(150px, 1fr)) minmax(110px, 0.35fr);
+}
+
+.setup-check-field {
+  display: flex;
+  min-height: 2.35rem;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 1.7rem;
+  color: var(--app-muted);
+  font-weight: 800;
+}
+
+.setup-form-actions,
+.setup-row-actions,
+.setup-search-form {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.setup-form-actions {
+  justify-content: flex-end;
+}
+
+.setup-table-card {
+  min-height: 0;
+}
+
+.setup-table-scroll {
+  min-height: 0;
+  max-height: calc(100vh - 26rem);
+  overflow: auto;
+  border: 1px solid var(--app-line);
+  border-radius: var(--app-radius);
+}
+
+.setup-row-actions form,
+.setup-search-form {
+  margin: 0;
+}
+
 .table-card {
   padding-bottom: 1rem;
 }
@@ -2863,6 +2941,15 @@ textarea.form-control {
     grid-template-columns: 1fr;
   }
 
+  .setup-form-grid-3,
+  .setup-form-grid-5 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .setup-check-field {
+    margin-top: 0;
+  }
+
   .salesman-pos-panels {
     grid-template-columns: 1fr;
   }
@@ -3026,6 +3113,30 @@ textarea.form-control {
 
   .table-actions .form-control {
     width: 100%;
+  }
+
+  .fuel-toolbar,
+  .fuel-toolbar-search,
+  .fuel-toolbar > .btn {
+    width: 100%;
+    max-width: none;
+  }
+
+  .setup-form-grid-3,
+  .setup-form-grid-5,
+  .setup-search-form {
+    grid-template-columns: 1fr;
+  }
+
+  .setup-search-form,
+  .setup-form-actions,
+  .setup-row-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .setup-table-scroll {
+    max-height: none;
   }
 
   .content-card {

@@ -32,6 +32,7 @@ builder.Services.AddDistributedMemoryCache();
 builder.Services.AddSession();
 builder.Services.AddScoped<UserAuthService>();
 builder.Services.AddScoped<EmployeeAuthService>();
+builder.Services.AddScoped<ProductBatchNumberService>();
 
 builder.Services.Configure<CookieAuthenticationOptions>(CookieAuthenticationDefaults.AuthenticationScheme, options =>
 {

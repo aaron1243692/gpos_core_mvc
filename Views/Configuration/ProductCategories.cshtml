@@ -1,3 +1,5 @@
+@model gpos.Models.ViewModels.ProductStockPageViewModel
+
 <div class="page-header">
     <div class="page-heading">
         <nav aria-label="breadcrumb">
@@ -15,12 +17,12 @@
 
 <section class="card content-card mb-4">
     <div class="d-flex justify-content-between align-items-center gap-2 flex-wrap mb-3">
-        <div class="products-search-wrap">
+        <form class="products-search-wrap" asp-action="ProductCategories" method="get">
             <label class="visually-hidden" for="product-category-search">Search categories</label>
-            <input class="form-control form-control-sm products-search" id="product-category-search" type="search" placeholder="Search categories" autocomplete="off" />
-        </div>
+            <input class="form-control form-control-sm products-search" id="product-category-search" name="search" value="@Model.Search" type="search" placeholder="Search categories" autocomplete="off" />
+        </form>
         <div class="col-12 col-sm-auto ms-sm-auto">
-            <button class="btn btn-primary btn-sm w-100" type="button">Add Category</button>
+            <button class="btn btn-primary btn-sm w-100" type="button" data-bs-toggle="modal" data-bs-target="#productCategoryModal">Add Category</button>
         </div>
     </div>
 
@@ -31,43 +33,89 @@
                     <th scope="col">No</th>
                     <th scope="col">ID</th>
                     <th scope="col">Name</th>
+                    <th scope="col">Description</th>
+                    <th scope="col">Status</th>
                     <th scope="col">Action</th>
                 </tr>
             </thead>
             <tbody>
-                <tr data-product-category-empty-row>
-                    <td class="text-center text-muted fw-bold" colspan="4">No product categories yet.</td>
-                </tr>
+                @if (Model.Categories.Count == 0)
+                {
+                    <tr>
+                        <td class="text-center text-muted fw-bold" colspan="6">No product categories yet.</td>
+                    </tr>
+                }
+                @for (var index = 0; index < Model.Categories.Count; index += 1)
+                {
+                    <tr>
+                        <td>@(index + 1)</td>
+                        <td>@Model.Categories[index].Id</td>
+                        <td>@Model.Categories[index].Name</td>
+                        <td>@Model.Categories[index].Description</td>
+                        <td>@(Model.Categories[index].IsActive ? "Active" : "Inactive")</td>
+                        <td>
+                            <button class="btn btn-outline-secondary btn-sm" type="button" disabled>Edit</button>
+                        </td>
+                    </tr>
+                }
             </tbody>
         </table>
     </div>
 </section>
 
-<script>
-    document.addEventListener("DOMContentLoaded", () => {
-        const searchInput = document.getElementById("product-category-search");
-        const categoryRows = Array.from(document.querySelectorAll("[data-product-category-row]"));
-        const emptyRow = document.querySelector("[data-product-category-empty-row]");
+<div class="modal fade" id="productCategoryModal" tabindex="-1" aria-labelledby="productCategoryModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <form asp-action="SaveProductCategory" method="post">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="search" value="@Model.Search" />
+                <div class="modal-header">
+                    <h2 class="modal-title fs-5" id="productCategoryModalLabel">Add Category</h2>
+                    <button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="d-grid gap-3">
+                        <div>
+                            <label class="form-label" asp-for="CategoryForm.Name">Name</label>
+                            <input class="form-control" asp-for="CategoryForm.Name" autocomplete="off" />
+                            <span class="text-danger small" asp-validation-for="CategoryForm.Name"></span>
+                        </div>
+                        <div>
+                            <label class="form-label" asp-for="CategoryForm.Description">Description</label>
+                            <textarea class="form-control" asp-for="CategoryForm.Description" rows="3"></textarea>
+                        </div>
+                        <div>
+                            <label class="form-check">
+                                <input class="form-check-input" asp-for="CategoryForm.IsActive" />
+                                <span class="form-check-label">Active</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button>
+                    <button class="btn btn-primary" type="submit">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 
-        if (!searchInput || !emptyRow) {
-            return;
-        }
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            const activeModalId = "@Model.ActiveModalId";
 
-        searchInput.addEventListener("input", () => {
-            const query = searchInput.value.trim().toLowerCase();
-            let visibleCount = 0;
-
-            for (let index = 0; index < categoryRows.length; index += 1) {
-                const row = categoryRows[index];
-                const isVisible = !query || row.textContent.toLowerCase().includes(query);
-                row.classList.toggle("d-none", !isVisible);
-
-                if (isVisible) {
-                    visibleCount += 1;
-                }
+            if (!activeModalId || !window.bootstrap) {
+                return;
             }
 
-            emptyRow.classList.toggle("d-none", categoryRows.length > 0 && visibleCount > 0);
+            const activeModal = document.getElementById(activeModalId);
+
+            if (activeModal) {
+                bootstrap.Modal.getOrCreateInstance(activeModal).show();
+            }
         });
-    });
-</script>
+    </script>
+}

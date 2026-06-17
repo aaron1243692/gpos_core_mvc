@@ -22,6 +22,99 @@ namespace gpos.Migrations
 
             MySqlModelBuilderExtensions.AutoIncrementColumns(modelBuilder);
 
+            modelBuilder.Entity("gpos.Models.DisplayStock", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("id");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("BatchId")
+                        .HasColumnType("int")
+                        .HasColumnName("batch_id");
+
+                    b.Property<DateTime?>("CreatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("created_at");
+
+                    b.Property<int>("ProductId")
+                        .HasColumnType("int")
+                        .HasColumnName("product_id");
+
+                    b.Property<decimal>("Quantity")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasDefaultValue(0m)
+                        .HasColumnName("quantity");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BatchId");
+
+                    b.HasIndex("ProductId");
+
+                    b.ToTable("display_stocks", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_display_stocks_quantity_non_negative", "quantity >= 0");
+                        });
+                });
+
+            modelBuilder.Entity("gpos.Models.Fuel", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("id");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasColumnType("longtext")
+                        .HasColumnName("code");
+
+                    b.Property<DateTime?>("CreatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("created_at");
+
+                    b.Property<decimal>("CurrentPricePerLiter")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("current_price_per_liter");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("tinyint(1)")
+                        .HasDefaultValue(true)
+                        .HasColumnName("is_active");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("longtext")
+                        .HasColumnName("name");
+
+                    b.Property<int?>("SupplierId")
+                        .HasColumnType("int")
+                        .HasColumnName("supplier_id");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SupplierId");
+
+                    b.ToTable("fuels", (string)null);
+                });
+
             modelBuilder.Entity("gpos.Models.Permission", b =>
                 {
                     b.Property<int>("Id")
@@ -61,6 +154,186 @@ namespace gpos.Migrations
                     b.HasIndex("ParentId");
 
                     b.ToTable("permissions", (string)null);
+                });
+
+            modelBuilder.Entity("gpos.Models.Product", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("id");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int?>("CategoryId")
+                        .HasColumnType("int")
+                        .HasColumnName("category_id");
+
+                    b.Property<DateTime?>("CreatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("created_at");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_active");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("longtext")
+                        .HasColumnName("name");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CategoryId");
+
+                    b.ToTable("products", (string)null);
+                });
+
+            modelBuilder.Entity("gpos.Models.ProductBatch", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("id");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("BatchNo")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("varchar(100)")
+                        .HasColumnName("batch_no");
+
+                    b.Property<decimal>("CostPrice")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasDefaultValue(0m)
+                        .HasColumnName("cost_price");
+
+                    b.Property<DateTime?>("CreatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Email")
+                        .HasMaxLength(255)
+                        .HasColumnType("varchar(255)")
+                        .HasColumnName("email");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("tinyint(1)")
+                        .HasDefaultValue(true)
+                        .HasColumnName("is_active");
+
+                    b.Property<int>("ProductId")
+                        .HasColumnType("int")
+                        .HasColumnName("product_id");
+
+                    b.Property<decimal>("SellingPrice")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasDefaultValue(0m)
+                        .HasColumnName("selling_price");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BatchNo")
+                        .IsUnique();
+
+                    b.HasIndex("ProductId");
+
+                    b.ToTable("product_batches", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_product_batches_cost_price_non_negative", "cost_price >= 0");
+
+                            t.HasCheckConstraint("CK_product_batches_selling_price_non_negative", "selling_price >= 0");
+                        });
+                });
+
+            modelBuilder.Entity("gpos.Models.ProductCategory", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("id");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime?>("CreatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasColumnType("longtext")
+                        .HasColumnName("description");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("tinyint(1)")
+                        .HasDefaultValue(true)
+                        .HasColumnName("is_active");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("longtext")
+                        .HasColumnName("name");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("product_categories", (string)null);
+                });
+
+            modelBuilder.Entity("gpos.Models.Pump", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("id");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime?>("CreatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("longtext")
+                        .HasColumnName("name");
+
+                    b.Property<string>("PumpNo")
+                        .IsRequired()
+                        .HasColumnType("longtext")
+                        .HasColumnName("pump_no");
+
+                    b.Property<int>("TankId")
+                        .HasColumnType("int")
+                        .HasColumnName("tank_id");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TankId");
+
+                    b.ToTable("pumps", (string)null);
                 });
 
             modelBuilder.Entity("gpos.Models.Role", b =>
@@ -131,6 +404,93 @@ namespace gpos.Migrations
                         .IsUnique();
 
                     b.ToTable("role_permissions", (string)null);
+                });
+
+            modelBuilder.Entity("gpos.Models.Supplier", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("id");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Address")
+                        .HasMaxLength(255)
+                        .HasColumnType("varchar(255)")
+                        .HasColumnName("address");
+
+                    b.Property<string>("ContactNumber")
+                        .HasMaxLength(50)
+                        .HasColumnType("varchar(50)")
+                        .HasColumnName("contact_number");
+
+                    b.Property<string>("ContactPerson")
+                        .HasMaxLength(150)
+                        .HasColumnType("varchar(150)")
+                        .HasColumnName("contact_person");
+
+                    b.Property<DateTime?>("CreatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Email")
+                        .HasMaxLength(150)
+                        .HasColumnType("varchar(150)")
+                        .HasColumnName("email");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("varchar(150)")
+                        .HasColumnName("name");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("suppliers", (string)null);
+                });
+
+            modelBuilder.Entity("gpos.Models.Tank", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("id");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime?>("CreatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("created_at");
+
+                    b.Property<int>("FuelId")
+                        .HasColumnType("int")
+                        .HasColumnName("fuel_id");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("tinyint(1)")
+                        .HasDefaultValue(true)
+                        .HasColumnName("is_active");
+
+                    b.Property<string>("TankNo")
+                        .IsRequired()
+                        .HasColumnType("longtext")
+                        .HasColumnName("tank_no");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FuelId");
+
+                    b.ToTable("tanks", (string)null);
                 });
 
             modelBuilder.Entity("gpos.Models.User", b =>
@@ -211,6 +571,79 @@ namespace gpos.Migrations
                     b.ToTable("user_roles", (string)null);
                 });
 
+            modelBuilder.Entity("gpos.Models.WarehouseStock", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("id");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("BatchId")
+                        .HasColumnType("int")
+                        .HasColumnName("batch_id");
+
+                    b.Property<DateTime?>("CreatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("created_at");
+
+                    b.Property<int>("ProductId")
+                        .HasColumnType("int")
+                        .HasColumnName("product_id");
+
+                    b.Property<decimal>("Quantity")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasDefaultValue(0m)
+                        .HasColumnName("quantity");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BatchId");
+
+                    b.HasIndex("ProductId");
+
+                    b.ToTable("warehouse_stocks", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_warehouse_stocks_quantity_non_negative", "quantity >= 0");
+                        });
+                });
+
+            modelBuilder.Entity("gpos.Models.DisplayStock", b =>
+                {
+                    b.HasOne("gpos.Models.ProductBatch", "Batch")
+                        .WithMany("DisplayStocks")
+                        .HasForeignKey("BatchId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("gpos.Models.Product", "Product")
+                        .WithMany("DisplayStocks")
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Batch");
+
+                    b.Navigation("Product");
+                });
+
+            modelBuilder.Entity("gpos.Models.Fuel", b =>
+                {
+                    b.HasOne("gpos.Models.Supplier", "Supplier")
+                        .WithMany("Fuels")
+                        .HasForeignKey("SupplierId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Supplier");
+                });
+
             modelBuilder.Entity("gpos.Models.Permission", b =>
                 {
                     b.HasOne("gpos.Models.Permission", "Parent")
@@ -219,6 +652,38 @@ namespace gpos.Migrations
                         .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("Parent");
+                });
+
+            modelBuilder.Entity("gpos.Models.Product", b =>
+                {
+                    b.HasOne("gpos.Models.ProductCategory", "Category")
+                        .WithMany("Products")
+                        .HasForeignKey("CategoryId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Category");
+                });
+
+            modelBuilder.Entity("gpos.Models.ProductBatch", b =>
+                {
+                    b.HasOne("gpos.Models.Product", "Product")
+                        .WithMany("ProductBatches")
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Product");
+                });
+
+            modelBuilder.Entity("gpos.Models.Pump", b =>
+                {
+                    b.HasOne("gpos.Models.Tank", "Tank")
+                        .WithMany("Pumps")
+                        .HasForeignKey("TankId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Tank");
                 });
 
             modelBuilder.Entity("gpos.Models.RolePermission", b =>
@@ -240,6 +705,17 @@ namespace gpos.Migrations
                     b.Navigation("Role");
                 });
 
+            modelBuilder.Entity("gpos.Models.Tank", b =>
+                {
+                    b.HasOne("gpos.Models.Fuel", "Fuel")
+                        .WithMany("Tanks")
+                        .HasForeignKey("FuelId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Fuel");
+                });
+
             modelBuilder.Entity("gpos.Models.UserRole", b =>
                 {
                     b.HasOne("gpos.Models.Role", "Role")
@@ -259,6 +735,30 @@ namespace gpos.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("gpos.Models.WarehouseStock", b =>
+                {
+                    b.HasOne("gpos.Models.ProductBatch", "Batch")
+                        .WithMany("WarehouseStocks")
+                        .HasForeignKey("BatchId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("gpos.Models.Product", "Product")
+                        .WithMany("WarehouseStocks")
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Batch");
+
+                    b.Navigation("Product");
+                });
+
+            modelBuilder.Entity("gpos.Models.Fuel", b =>
+                {
+                    b.Navigation("Tanks");
+                });
+
             modelBuilder.Entity("gpos.Models.Permission", b =>
                 {
                     b.Navigation("Children");
@@ -266,11 +766,42 @@ namespace gpos.Migrations
                     b.Navigation("RolePermissions");
                 });
 
+            modelBuilder.Entity("gpos.Models.Product", b =>
+                {
+                    b.Navigation("DisplayStocks");
+
+                    b.Navigation("ProductBatches");
+
+                    b.Navigation("WarehouseStocks");
+                });
+
+            modelBuilder.Entity("gpos.Models.ProductBatch", b =>
+                {
+                    b.Navigation("DisplayStocks");
+
+                    b.Navigation("WarehouseStocks");
+                });
+
+            modelBuilder.Entity("gpos.Models.ProductCategory", b =>
+                {
+                    b.Navigation("Products");
+                });
+
             modelBuilder.Entity("gpos.Models.Role", b =>
                 {
                     b.Navigation("RolePermissions");
 
                     b.Navigation("UserRoles");
+                });
+
+            modelBuilder.Entity("gpos.Models.Supplier", b =>
+                {
+                    b.Navigation("Fuels");
+                });
+
+            modelBuilder.Entity("gpos.Models.Tank", b =>
+                {
+                    b.Navigation("Pumps");
                 });
 
             modelBuilder.Entity("gpos.Models.User", b =>

@@ -1,7 +1,122 @@
-@{
-    ViewData["Title"] = "Tanks";
-    ViewData["Section"] = "Configuration";
-    ViewData["PageKind"] = "form";
-}
+@model gpos.Models.ViewModels.FuelSetupPageViewModel
 
-<partial name="_PageShell" />
+<div class="page-header">
+    <div class="page-heading">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item">GPOS</li>
+                <li class="breadcrumb-item">Setup</li>
+                <li class="breadcrumb-item">Fuel</li>
+                <li class="breadcrumb-item active" aria-current="page">Tanks</li>
+            </ol>
+        </nav>
+        <h1>Tanks</h1>
+        <p class="page-subtitle">Connect tanks to the fuel they store.</p>
+    </div>
+</div>
+
+<section class="content-card setup-crud-card setup-table-card">
+    @if (TempData["FuelSetupFeedback"] is string feedback)
+    {
+        <div class="alert alert-info mb-0" role="alert">@feedback</div>
+    }
+    <div class="table-actions fuel-toolbar">
+        <form asp-action="Tanks" method="get" class="setup-search-form fuel-toolbar-search">
+            <input class="form-control" name="search" value="@Model.Search" placeholder="Search by tank or fuel" />
+        </form>
+        <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#tankModal">Add Tank</button>
+    </div>
+    <div class="setup-table-scroll">
+        <table class="table app-table table-sm align-middle mb-0">
+            <thead>
+                <tr>
+                    <th>No</th>
+                    <th>ID</th>
+                    <th>Tank</th>
+                    <th>Fuel</th>
+                    <th>Status</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model.Tanks.Count == 0)
+                {
+                    <tr><td class="text-center text-muted fw-bold" colspan="6">No records yet.</td></tr>
+                }
+                @for (var i = 0; i < Model.Tanks.Count; i++)
+                {
+                    <tr>
+                        <td>@(i + 1)</td>
+                        <td>@Model.Tanks[i].Id</td>
+                        <td>@Model.Tanks[i].TankNo</td>
+                        <td>@Model.Tanks[i].Fuel?.Name</td>
+                        <td>@(Model.Tanks[i].IsActive ? "Active" : "Inactive")</td>
+                        <td>
+                            <div class="setup-row-actions">
+                                <a class="btn btn-sm btn-outline-primary" asp-action="Tanks" asp-route-editId="@Model.Tanks[i].Id" asp-route-search="@Model.Search">Edit</a>
+                                <form asp-action="DeleteTank" method="post" onsubmit="return confirm('Delete this tank?');">
+                                    @Html.AntiForgeryToken()
+                                    <input name="id" type="hidden" value="@Model.Tanks[i].Id" />
+                                    <input name="search" type="hidden" value="@Model.Search" />
+                                    <button class="btn btn-sm btn-outline-danger" type="submit">Delete</button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<div class="modal fade" id="tankModal" tabindex="-1" aria-labelledby="tankModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <form asp-action="SaveTank" method="post">
+                @Html.AntiForgeryToken()
+                <input asp-for="TankForm.Id" type="hidden" />
+                <input name="search" type="hidden" value="@Model.Search" />
+                <div class="modal-header">
+                    <h2 class="modal-title fs-5" id="tankModalLabel">Add Tank</h2>
+                    <button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label asp-for="TankForm.FuelId" class="form-label">Fuel</label>
+                        <select asp-for="TankForm.FuelId" asp-items="Model.FuelOptions" class="form-select">
+                            <option value="0">Select fuel</option>
+                        </select>
+                        <span asp-validation-for="TankForm.FuelId" class="text-danger"></span>
+                    </div>
+                    <div class="mb-3">
+                        <label asp-for="TankForm.TankNo" class="form-label">Tank</label>
+                        <input asp-for="TankForm.TankNo" class="form-control" placeholder="Tank 1" />
+                        <span asp-validation-for="TankForm.TankNo" class="text-danger"></span>
+                    </div>
+                    <label class="form-check">
+                        <input asp-for="TankForm.IsActive" class="form-check-input" />
+                        <span class="form-check-label">Active</span>
+                    </label>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button>
+                    <button class="btn btn-primary" type="submit">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            const modalId = "@Model.ActiveModalId";
+            const modalElement = modalId ? document.getElementById(modalId) : null;
+
+            if (modalElement && window.bootstrap) {
+                bootstrap.Modal.getOrCreateInstance(modalElement).show();
+            }
+        });
+    </script>
+}

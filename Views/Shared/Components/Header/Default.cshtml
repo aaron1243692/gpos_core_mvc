@@ -23,8 +23,6 @@
                         <button class="dropdown-item eg-rb-dropdown-group-toggle" type="button">Fuel</button>
                         <div class="dropdown-menu eg-rb-submenu">
                             <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Configuration.Fuels" ? "active" : "")" asp-controller="Configuration" asp-action="Fuels">Fuels</a>
-                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Configuration.FuelTypes" ? "active" : "")" asp-controller="Configuration" asp-action="FuelTypes">Types</a>
-                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Configuration.FuelUnits" ? "active" : "")" asp-controller="Configuration" asp-action="FuelUnits">Units</a>
                             <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Configuration.Pumps" ? "active" : "")" asp-controller="Configuration" asp-action="Pumps">Pumps</a>
                             <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Configuration.Tanks" ? "active" : "")" asp-controller="Configuration" asp-action="Tanks">Tanks</a>
                         </div>
