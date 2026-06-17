@@ -22,5 +22,7 @@ namespace gpos.Controllers
         public IActionResult Members() => View();
         public IActionResult Rebate() => View();
         public IActionResult Position() => View();
+        public IActionResult Branch() => View();
+        public IActionResult Department() => View();
     }
 }

@@ -46,6 +46,7 @@
                     <nav class="eg-rb-items" aria-label="Page links">
                         <a class="eg-rb-tile @(Model.ActivePage == "Configuration.Fuels" ? "is-active" : "")" asp-controller="Configuration" asp-action="Fuels"><span>Fuels</span></a>
                         <a class="eg-rb-tile @(Model.ActivePage == "Configuration.FuelTypes" ? "is-active" : "")" asp-controller="Configuration" asp-action="FuelTypes"><span>Types</span></a>
+                        <a class="eg-rb-tile @(Model.ActivePage == "Configuration.FuelUnits" ? "is-active" : "")" asp-controller="Configuration" asp-action="FuelUnits"><span>Units</span></a>
                         <a class="eg-rb-tile @(Model.ActivePage == "Configuration.Pumps" ? "is-active" : "")" asp-controller="Configuration" asp-action="Pumps"><span>Pumps</span></a>
                         <a class="eg-rb-tile @(Model.ActivePage == "Configuration.Tanks" ? "is-active" : "")" asp-controller="Configuration" asp-action="Tanks"><span>Tanks</span></a>
                     </nav>
@@ -62,7 +63,6 @@
                     <div class="eg-rb-subgroup-title">Access</div>
                     <nav class="eg-rb-items" aria-label="Page links">
                         <a class="eg-rb-tile @(Model.ActivePage == "Users.Index" ? "is-active" : "")" asp-controller="Users" asp-action="Index"><span>Users</span></a>
-                        <a class="eg-rb-tile @(Model.ActivePage == "Employees.Index" ? "is-active" : "")" asp-controller="Employees" asp-action="Index"><span>Employees</span></a>
                         <a class="eg-rb-tile @(Model.ActivePage == "Roles.Index" ? "is-active" : "")" asp-controller="Roles" asp-action="Index"><span>Roles</span></a>
                         <a class="eg-rb-tile @(Model.ActivePage == "Permissions.Index" ? "is-active" : "")" asp-controller="Permissions" asp-action="Index"><span>Permissions</span></a>
                     </nav>
@@ -70,8 +70,11 @@
                 <section class="eg-rb-page-card">
                     <div class="eg-rb-subgroup-title">Config</div>
                     <nav class="eg-rb-items" aria-label="Page links">
+                        <a class="eg-rb-tile @(Model.ActivePage == "Employees.Index" ? "is-active" : "")" asp-controller="Employees" asp-action="Index"><span>Employees</span></a>
                         <a class="eg-rb-tile @(Model.ActivePage == "Suppliers.Index" ? "is-active" : "")" asp-controller="Suppliers" asp-action="Index"><span>Suppliers</span></a>
                         <a class="eg-rb-tile @(Model.ActivePage == "Configuration.Position" ? "is-active" : "")" asp-controller="Configuration" asp-action="Position"><span>Position</span></a>
+                        <a class="eg-rb-tile @(Model.ActivePage == "Configuration.Branch" ? "is-active" : "")" asp-controller="Configuration" asp-action="Branch"><span>Branch</span></a>
+                        <a class="eg-rb-tile @(Model.ActivePage == "Configuration.Department" ? "is-active" : "")" asp-controller="Configuration" asp-action="Department"><span>Department</span></a>
                     </nav>
                 </section>
             </div>

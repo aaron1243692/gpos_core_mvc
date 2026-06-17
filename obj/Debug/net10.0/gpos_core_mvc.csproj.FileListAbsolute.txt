@@ -111,7 +111,6 @@ C:\project\gpos_core_mvc\obj\Debug\net10.0\scopedcss\Views\Shared\_Layout.cshtml
 C:\project\gpos_core_mvc\obj\Debug\net10.0\scopedcss\bundle\gpos_core_mvc.styles.css
 C:\project\gpos_core_mvc\obj\Debug\net10.0\scopedcss\projectbundle\gpos_core_mvc.bundle.scp.css
 C:\project\gpos_core_mvc\obj\Debug\net10.0\compressed\91gdkv4az0-{0}-61n19gt1b8-61n19gt1b8.gz
-C:\project\gpos_core_mvc\obj\Debug\net10.0\compressed\j7yrgpa9p4-{0}-y3pxobjlij-y3pxobjlij.gz
 C:\project\gpos_core_mvc\obj\Debug\net10.0\compressed\iihbuwp2ov-{0}-bqjiyaj88i-bqjiyaj88i.gz
 C:\project\gpos_core_mvc\obj\Debug\net10.0\compressed\stfm2x8nhn-{0}-c2jlpeoesf-c2jlpeoesf.gz
 C:\project\gpos_core_mvc\obj\Debug\net10.0\compressed\rvindlr5s9-{0}-erw9l3u2r3-erw9l3u2r3.gz
@@ -576,7 +575,6 @@ C:\project\gpos_core_mvc\.codex-build-check-css\ru\Microsoft.CodeAnalysis.Worksp
 C:\project\gpos_core_mvc\.codex-build-check-css\tr\Microsoft.CodeAnalysis.Workspaces.MSBuild.BuildHost.resources.dll
 C:\project\gpos_core_mvc\.codex-build-check-css\zh-Hans\Microsoft.CodeAnalysis.Workspaces.MSBuild.BuildHost.resources.dll
 C:\project\gpos_core_mvc\.codex-build-check-css\zh-Hant\Microsoft.CodeAnalysis.Workspaces.MSBuild.BuildHost.resources.dll
-C:\project\gpos_core_mvc\obj\Debug\net10.0\compressed\ios0330fcj-{0}-r9txeu65gl-r9txeu65gl.gz
 C:\project\gpos_core_mvc\.codex-build-check-header\appsettings.Development.json
 C:\project\gpos_core_mvc\.codex-build-check-header\appsettings.json
 C:\project\gpos_core_mvc\.codex-build-check-header\gpos_core_mvc.staticwebassets.runtime.json
@@ -683,3 +681,5 @@ C:\Users\Admin\AppData\Local\Temp\gpos_core_mvc_codex_build\gpos_core_mvc.deps.j
 C:\Users\Admin\AppData\Local\Temp\gpos_core_mvc_codex_build\gpos_core_mvc.runtimeconfig.json
 C:\Users\Admin\AppData\Local\Temp\gpos_core_mvc_codex_build\gpos_core_mvc.dll
 C:\Users\Admin\AppData\Local\Temp\gpos_core_mvc_codex_build\gpos_core_mvc.pdb
+C:\project\gpos_core_mvc\obj\Debug\net10.0\compressed\ios0330fcj-{0}-z6b4itnebh-z6b4itnebh.gz
+C:\project\gpos_core_mvc\obj\Debug\net10.0\compressed\j7yrgpa9p4-{0}-wjlyj6786t-wjlyj6786t.gz
