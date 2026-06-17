@@ -8,9 +8,143 @@
         </a>
 
         <nav class="eg-rb-tabs" aria-label="Main page groups">
-            <button class="eg-rb-tab @(Model.ActiveTab == "Configuration" ? "is-active" : "")" type="button" data-gpos-tab="Configuration" aria-controls="gposHeaderPanel-Configuration" aria-selected="@(Model.ActiveTab == "Configuration" ? "true" : "false")">Setup</button>
-            <button class="eg-rb-tab @(Model.ActiveTab == "Transactions" ? "is-active" : "")" type="button" data-gpos-tab="Transactions" aria-controls="gposHeaderPanel-Transactions" aria-selected="@(Model.ActiveTab == "Transactions" ? "true" : "false")">Transaction</button>
-            <button class="eg-rb-tab @(Model.ActiveTab == "Reports" ? "is-active" : "")" type="button" data-gpos-tab="Reports" aria-controls="gposHeaderPanel-Reports" aria-selected="@(Model.ActiveTab == "Reports" ? "true" : "false")">Reports</button>
+            <div class="dropdown eg-rb-nav-dropdown eg-rb-setup-dropdown">
+                <button class="eg-rb-tab dropdown-toggle @(Model.ActiveTab == "Configuration" ? "is-active" : "")" type="button" id="gposSetupDropdown" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">Setup</button>
+                <div class="dropdown-menu eg-rb-setup-menu" aria-labelledby="gposSetupDropdown">
+                    <div class="dropend eg-rb-dropdown-group">
+                        <button class="dropdown-item eg-rb-dropdown-group-toggle" type="button">Products</button>
+                        <div class="dropdown-menu eg-rb-submenu">
+                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Configuration.DisplayProducts" ? "active" : "")" asp-controller="Configuration" asp-action="DisplayProducts">Display</a>
+                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Configuration.WarehouseProducts" ? "active" : "")" asp-controller="Configuration" asp-action="WarehouseProducts">Warehouse</a>
+                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Configuration.ProductCategories" ? "active" : "")" asp-controller="Configuration" asp-action="ProductCategories">Categories</a>
+                        </div>
+                    </div>
+                    <div class="dropend eg-rb-dropdown-group">
+                        <button class="dropdown-item eg-rb-dropdown-group-toggle" type="button">Fuel</button>
+                        <div class="dropdown-menu eg-rb-submenu">
+                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Configuration.Fuels" ? "active" : "")" asp-controller="Configuration" asp-action="Fuels">Fuels</a>
+                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Configuration.FuelTypes" ? "active" : "")" asp-controller="Configuration" asp-action="FuelTypes">Types</a>
+                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Configuration.FuelUnits" ? "active" : "")" asp-controller="Configuration" asp-action="FuelUnits">Units</a>
+                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Configuration.Pumps" ? "active" : "")" asp-controller="Configuration" asp-action="Pumps">Pumps</a>
+                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Configuration.Tanks" ? "active" : "")" asp-controller="Configuration" asp-action="Tanks">Tanks</a>
+                        </div>
+                    </div>
+                    <div class="dropend eg-rb-dropdown-group">
+                        <button class="dropdown-item eg-rb-dropdown-group-toggle" type="button">Discounts</button>
+                        <div class="dropdown-menu eg-rb-submenu">
+                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Configuration.Discounts" ? "active" : "")" asp-controller="Configuration" asp-action="Discounts">Discount</a>
+                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Configuration.Members" ? "active" : "")" asp-controller="Configuration" asp-action="Members">Members</a>
+                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Configuration.Rebate" ? "active" : "")" asp-controller="Configuration" asp-action="Rebate">Rebate</a>
+                        </div>
+                    </div>
+                    <div class="dropend eg-rb-dropdown-group">
+                        <button class="dropdown-item eg-rb-dropdown-group-toggle" type="button">Access</button>
+                        <div class="dropdown-menu eg-rb-submenu">
+                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Users.Index" ? "active" : "")" asp-controller="Users" asp-action="Index">Users</a>
+                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Roles.Index" ? "active" : "")" asp-controller="Roles" asp-action="Index">Roles</a>
+                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Permissions.Index" ? "active" : "")" asp-controller="Permissions" asp-action="Index">Permissions</a>
+                        </div>
+                    </div>
+                    <div class="dropend eg-rb-dropdown-group">
+                        <button class="dropdown-item eg-rb-dropdown-group-toggle" type="button">Config</button>
+                        <div class="dropdown-menu eg-rb-submenu">
+                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Employees.Index" ? "active" : "")" asp-controller="Employees" asp-action="Index">Employees</a>
+                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Suppliers.Index" ? "active" : "")" asp-controller="Suppliers" asp-action="Index">Suppliers</a>
+                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Configuration.Position" ? "active" : "")" asp-controller="Configuration" asp-action="Position">Position</a>
+                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Configuration.Branch" ? "active" : "")" asp-controller="Configuration" asp-action="Branch">Branch</a>
+                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Configuration.Department" ? "active" : "")" asp-controller="Configuration" asp-action="Department">Department</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="dropdown eg-rb-nav-dropdown">
+                <button class="eg-rb-tab dropdown-toggle @(Model.ActiveTab == "Transactions" ? "is-active" : "")" type="button" id="gposTransactionDropdown" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">Transaction</button>
+                <div class="dropdown-menu eg-rb-setup-menu" aria-labelledby="gposTransactionDropdown">
+                    <div class="dropend eg-rb-dropdown-group">
+                        <button class="dropdown-item eg-rb-dropdown-group-toggle" type="button">Sales</button>
+                        <div class="dropdown-menu eg-rb-submenu">
+                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Transaction.ProductSales" ? "active" : "")" asp-controller="Transaction" asp-action="ProductSales">Product</a>
+                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Transaction.FuelSales" ? "active" : "")" asp-controller="Transaction" asp-action="FuelSales">Fuel</a>
+                        </div>
+                    </div>
+                    <div class="dropend eg-rb-dropdown-group">
+                        <button class="dropdown-item eg-rb-dropdown-group-toggle" type="button">Employee</button>
+                        <div class="dropdown-menu eg-rb-submenu">
+                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Salesman.POS" ? "active" : "")" asp-controller="Salesman" asp-action="POS">POS</a>
+                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Transaction.EmployeeProductSales" ? "active" : "")" asp-controller="Transaction" asp-action="EmployeeProductSales">Product</a>
+                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Transaction.EmployeeFuelSales" ? "active" : "")" asp-controller="Transaction" asp-action="EmployeeFuelSales">Fuel</a>
+                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Transaction.DailyCash" ? "active" : "")" asp-controller="Transaction" asp-action="DailyCash">Daily Cash</a>
+                        </div>
+                    </div>
+                    <div class="dropend eg-rb-dropdown-group">
+                        <button class="dropdown-item eg-rb-dropdown-group-toggle" type="button">Stock Transfer</button>
+                        <div class="dropdown-menu eg-rb-submenu">
+                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Transaction.WarehouseTransfer" ? "active" : "")" asp-controller="Transaction" asp-action="WarehouseTransfer">Warehouse</a>
+                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Transaction.DisplayTransfer" ? "active" : "")" asp-controller="Transaction" asp-action="DisplayTransfer">Display</a>
+                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Transaction.FuelTransfer" ? "active" : "")" asp-controller="Transaction" asp-action="FuelTransfer">Fuel</a>
+                        </div>
+                    </div>
+                    <div class="dropend eg-rb-dropdown-group">
+                        <button class="dropdown-item eg-rb-dropdown-group-toggle" type="button">Adjustment</button>
+                        <div class="dropdown-menu eg-rb-submenu">
+                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Transaction.WarehouseAdjustment" ? "active" : "")" asp-controller="Transaction" asp-action="WarehouseAdjustment">Warehouse</a>
+                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Transaction.ProductAdjustment" ? "active" : "")" asp-controller="Transaction" asp-action="ProductAdjustment">Product</a>
+                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Transaction.FuelAdjustment" ? "active" : "")" asp-controller="Transaction" asp-action="FuelAdjustment">Fuel</a>
+                        </div>
+                    </div>
+                    <div class="dropend eg-rb-dropdown-group">
+                        <button class="dropdown-item eg-rb-dropdown-group-toggle" type="button">Returns</button>
+                        <div class="dropdown-menu eg-rb-submenu">
+                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Transaction.WarehouseReturn" ? "active" : "")" asp-controller="Transaction" asp-action="WarehouseReturn">Warehouse</a>
+                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Transaction.ProductReturn" ? "active" : "")" asp-controller="Transaction" asp-action="ProductReturn">Product</a>
+                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Transaction.FuelReturn" ? "active" : "")" asp-controller="Transaction" asp-action="FuelReturn">Fuel</a>
+                        </div>
+                    </div>
+                    <div class="dropend eg-rb-dropdown-group">
+                        <button class="dropdown-item eg-rb-dropdown-group-toggle" type="button">Void</button>
+                        <div class="dropdown-menu eg-rb-submenu">
+                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Transaction.WarehouseVoid" ? "active" : "")" asp-controller="Transaction" asp-action="WarehouseVoid">Warehouse</a>
+                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Transaction.ProductVoid" ? "active" : "")" asp-controller="Transaction" asp-action="ProductVoid">Product</a>
+                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Transaction.FuelVoid" ? "active" : "")" asp-controller="Transaction" asp-action="FuelVoid">Fuel</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="dropdown eg-rb-nav-dropdown">
+                <button class="eg-rb-tab dropdown-toggle @(Model.ActiveTab == "Reports" ? "is-active" : "")" type="button" id="gposReportsDropdown" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">Reports</button>
+                <div class="dropdown-menu eg-rb-setup-menu" aria-labelledby="gposReportsDropdown">
+                    <div class="dropend eg-rb-dropdown-group">
+                        <button class="dropdown-item eg-rb-dropdown-group-toggle" type="button">Sales Reports</button>
+                        <div class="dropdown-menu eg-rb-submenu">
+                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Reports.DailySales" ? "active" : "")" asp-controller="Reports" asp-action="DailySales">Daily Sales</a>
+                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Reports.FuelSales" ? "active" : "")" asp-controller="Reports" asp-action="FuelSales">Fuel Sales</a>
+                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Reports.ProductSales" ? "active" : "")" asp-controller="Reports" asp-action="ProductSales">Product Sales</a>
+                        </div>
+                    </div>
+                    <div class="dropend eg-rb-dropdown-group">
+                        <button class="dropdown-item eg-rb-dropdown-group-toggle" type="button">Shift and Cash Reports</button>
+                        <div class="dropdown-menu eg-rb-submenu">
+                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Reports.ShiftReport" ? "active" : "")" asp-controller="Reports" asp-action="ShiftReport">Shift Report</a>
+                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Reports.CashReport" ? "active" : "")" asp-controller="Reports" asp-action="CashReport">Cash Report</a>
+                        </div>
+                    </div>
+                    <div class="dropend eg-rb-dropdown-group">
+                        <button class="dropdown-item eg-rb-dropdown-group-toggle" type="button">Inventory Reports</button>
+                        <div class="dropdown-menu eg-rb-submenu">
+                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Reports.InventoryReport" ? "active" : "")" asp-controller="Reports" asp-action="InventoryReport">Inventory Report</a>
+                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Reports.PurchaseHistory" ? "active" : "")" asp-controller="Reports" asp-action="PurchaseHistory">Purchase History</a>
+                        </div>
+                    </div>
+                    <div class="dropend eg-rb-dropdown-group">
+                        <button class="dropdown-item eg-rb-dropdown-group-toggle" type="button">Daily Stock</button>
+                        <div class="dropdown-menu eg-rb-submenu">
+                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Reports.WarehouseDailyStock" ? "active" : "")" asp-controller="Reports" asp-action="WarehouseDailyStock">Warehouse</a>
+                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Reports.DisplayDailyStock" ? "active" : "")" asp-controller="Reports" asp-action="DisplayDailyStock">Display</a>
+                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Reports.TankDailyStock" ? "active" : "")" asp-controller="Reports" asp-action="TankDailyStock">Tank</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </nav>
 
         <details class="eg-rb-user" id="gposUserDropdown">
@@ -28,144 +162,5 @@
                 </form>
             </div>
         </details>
-    </div>
-
-    <div class="eg-rb-ribbon">
-        <section class="eg-rb-pages-panel @(Model.ActiveTab == "Configuration" ? "is-active" : "")" id="gposHeaderPanel-Configuration" data-gpos-panel="Configuration" aria-label="Configuration pages">
-            <div class="eg-rb-subgroups">
-                <section class="eg-rb-page-card">
-                    <div class="eg-rb-subgroup-title">Products</div>
-                    <nav class="eg-rb-items" aria-label="Page links">
-                        <a class="eg-rb-tile @(Model.ActivePage == "Configuration.DisplayProducts" ? "is-active" : "")" asp-controller="Configuration" asp-action="DisplayProducts"><span>Display</span></a>
-                        <a class="eg-rb-tile @(Model.ActivePage == "Configuration.WarehouseProducts" ? "is-active" : "")" asp-controller="Configuration" asp-action="WarehouseProducts"><span>Warehouse</span></a>
-                        <a class="eg-rb-tile @(Model.ActivePage == "Configuration.ProductCategories" ? "is-active" : "")" asp-controller="Configuration" asp-action="ProductCategories"><span>Categories</span></a>
-                    </nav>
-                </section>
-                <section class="eg-rb-page-card">
-                    <div class="eg-rb-subgroup-title">Fuel</div>
-                    <nav class="eg-rb-items" aria-label="Page links">
-                        <a class="eg-rb-tile @(Model.ActivePage == "Configuration.Fuels" ? "is-active" : "")" asp-controller="Configuration" asp-action="Fuels"><span>Fuels</span></a>
-                        <a class="eg-rb-tile @(Model.ActivePage == "Configuration.FuelTypes" ? "is-active" : "")" asp-controller="Configuration" asp-action="FuelTypes"><span>Types</span></a>
-                        <a class="eg-rb-tile @(Model.ActivePage == "Configuration.FuelUnits" ? "is-active" : "")" asp-controller="Configuration" asp-action="FuelUnits"><span>Units</span></a>
-                        <a class="eg-rb-tile @(Model.ActivePage == "Configuration.Pumps" ? "is-active" : "")" asp-controller="Configuration" asp-action="Pumps"><span>Pumps</span></a>
-                        <a class="eg-rb-tile @(Model.ActivePage == "Configuration.Tanks" ? "is-active" : "")" asp-controller="Configuration" asp-action="Tanks"><span>Tanks</span></a>
-                    </nav>
-                </section>
-                <section class="eg-rb-page-card">
-                    <div class="eg-rb-subgroup-title">Discounts</div>
-                    <nav class="eg-rb-items" aria-label="Page links">
-                        <a class="eg-rb-tile @(Model.ActivePage == "Configuration.Discounts" ? "is-active" : "")" asp-controller="Configuration" asp-action="Discounts"><span>Discount</span></a>
-                        <a class="eg-rb-tile @(Model.ActivePage == "Configuration.Members" ? "is-active" : "")" asp-controller="Configuration" asp-action="Members"><span>Members</span></a>
-                        <a class="eg-rb-tile @(Model.ActivePage == "Configuration.Rebate" ? "is-active" : "")" asp-controller="Configuration" asp-action="Rebate"><span>Rebate</span></a>
-                    </nav>
-                </section>
-                <section class="eg-rb-page-card">
-                    <div class="eg-rb-subgroup-title">Access</div>
-                    <nav class="eg-rb-items" aria-label="Page links">
-                        <a class="eg-rb-tile @(Model.ActivePage == "Users.Index" ? "is-active" : "")" asp-controller="Users" asp-action="Index"><span>Users</span></a>
-                        <a class="eg-rb-tile @(Model.ActivePage == "Roles.Index" ? "is-active" : "")" asp-controller="Roles" asp-action="Index"><span>Roles</span></a>
-                        <a class="eg-rb-tile @(Model.ActivePage == "Permissions.Index" ? "is-active" : "")" asp-controller="Permissions" asp-action="Index"><span>Permissions</span></a>
-                    </nav>
-                </section>
-                <section class="eg-rb-page-card">
-                    <div class="eg-rb-subgroup-title">Config</div>
-                    <nav class="eg-rb-items" aria-label="Page links">
-                        <a class="eg-rb-tile @(Model.ActivePage == "Employees.Index" ? "is-active" : "")" asp-controller="Employees" asp-action="Index"><span>Employees</span></a>
-                        <a class="eg-rb-tile @(Model.ActivePage == "Suppliers.Index" ? "is-active" : "")" asp-controller="Suppliers" asp-action="Index"><span>Suppliers</span></a>
-                        <a class="eg-rb-tile @(Model.ActivePage == "Configuration.Position" ? "is-active" : "")" asp-controller="Configuration" asp-action="Position"><span>Position</span></a>
-                        <a class="eg-rb-tile @(Model.ActivePage == "Configuration.Branch" ? "is-active" : "")" asp-controller="Configuration" asp-action="Branch"><span>Branch</span></a>
-                        <a class="eg-rb-tile @(Model.ActivePage == "Configuration.Department" ? "is-active" : "")" asp-controller="Configuration" asp-action="Department"><span>Department</span></a>
-                    </nav>
-                </section>
-            </div>
-        </section>
-
-        <section class="eg-rb-pages-panel @(Model.ActiveTab == "Transactions" ? "is-active" : "")" id="gposHeaderPanel-Transactions" data-gpos-panel="Transactions" aria-label="Transaction pages">
-            <div class="eg-rb-subgroups">
-                <section class="eg-rb-page-card">
-                    <div class="eg-rb-subgroup-title">Sales</div>
-                    <nav class="eg-rb-items" aria-label="Page links">
-                        <a class="eg-rb-tile @(Model.ActivePage == "Transaction.ProductSales" ? "is-active" : "")" asp-controller="Transaction" asp-action="ProductSales"><span>Product</span></a>
-                        <a class="eg-rb-tile @(Model.ActivePage == "Transaction.FuelSales" ? "is-active" : "")" asp-controller="Transaction" asp-action="FuelSales"><span>Fuel</span></a>
-                    </nav>
-                </section>
-                <section class="eg-rb-page-card">
-                    <div class="eg-rb-subgroup-title">Employee</div>
-                    <nav class="eg-rb-items" aria-label="Page links">
-                        <a class="eg-rb-tile @(Model.ActivePage == "Salesman.POS" ? "is-active" : "")" asp-controller="Salesman" asp-action="POS"><span>POS</span></a>
-                        <a class="eg-rb-tile @(Model.ActivePage == "Transaction.EmployeeProductSales" ? "is-active" : "")" asp-controller="Transaction" asp-action="EmployeeProductSales"><span>Product</span></a>
-                        <a class="eg-rb-tile @(Model.ActivePage == "Transaction.EmployeeFuelSales" ? "is-active" : "")" asp-controller="Transaction" asp-action="EmployeeFuelSales"><span>Fuel</span></a>
-                        <a class="eg-rb-tile @(Model.ActivePage == "Transaction.DailyCash" ? "is-active" : "")" asp-controller="Transaction" asp-action="DailyCash"><span>Daily Cash</span></a>
-                    </nav>
-                </section>
-                <section class="eg-rb-page-card">
-                    <div class="eg-rb-subgroup-title">Stock Transfer</div>
-                    <nav class="eg-rb-items" aria-label="Page links">
-                        <a class="eg-rb-tile @(Model.ActivePage == "Transaction.WarehouseTransfer" ? "is-active" : "")" asp-controller="Transaction" asp-action="WarehouseTransfer"><span>Warehouse</span></a>
-                        <a class="eg-rb-tile @(Model.ActivePage == "Transaction.DisplayTransfer" ? "is-active" : "")" asp-controller="Transaction" asp-action="DisplayTransfer"><span>Display</span></a>
-                        <a class="eg-rb-tile @(Model.ActivePage == "Transaction.FuelTransfer" ? "is-active" : "")" asp-controller="Transaction" asp-action="FuelTransfer"><span>Fuel</span></a>
-                    </nav>
-                </section>
-                <section class="eg-rb-page-card">
-                    <div class="eg-rb-subgroup-title">Adjustment</div>
-                    <nav class="eg-rb-items" aria-label="Page links">
-                        <a class="eg-rb-tile @(Model.ActivePage == "Transaction.WarehouseAdjustment" ? "is-active" : "")" asp-controller="Transaction" asp-action="WarehouseAdjustment"><span>Warehouse</span></a>
-                        <a class="eg-rb-tile @(Model.ActivePage == "Transaction.ProductAdjustment" ? "is-active" : "")" asp-controller="Transaction" asp-action="ProductAdjustment"><span>Product</span></a>
-                        <a class="eg-rb-tile @(Model.ActivePage == "Transaction.FuelAdjustment" ? "is-active" : "")" asp-controller="Transaction" asp-action="FuelAdjustment"><span>Fuel</span></a>
-                    </nav>
-                </section>
-                <section class="eg-rb-page-card">
-                    <div class="eg-rb-subgroup-title">Returns</div>
-                    <nav class="eg-rb-items" aria-label="Page links">
-                        <a class="eg-rb-tile @(Model.ActivePage == "Transaction.WarehouseReturn" ? "is-active" : "")" asp-controller="Transaction" asp-action="WarehouseReturn"><span>Warehouse</span></a>
-                        <a class="eg-rb-tile @(Model.ActivePage == "Transaction.ProductReturn" ? "is-active" : "")" asp-controller="Transaction" asp-action="ProductReturn"><span>Product</span></a>
-                        <a class="eg-rb-tile @(Model.ActivePage == "Transaction.FuelReturn" ? "is-active" : "")" asp-controller="Transaction" asp-action="FuelReturn"><span>Fuel</span></a>
-                    </nav>
-                </section>
-                <section class="eg-rb-page-card">
-                    <div class="eg-rb-subgroup-title">Void</div>
-                    <nav class="eg-rb-items" aria-label="Page links">
-                        <a class="eg-rb-tile @(Model.ActivePage == "Transaction.WarehouseVoid" ? "is-active" : "")" asp-controller="Transaction" asp-action="WarehouseVoid"><span>Warehouse</span></a>
-                        <a class="eg-rb-tile @(Model.ActivePage == "Transaction.ProductVoid" ? "is-active" : "")" asp-controller="Transaction" asp-action="ProductVoid"><span>Product</span></a>
-                        <a class="eg-rb-tile @(Model.ActivePage == "Transaction.FuelVoid" ? "is-active" : "")" asp-controller="Transaction" asp-action="FuelVoid"><span>Fuel</span></a>
-                    </nav>
-                </section>
-            </div>
-        </section>
-
-        <section class="eg-rb-pages-panel @(Model.ActiveTab == "Reports" ? "is-active" : "")" id="gposHeaderPanel-Reports" data-gpos-panel="Reports" aria-label="Reports pages">
-            <div class="eg-rb-subgroups">
-                <section class="eg-rb-page-card">
-                    <div class="eg-rb-subgroup-title">Sales Reports</div>
-                    <nav class="eg-rb-items" aria-label="Page links">
-                        <a class="eg-rb-tile @(Model.ActivePage == "Reports.DailySales" ? "is-active" : "")" asp-controller="Reports" asp-action="DailySales"><span>Daily Sales</span></a>
-                        <a class="eg-rb-tile @(Model.ActivePage == "Reports.FuelSales" ? "is-active" : "")" asp-controller="Reports" asp-action="FuelSales"><span>Fuel Sales</span></a>
-                        <a class="eg-rb-tile @(Model.ActivePage == "Reports.ProductSales" ? "is-active" : "")" asp-controller="Reports" asp-action="ProductSales"><span>Product Sales</span></a>
-                    </nav>
-                </section>
-                <section class="eg-rb-page-card">
-                    <div class="eg-rb-subgroup-title">Shift and Cash Reports</div>
-                    <nav class="eg-rb-items" aria-label="Page links">
-                        <a class="eg-rb-tile @(Model.ActivePage == "Reports.ShiftReport" ? "is-active" : "")" asp-controller="Reports" asp-action="ShiftReport"><span>Shift Report</span></a>
-                        <a class="eg-rb-tile @(Model.ActivePage == "Reports.CashReport" ? "is-active" : "")" asp-controller="Reports" asp-action="CashReport"><span>Cash Report</span></a>
-                    </nav>
-                </section>
-                <section class="eg-rb-page-card">
-                    <div class="eg-rb-subgroup-title">Inventory Reports</div>
-                    <nav class="eg-rb-items" aria-label="Page links">
-                        <a class="eg-rb-tile @(Model.ActivePage == "Reports.InventoryReport" ? "is-active" : "")" asp-controller="Reports" asp-action="InventoryReport"><span>Inventory Report</span></a>
-                    </nav>
-                </section>
-                <section class="eg-rb-page-card">
-                    <div class="eg-rb-subgroup-title">Daily Stock</div>
-                    <nav class="eg-rb-items" aria-label="Page links">
-                        <a class="eg-rb-tile @(Model.ActivePage == "Reports.WarehouseDailyStock" ? "is-active" : "")" asp-controller="Reports" asp-action="WarehouseDailyStock"><span>Warehouse</span></a>
-                        <a class="eg-rb-tile @(Model.ActivePage == "Reports.DisplayDailyStock" ? "is-active" : "")" asp-controller="Reports" asp-action="DisplayDailyStock"><span>Display</span></a>
-                        <a class="eg-rb-tile @(Model.ActivePage == "Reports.TankDailyStock" ? "is-active" : "")" asp-controller="Reports" asp-action="TankDailyStock"><span>Tank</span></a>
-                    </nav>
-                </section>
-            </div>
-        </section>
-
     </div>
 </header>

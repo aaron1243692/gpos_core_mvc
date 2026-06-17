@@ -1,5 +1,7 @@
 using gpos.Models;
 using gpos.Services;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Mvc;
 
 namespace gpos.Controllers
@@ -47,14 +49,12 @@ namespace gpos.Controllers
         }
 
         [HttpGet("Logout")]
-        public IActionResult Logout()
+        public async Task<IActionResult> Logout()
         {
-            HttpContext.Session.Remove("EmployeeId");
-            HttpContext.Session.Remove("EmployeeName");
-            HttpContext.Session.Remove("EmployeeUsername");
-            HttpContext.Session.Remove("EmployeeRole");
+            HttpContext.Session.Clear();
+            await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
 
-            return RedirectToAction(nameof(Login));
+            return RedirectToAction("Index", "Home");
         }
     }
 }

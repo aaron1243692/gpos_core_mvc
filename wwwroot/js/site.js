@@ -3,19 +3,51 @@
 
 document.addEventListener("DOMContentLoaded", () => {
   const ribbon = document.querySelector("[data-gpos-ribbon]");
-  const userDropdown = document.getElementById("gposUserDropdown");
+  const userDropdowns = Array.from(document.querySelectorAll(".eg-rb-user"));
+  const loginForms = Array.from(document.querySelectorAll(".login-form"));
 
-  if (userDropdown) {
+  loginForms.forEach((form) => {
+    const identityInput = form.querySelector(".login-identity-input");
+    const passwordInput = form.querySelector(".login-password-input");
+
+    if (identityInput) {
+      identityInput.focus();
+
+      identityInput.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") {
+          event.preventDefault();
+          passwordInput?.focus();
+        }
+      });
+    }
+
+    if (passwordInput) {
+      passwordInput.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") {
+          event.preventDefault();
+          form.requestSubmit();
+        }
+      });
+    }
+  });
+
+  if (userDropdowns.length) {
     document.addEventListener("click", (event) => {
-      if (!userDropdown.contains(event.target)) {
-        userDropdown.removeAttribute("open");
-      }
+      userDropdowns.forEach((userDropdown) => {
+        if (!userDropdown.contains(event.target)) {
+          userDropdown.removeAttribute("open");
+        }
+      });
     });
 
     document.addEventListener("keydown", (event) => {
-      if (event.key === "Escape" && userDropdown.hasAttribute("open")) {
-        userDropdown.removeAttribute("open");
-        userDropdown.querySelector("summary")?.focus();
+      if (event.key === "Escape") {
+        userDropdowns.forEach((userDropdown) => {
+          if (userDropdown.hasAttribute("open")) {
+            userDropdown.removeAttribute("open");
+            userDropdown.querySelector("summary")?.focus();
+          }
+        });
       }
     });
   }
@@ -28,9 +60,22 @@ document.addEventListener("DOMContentLoaded", () => {
   const tabs = Array.from(ribbon.querySelectorAll("[data-gpos-tab]"));
   const panels = Array.from(ribbon.querySelectorAll("[data-gpos-panel]"));
   const pageLinks = Array.from(ribbon.querySelectorAll(".eg-rb-tile"));
+  const navDropdowns = Array.from(ribbon.querySelectorAll(".eg-rb-nav-dropdown"));
 
   const closeHeaderPanels = () => {
     ribbon.classList.remove("is-open");
+  };
+
+  const closeDropdownSubmenus = (dropdown = null, exceptGroup = null) => {
+    const groups = dropdown
+      ? Array.from(dropdown.querySelectorAll(".eg-rb-dropdown-group"))
+      : Array.from(ribbon.querySelectorAll(".eg-rb-dropdown-group"));
+
+    groups.forEach((group) => {
+      if (group !== exceptGroup) {
+        group.classList.remove("is-open");
+      }
+    });
   };
 
   const activateHeaderTab = (name, shouldOpen = true) => {
@@ -55,6 +100,44 @@ document.addEventListener("DOMContentLoaded", () => {
       event.stopPropagation();
       const isSameOpenTab = ribbon.classList.contains("is-open") && tab.classList.contains("is-active");
       activateHeaderTab(tab.dataset.gposTab, !isSameOpenTab);
+    });
+  });
+
+  navDropdowns.forEach((dropdown) => {
+    const toggle = dropdown.querySelector(".eg-rb-tab");
+    const groups = Array.from(dropdown.querySelectorAll(".eg-rb-dropdown-group"));
+
+    if (!toggle) {
+      return;
+    }
+
+    toggle.addEventListener("show.bs.dropdown", () => {
+      closeHeaderPanels();
+      navDropdowns.forEach((otherDropdown) => {
+        if (otherDropdown !== dropdown) {
+          closeDropdownSubmenus(otherDropdown);
+        }
+      });
+    });
+
+    toggle.addEventListener("hidden.bs.dropdown", () => {
+      closeDropdownSubmenus(dropdown);
+    });
+
+    groups.forEach((group) => {
+      const groupToggle = group.querySelector(".eg-rb-dropdown-group-toggle");
+
+      if (!groupToggle) {
+        return;
+      }
+
+      groupToggle.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        const shouldOpen = !group.classList.contains("is-open");
+        closeDropdownSubmenus(dropdown, group);
+        group.classList.toggle("is-open", shouldOpen);
+      });
     });
   });
 

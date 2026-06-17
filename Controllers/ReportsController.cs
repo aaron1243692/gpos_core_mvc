@@ -21,6 +21,7 @@ namespace gpos.Controllers
         public IActionResult PointsReport() => View();
         public IActionResult CustomerReport() => View();
         public IActionResult InventoryReport() => View();
+        public IActionResult PurchaseHistory() => View();
         public IActionResult FuelTankReport() => View();
         public IActionResult FuelBatchReport() => View();
         public IActionResult ItemBatchReport() => View();

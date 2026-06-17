@@ -12,135 +12,152 @@
 
 <section class="salesman-pos-page">
     <form id="posSaleForm" method="post" class="salesman-pos-card">
-        <div class="salesman-pos-panels">
-            <section class="salesman-pos-panel gas-panel">
-                <div class="pos-section-header">
-                    <div>
-                        <span class="pos-eyebrow">Gas</span>
-                        <h2>Gas Purchase</h2>
+        <div class="pos-order-layout">
+            <section class="pos-order-menu" aria-label="Order menu">
+                <div class="pos-order-toolbar">
+                    <h1>Product <span>Category</span></h1>
+                    <div class="pos-order-search">
+                        <span aria-hidden="true">Search</span>
+                        <input class="form-control" id="productSearch" type="search" placeholder="Search product or fuel" autocomplete="off" />
                     </div>
-                    <span class="status-badge">Cash Sale</span>
                 </div>
 
-                <div class="fuel-type-grid">
-                    <label class="fuel-option">
-                        <input class="form-check-input fuel-choice" type="radio" name="FuelType" value="Diesel" data-price="65" checked />
-                        <span>Diesel <small>PHP 65.00/L</small></span>
-                    </label>
-                    <label class="fuel-option">
-                        <input class="form-check-input fuel-choice" type="radio" name="FuelType" value="Gasoline" data-price="68" />
-                        <span>Gasoline <small>PHP 68.00/L</small></span>
-                    </label>
-                    <label class="fuel-option">
-                        <input class="form-check-input fuel-choice" type="radio" name="FuelType" value="Premium" data-price="72" />
-                        <span>Premium <small>PHP 72.00/L</small></span>
-                    </label>
+                <nav class="pos-category-row" aria-label="Order categories">
+                    <button class="pos-category-pill is-active" type="button"><span>HOT</span><strong>Hot</strong></button>
+                    <button class="pos-category-pill" type="button"><span>PRD</span><strong>Products</strong></button>
+                    <button class="pos-category-pill" type="button"><span>FUE</span><strong>Fuel</strong></button>
+                    <button class="pos-category-pill" type="button"><span>PAY</span><strong>Cash</strong></button>
+                    <button class="pos-category-pill" type="button"><span>REC</span><strong>Receipt</strong></button>
+                </nav>
+
+                <div class="pos-menu-heading">
+                    <h2>Products</h2>
+                    <div>Sort By <strong>Popular</strong></div>
                 </div>
-                
-                <div class="row g-3 mt-1">
-                    <div class="col-12">
-                        <label class="form-label" for="fuelCashAmount">Cash amount</label>
-                        <div class="input-group input-group-lg">
-                            <span class="input-group-text">PHP</span>
-                            <input class="form-control pos-total-input" id="fuelCashAmount" name="FuelCashAmount" type="number" min="0" step="0.01" placeholder="0.00" />
+
+                <div class="pos-product-grid">
+                    <article class="pos-menu-product-card" data-product-name="premium lubricant">
+                        <div class="pos-product-visual">PL</div>
+                        <h3>Premium Lubricant</h3>
+                        <p>PHP 530.00</p>
+                        <label class="pos-quantity-control" for="productQuantity_LUB001">
+                            <span>Qty</span>
+                            <input class="form-control product-quantity-input" id="productQuantity_LUB001" name="Products[0].Quantity" type="number" min="0" value="0" data-price="530" data-no="LUB-001" data-name="Premium Lubricant" aria-label="Premium Lubricant quantity" />
+                        </label>
+                        <input type="hidden" name="Products.Index" value="0" />
+                        <input type="hidden" name="Products[0].Code" value="LUB-001" />
+                        <input type="hidden" name="Products[0].Name" value="Premium Lubricant" />
+                    </article>
+                    <article class="pos-menu-product-card" data-product-name="engine coolant">
+                        <div class="pos-product-visual">EC</div>
+                        <h3>Engine Coolant</h3>
+                        <p>PHP 280.00</p>
+                        <label class="pos-quantity-control" for="productQuantity_CLT001">
+                            <span>Qty</span>
+                            <input class="form-control product-quantity-input" id="productQuantity_CLT001" name="Products[1].Quantity" type="number" min="0" value="0" data-price="280" data-no="CLT-001" data-name="Engine Coolant" aria-label="Engine Coolant quantity" />
+                        </label>
+                        <input type="hidden" name="Products.Index" value="1" />
+                        <input type="hidden" name="Products[1].Code" value="CLT-001" />
+                        <input type="hidden" name="Products[1].Name" value="Engine Coolant" />
+                    </article>
+                    <article class="pos-menu-product-card" data-product-name="brake fluid">
+                        <span class="pos-product-badge">New</span>
+                        <div class="pos-product-visual">BF</div>
+                        <h3>Brake Fluid</h3>
+                        <p>PHP 190.00</p>
+                        <label class="pos-quantity-control" for="productQuantity_BRK001">
+                            <span>Qty</span>
+                            <input class="form-control product-quantity-input" id="productQuantity_BRK001" name="Products[2].Quantity" type="number" min="0" value="0" data-price="190" data-no="BRK-001" data-name="Brake Fluid" aria-label="Brake Fluid quantity" />
+                        </label>
+                        <input type="hidden" name="Products.Index" value="2" />
+                        <input type="hidden" name="Products[2].Code" value="BRK-001" />
+                        <input type="hidden" name="Products[2].Name" value="Brake Fluid" />
+                    </article>
+                    <article class="pos-menu-product-card" data-product-name="wiper fluid">
+                        <div class="pos-product-visual">WF</div>
+                        <h3>Wiper Fluid</h3>
+                        <p>PHP 160.00</p>
+                        <label class="pos-quantity-control" for="productQuantity_WPR001">
+                            <span>Qty</span>
+                            <input class="form-control product-quantity-input" id="productQuantity_WPR001" name="Products[3].Quantity" type="number" min="0" value="0" data-price="160" data-no="WPR-001" data-name="Wiper Fluid" aria-label="Wiper Fluid quantity" />
+                        </label>
+                        <input type="hidden" name="Products.Index" value="3" />
+                        <input type="hidden" name="Products[3].Code" value="WPR-001" />
+                        <input type="hidden" name="Products[3].Name" value="Wiper Fluid" />
+                    </article>
+                </div>
+
+                <section class="pos-fuel-menu" aria-label="Fuel order">
+                    <div class="pos-menu-heading">
+                        <h2>Fuel <span>Menu</span></h2>
+                        <div>Cash Sale</div>
+                    </div>
+
+                    <div class="fuel-type-grid">
+                        <label class="fuel-option">
+                            <input class="form-check-input fuel-choice" type="radio" name="FuelType" value="Diesel" data-price="65" checked />
+                            <span>Diesel <small>PHP 65.00/L</small></span>
+                        </label>
+                        <label class="fuel-option">
+                            <input class="form-check-input fuel-choice" type="radio" name="FuelType" value="Gasoline" data-price="68" />
+                            <span>Gasoline <small>PHP 68.00/L</small></span>
+                        </label>
+                        <label class="fuel-option">
+                            <input class="form-check-input fuel-choice" type="radio" name="FuelType" value="Premium" data-price="72" />
+                            <span>Premium <small>PHP 72.00/L</small></span>
+                        </label>
+                    </div>
+
+                    <div class="pos-fuel-fields">
+                        <div>
+                            <label class="form-label" for="fuelCashAmount">Fuel cash amount</label>
+                            <div class="input-group">
+                                <span class="input-group-text">PHP</span>
+                                <input class="form-control pos-total-input" id="fuelCashAmount" name="FuelCashAmount" type="number" min="0" step="0.01" placeholder="0.00" />
+                            </div>
+                        </div>
+                        <div>
+                            <label class="form-label" for="fuelLiters">Liters</label>
+                            <input class="form-control" id="fuelLiters" name="FuelLiters" type="number" min="0" step="0.01" value="0.00" readonly />
                         </div>
                     </div>
-                    <div class="col-12">
-                        <label class="form-label" for="fuelLiters">Liters</label>
-                        <input class="form-control form-control-lg" id="fuelLiters" name="FuelLiters" type="number" min="0" step="0.01" value="0.00" readonly />
-                    </div>
-                    <div class="col-12 col-sm-6">
-                        <label class="form-label" for="paymentMethod">Payment method</label>
-                        <select class="form-select form-select-lg" id="paymentMethod" name="PaymentMethod">
+                </section>
+            </section>
+
+            <aside class="pos-order-summary" aria-label="Order summary">
+                <div class="pos-summary-top">
+                    <h2>Order Menu</h2>
+                    <span aria-hidden="true">Edit</span>
+                </div>
+
+                <div class="pos-summary-fields">
+                    <div>
+                        <label class="form-label" for="paymentMethod">Payment</label>
+                        <select class="form-select" id="paymentMethod" name="PaymentMethod">
                             <option>Cash</option>
                             <option>GCash</option>
                             <option>Card</option>
                         </select>
                     </div>
-                    <div class="col-12 col-sm-6">
-                        <label class="form-label" for="referenceNumber">Customer Code</label>
-                        <input class="form-control form-control-lg" id="referenceNumber" name="ReferenceNumber" placeholder="Customer code" />
-                    </div>
-                </div>
-            </section>
-
-            <section class="salesman-pos-panel product-panel">
-                <div class="pos-section-header">
                     <div>
-                        <span class="pos-eyebrow">Products</span>
-                        <h2>Products Purchase</h2>
+                        <label class="form-label" for="referenceNumber">Customer Code</label>
+                        <input class="form-control" id="referenceNumber" name="ReferenceNumber" placeholder="Walk-in" />
                     </div>
-                    <span class="status-badge">In Store</span>
                 </div>
 
-                <div class="mb-2">
-                    <label class="form-label" for="productSearch">Search products</label>
-                    <input class="form-control form-control-sm" id="productSearch" type="search" placeholder="Search by product name" autocomplete="off" />
+                <div class="pos-cart-list" id="orderCartItems">
+                    <div class="pos-empty-cart">No selected items yet.</div>
                 </div>
 
-                <div class="salesman-product-table-wrap">
-                    <table class="table app-table salesman-product-table align-middle">
-                        <thead>
-                            <tr>
-                                <th scope="col">No</th>
-                                <th scope="col">Name</th>
-                                <th scope="col">Quantity</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr data-product-name="premium lubricant">
-                                <td>LUB-001</td>
-                                <td>Premium Lubricant</td>
-                                <td>
-                                    <input class="form-control product-quantity-input" id="productQuantity_LUB001" name="Products[0].Quantity" type="number" min="0" value="0" data-price="530" aria-label="Premium Lubricant quantity" />
-                                    <input type="hidden" name="Products.Index" value="0" />
-                                    <input type="hidden" name="Products[0].Code" value="LUB-001" />
-                                    <input type="hidden" name="Products[0].Name" value="Premium Lubricant" />
-                                </td>
-                            </tr>
-                            <tr data-product-name="engine coolant">
-                                <td>CLT-001</td>
-                                <td>Engine Coolant</td>
-                                <td>
-                                    <input class="form-control product-quantity-input" id="productQuantity_CLT001" name="Products[1].Quantity" type="number" min="0" value="0" data-price="280" aria-label="Engine Coolant quantity" />
-                                    <input type="hidden" name="Products.Index" value="1" />
-                                    <input type="hidden" name="Products[1].Code" value="CLT-001" />
-                                    <input type="hidden" name="Products[1].Name" value="Engine Coolant" />
-                                </td>
-                            </tr>
-                            <tr data-product-name="brake fluid">
-                                <td>BRK-001</td>
-                                <td>Brake Fluid</td>
-                                <td>
-                                    <input class="form-control product-quantity-input" id="productQuantity_BRK001" name="Products[2].Quantity" type="number" min="0" value="0" data-price="190" aria-label="Brake Fluid quantity" />
-                                    <input type="hidden" name="Products.Index" value="2" />
-                                    <input type="hidden" name="Products[2].Code" value="BRK-001" />
-                                    <input type="hidden" name="Products[2].Name" value="Brake Fluid" />
-                                </td>
-                            </tr>
-                            <tr data-product-name="wiper fluid">
-                                <td>WPR-001</td>
-                                <td>Wiper Fluid</td>
-                                <td>
-                                    <input class="form-control product-quantity-input" id="productQuantity_WPR001" name="Products[3].Quantity" type="number" min="0" value="0" data-price="160" aria-label="Wiper Fluid quantity" />
-                                    <input type="hidden" name="Products.Index" value="3" />
-                                    <input type="hidden" name="Products[3].Code" value="WPR-001" />
-                                    <input type="hidden" name="Products[3].Name" value="Wiper Fluid" />
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
+                <div class="pos-summary-totals">
+                    <div><span>Products</span><strong id="cartSubTotal">PHP 0.00</strong></div>
+                    <div><span>Fuel</span><strong id="cartFuelLine">PHP 0.00</strong></div>
+                    <div><span>Total</span><strong id="posGrandTotal">PHP 0.00</strong></div>
                 </div>
-            </section>
+
+                <button class="btn btn-primary btn-lg pos-charge-button" id="checkoutButton" type="button">Charge <span id="checkoutChargeAmount">PHP 0.00</span></button>
+            </aside>
         </div>
-
-        <section class="salesman-pos-bottom-bar" aria-label="POS checkout summary">
-            <div>
-                <span>Total</span>
-                <strong id="posGrandTotal">PHP 0.00</strong>
-            </div>
-            <button class="btn btn-primary btn-lg px-5" id="checkoutButton" type="button">Checkout</button>
-        </section>
 
         <section class="salesman-receipt-preview" id="receiptPreview" hidden aria-live="polite">
             <div class="salesman-receipt-print" id="receiptPrintArea">
@@ -206,8 +223,12 @@
             const fuelLitersInput = document.getElementById("fuelLiters");
             const customerCodeInput = document.getElementById("referenceNumber");
             const grandTotal = document.getElementById("posGrandTotal");
+            const cartSubTotal = document.getElementById("cartSubTotal");
+            const cartFuelLine = document.getElementById("cartFuelLine");
+            const checkoutChargeAmount = document.getElementById("checkoutChargeAmount");
+            const orderCartItems = document.getElementById("orderCartItems");
             const productSearch = document.getElementById("productSearch");
-            const productRows = Array.from(document.querySelectorAll(".salesman-product-table tbody tr"));
+            const productRows = Array.from(document.querySelectorAll(".pos-menu-product-card"));
             const checkoutButton = document.getElementById("checkoutButton");
             const receiptPreview = document.getElementById("receiptPreview");
             const receiptDateTime = document.getElementById("receiptDateTime");
@@ -248,16 +269,15 @@
             function selectedProducts() {
                 return productQuantityInputs.reduce((products, input) => {
                     const quantity = Math.max(0, numericValue(input));
-                    const row = input.closest("tr");
 
                     if (numericValue(input) < 0) {
                         input.value = 0;
                     }
 
-                    if (quantity > 0 && row) {
+                    if (quantity > 0) {
                         products.push({
-                            no: row.cells[0].textContent.trim(),
-                            name: row.cells[1].textContent.trim(),
+                            no: input.dataset.no,
+                            name: input.dataset.name,
                             quantity,
                             price: Number.parseFloat(input.dataset.price) || 0
                         });
@@ -267,22 +287,50 @@
                 }, []);
             }
 
-            function totalAmount() {
-                const productTotal = selectedProducts().reduce((total, product) => {
+            function productTotalAmount() {
+                return selectedProducts().reduce((total, product) => {
                     return total + (product.quantity * product.price);
                 }, 0);
-                const fuelTotal = Math.max(0, numericValue(fuelAmountInput));
+            }
 
+            function fuelTotalAmount() {
                 if (numericValue(fuelAmountInput) < 0) {
                     fuelAmountInput.value = 0;
                 }
 
-                return productTotal + fuelTotal;
+                return Math.max(0, numericValue(fuelAmountInput));
+            }
+
+            function totalAmount() {
+                return productTotalAmount() + fuelTotalAmount();
+            }
+
+            function renderCart() {
+                const products = selectedProducts();
+                const fuelAmount = fuelTotalAmount();
+                const productMarkup = products.map(product => {
+                    return `<div class="pos-cart-item"><div class="pos-cart-thumb">${product.no.substring(0, 2)}</div><div><strong>${product.name}</strong><span>${peso.format(product.price)}</span></div><span>x${product.quantity}</span><b>${peso.format(product.quantity * product.price)}</b></div>`;
+                }).join("");
+                const fuelMarkup = fuelAmount > 0
+                    ? `<div class="pos-cart-item"><div class="pos-cart-thumb">FU</div><div><strong>${selectedFuelType()}</strong><span>${calculatedLiters().toFixed(2)} L</span></div><span>x1</span><b>${peso.format(fuelAmount)}</b></div>`
+                    : "";
+
+                orderCartItems.innerHTML = productMarkup || fuelMarkup
+                    ? `${productMarkup}${fuelMarkup}`
+                    : `<div class="pos-empty-cart">No selected items yet.</div>`;
+            }
+
+            function updateSummaryAmounts() {
+                cartSubTotal.textContent = peso.format(productTotalAmount());
+                cartFuelLine.textContent = peso.format(fuelTotalAmount());
+                grandTotal.textContent = peso.format(totalAmount());
+                checkoutChargeAmount.textContent = peso.format(totalAmount());
             }
 
             function updateTotal() {
                 updateLiters();
-                grandTotal.textContent = peso.format(totalAmount());
+                updateSummaryAmounts();
+                renderCart();
 
                 if (!receiptPreview.hidden) {
                     renderReceipt();
@@ -291,7 +339,7 @@
 
             function renderReceipt() {
                 const products = selectedProducts();
-                const fuelAmount = Math.max(0, numericValue(fuelAmountInput));
+                const fuelAmount = fuelTotalAmount();
 
                 receiptDateTime.textContent = new Date().toLocaleString();
                 receiptSalesman.textContent = salesmanName;
@@ -315,7 +363,7 @@
 
             function restoreProductSubmitFields() {
                 productRows.forEach(row => {
-                    Array.from(row.querySelectorAll("input")).forEach(input => {
+                    Array.from(row.querySelectorAll("input[type='hidden'], .product-quantity-input")).forEach(input => {
                         input.disabled = false;
                     });
                 });
@@ -323,7 +371,7 @@
 
             function disableZeroQuantityProducts() {
                 productQuantityInputs.forEach(input => {
-                    const rowInputs = Array.from(input.closest("tr").querySelectorAll("input"));
+                    const rowInputs = Array.from(input.closest(".pos-menu-product-card").querySelectorAll("input[type='hidden'], .product-quantity-input"));
                     const shouldSubmit = Math.max(0, numericValue(input)) > 0;
 
                     rowInputs.forEach(rowInput => {
@@ -355,9 +403,7 @@
                     renderReceipt();
                 }
             });
-            fuelChoices.forEach(choice => choice.addEventListener("change", () => {
-                updateTotal();
-            }));
+            fuelChoices.forEach(choice => choice.addEventListener("change", updateTotal));
             productSearch.addEventListener("input", () => {
                 const query = productSearch.value.trim().toLowerCase();
 
@@ -368,9 +414,7 @@
             checkoutButton.addEventListener("click", showReceipt);
             printReceiptButton.addEventListener("click", () => window.print());
             newSaleButton.addEventListener("click", resetSale);
-            form.addEventListener("submit", () => {
-                disableZeroQuantityProducts();
-            });
+            form.addEventListener("submit", disableZeroQuantityProducts);
             window.addEventListener("pageshow", restoreProductSubmitFields);
             updateTotal();
         })();

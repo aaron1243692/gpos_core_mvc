@@ -223,6 +223,10 @@ build_metadata.AdditionalFiles.CssScope =
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcUmVwb3J0c1xQcm9kdWN0U2FsZXNSZXBvcnQuY3NodG1s
 build_metadata.AdditionalFiles.CssScope = 
 
+[C:/project/gpos_core_mvc/Views/Reports/PurchaseHistory.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcUmVwb3J0c1xQdXJjaGFzZUhpc3RvcnkuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
 [C:/project/gpos_core_mvc/Views/Reports/ShiftReport.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcUmVwb3J0c1xTaGlmdFJlcG9ydC5jc2h0bWw=
 build_metadata.AdditionalFiles.CssScope = 
