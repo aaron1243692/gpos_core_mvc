@@ -26,7 +26,10 @@
                 <div asp-validation-summary="All" class="salesman-login-error login-feedback"></div>
             </div>
 
-            <button class="btn btn-primary w-100" type="submit">Sign In</button>
+            <div class="d-flex gap-2">
+                <a class="btn btn-outline-secondary flex-fill" asp-controller="Home" asp-action="Index">Cancel</a>
+                <button class="btn btn-primary flex-fill" type="submit">Sign In</button>
+            </div>
         </form>
     </section>
 </main>

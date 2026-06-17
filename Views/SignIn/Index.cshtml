@@ -143,7 +143,10 @@
                     </div>
                 </div>
 
-                <button type="submit" class="signin-button btn btn-primary w-100">Sign In</button>
+                <div class="d-flex gap-2">
+                    <a class="btn btn-outline-secondary flex-fill" asp-controller="Home" asp-action="Index">Cancel</a>
+                    <button type="submit" class="signin-button btn btn-primary flex-fill">Sign In</button>
+                </div>
             </form>
         </section>
     </main>
