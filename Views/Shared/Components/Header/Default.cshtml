@@ -53,7 +53,7 @@
                 <section class="eg-rb-page-card">
                     <div class="eg-rb-subgroup-title">Discounts</div>
                     <nav class="eg-rb-items" aria-label="Page links">
-                        <a class="eg-rb-tile @(Model.ActivePage == "Configuration.Discounts" ? "is-active" : "")" asp-controller="Configuration" asp-action="Discounts"><span>Discounts</span></a>
+                        <a class="eg-rb-tile @(Model.ActivePage == "Configuration.Discounts" ? "is-active" : "")" asp-controller="Configuration" asp-action="Discounts"><span>Discount</span></a>
                         <a class="eg-rb-tile @(Model.ActivePage == "Configuration.Members" ? "is-active" : "")" asp-controller="Configuration" asp-action="Members"><span>Members</span></a>
                         <a class="eg-rb-tile @(Model.ActivePage == "Configuration.Rebate" ? "is-active" : "")" asp-controller="Configuration" asp-action="Rebate"><span>Rebate</span></a>
                     </nav>
@@ -61,16 +61,17 @@
                 <section class="eg-rb-page-card">
                     <div class="eg-rb-subgroup-title">Access</div>
                     <nav class="eg-rb-items" aria-label="Page links">
+                        <a class="eg-rb-tile @(Model.ActivePage == "Users.Index" ? "is-active" : "")" asp-controller="Users" asp-action="Index"><span>Users</span></a>
+                        <a class="eg-rb-tile @(Model.ActivePage == "Employees.Index" ? "is-active" : "")" asp-controller="Employees" asp-action="Index"><span>Employees</span></a>
                         <a class="eg-rb-tile @(Model.ActivePage == "Roles.Index" ? "is-active" : "")" asp-controller="Roles" asp-action="Index"><span>Roles</span></a>
                         <a class="eg-rb-tile @(Model.ActivePage == "Permissions.Index" ? "is-active" : "")" asp-controller="Permissions" asp-action="Index"><span>Permissions</span></a>
                     </nav>
                 </section>
                 <section class="eg-rb-page-card">
-                    <div class="eg-rb-subgroup-title">Setting</div>
+                    <div class="eg-rb-subgroup-title">Config</div>
                     <nav class="eg-rb-items" aria-label="Page links">
-                        <a class="eg-rb-tile @(Model.ActivePage == "Users.Index" ? "is-active" : "")" asp-controller="Users" asp-action="Index"><span>Users</span></a>
-                        <a class="eg-rb-tile @(Model.ActivePage == "Employees.Index" ? "is-active" : "")" asp-controller="Employees" asp-action="Index"><span>Employees</span></a>
                         <a class="eg-rb-tile @(Model.ActivePage == "Suppliers.Index" ? "is-active" : "")" asp-controller="Suppliers" asp-action="Index"><span>Suppliers</span></a>
+                        <a class="eg-rb-tile @(Model.ActivePage == "Configuration.Position" ? "is-active" : "")" asp-controller="Configuration" asp-action="Position"><span>Position</span></a>
                     </nav>
                 </section>
             </div>
@@ -81,23 +82,49 @@
                 <section class="eg-rb-page-card">
                     <div class="eg-rb-subgroup-title">Sales</div>
                     <nav class="eg-rb-items" aria-label="Page links">
+                        <a class="eg-rb-tile @(Model.ActivePage == "Transaction.ProductSales" ? "is-active" : "")" asp-controller="Transaction" asp-action="ProductSales"><span>Product</span></a>
+                        <a class="eg-rb-tile @(Model.ActivePage == "Transaction.FuelSales" ? "is-active" : "")" asp-controller="Transaction" asp-action="FuelSales"><span>Fuel</span></a>
+                    </nav>
+                </section>
+                <section class="eg-rb-page-card">
+                    <div class="eg-rb-subgroup-title">Employee</div>
+                    <nav class="eg-rb-items" aria-label="Page links">
                         <a class="eg-rb-tile @(Model.ActivePage == "Salesman.POS" ? "is-active" : "")" asp-controller="Salesman" asp-action="POS"><span>POS</span></a>
-                        <a class="eg-rb-tile @(Model.ActivePage == "Transactions.FuelTransactions" ? "is-active" : "")" asp-controller="Transactions" asp-action="FuelTransactions"><span>Fuel Transactions</span></a>
-                        <a class="eg-rb-tile @(Model.ActivePage == "Transactions.ProductSales" ? "is-active" : "")" asp-controller="Transactions" asp-action="ProductSales"><span>Product Sales</span></a>
+                        <a class="eg-rb-tile @(Model.ActivePage == "Transaction.EmployeeProductSales" ? "is-active" : "")" asp-controller="Transaction" asp-action="EmployeeProductSales"><span>Product</span></a>
+                        <a class="eg-rb-tile @(Model.ActivePage == "Transaction.EmployeeFuelSales" ? "is-active" : "")" asp-controller="Transaction" asp-action="EmployeeFuelSales"><span>Fuel</span></a>
+                        <a class="eg-rb-tile @(Model.ActivePage == "Transaction.DailyCash" ? "is-active" : "")" asp-controller="Transaction" asp-action="DailyCash"><span>Daily Cash</span></a>
                     </nav>
                 </section>
                 <section class="eg-rb-page-card">
-                    <div class="eg-rb-subgroup-title">Shift</div>
+                    <div class="eg-rb-subgroup-title">Stock Transfer</div>
                     <nav class="eg-rb-items" aria-label="Page links">
-                        <a class="eg-rb-tile @(Model.ActivePage == "Transactions.OpenShift" ? "is-active" : "")" asp-controller="Transactions" asp-action="OpenShift"><span>Open Shift</span></a>
-                        <a class="eg-rb-tile @(Model.ActivePage == "Transactions.CloseShift" ? "is-active" : "")" asp-controller="Transactions" asp-action="CloseShift"><span>Close Shift</span></a>
+                        <a class="eg-rb-tile @(Model.ActivePage == "Transaction.WarehouseTransfer" ? "is-active" : "")" asp-controller="Transaction" asp-action="WarehouseTransfer"><span>Warehouse</span></a>
+                        <a class="eg-rb-tile @(Model.ActivePage == "Transaction.DisplayTransfer" ? "is-active" : "")" asp-controller="Transaction" asp-action="DisplayTransfer"><span>Display</span></a>
+                        <a class="eg-rb-tile @(Model.ActivePage == "Transaction.FuelTransfer" ? "is-active" : "")" asp-controller="Transaction" asp-action="FuelTransfer"><span>Fuel</span></a>
                     </nav>
                 </section>
                 <section class="eg-rb-page-card">
-                    <div class="eg-rb-subgroup-title">Cash</div>
+                    <div class="eg-rb-subgroup-title">Adjustment</div>
                     <nav class="eg-rb-items" aria-label="Page links">
-                        <a class="eg-rb-tile @(Model.ActivePage == "Transactions.CashIn" ? "is-active" : "")" asp-controller="Transactions" asp-action="CashIn"><span>Cash In</span></a>
-                        <a class="eg-rb-tile @(Model.ActivePage == "Transactions.CashOut" ? "is-active" : "")" asp-controller="Transactions" asp-action="CashOut"><span>Cash Out</span></a>
+                        <a class="eg-rb-tile @(Model.ActivePage == "Transaction.WarehouseAdjustment" ? "is-active" : "")" asp-controller="Transaction" asp-action="WarehouseAdjustment"><span>Warehouse</span></a>
+                        <a class="eg-rb-tile @(Model.ActivePage == "Transaction.ProductAdjustment" ? "is-active" : "")" asp-controller="Transaction" asp-action="ProductAdjustment"><span>Product</span></a>
+                        <a class="eg-rb-tile @(Model.ActivePage == "Transaction.FuelAdjustment" ? "is-active" : "")" asp-controller="Transaction" asp-action="FuelAdjustment"><span>Fuel</span></a>
+                    </nav>
+                </section>
+                <section class="eg-rb-page-card">
+                    <div class="eg-rb-subgroup-title">Returns</div>
+                    <nav class="eg-rb-items" aria-label="Page links">
+                        <a class="eg-rb-tile @(Model.ActivePage == "Transaction.WarehouseReturn" ? "is-active" : "")" asp-controller="Transaction" asp-action="WarehouseReturn"><span>Warehouse</span></a>
+                        <a class="eg-rb-tile @(Model.ActivePage == "Transaction.ProductReturn" ? "is-active" : "")" asp-controller="Transaction" asp-action="ProductReturn"><span>Product</span></a>
+                        <a class="eg-rb-tile @(Model.ActivePage == "Transaction.FuelReturn" ? "is-active" : "")" asp-controller="Transaction" asp-action="FuelReturn"><span>Fuel</span></a>
+                    </nav>
+                </section>
+                <section class="eg-rb-page-card">
+                    <div class="eg-rb-subgroup-title">Void</div>
+                    <nav class="eg-rb-items" aria-label="Page links">
+                        <a class="eg-rb-tile @(Model.ActivePage == "Transaction.WarehouseVoid" ? "is-active" : "")" asp-controller="Transaction" asp-action="WarehouseVoid"><span>Warehouse</span></a>
+                        <a class="eg-rb-tile @(Model.ActivePage == "Transaction.ProductVoid" ? "is-active" : "")" asp-controller="Transaction" asp-action="ProductVoid"><span>Product</span></a>
+                        <a class="eg-rb-tile @(Model.ActivePage == "Transaction.FuelVoid" ? "is-active" : "")" asp-controller="Transaction" asp-action="FuelVoid"><span>Fuel</span></a>
                     </nav>
                 </section>
             </div>

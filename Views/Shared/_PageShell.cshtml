@@ -297,6 +297,7 @@ else
     string[] FormFields(string title) => title switch
     {
         "Users" => new[] { "Name", "Email", "Username", "Password", "Role", "Status" },
+        "Operation" => new[] { "Operation Name", "Business Day Start", "Default Shift", "Cash Drawer Limit", "Status" },
         "Customers" => new[] { "Customer Code", "Name", "Contact Number", "Address", "Plate Number", "Status" },
         "Categories" => new[] { "Name", "Status" },
         "Item Units" => new[] { "Name", "Short Name" },
@@ -335,6 +336,7 @@ else
         return title switch
         {
             "Users" => new[] { "Name", "Email", "Username", "Role", "Status", "Actions" },
+            "Operation" => new[] { "Operation Name", "Business Day Start", "Default Shift", "Cash Drawer Limit", "Status", "Actions" },
             "Customers" => new[] { "Customer Code", "Name", "Contact Number", "Plate Number", "Points Balance", "Status", "Actions" },
             "Categories" => new[] { "Name", "Status", "Created At", "Actions" },
             "Item Units" or "Fuel Units" => new[] { "Name", "Short Name", "Actions" },

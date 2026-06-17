@@ -21,5 +21,6 @@ namespace gpos.Controllers
         public IActionResult Discounts() => View();
         public IActionResult Members() => View();
         public IActionResult Rebate() => View();
+        public IActionResult Position() => View();
     }
 }

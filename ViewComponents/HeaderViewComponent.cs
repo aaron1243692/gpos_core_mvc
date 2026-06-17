@@ -61,7 +61,7 @@ namespace gpos.ViewComponents
                 return "Reports";
             }
 
-            if (Is(controller, "Users") || Is(controller, "Employees") || Is(controller, "Suppliers") || Is(controller, "Roles") || Is(controller, "Permissions") || IsLegacySetupUsers(action))
+            if (Is(controller, "Users") || Is(controller, "Employees") || Is(controller, "Suppliers") || Is(controller, "Operations") || Is(controller, "Branches") || Is(controller, "Departments") || Is(controller, "Shift") || Is(controller, "Roles") || Is(controller, "Permissions") || IsLegacySetupUsers(action))
             {
                 return "Configuration";
             }
@@ -101,7 +101,12 @@ namespace gpos.ViewComponents
                 return $"Reports.{MapReportAction(action)}";
             }
 
-            if (Is(controller, "Users") || Is(controller, "Employees") || Is(controller, "Customers") || Is(controller, "Suppliers") || Is(controller, "Roles") || Is(controller, "Permissions"))
+            if (Is(controller, "Shift"))
+            {
+                return $"Shift.{action}";
+            }
+
+            if (Is(controller, "Users") || Is(controller, "Employees") || Is(controller, "Customers") || Is(controller, "Suppliers") || Is(controller, "Operations") || Is(controller, "Branches") || Is(controller, "Departments") || Is(controller, "Roles") || Is(controller, "Permissions"))
             {
                 return $"{controller}.Index";
             }
@@ -125,9 +130,14 @@ namespace gpos.ViewComponents
                     "Discounts" => "Configuration.Discounts",
                     "Members" => "Configuration.Members",
                     "Rebate" => "Configuration.Rebate",
+                    "Position" => "Configuration.Position",
                     "Users" => "Users.Index",
                     "Employees" => "Employees.Index",
                     "Suppliers" => "Suppliers.Index",
+                    "Operations" => "Operations.Index",
+                    "Branches" => "Branches.Index",
+                    "Departments" => "Departments.Index",
+                    "Schedule" => "Shift.Schedule",
                     "Roles" => "Roles.Index",
                     "Permissions" => "Permissions.Index",
                     _ => string.Empty
@@ -138,6 +148,24 @@ namespace gpos.ViewComponents
             {
                 return action switch
                 {
+                    "ProductSales" => "Transaction.ProductSales",
+                    "FuelSales" => "Transaction.FuelSales",
+                    "EmployeePOS" => "Transaction.EmployeePOS",
+                    "EmployeeProductSales" => "Transaction.EmployeeProductSales",
+                    "EmployeeFuelSales" => "Transaction.EmployeeFuelSales",
+                    "DailyCash" => "Transaction.DailyCash",
+                    "WarehouseTransfer" => "Transaction.WarehouseTransfer",
+                    "DisplayTransfer" => "Transaction.DisplayTransfer",
+                    "FuelTransfer" => "Transaction.FuelTransfer",
+                    "WarehouseAdjustment" => "Transaction.WarehouseAdjustment",
+                    "ProductAdjustment" => "Transaction.ProductAdjustment",
+                    "FuelAdjustment" => "Transaction.FuelAdjustment",
+                    "WarehouseReturn" => "Transaction.WarehouseReturn",
+                    "ProductReturn" => "Transaction.ProductReturn",
+                    "FuelReturn" => "Transaction.FuelReturn",
+                    "WarehouseVoid" => "Transaction.WarehouseVoid",
+                    "ProductVoid" => "Transaction.ProductVoid",
+                    "FuelVoid" => "Transaction.FuelVoid",
                     "OpenShift" => "Transactions.OpenShift",
                     "DailyClosingBalance" => "Transactions.CloseShift",
                     "PumpTransaction" => "Transactions.FuelTransactions",
@@ -159,9 +187,9 @@ namespace gpos.ViewComponents
             _ => action
         };
 
-        private static bool IsLegacySetupConfiguration(string action) => action is "Products" or "DisplayProducts" or "WarehouseProducts" or "Categories" or "ItemUnits" or "Fuels" or "FuelTypes" or "FuelUnits" or "FuelPriceHistory" or "Pumps" or "PumpUnits" or "FuelTanks" or "Discounts" or "Members" or "Rebate";
+        private static bool IsLegacySetupConfiguration(string action) => action is "Products" or "DisplayProducts" or "WarehouseProducts" or "Categories" or "ItemUnits" or "Fuels" or "FuelTypes" or "FuelUnits" or "FuelPriceHistory" or "Pumps" or "PumpUnits" or "FuelTanks" or "Discounts" or "Members" or "Rebate" or "Position";
 
-        private static bool IsLegacySetupUsers(string action) => action is "Users" or "Employees" or "Suppliers" or "Roles" or "Permissions";
+        private static bool IsLegacySetupUsers(string action) => action is "Users" or "Employees" or "Suppliers" or "Operations" or "Branches" or "Departments" or "Roles" or "Permissions";
 
         private static bool Is(string left, string right) => string.Equals(left, right, StringComparison.OrdinalIgnoreCase);
     }
