@@ -24,6 +24,8 @@ namespace gpos.Data
         public DbSet<ProductBatch> ProductBatches { get; set; }
         public DbSet<DisplayStock> DisplayStocks { get; set; }
         public DbSet<WarehouseStock> WarehouseStocks { get; set; }
+        public DbSet<Discount> Discounts { get; set; }
+        public DbSet<Member> Members { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -308,6 +310,46 @@ namespace gpos.Data
                 entity.HasOne(stock => stock.Batch)
                     .WithMany(batch => batch.DisplayStocks)
                     .HasForeignKey(stock => stock.BatchId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            modelBuilder.Entity<Discount>(entity =>
+            {
+                entity.ToTable("discounts");
+                entity.HasKey(discount => discount.Id);
+
+                entity.Property(discount => discount.Id).HasColumnName("id");
+                entity.Property(discount => discount.Name).HasColumnName("name").HasMaxLength(100).IsRequired();
+                entity.Property(discount => discount.EarnRate).HasColumnName("earn_rate").HasPrecision(5, 2).HasDefaultValue(0m);
+                entity.Property(discount => discount.Status).HasColumnName("status").HasDefaultValue(1);
+                entity.Property(discount => discount.CreatedAt).HasColumnName("created_at");
+                entity.Property(discount => discount.UpdatedAt).HasColumnName("updated_at");
+            });
+
+            modelBuilder.Entity<Member>(entity =>
+            {
+                entity.ToTable("members");
+                entity.HasKey(member => member.Id);
+
+                entity.Property(member => member.Id).HasColumnName("id");
+                entity.Property(member => member.MemberNo).HasColumnName("member_no").HasMaxLength(100).IsRequired();
+                entity.Property(member => member.CardNo).HasColumnName("card_no").HasMaxLength(100);
+                entity.Property(member => member.FullName).HasColumnName("full_name").HasMaxLength(150).IsRequired();
+                entity.Property(member => member.ContactNumber).HasColumnName("contact_number").HasMaxLength(50);
+                entity.Property(member => member.Email).HasColumnName("email").HasMaxLength(150);
+                entity.Property(member => member.Address).HasColumnName("address").HasMaxLength(255);
+                entity.Property(member => member.DiscountId).HasColumnName("discount_id");
+                entity.Property(member => member.Points).HasColumnName("points").HasPrecision(18, 2).HasDefaultValue(0m);
+                entity.Property(member => member.Status).HasColumnName("status").HasDefaultValue(1);
+                entity.Property(member => member.CreatedAt).HasColumnName("created_at");
+                entity.Property(member => member.UpdatedAt).HasColumnName("updated_at");
+
+                entity.HasIndex(member => member.MemberNo).IsUnique();
+                entity.HasIndex(member => member.CardNo).IsUnique();
+                entity.HasIndex(member => member.DiscountId);
+                entity.HasOne(member => member.Discount)
+                    .WithMany(discount => discount.Members)
+                    .HasForeignKey(member => member.DiscountId)
                     .OnDelete(DeleteBehavior.Restrict);
             });
         }

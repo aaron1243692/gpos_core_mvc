@@ -132,8 +132,150 @@ namespace gpos.Controllers
         public IActionResult FuelTypes() => View();
         public IActionResult FuelPrices() => View();
         public IActionResult PumpUnits() => View();
-        public IActionResult Discounts() => View();
-        public IActionResult Members() => View();
+        public async Task<IActionResult> Discounts(string? search, int? editId)
+        {
+            return View(await BuildDiscountsPageAsync(search, editId: editId, activeModalId: editId.HasValue ? "discountModal" : ""));
+        }
+
+        public async Task<IActionResult> Members(string? search, int? editId)
+        {
+            return View(await BuildMembersPageAsync(search, editId: editId, activeModalId: editId.HasValue ? "memberModal" : ""));
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> SaveDiscount([Bind(Prefix = "DiscountForm")] DiscountForm form, string? search)
+        {
+            if (!ModelState.IsValid)
+            {
+                return View("Discounts", await BuildDiscountsPageAsync(search, form, activeModalId: "discountModal"));
+            }
+
+            var now = DateTime.UtcNow;
+            var discount = form.Id > 0 ? await _db.Discounts.FindAsync(form.Id) : new Discount { CreatedAt = now };
+
+            if (discount is null)
+            {
+                return NotFound();
+            }
+
+            discount.Name = form.Name.Trim();
+            discount.EarnRate = form.EarnRate;
+            discount.Status = form.Status;
+            discount.UpdatedAt = now;
+
+            if (form.Id == 0)
+            {
+                _db.Discounts.Add(discount);
+            }
+
+            await _db.SaveChangesAsync();
+            return RedirectToAction(nameof(Discounts), new { search });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> DeleteDiscount(int id, string? search)
+        {
+            var discount = await _db.Discounts.FindAsync(id);
+
+            if (discount is not null)
+            {
+                discount.Status = 0;
+                discount.UpdatedAt = DateTime.UtcNow;
+                TempData["DiscountSetupFeedback"] = "Discount disabled.";
+                await _db.SaveChangesAsync();
+            }
+
+            return RedirectToAction(nameof(Discounts), new { search });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> SaveMember([Bind(Prefix = "MemberForm")] MemberForm form, string? search)
+        {
+            if (!ModelState.IsValid)
+            {
+                return View("Members", await BuildMembersPageAsync(search, form, activeModalId: "memberModal"));
+            }
+
+            if (form.DiscountId.HasValue)
+            {
+                var discountExists = await _db.Discounts.AnyAsync(discount => discount.Id == form.DiscountId.Value && discount.Status == 1);
+
+                if (!discountExists)
+                {
+                    ModelState.AddModelError("MemberForm.DiscountId", "Select an active discount.");
+                    return View("Members", await BuildMembersPageAsync(search, form, activeModalId: "memberModal"));
+                }
+            }
+
+            var memberNo = form.MemberNo.Trim();
+            var cardNo = string.IsNullOrWhiteSpace(form.CardNo) ? null : form.CardNo.Trim();
+            var hasDuplicateMemberNo = await _db.Members.AnyAsync(member => member.Id != form.Id && member.MemberNo == memberNo);
+
+            if (hasDuplicateMemberNo)
+            {
+                ModelState.AddModelError("MemberForm.MemberNo", "Member No already exists.");
+                return View("Members", await BuildMembersPageAsync(search, form, activeModalId: "memberModal"));
+            }
+
+            if (!string.IsNullOrWhiteSpace(cardNo))
+            {
+                var hasDuplicateCardNo = await _db.Members.AnyAsync(member => member.Id != form.Id && member.CardNo == cardNo);
+
+                if (hasDuplicateCardNo)
+                {
+                    ModelState.AddModelError("MemberForm.CardNo", "Card No already exists.");
+                    return View("Members", await BuildMembersPageAsync(search, form, activeModalId: "memberModal"));
+                }
+            }
+
+            var now = DateTime.UtcNow;
+            var member = form.Id > 0 ? await _db.Members.FindAsync(form.Id) : new Member { CreatedAt = now };
+
+            if (member is null)
+            {
+                return NotFound();
+            }
+
+            member.MemberNo = memberNo;
+            member.CardNo = cardNo;
+            member.FullName = form.FullName.Trim();
+            member.ContactNumber = string.IsNullOrWhiteSpace(form.ContactNumber) ? null : form.ContactNumber.Trim();
+            member.Email = string.IsNullOrWhiteSpace(form.Email) ? null : form.Email.Trim();
+            member.Address = string.IsNullOrWhiteSpace(form.Address) ? null : form.Address.Trim();
+            member.DiscountId = form.DiscountId;
+            member.Points = form.Points;
+            member.Status = form.Status;
+            member.UpdatedAt = now;
+
+            if (form.Id == 0)
+            {
+                _db.Members.Add(member);
+            }
+
+            await _db.SaveChangesAsync();
+            return RedirectToAction(nameof(Members), new { search });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> DeleteMember(int id, string? search)
+        {
+            var member = await _db.Members.FindAsync(id);
+
+            if (member is not null)
+            {
+                member.Status = 0;
+                member.UpdatedAt = DateTime.UtcNow;
+                TempData["DiscountSetupFeedback"] = "Member disabled.";
+                await _db.SaveChangesAsync();
+            }
+
+            return RedirectToAction(nameof(Members), new { search });
+        }
+
         public IActionResult Rebate() => View();
         public IActionResult Position() => View();
         public IActionResult Branch() => View();
@@ -605,6 +747,92 @@ namespace gpos.Controllers
                 options.Add(new SelectListItem { Value = "0", Text = "No tanks available", Disabled = true });
             }
 
+            return options;
+        }
+
+        private async Task<DiscountSetupPageViewModel> BuildDiscountsPageAsync(string? search, DiscountForm? form = null, int? editId = null, string activeModalId = "")
+        {
+            IQueryable<Discount> query = _db.Discounts.AsNoTracking();
+            var searchText = (search ?? string.Empty).Trim();
+
+            if (!string.IsNullOrWhiteSpace(searchText))
+            {
+                query = query.Where(discount => discount.Name.Contains(searchText));
+            }
+
+            return new DiscountSetupPageViewModel
+            {
+                Search = searchText,
+                ActiveModalId = activeModalId,
+                DiscountForm = form ?? await BuildDiscountFormAsync(editId),
+                Discounts = await query.OrderBy(discount => discount.Id).ToListAsync()
+            };
+        }
+
+        private async Task<DiscountSetupPageViewModel> BuildMembersPageAsync(string? search, MemberForm? form = null, int? editId = null, string activeModalId = "")
+        {
+            IQueryable<Member> query = _db.Members.AsNoTracking().Include(member => member.Discount);
+            var searchText = (search ?? string.Empty).Trim();
+
+            if (!string.IsNullOrWhiteSpace(searchText))
+            {
+                query = query.Where(member => member.MemberNo.Contains(searchText)
+                    || member.FullName.Contains(searchText)
+                    || (member.CardNo != null && member.CardNo.Contains(searchText))
+                    || (member.Discount != null && member.Discount.Name.Contains(searchText)));
+            }
+
+            return new DiscountSetupPageViewModel
+            {
+                Search = searchText,
+                ActiveModalId = activeModalId,
+                MemberForm = form ?? await BuildMemberFormAsync(editId),
+                DiscountOptions = await BuildDiscountOptionsAsync(),
+                Members = await query.OrderBy(member => member.Id).ToListAsync()
+            };
+        }
+
+        private async Task<DiscountForm> BuildDiscountFormAsync(int? editId)
+        {
+            var discount = editId.HasValue ? await _db.Discounts.AsNoTracking().FirstOrDefaultAsync(item => item.Id == editId.Value) : null;
+
+            return discount is null ? new DiscountForm() : new DiscountForm
+            {
+                Id = discount.Id,
+                Name = discount.Name,
+                EarnRate = discount.EarnRate,
+                Status = discount.Status
+            };
+        }
+
+        private async Task<MemberForm> BuildMemberFormAsync(int? editId)
+        {
+            var member = editId.HasValue ? await _db.Members.AsNoTracking().FirstOrDefaultAsync(item => item.Id == editId.Value) : null;
+
+            return member is null ? new MemberForm() : new MemberForm
+            {
+                Id = member.Id,
+                MemberNo = member.MemberNo,
+                CardNo = member.CardNo,
+                FullName = member.FullName,
+                ContactNumber = member.ContactNumber,
+                Email = member.Email,
+                Address = member.Address,
+                DiscountId = member.DiscountId,
+                Points = member.Points,
+                Status = member.Status
+            };
+        }
+
+        private async Task<List<SelectListItem>> BuildDiscountOptionsAsync()
+        {
+            var options = await _db.Discounts.AsNoTracking()
+                .Where(discount => discount.Status == 1)
+                .OrderBy(discount => discount.Name)
+                .Select(discount => new SelectListItem { Value = discount.Id.ToString(), Text = discount.Name })
+                .ToListAsync();
+
+            options.Insert(0, new SelectListItem { Value = "", Text = "No discount" });
             return options;
         }
 
