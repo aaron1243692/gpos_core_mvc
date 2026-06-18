@@ -5,21 +5,21 @@ namespace gpos.Models.ViewModels
 {
     public class ProductStockForm
     {
-        [Required(ErrorMessage = "Category is required.")]
-        [Range(1, int.MaxValue, ErrorMessage = "Category is required.")]
-        public int CategoryId { get; set; }
+        public int? CategoryId { get; set; }
 
         [Required(ErrorMessage = "Product Name is required.")]
         public string ProductName { get; set; } = string.Empty;
 
+        [Required(ErrorMessage = "Cost Price is required.")]
         [Range(0, double.MaxValue, ErrorMessage = "Cost Price cannot be negative.")]
-        public decimal CostPrice { get; set; }
+        public decimal? CostPrice { get; set; }
 
         [Range(0, double.MaxValue, ErrorMessage = "Selling Price cannot be negative.")]
-        public decimal SellingPrice { get; set; }
+        public decimal? SellingPrice { get; set; }
 
+        [Required(ErrorMessage = "Quantity is required.")]
         [Range(0, double.MaxValue, ErrorMessage = "Quantity cannot be negative.")]
-        public decimal Quantity { get; set; }
+        public decimal? Quantity { get; set; }
 
         public bool IsActive { get; set; } = true;
     }

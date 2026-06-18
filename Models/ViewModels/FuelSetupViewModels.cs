@@ -14,8 +14,9 @@ namespace gpos.Models.ViewModels
 
         public int? SupplierId { get; set; }
 
+        [Required(ErrorMessage = "Current Price Per Liter is required.")]
         [Range(0, double.MaxValue, ErrorMessage = "Price cannot be negative.")]
-        public decimal CurrentPricePerLiter { get; set; }
+        public decimal? CurrentPricePerLiter { get; set; }
 
         public bool IsActive { get; set; } = true;
     }

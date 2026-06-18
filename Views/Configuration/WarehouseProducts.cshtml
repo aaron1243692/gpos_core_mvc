@@ -55,9 +55,9 @@
                         <td>@Model.WarehouseStocks[index].Id</td>
                         <td>@(Model.WarehouseStocks[index].Batch?.BatchNo ?? "-")</td>
                         <td>@(Model.WarehouseStocks[index].Product?.Name ?? "-")</td>
-                        <td>@(Model.WarehouseStocks[index].Product?.Category?.Name ?? "-")</td>
-                        <td>&#8369;@(Model.WarehouseStocks[index].Batch?.CostPrice.ToString("N2") ?? "0.00")</td>
-                        <td>&#8369;@(Model.WarehouseStocks[index].Batch?.SellingPrice.ToString("N2") ?? "0.00")</td>
+                        <td>@(Model.WarehouseStocks[index].Product?.Category?.Name ?? "No category")</td>
+                        <td>₱@(Model.WarehouseStocks[index].Batch?.CostPrice.ToString("N2") ?? "0.00")</td>
+                        <td>₱@(Model.WarehouseStocks[index].Batch?.SellingPrice.ToString("N2") ?? "0.00")</td>
                         <td>@Model.WarehouseStocks[index].Quantity.ToString("N2")</td>
                         <td>
                             <button class="btn btn-outline-secondary btn-sm" type="button" disabled>Edit</button>
@@ -84,7 +84,7 @@
                         <div>
                             <label class="form-label" asp-for="StockForm.CategoryId">Category</label>
                             <select class="form-select" asp-for="StockForm.CategoryId" asp-items="Model.CategoryOptions">
-                                <option value="0">Select category</option>
+                                <option value="">Select category</option>
                             </select>
                             <span class="text-danger small" asp-validation-for="StockForm.CategoryId"></span>
                         </div>
@@ -95,17 +95,17 @@
                         </div>
                         <div>
                             <label class="form-label" asp-for="StockForm.CostPrice">Cost Price</label>
-                            <input class="form-control" asp-for="StockForm.CostPrice" type="number" min="0" step="0.01" />
+                            <input class="form-control" asp-for="StockForm.CostPrice" type="number" min="0" step="0.01" placeholder="Enter cost price" />
                             <span class="text-danger small" asp-validation-for="StockForm.CostPrice"></span>
                         </div>
                         <div>
                             <label class="form-label" asp-for="StockForm.SellingPrice">Selling Price</label>
-                            <input class="form-control" asp-for="StockForm.SellingPrice" type="number" min="0" step="0.01" />
+                            <input class="form-control" asp-for="StockForm.SellingPrice" type="number" min="0" step="0.01" placeholder="Enter selling price" />
                             <span class="text-danger small" asp-validation-for="StockForm.SellingPrice"></span>
                         </div>
                         <div>
                             <label class="form-label" asp-for="StockForm.Quantity">Quantity</label>
-                            <input class="form-control" asp-for="StockForm.Quantity" type="number" min="0" step="0.01" />
+                            <input class="form-control" asp-for="StockForm.Quantity" type="number" min="0" step="0.01" placeholder="Enter quantity" />
                             <span class="text-danger small" asp-validation-for="StockForm.Quantity"></span>
                         </div>
                         <div>

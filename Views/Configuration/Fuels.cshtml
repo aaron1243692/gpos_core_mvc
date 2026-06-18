@@ -53,7 +53,7 @@
                         <td>@Model.Fuels[i].Code</td>
                         <td>@Model.Fuels[i].Name</td>
                         <td>@(Model.Fuels[i].Supplier == null ? "No supplier" : Model.Fuels[i].Supplier!.Name)</td>
-                        <td>&#8369;@Model.Fuels[i].CurrentPricePerLiter.ToString("N2")</td>
+                        <td>₱@Model.Fuels[i].CurrentPricePerLiter.ToString("N2")</td>
                         <td>@(Model.Fuels[i].IsActive ? "Active" : "Inactive")</td>
                         <td>
                             <div class="setup-row-actions">
@@ -102,7 +102,7 @@
                     </div>
                     <div class="mb-3">
                         <label asp-for="FuelForm.CurrentPricePerLiter" class="form-label">Current Price Per Liter</label>
-                        <input asp-for="FuelForm.CurrentPricePerLiter" class="form-control" min="0" step="0.01" type="number" />
+                        <input asp-for="FuelForm.CurrentPricePerLiter" class="form-control" min="0" step="0.01" type="number" placeholder="Enter price per liter" />
                         <span asp-validation-for="FuelForm.CurrentPricePerLiter" class="text-danger"></span>
                     </div>
                     <label class="form-check">

@@ -46,11 +46,9 @@ namespace gpos.Controllers
                 return View("DisplayProducts", await BuildDisplayProductsPageAsync(search, form, "displayProductModal"));
             }
 
-            var categoryExists = await _db.ProductCategories.AnyAsync(category => category.Id == form.CategoryId && category.IsActive);
-
-            if (!categoryExists)
+            if (form.CategoryId.HasValue && !await ProductCategoryExistsAsync(form.CategoryId.Value))
             {
-                ModelState.AddModelError("StockForm.CategoryId", "Category is required.");
+                ModelState.AddModelError("StockForm.CategoryId", "Select an active category.");
                 return View("DisplayProducts", await BuildDisplayProductsPageAsync(search, form, "displayProductModal"));
             }
 
@@ -62,7 +60,7 @@ namespace gpos.Controllers
             {
                 Product = product,
                 Batch = batch,
-                Quantity = form.Quantity,
+                Quantity = form.Quantity!.Value,
                 CreatedAt = now,
                 UpdatedAt = now
             });
@@ -80,11 +78,9 @@ namespace gpos.Controllers
                 return View("WarehouseProducts", await BuildWarehouseProductsPageAsync(search, form, "warehouseProductModal"));
             }
 
-            var categoryExists = await _db.ProductCategories.AnyAsync(category => category.Id == form.CategoryId && category.IsActive);
-
-            if (!categoryExists)
+            if (form.CategoryId.HasValue && !await ProductCategoryExistsAsync(form.CategoryId.Value))
             {
-                ModelState.AddModelError("StockForm.CategoryId", "Category is required.");
+                ModelState.AddModelError("StockForm.CategoryId", "Select an active category.");
                 return View("WarehouseProducts", await BuildWarehouseProductsPageAsync(search, form, "warehouseProductModal"));
             }
 
@@ -96,7 +92,7 @@ namespace gpos.Controllers
             {
                 Product = product,
                 Batch = batch,
-                Quantity = form.Quantity,
+                Quantity = form.Quantity!.Value,
                 CreatedAt = now,
                 UpdatedAt = now
             });
@@ -317,7 +313,7 @@ namespace gpos.Controllers
             fuel.Name = form.Name.Trim();
             fuel.Code = form.Code.Trim();
             fuel.SupplierId = form.SupplierId;
-            fuel.CurrentPricePerLiter = form.CurrentPricePerLiter;
+            fuel.CurrentPricePerLiter = form.CurrentPricePerLiter!.Value;
             fuel.IsActive = form.IsActive;
             fuel.UpdatedAt = now;
 
@@ -558,8 +554,9 @@ namespace gpos.Controllers
         private async Task<Product> CreateOrGetProductAsync(ProductStockForm form, DateTime now)
         {
             var productName = form.ProductName.Trim();
+            var categoryId = form.CategoryId;
             var product = await _db.Products
-                .FirstOrDefaultAsync(item => item.CategoryId == form.CategoryId && item.Name == productName);
+                .FirstOrDefaultAsync(item => item.CategoryId == categoryId && item.Name == productName);
 
             if (product is not null)
             {
@@ -570,7 +567,7 @@ namespace gpos.Controllers
 
             product = new Product
             {
-                CategoryId = form.CategoryId,
+                CategoryId = categoryId,
                 Name = productName,
                 IsActive = form.IsActive,
                 CreatedAt = now,
@@ -587,8 +584,8 @@ namespace gpos.Controllers
             {
                 Product = product,
                 BatchNo = await _batchNumberService.GenerateNextBatchNoAsync(),
-                CostPrice = form.CostPrice,
-                SellingPrice = form.SellingPrice,
+                CostPrice = form.CostPrice!.Value,
+                SellingPrice = form.SellingPrice ?? 0m,
                 IsActive = form.IsActive,
                 CreatedAt = now,
                 UpdatedAt = now
@@ -605,6 +602,11 @@ namespace gpos.Controllers
                 .OrderBy(category => category.Name)
                 .Select(category => new SelectListItem { Value = category.Id.ToString(), Text = category.Name })
                 .ToListAsync();
+        }
+
+        private async Task<bool> ProductCategoryExistsAsync(int categoryId)
+        {
+            return await _db.ProductCategories.AnyAsync(category => category.Id == categoryId && category.IsActive);
         }
 
         private async Task<FuelSetupPageViewModel> BuildFuelsPageAsync(string? search, FuelForm? form = null, int? editId = null, string activeModalId = "")
