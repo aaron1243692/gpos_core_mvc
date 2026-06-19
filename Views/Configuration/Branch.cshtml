@@ -1,3 +1,5 @@
+@model gpos.Models.ViewModels.EmployeeSetupPageViewModel
+
 <div class="page-header">
     <div class="page-heading">
         <nav aria-label="breadcrumb">
@@ -13,27 +15,116 @@
     </div>
 </div>
 
-<section class="card content-card mb-4">
-    <div class="row g-3 mb-3">
-        <div class="col-12 col-md-5"><input class="form-control" type="search" placeholder="Search branches" disabled /></div>
-        <div class="col-12 col-md-3"><select class="form-select" disabled><option>All statuses</option></select></div>
-        <div class="col-12 col-md-4"><input class="form-control" type="text" placeholder="Filter by location" disabled /></div>
+<section class="content-card setup-crud-card setup-table-card">
+    @if (TempData["ConfigSetupFeedback"] is string feedback)
+    {
+        <div class="alert alert-info mb-0" role="alert">@feedback</div>
+    }
+    <div class="table-actions fuel-toolbar">
+        <form asp-action="Branch" method="get" class="setup-search-form fuel-toolbar-search">
+            <input class="form-control" name="search" value="@Model.Search" placeholder="Search branches" />
+        </form>
+        <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#branchModal">Add Branch</button>
     </div>
-    <div class="table-responsive">
-        <table class="table table-sm table-hover align-middle mb-0">
+    <div class="setup-table-scroll">
+        <table class="table app-table table-sm align-middle admin-table mb-0">
+            <colgroup>
+                <col class="col-no" />
+                <col class="col-id" />
+                <col class="col-name" />
+                <col class="col-address" />
+                <col class="col-normal" />
+                <col class="col-action" />
+            </colgroup>
             <thead>
                 <tr>
-                    <th scope="col">No</th>
-                    <th scope="col">Branch</th>
-                    <th scope="col">Location</th>
-                    <th scope="col">Status</th>
+                    <th>No</th>
+                    <th>ID</th>
+                    <th>Name</th>
+                    <th>Address</th>
+                    <th>Status</th>
+                    <th>Action</th>
                 </tr>
             </thead>
             <tbody>
-                <tr>
-                    <td class="text-center text-muted fw-bold" colspan="4">No branch records yet.</td>
-                </tr>
+                @if (Model.Branches.Count == 0)
+                {
+                    <tr><td class="text-center text-muted fw-bold" colspan="6">No branch records yet.</td></tr>
+                }
+                @for (var i = 0; i < Model.Branches.Count; i++)
+                {
+                    <tr>
+                        <td>@(i + 1)</td>
+                        <td>@Model.Branches[i].Id</td>
+                        <td>@Model.Branches[i].Name</td>
+                        <td>@Model.Branches[i].Address</td>
+                        <td>@(Model.Branches[i].Status == 1 ? "Active" : "Inactive")</td>
+                        <td>
+                            <div class="setup-row-actions">
+                                <a class="btn btn-sm btn-outline-primary" asp-action="Branch" asp-route-editId="@Model.Branches[i].Id" asp-route-search="@Model.Search">Edit</a>
+                                <form asp-action="DeleteBranch" method="post" onsubmit="return confirm('Delete or disable this branch?');">
+                                    @Html.AntiForgeryToken()
+                                    <input name="id" type="hidden" value="@Model.Branches[i].Id" />
+                                    <input name="search" type="hidden" value="@Model.Search" />
+                                    <button class="btn btn-sm btn-outline-danger" type="submit">Delete</button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                }
             </tbody>
         </table>
     </div>
 </section>
+
+<div class="modal fade" id="branchModal" tabindex="-1" aria-labelledby="branchModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <form asp-action="SaveBranch" method="post">
+                @Html.AntiForgeryToken()
+                <input asp-for="BranchForm.Id" type="hidden" />
+                <input name="search" type="hidden" value="@Model.Search" />
+                <div class="modal-header">
+                    <h2 class="modal-title fs-5" id="branchModalLabel">Branch</h2>
+                    <button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label asp-for="BranchForm.Name" class="form-label">Name</label>
+                        <input asp-for="BranchForm.Name" class="form-control" autocomplete="off" />
+                        <span asp-validation-for="BranchForm.Name" class="text-danger"></span>
+                    </div>
+                    <div class="mb-3">
+                        <label asp-for="BranchForm.Address" class="form-label">Address</label>
+                        <textarea asp-for="BranchForm.Address" class="form-control" rows="3"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label asp-for="BranchForm.Status" class="form-label">Status</label>
+                        <select asp-for="BranchForm.Status" class="form-select">
+                            <option value="1">Active</option>
+                            <option value="0">Inactive</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button>
+                    <button class="btn btn-primary" type="submit">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            const modalId = "@Model.ActiveModalId";
+            const modalElement = modalId ? document.getElementById(modalId) : null;
+
+            if (modalElement && window.bootstrap) {
+                bootstrap.Modal.getOrCreateInstance(modalElement).show();
+            }
+        });
+    </script>
+}

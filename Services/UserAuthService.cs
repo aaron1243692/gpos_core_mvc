@@ -52,12 +52,18 @@ namespace gpos.Services
                 return SignInResult.Failed("Invalid username/email or password.");
             }
 
+            if (user.Status != 1)
+            {
+                return SignInResult.Failed("This account is disabled.");
+            }
+
             if (!PasswordMatches(user.PasswordHash, password))
             {
                 return SignInResult.Failed("Invalid username/email or password.");
             }
 
             var roleCode = user.UserRoles
+                .Where(userRole => userRole.Role?.Status == 1)
                 .Select(userRole => userRole.Role?.Code)
                 .FirstOrDefault(code => !string.IsNullOrWhiteSpace(code))
                 ?? string.Empty;

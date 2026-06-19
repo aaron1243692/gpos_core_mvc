@@ -14,6 +14,7 @@ namespace gpos.Models.ViewModels
         public string? ContactPerson { get; set; }
         public string? ContactNumber { get; set; }
         public string? Address { get; set; }
+        public int Status { get; set; } = 1;
     }
 
     public class SupplierPageViewModel

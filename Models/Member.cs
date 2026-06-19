@@ -16,5 +16,6 @@ namespace gpos.Models
         public DateTime? UpdatedAt { get; set; }
 
         public Discount? Discount { get; set; }
+        public ICollection<PointsLedger> PointsLedger { get; set; } = new List<PointsLedger>();
     }
 }

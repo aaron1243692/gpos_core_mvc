@@ -7,9 +7,9 @@ namespace gpos.Controllers
     {
         public override void OnActionExecuting(ActionExecutingContext context)
         {
-            var employeeRole = HttpContext.Session.GetString("EmployeeRole");
+            var employeeId = HttpContext.Session.GetString("EmployeeId");
 
-            if (!string.Equals(employeeRole, "salesman", StringComparison.OrdinalIgnoreCase))
+            if (string.IsNullOrWhiteSpace(employeeId))
             {
                 context.Result = RedirectToAction("Login", "SalesmanAuth");
                 return;

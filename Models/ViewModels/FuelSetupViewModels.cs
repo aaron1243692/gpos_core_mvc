@@ -21,7 +21,7 @@ namespace gpos.Models.ViewModels
         public bool IsActive { get; set; } = true;
     }
 
-    public class TankForm
+    public class TankForm : IValidatableObject
     {
         public int Id { get; set; }
 
@@ -32,7 +32,27 @@ namespace gpos.Models.ViewModels
         [Required(ErrorMessage = "Tank no is required.")]
         public string TankNo { get; set; } = string.Empty;
 
+        [Required(ErrorMessage = "Capacity Liters is required.")]
+        [Range(typeof(decimal), "0.01", "79228162514264337593543950335", ErrorMessage = "Capacity Liters must be greater than 0.")]
+        public decimal? CapacityLiters { get; set; }
+
+        [Required(ErrorMessage = "Current Liters is required.")]
+        [Range(typeof(decimal), "0", "79228162514264337593543950335", ErrorMessage = "Current Liters must be 0 or greater.")]
+        public decimal? CurrentLiters { get; set; }
+
         public bool IsActive { get; set; } = true;
+
+        public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+        {
+            if (CapacityLiters.HasValue
+                && CurrentLiters.HasValue
+                && CurrentLiters.Value > CapacityLiters.Value)
+            {
+                yield return new ValidationResult(
+                    "Current Liters must not be greater than Capacity Liters.",
+                    new[] { nameof(CurrentLiters) });
+            }
+        }
     }
 
     public class PumpForm
@@ -45,6 +65,8 @@ namespace gpos.Models.ViewModels
 
         [Required(ErrorMessage = "Pump name is required.")]
         public string Name { get; set; } = string.Empty;
+
+        public int Status { get; set; } = 1;
     }
 
     public class FuelSetupPageViewModel

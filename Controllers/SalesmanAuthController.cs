@@ -43,7 +43,6 @@ namespace gpos.Controllers
             HttpContext.Session.SetString("EmployeeId", employee.Id.ToString());
             HttpContext.Session.SetString("EmployeeName", employee.Name);
             HttpContext.Session.SetString("EmployeeUsername", employee.Username);
-            HttpContext.Session.SetString("EmployeeRole", employee.Role);
 
             return RedirectToAction("POS", "Salesman");
         }

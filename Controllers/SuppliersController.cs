@@ -44,6 +44,7 @@ namespace gpos.Controllers
             supplier.ContactPerson = CleanOptional(form.ContactPerson);
             supplier.ContactNumber = CleanOptional(form.ContactNumber);
             supplier.Address = CleanOptional(form.Address);
+            supplier.Status = form.Status;
             supplier.UpdatedAt = now;
 
             if (form.Id == 0)
@@ -66,16 +67,9 @@ namespace gpos.Controllers
                 return RedirectToAction(nameof(Index), new { search });
             }
 
-            var isUsedByFuel = await _db.Fuels.AnyAsync(fuel => fuel.SupplierId == id);
-
-            if (isUsedByFuel)
-            {
-                TempData["SupplierFeedback"] = "Delete blocked. This supplier is used by fuel.";
-                return RedirectToAction(nameof(Index), new { search });
-            }
-
-            _db.Suppliers.Remove(supplier);
-            TempData["SupplierFeedback"] = "Supplier deleted.";
+            supplier.Status = 0;
+            supplier.UpdatedAt = DateTime.UtcNow;
+            TempData["SupplierFeedback"] = "Supplier disabled.";
             await _db.SaveChangesAsync();
             return RedirectToAction(nameof(Index), new { search });
         }
@@ -116,7 +110,8 @@ namespace gpos.Controllers
                 Email = supplier.Email,
                 ContactPerson = supplier.ContactPerson,
                 ContactNumber = supplier.ContactNumber,
-                Address = supplier.Address
+                Address = supplier.Address,
+                Status = supplier.Status
             };
         }
 

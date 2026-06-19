@@ -10,8 +10,9 @@ namespace gpos.Models.ViewModels
         [Required(ErrorMessage = "Name is required.")]
         public string Name { get; set; } = string.Empty;
 
-        [Range(0, 999.99, ErrorMessage = "Earn Rate must be between 0 and 999.99.")]
-        public decimal EarnRate { get; set; }
+        [Required(ErrorMessage = "Earn Rate is required.")]
+        [Range(0, 100, ErrorMessage = "Earn Rate must be between 0 and 100.")]
+        public decimal? EarnRate { get; set; }
 
         [Range(0, 1, ErrorMessage = "Status is required.")]
         public int Status { get; set; } = 1;
@@ -30,6 +31,7 @@ namespace gpos.Models.ViewModels
         public string FullName { get; set; } = string.Empty;
 
         public string? ContactNumber { get; set; }
+        [EmailAddress(ErrorMessage = "Enter a valid email address.")]
         public string? Email { get; set; }
         public string? Address { get; set; }
         public int? DiscountId { get; set; }

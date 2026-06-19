@@ -6,6 +6,6 @@ namespace gpos.Controllers
     [BlockSalesmanSession]
     public class ShiftController : Controller
     {
-        public IActionResult Schedule() => View();
+        public IActionResult Schedule() => RedirectToAction("ShiftSchedule", "Configuration");
     }
 }

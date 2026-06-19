@@ -1,0 +1,16 @@
+namespace gpos.Models
+{
+    public class PointsLedger
+    {
+        public int Id { get; set; }
+        public int MemberId { get; set; }
+        public string TransactionType { get; set; } = string.Empty;
+        public decimal Points { get; set; }
+        public string? ReferenceType { get; set; }
+        public int? ReferenceId { get; set; }
+        public string? Remarks { get; set; }
+        public DateTime? CreatedAt { get; set; }
+
+        public Member? Member { get; set; }
+    }
+}

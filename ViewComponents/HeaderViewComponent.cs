@@ -119,28 +119,42 @@ namespace gpos.ViewComponents
                     "DisplayProducts" => "Configuration.DisplayProducts",
                     "WarehouseProducts" => "Configuration.WarehouseProducts",
                     "Categories" => "Configuration.ProductCategories",
+                    "ProductBatches" => "Configuration.ProductBatches",
+                    "StockReceiving" => "Configuration.StockReceiving",
+                    "ProductUnits" => "Configuration.ProductUnits",
+                    "LowStockSettings" => "Configuration.LowStockSettings",
                     "ItemUnits" => "Configuration.ItemUnits",
                     "Fuels" => "Configuration.Fuels",
                     "FuelTypes" => "Configuration.FuelTypes",
-                    "FuelPriceHistory" => "Configuration.FuelPrices",
+                    "FuelPriceHistory" => "Configuration.FuelPriceHistory",
                     "Pumps" => "Configuration.Pumps",
+                    "Nozzles" => "Configuration.Nozzles",
+                    "FuelDeliveries" => "Configuration.FuelDeliveries",
+                    "PumpMeterReadings" => "Configuration.PumpMeterReadings",
                     "PumpUnits" => "Configuration.PumpUnits",
                     "FuelTanks" => "Configuration.Tanks",
                     "Discounts" => "Configuration.Discounts",
                     "Members" => "Configuration.Members",
                     "Rebate" => "Configuration.Rebate",
+                    "PointsLedger" => "Configuration.PointsLedger",
+                    "DiscountRules" => "Configuration.DiscountRules",
                     "Position" => "Configuration.Position",
                     "Branch" => "Configuration.Branch",
                     "Department" => "Configuration.Department",
+                    "PaymentMethods" => "Configuration.PaymentMethods",
+                    "ShiftSettings" => "Configuration.ShiftSettings",
+                    "ShiftSchedule" => "Configuration.ShiftSchedule",
                     "Users" => "Users.Index",
                     "Employees" => "Employees.Index",
                     "Suppliers" => "Suppliers.Index",
                     "Operations" => "Operations.Index",
                     "Branches" => "Branches.Index",
                     "Departments" => "Departments.Index",
-                    "Schedule" => "Shift.Schedule",
+                    "Schedule" => "Configuration.ShiftSchedule",
                     "Roles" => "Roles.Index",
                     "Permissions" => "Permissions.Index",
+                    "RolePermissions" => "Configuration.RolePermissions",
+                    "ActivityLogs" => "Configuration.ActivityLogs",
                     _ => string.Empty
                 };
             }
@@ -188,7 +202,7 @@ namespace gpos.ViewComponents
             _ => action
         };
 
-        private static bool IsLegacySetupConfiguration(string action) => action is "Products" or "DisplayProducts" or "WarehouseProducts" or "Categories" or "ItemUnits" or "Fuels" or "FuelTypes" or "FuelPriceHistory" or "Pumps" or "PumpUnits" or "FuelTanks" or "Discounts" or "Members" or "Rebate" or "Position" or "Branch" or "Department";
+        private static bool IsLegacySetupConfiguration(string action) => action is "Products" or "DisplayProducts" or "WarehouseProducts" or "Categories" or "ProductBatches" or "StockReceiving" or "ProductUnits" or "LowStockSettings" or "ItemUnits" or "Fuels" or "FuelTypes" or "FuelPriceHistory" or "Pumps" or "Nozzles" or "FuelDeliveries" or "PumpMeterReadings" or "PumpUnits" or "FuelTanks" or "Discounts" or "Members" or "Rebate" or "PointsLedger" or "DiscountRules" or "Position" or "Branch" or "Department" or "PaymentMethods" or "ShiftSettings" or "ShiftSchedule" or "RolePermissions" or "ActivityLogs";
 
         private static bool IsLegacySetupUsers(string action) => action is "Users" or "Employees" or "Suppliers" or "Operations" or "Branches" or "Departments" or "Roles" or "Permissions";
 

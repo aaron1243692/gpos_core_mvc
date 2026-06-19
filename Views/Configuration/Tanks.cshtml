@@ -1,3 +1,4 @@
+@using System.Globalization
 @model gpos.Models.ViewModels.FuelSetupPageViewModel
 
 <div class="page-header">
@@ -27,34 +28,48 @@
         <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#tankModal">Add Tank</button>
     </div>
     <div class="setup-table-scroll">
-        <table class="table app-table table-sm align-middle mb-0">
+        <table class="table app-table table-sm align-middle admin-table mb-0">
+            <colgroup>
+                <col class="col-no" />
+                <col class="col-id" />
+                <col class="col-name" />
+                <col class="col-normal" />
+                <col class="col-normal" />
+                <col class="col-normal" />
+                <col class="col-normal" />
+                <col class="col-action" />
+            </colgroup>
             <thead>
                 <tr>
-                    <th>No</th>
-                    <th>ID</th>
-                    <th>Tank</th>
+                    <th class="col-no">No</th>
+                    <th class="col-id">ID</th>
+                    <th class="col-name">Tank No</th>
                     <th>Fuel</th>
-                    <th>Status</th>
-                    <th>Action</th>
+                    <th>Capacity Liters</th>
+                    <th>Current Liters</th>
+                    <th class="col-status">Status</th>
+                    <th class="col-action">Action</th>
                 </tr>
             </thead>
             <tbody>
                 @if (Model.Tanks.Count == 0)
                 {
-                    <tr><td class="text-center text-muted fw-bold" colspan="6">No records yet.</td></tr>
+                    <tr><td class="text-center text-muted fw-bold" colspan="8">No records yet.</td></tr>
                 }
                 @for (var i = 0; i < Model.Tanks.Count; i++)
                 {
                     <tr>
-                        <td>@(i + 1)</td>
-                        <td>@Model.Tanks[i].Id</td>
+                        <td class="col-no">@(i + 1)</td>
+                        <td class="col-id">@Model.Tanks[i].Id</td>
                         <td>@Model.Tanks[i].TankNo</td>
                         <td>@Model.Tanks[i].Fuel?.Name</td>
-                        <td>@(Model.Tanks[i].IsActive ? "Active" : "Inactive")</td>
-                        <td>
+                        <td>@Model.Tanks[i].CapacityLiters.ToString("N2", CultureInfo.InvariantCulture) L</td>
+                        <td>@Model.Tanks[i].CurrentLiters.ToString("N2", CultureInfo.InvariantCulture) L</td>
+                        <td><span class="badge @(Model.Tanks[i].Status == 1 ? "text-bg-success" : "text-bg-secondary")">@(Model.Tanks[i].Status == 1 ? "Active" : "Disabled")</span></td>
+                        <td class="col-action">
                             <div class="setup-row-actions">
                                 <a class="btn btn-sm btn-outline-primary" asp-action="Tanks" asp-route-editId="@Model.Tanks[i].Id" asp-route-search="@Model.Search">Edit</a>
-                                <form asp-action="DeleteTank" method="post" onsubmit="return confirm('Delete this tank?');">
+                                <form asp-action="DeleteTank" method="post" onsubmit="return confirm('Disable this tank?');">
                                     @Html.AntiForgeryToken()
                                     <input name="id" type="hidden" value="@Model.Tanks[i].Id" />
                                     <input name="search" type="hidden" value="@Model.Search" />
@@ -77,7 +92,7 @@
                 <input asp-for="TankForm.Id" type="hidden" />
                 <input name="search" type="hidden" value="@Model.Search" />
                 <div class="modal-header">
-                    <h2 class="modal-title fs-5" id="tankModalLabel">Add Tank</h2>
+                    <h2 class="modal-title fs-5" id="tankModalLabel">@(Model.TankForm.Id > 0 ? "Edit Tank" : "Add Tank")</h2>
                     <button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
@@ -89,9 +104,19 @@
                         <span asp-validation-for="TankForm.FuelId" class="text-danger"></span>
                     </div>
                     <div class="mb-3">
-                        <label asp-for="TankForm.TankNo" class="form-label">Tank</label>
+                        <label asp-for="TankForm.TankNo" class="form-label">Tank No</label>
                         <input asp-for="TankForm.TankNo" class="form-control" placeholder="Tank 1" />
                         <span asp-validation-for="TankForm.TankNo" class="text-danger"></span>
+                    </div>
+                    <div class="mb-3">
+                        <label asp-for="TankForm.CapacityLiters" class="form-label">Capacity Liters</label>
+                        <input asp-for="TankForm.CapacityLiters" class="form-control" type="number" min="0.01" step="0.01" placeholder="1000.00" />
+                        <span asp-validation-for="TankForm.CapacityLiters" class="text-danger"></span>
+                    </div>
+                    <div class="mb-3">
+                        <label asp-for="TankForm.CurrentLiters" class="form-label">Current Liters</label>
+                        <input asp-for="TankForm.CurrentLiters" class="form-control" type="number" min="0" step="0.01" placeholder="0.00" />
+                        <span asp-validation-for="TankForm.CurrentLiters" class="text-danger"></span>
                     </div>
                     <label class="form-check">
                         <input asp-for="TankForm.IsActive" class="form-check-input" />

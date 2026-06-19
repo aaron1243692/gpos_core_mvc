@@ -26,32 +26,42 @@
         <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#supplierModal">Add Supplier</button>
     </div>
     <div class="setup-table-scroll">
-        <table class="table app-table table-sm align-middle mb-0">
+        <table class="table app-table table-sm align-middle admin-table mb-0">
+            <colgroup>
+                <col class="col-no" />
+                <col class="col-id" />
+                <col class="col-name" />
+                <col class="col-address" />
+                <col class="col-status" />
+                <col class="col-action" />
+            </colgroup>
             <thead>
                 <tr>
-                    <th>No</th>
-                    <th>ID</th>
-                    <th>Name</th>
-                    <th>Address</th>
-                    <th>Action</th>
+                    <th class="col-no">No</th>
+                    <th class="col-id">ID</th>
+                    <th class="col-name">Name</th>
+                    <th class="col-address">Address</th>
+                    <th class="col-status">Status</th>
+                    <th class="col-action">Action</th>
                 </tr>
             </thead>
             <tbody>
                 @if (Model.Suppliers.Count == 0)
                 {
-                    <tr><td class="text-center text-muted fw-bold" colspan="5">No records yet.</td></tr>
+                    <tr><td class="text-center text-muted fw-bold" colspan="6">No records yet.</td></tr>
                 }
                 @for (var i = 0; i < Model.Suppliers.Count; i++)
                 {
                     <tr>
-                        <td>@(i + 1)</td>
-                        <td>@Model.Suppliers[i].Id</td>
+                        <td class="col-no">@(i + 1)</td>
+                        <td class="col-id">@Model.Suppliers[i].Id</td>
                         <td>@Model.Suppliers[i].Name</td>
                         <td>@(Model.Suppliers[i].Address ?? "-")</td>
-                        <td>
+                        <td><span class="badge @(Model.Suppliers[i].Status == 1 ? "text-bg-success" : "text-bg-secondary")">@(Model.Suppliers[i].Status == 1 ? "Active" : "Disabled")</span></td>
+                        <td class="col-action">
                             <div class="setup-row-actions">
                                 <a class="btn btn-sm btn-outline-primary" asp-action="Index" asp-route-editId="@Model.Suppliers[i].Id" asp-route-search="@Model.Search">Edit</a>
-                                <form asp-action="Delete" method="post" onsubmit="return confirm('Delete this supplier?');">
+                                <form asp-action="Delete" method="post" onsubmit="return confirm('Disable this supplier?');">
                                     @Html.AntiForgeryToken()
                                     <input name="id" type="hidden" value="@Model.Suppliers[i].Id" />
                                     <input name="search" type="hidden" value="@Model.Search" />
@@ -99,6 +109,13 @@
                     <div class="mb-3">
                         <label asp-for="SupplierForm.Address" class="form-label">Address</label>
                         <textarea asp-for="SupplierForm.Address" class="form-control" rows="3" placeholder="Address"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label asp-for="SupplierForm.Status" class="form-label">Status</label>
+                        <select asp-for="SupplierForm.Status" class="form-select">
+                            <option value="1">Active</option>
+                            <option value="0">Disabled</option>
+                        </select>
                     </div>
                 </div>
                 <div class="modal-footer">

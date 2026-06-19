@@ -35,6 +35,10 @@ build_property.EnableCodeStyleSeverity =
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcQnJhbmNoZXNcSW5kZXguY3NodG1s
 build_metadata.AdditionalFiles.CssScope = 
 
+[C:/project/gpos_core_mvc/Views/Configuration/ActivityLogs.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcQ29uZmlndXJhdGlvblxBY3Rpdml0eUxvZ3MuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
 [C:/project/gpos_core_mvc/Views/Configuration/Branch.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcQ29uZmlndXJhdGlvblxCcmFuY2guY3NodG1s
 build_metadata.AdditionalFiles.CssScope = 
@@ -43,12 +47,24 @@ build_metadata.AdditionalFiles.CssScope =
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcQ29uZmlndXJhdGlvblxEZXBhcnRtZW50LmNzaHRtbA==
 build_metadata.AdditionalFiles.CssScope = 
 
+[C:/project/gpos_core_mvc/Views/Configuration/DiscountRules.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcQ29uZmlndXJhdGlvblxEaXNjb3VudFJ1bGVzLmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
 [C:/project/gpos_core_mvc/Views/Configuration/Discounts.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcQ29uZmlndXJhdGlvblxEaXNjb3VudHMuY3NodG1s
 build_metadata.AdditionalFiles.CssScope = 
 
 [C:/project/gpos_core_mvc/Views/Configuration/DisplayProducts.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcQ29uZmlndXJhdGlvblxEaXNwbGF5UHJvZHVjdHMuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/project/gpos_core_mvc/Views/Configuration/FuelDeliveries.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcQ29uZmlndXJhdGlvblxGdWVsRGVsaXZlcmllcy5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/project/gpos_core_mvc/Views/Configuration/FuelPriceHistory.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcQ29uZmlndXJhdGlvblxGdWVsUHJpY2VIaXN0b3J5LmNzaHRtbA==
 build_metadata.AdditionalFiles.CssScope = 
 
 [C:/project/gpos_core_mvc/Views/Configuration/FuelPrices.cshtml]
@@ -67,12 +83,32 @@ build_metadata.AdditionalFiles.CssScope =
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcQ29uZmlndXJhdGlvblxJdGVtVW5pdHMuY3NodG1s
 build_metadata.AdditionalFiles.CssScope = 
 
+[C:/project/gpos_core_mvc/Views/Configuration/LowStockSettings.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcQ29uZmlndXJhdGlvblxMb3dTdG9ja1NldHRpbmdzLmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
 [C:/project/gpos_core_mvc/Views/Configuration/Members.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcQ29uZmlndXJhdGlvblxNZW1iZXJzLmNzaHRtbA==
 build_metadata.AdditionalFiles.CssScope = 
 
+[C:/project/gpos_core_mvc/Views/Configuration/Nozzles.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcQ29uZmlndXJhdGlvblxOb3p6bGVzLmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/project/gpos_core_mvc/Views/Configuration/PaymentMethods.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcQ29uZmlndXJhdGlvblxQYXltZW50TWV0aG9kcy5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/project/gpos_core_mvc/Views/Configuration/PointsLedger.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcQ29uZmlndXJhdGlvblxQb2ludHNMZWRnZXIuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
 [C:/project/gpos_core_mvc/Views/Configuration/Position.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcQ29uZmlndXJhdGlvblxQb3NpdGlvbi5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/project/gpos_core_mvc/Views/Configuration/ProductBatches.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcQ29uZmlndXJhdGlvblxQcm9kdWN0QmF0Y2hlcy5jc2h0bWw=
 build_metadata.AdditionalFiles.CssScope = 
 
 [C:/project/gpos_core_mvc/Views/Configuration/ProductCategories.cshtml]
@@ -81,6 +117,14 @@ build_metadata.AdditionalFiles.CssScope =
 
 [C:/project/gpos_core_mvc/Views/Configuration/Products.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcQ29uZmlndXJhdGlvblxQcm9kdWN0cy5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/project/gpos_core_mvc/Views/Configuration/ProductUnits.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcQ29uZmlndXJhdGlvblxQcm9kdWN0VW5pdHMuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/project/gpos_core_mvc/Views/Configuration/PumpMeterReadings.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcQ29uZmlndXJhdGlvblxQdW1wTWV0ZXJSZWFkaW5ncy5jc2h0bWw=
 build_metadata.AdditionalFiles.CssScope = 
 
 [C:/project/gpos_core_mvc/Views/Configuration/Pumps.cshtml]
@@ -93,6 +137,22 @@ build_metadata.AdditionalFiles.CssScope =
 
 [C:/project/gpos_core_mvc/Views/Configuration/Rebate.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcQ29uZmlndXJhdGlvblxSZWJhdGUuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/project/gpos_core_mvc/Views/Configuration/RolePermissions.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcQ29uZmlndXJhdGlvblxSb2xlUGVybWlzc2lvbnMuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/project/gpos_core_mvc/Views/Configuration/ShiftSchedule.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcQ29uZmlndXJhdGlvblxTaGlmdFNjaGVkdWxlLmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/project/gpos_core_mvc/Views/Configuration/ShiftSettings.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcQ29uZmlndXJhdGlvblxTaGlmdFNldHRpbmdzLmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/project/gpos_core_mvc/Views/Configuration/StockReceiving.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcQ29uZmlndXJhdGlvblxTdG9ja1JlY2VpdmluZy5jc2h0bWw=
 build_metadata.AdditionalFiles.CssScope = 
 
 [C:/project/gpos_core_mvc/Views/Configuration/Tanks.cshtml]

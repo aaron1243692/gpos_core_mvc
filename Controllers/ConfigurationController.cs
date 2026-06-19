@@ -10,7 +10,7 @@ using Microsoft.EntityFrameworkCore;
 namespace gpos.Controllers
 {
     [BlockSalesmanSession]
-    public class ConfigurationController : Controller
+    public partial class ConfigurationController : Controller
     {
         private readonly ApplicationDbContext _db;
         private readonly ProductBatchNumberService _batchNumberService;
@@ -116,11 +116,29 @@ namespace gpos.Controllers
                 Name = form.Name.Trim(),
                 Description = form.Description.Trim(),
                 IsActive = form.IsActive,
+                Status = form.IsActive ? 1 : 0,
                 CreatedAt = now,
                 UpdatedAt = now
             });
 
             await _db.SaveChangesAsync();
+            return RedirectToAction(nameof(ProductCategories), new { search });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> DeleteProductCategory(int id, string? search)
+        {
+            var category = await _db.ProductCategories.FindAsync(id);
+
+            if (category is not null)
+            {
+                category.IsActive = false;
+                category.Status = 0;
+                category.UpdatedAt = DateTime.UtcNow;
+                await _db.SaveChangesAsync();
+            }
+
             return RedirectToAction(nameof(ProductCategories), new { search });
         }
 
@@ -156,7 +174,7 @@ namespace gpos.Controllers
             }
 
             discount.Name = form.Name.Trim();
-            discount.EarnRate = form.EarnRate;
+            discount.EarnRate = form.EarnRate!.Value;
             discount.Status = form.Status;
             discount.UpdatedAt = now;
 
@@ -272,10 +290,209 @@ namespace gpos.Controllers
             return RedirectToAction(nameof(Members), new { search });
         }
 
-        public IActionResult Rebate() => View();
-        public IActionResult Position() => View();
-        public IActionResult Branch() => View();
-        public IActionResult Department() => View();
+        public async Task<IActionResult> Position(string? search, int? editId)
+        {
+            return View(await BuildPositionsPageAsync(search, editId: editId, activeModalId: editId.HasValue ? "positionModal" : ""));
+        }
+
+        public async Task<IActionResult> Branch(string? search, int? editId)
+        {
+            return View(await BuildBranchesPageAsync(search, editId: editId, activeModalId: editId.HasValue ? "branchModal" : ""));
+        }
+
+        public async Task<IActionResult> Department(string? search, int? editId)
+        {
+            return View(await BuildDepartmentsPageAsync(search, editId: editId, activeModalId: editId.HasValue ? "departmentModal" : ""));
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> SaveBranch([Bind(Prefix = "BranchForm")] BranchForm form, string? search)
+        {
+            if (!ModelState.IsValid)
+            {
+                return View("Branch", await BuildBranchesPageAsync(search, form, activeModalId: "branchModal"));
+            }
+
+            var now = DateTime.UtcNow;
+            var branch = form.Id > 0 ? await _db.Branches.FindAsync(form.Id) : new Branch { CreatedAt = now };
+
+            if (branch is null)
+            {
+                return NotFound();
+            }
+
+            branch.Name = form.Name.Trim();
+            branch.Address = CleanOptional(form.Address);
+            branch.Status = form.Status;
+            branch.UpdatedAt = now;
+
+            if (form.Id == 0)
+            {
+                _db.Branches.Add(branch);
+            }
+
+            await _db.SaveChangesAsync();
+            return RedirectToAction(nameof(Branch), new { search });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> DeleteBranch(int id, string? search)
+        {
+            var branch = await _db.Branches.FindAsync(id);
+
+            if (branch is not null)
+            {
+                var isUsed = await _db.Departments.AnyAsync(department => department.BranchId == id);
+
+                if (isUsed)
+                {
+                    branch.Status = 0;
+                    branch.UpdatedAt = DateTime.UtcNow;
+                    TempData["ConfigSetupFeedback"] = "Branch disabled because departments are assigned to it.";
+                }
+                else
+                {
+                    branch.Status = 0;
+                    branch.UpdatedAt = DateTime.UtcNow;
+                    TempData["ConfigSetupFeedback"] = "Branch disabled.";
+                }
+
+                await _db.SaveChangesAsync();
+            }
+
+            return RedirectToAction(nameof(Branch), new { search });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> SaveDepartment([Bind(Prefix = "DepartmentForm")] DepartmentForm form, string? search)
+        {
+            if (!ModelState.IsValid)
+            {
+                return View("Department", await BuildDepartmentsPageAsync(search, form, activeModalId: "departmentModal"));
+            }
+
+            var branchExists = await _db.Branches.AnyAsync(branch => branch.Id == form.BranchId && branch.Status == 1);
+
+            if (!branchExists)
+            {
+                ModelState.AddModelError("DepartmentForm.BranchId", "Select an active branch.");
+                return View("Department", await BuildDepartmentsPageAsync(search, form, activeModalId: "departmentModal"));
+            }
+
+            var now = DateTime.UtcNow;
+            var department = form.Id > 0 ? await _db.Departments.FindAsync(form.Id) : new Department { CreatedAt = now };
+
+            if (department is null)
+            {
+                return NotFound();
+            }
+
+            department.BranchId = form.BranchId;
+            department.Name = form.Name.Trim();
+            department.Description = CleanOptional(form.Description);
+            department.Status = form.Status;
+            department.UpdatedAt = now;
+
+            if (form.Id == 0)
+            {
+                _db.Departments.Add(department);
+            }
+
+            await _db.SaveChangesAsync();
+            return RedirectToAction(nameof(Department), new { search });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> DeleteDepartment(int id, string? search)
+        {
+            var department = await _db.Departments.FindAsync(id);
+
+            if (department is not null)
+            {
+                var isUsed = await _db.EmployeeAccounts.AnyAsync(employee => employee.DepartmentId == id);
+
+                if (isUsed)
+                {
+                    department.Status = 0;
+                    department.UpdatedAt = DateTime.UtcNow;
+                    TempData["ConfigSetupFeedback"] = "Department disabled because employees are assigned to it.";
+                }
+                else
+                {
+                    department.Status = 0;
+                    department.UpdatedAt = DateTime.UtcNow;
+                    TempData["ConfigSetupFeedback"] = "Department disabled.";
+                }
+
+                await _db.SaveChangesAsync();
+            }
+
+            return RedirectToAction(nameof(Department), new { search });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> SavePosition([Bind(Prefix = "PositionForm")] PositionForm form, string? search)
+        {
+            if (!ModelState.IsValid)
+            {
+                return View("Position", await BuildPositionsPageAsync(search, form, activeModalId: "positionModal"));
+            }
+
+            var now = DateTime.UtcNow;
+            var position = form.Id > 0 ? await _db.Positions.FindAsync(form.Id) : new gpos.Models.Position { CreatedAt = now };
+
+            if (position is null)
+            {
+                return NotFound();
+            }
+
+            position.Name = form.Name.Trim();
+            position.Description = CleanOptional(form.Description);
+            position.Status = form.Status;
+            position.UpdatedAt = now;
+
+            if (form.Id == 0)
+            {
+                _db.Positions.Add(position);
+            }
+
+            await _db.SaveChangesAsync();
+            return RedirectToAction(nameof(Position), new { search });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> DeletePosition(int id, string? search)
+        {
+            var position = await _db.Positions.FindAsync(id);
+
+            if (position is not null)
+            {
+                var isUsed = await _db.EmployeeAccounts.AnyAsync(employee => employee.PositionId == id);
+
+                if (isUsed)
+                {
+                    position.Status = 0;
+                    position.UpdatedAt = DateTime.UtcNow;
+                    TempData["ConfigSetupFeedback"] = "Position disabled because employees are assigned to it.";
+                }
+                else
+                {
+                    position.Status = 0;
+                    position.UpdatedAt = DateTime.UtcNow;
+                    TempData["ConfigSetupFeedback"] = "Position disabled.";
+                }
+
+                await _db.SaveChangesAsync();
+            }
+
+            return RedirectToAction(nameof(Position), new { search });
+        }
 
         public async Task<IActionResult> Fuels(string? search, int? editId)
         {
@@ -293,7 +510,7 @@ namespace gpos.Controllers
 
             if (form.SupplierId.HasValue)
             {
-                var supplierExists = await _db.Suppliers.AnyAsync(supplier => supplier.Id == form.SupplierId.Value);
+                var supplierExists = await _db.Suppliers.AnyAsync(supplier => supplier.Id == form.SupplierId.Value && supplier.Status == 1);
 
                 if (!supplierExists)
                 {
@@ -315,6 +532,7 @@ namespace gpos.Controllers
             fuel.SupplierId = form.SupplierId;
             fuel.CurrentPricePerLiter = form.CurrentPricePerLiter!.Value;
             fuel.IsActive = form.IsActive;
+            fuel.Status = form.IsActive ? 1 : 0;
             fuel.UpdatedAt = now;
 
             if (form.Id == 0)
@@ -337,17 +555,10 @@ namespace gpos.Controllers
                 return RedirectToAction(nameof(Fuels), new { search });
             }
 
-            var isUsedByTank = await _db.Tanks.AnyAsync(tank => tank.FuelId == id);
-
-            if (isUsedByTank)
-            {
-                TempData["FuelSetupFeedback"] = "Delete blocked. This fuel is used by a tank.";
-                return RedirectToAction(nameof(Fuels), new { search });
-            }
-
             fuel.IsActive = false;
+            fuel.Status = 0;
             fuel.UpdatedAt = DateTime.UtcNow;
-            TempData["FuelSetupFeedback"] = "Fuel deleted.";
+            TempData["FuelSetupFeedback"] = "Fuel disabled.";
             await _db.SaveChangesAsync();
             return RedirectToAction(nameof(Fuels), new { search });
         }
@@ -366,7 +577,7 @@ namespace gpos.Controllers
                 return View("Tanks", await BuildTanksPageAsync(search, form, activeModalId: "tankModal"));
             }
 
-            var fuelExists = await _db.Fuels.AnyAsync(fuel => fuel.Id == form.FuelId);
+            var fuelExists = await _db.Fuels.AnyAsync(fuel => fuel.Id == form.FuelId && fuel.Status == 1 && fuel.IsActive);
 
             if (!fuelExists)
             {
@@ -384,7 +595,10 @@ namespace gpos.Controllers
 
             tank.FuelId = form.FuelId;
             tank.TankNo = form.TankNo.Trim();
+            tank.CapacityLiters = form.CapacityLiters!.Value;
+            tank.CurrentLiters = form.CurrentLiters!.Value;
             tank.IsActive = form.IsActive;
+            tank.Status = form.IsActive ? 1 : 0;
             tank.UpdatedAt = now;
 
             if (form.Id == 0)
@@ -407,17 +621,10 @@ namespace gpos.Controllers
                 return RedirectToAction(nameof(Tanks), new { search });
             }
 
-            var isUsedByPump = await _db.Pumps.AnyAsync(pump => pump.TankId == id);
-
-            if (isUsedByPump)
-            {
-                TempData["FuelSetupFeedback"] = "Delete blocked. This tank is used by a pump.";
-                return RedirectToAction(nameof(Tanks), new { search });
-            }
-
             tank.IsActive = false;
+            tank.Status = 0;
             tank.UpdatedAt = DateTime.UtcNow;
-            TempData["FuelSetupFeedback"] = "Tank deleted.";
+            TempData["FuelSetupFeedback"] = "Tank disabled.";
             await _db.SaveChangesAsync();
             return RedirectToAction(nameof(Tanks), new { search });
         }
@@ -436,7 +643,7 @@ namespace gpos.Controllers
                 return View("Pumps", await BuildPumpsPageAsync(search, form, activeModalId: "pumpModal"));
             }
 
-            var tankExists = await _db.Tanks.AnyAsync(tank => tank.Id == form.TankId);
+            var tankExists = await _db.Tanks.AnyAsync(tank => tank.Id == form.TankId && tank.Status == 1 && tank.IsActive);
 
             if (!tankExists)
             {
@@ -455,6 +662,7 @@ namespace gpos.Controllers
             pump.TankId = form.TankId;
             pump.Name = form.Name.Trim();
             pump.PumpNo = form.Name.Trim();
+            pump.Status = form.Status;
             pump.UpdatedAt = now;
 
             if (form.Id == 0)
@@ -474,9 +682,10 @@ namespace gpos.Controllers
 
             if (pump is not null)
             {
-                _db.Pumps.Remove(pump);
+                pump.Status = 0;
+                pump.UpdatedAt = DateTime.UtcNow;
                 await _db.SaveChangesAsync();
-                TempData["FuelSetupFeedback"] = "Pump deleted.";
+                TempData["FuelSetupFeedback"] = "Pump disabled.";
             }
 
             return RedirectToAction(nameof(Pumps), new { search });
@@ -561,6 +770,7 @@ namespace gpos.Controllers
             if (product is not null)
             {
                 product.IsActive = form.IsActive;
+                product.Status = form.IsActive ? 1 : 0;
                 product.UpdatedAt = now;
                 return product;
             }
@@ -570,6 +780,7 @@ namespace gpos.Controllers
                 CategoryId = categoryId,
                 Name = productName,
                 IsActive = form.IsActive,
+                Status = form.IsActive ? 1 : 0,
                 CreatedAt = now,
                 UpdatedAt = now
             };
@@ -598,7 +809,7 @@ namespace gpos.Controllers
         private async Task<List<SelectListItem>> BuildCategoryOptionsAsync()
         {
             return await _db.ProductCategories.AsNoTracking()
-                .Where(category => category.IsActive)
+                .Where(category => category.IsActive && category.Status == 1)
                 .OrderBy(category => category.Name)
                 .Select(category => new SelectListItem { Value = category.Id.ToString(), Text = category.Name })
                 .ToListAsync();
@@ -606,7 +817,7 @@ namespace gpos.Controllers
 
         private async Task<bool> ProductCategoryExistsAsync(int categoryId)
         {
-            return await _db.ProductCategories.AnyAsync(category => category.Id == categoryId && category.IsActive);
+            return await _db.ProductCategories.AnyAsync(category => category.Id == categoryId && category.IsActive && category.Status == 1);
         }
 
         private async Task<FuelSetupPageViewModel> BuildFuelsPageAsync(string? search, FuelForm? form = null, int? editId = null, string activeModalId = "")
@@ -691,6 +902,7 @@ namespace gpos.Controllers
         private async Task<List<SelectListItem>> BuildSupplierOptionsAsync()
         {
             var options = await _db.Suppliers.AsNoTracking()
+                .Where(supplier => supplier.Status == 1)
                 .OrderBy(supplier => supplier.Name)
                 .Select(supplier => new SelectListItem { Value = supplier.Id.ToString(), Text = supplier.Name })
                 .ToListAsync();
@@ -708,6 +920,8 @@ namespace gpos.Controllers
                 Id = tank.Id,
                 FuelId = tank.FuelId,
                 TankNo = tank.TankNo,
+                CapacityLiters = tank.CapacityLiters,
+                CurrentLiters = tank.CurrentLiters,
                 IsActive = tank.IsActive
             };
         }
@@ -720,13 +934,15 @@ namespace gpos.Controllers
             {
                 Id = pump.Id,
                 TankId = pump.TankId,
-                Name = pump.Name
+                Name = pump.Name,
+                Status = pump.Status
             };
         }
 
         private async Task<List<SelectListItem>> BuildFuelOptionsAsync()
         {
             return await _db.Fuels.AsNoTracking()
+                .Where(fuel => fuel.Status == 1 && fuel.IsActive)
                 .OrderBy(fuel => fuel.Name)
                 .Select(fuel => new SelectListItem { Value = fuel.Id.ToString(), Text = $"{fuel.Code} - {fuel.Name}" })
                 .ToListAsync();
@@ -736,6 +952,7 @@ namespace gpos.Controllers
         {
             var options = await _db.Tanks.AsNoTracking()
                 .Include(tank => tank.Fuel)
+                .Where(tank => tank.Status == 1 && tank.IsActive && tank.Fuel != null && tank.Fuel.Status == 1 && tank.Fuel.IsActive)
                 .OrderBy(tank => tank.TankNo)
                 .Select(tank => new SelectListItem
                 {
@@ -828,15 +1045,139 @@ namespace gpos.Controllers
 
         private async Task<List<SelectListItem>> BuildDiscountOptionsAsync()
         {
-            var options = await _db.Discounts.AsNoTracking()
+            var discounts = await _db.Discounts.AsNoTracking()
                 .Where(discount => discount.Status == 1)
                 .OrderBy(discount => discount.Name)
-                .Select(discount => new SelectListItem { Value = discount.Id.ToString(), Text = discount.Name })
                 .ToListAsync();
+
+            var options = discounts
+                .Select(discount => new SelectListItem { Value = discount.Id.ToString(), Text = $"{discount.Name} - {FormatEarnRatePercent(discount.EarnRate)}" })
+                .ToList();
 
             options.Insert(0, new SelectListItem { Value = "", Text = "No discount" });
             return options;
         }
 
+        private static string FormatEarnRatePercent(decimal earnRate)
+        {
+            return (earnRate % 1 == 0 ? earnRate.ToString("N0") : earnRate.ToString("0.##")) + "%";
+        }
+
+        private async Task<EmployeeSetupPageViewModel> BuildBranchesPageAsync(string? search, BranchForm? form = null, int? editId = null, string activeModalId = "")
+        {
+            IQueryable<Branch> query = _db.Branches.AsNoTracking();
+            var searchText = (search ?? string.Empty).Trim();
+
+            if (!string.IsNullOrWhiteSpace(searchText))
+            {
+                query = query.Where(branch => branch.Name.Contains(searchText)
+                    || (branch.Address != null && branch.Address.Contains(searchText)));
+            }
+
+            return new EmployeeSetupPageViewModel
+            {
+                Search = searchText,
+                ActiveModalId = activeModalId,
+                BranchForm = form ?? await BuildBranchFormAsync(editId),
+                Branches = await query.OrderBy(branch => branch.Id).ToListAsync()
+            };
+        }
+
+        private async Task<EmployeeSetupPageViewModel> BuildDepartmentsPageAsync(string? search, DepartmentForm? form = null, int? editId = null, string activeModalId = "")
+        {
+            IQueryable<Department> query = _db.Departments.AsNoTracking().Include(department => department.Branch);
+            var searchText = (search ?? string.Empty).Trim();
+
+            if (!string.IsNullOrWhiteSpace(searchText))
+            {
+                query = query.Where(department => department.Name.Contains(searchText)
+                    || (department.Description != null && department.Description.Contains(searchText))
+                    || (department.Branch != null && department.Branch.Name.Contains(searchText)));
+            }
+
+            return new EmployeeSetupPageViewModel
+            {
+                Search = searchText,
+                ActiveModalId = activeModalId,
+                DepartmentForm = form ?? await BuildDepartmentFormAsync(editId),
+                BranchOptions = await BuildBranchOptionsAsync(),
+                Departments = await query.OrderBy(department => department.Id).ToListAsync()
+            };
+        }
+
+        private async Task<EmployeeSetupPageViewModel> BuildPositionsPageAsync(string? search, PositionForm? form = null, int? editId = null, string activeModalId = "")
+        {
+            IQueryable<gpos.Models.Position> query = _db.Positions.AsNoTracking();
+            var searchText = (search ?? string.Empty).Trim();
+
+            if (!string.IsNullOrWhiteSpace(searchText))
+            {
+                query = query.Where(position => position.Name.Contains(searchText)
+                    || (position.Description != null && position.Description.Contains(searchText)));
+            }
+
+            return new EmployeeSetupPageViewModel
+            {
+                Search = searchText,
+                ActiveModalId = activeModalId,
+                PositionForm = form ?? await BuildPositionFormAsync(editId),
+                Positions = await query.OrderBy(position => position.Id).ToListAsync()
+            };
+        }
+
+        private async Task<BranchForm> BuildBranchFormAsync(int? editId)
+        {
+            var branch = editId.HasValue ? await _db.Branches.AsNoTracking().FirstOrDefaultAsync(item => item.Id == editId.Value) : null;
+
+            return branch is null ? new BranchForm() : new BranchForm
+            {
+                Id = branch.Id,
+                Name = branch.Name,
+                Address = branch.Address,
+                Status = branch.Status
+            };
+        }
+
+        private async Task<DepartmentForm> BuildDepartmentFormAsync(int? editId)
+        {
+            var department = editId.HasValue ? await _db.Departments.AsNoTracking().FirstOrDefaultAsync(item => item.Id == editId.Value) : null;
+
+            return department is null ? new DepartmentForm() : new DepartmentForm
+            {
+                Id = department.Id,
+                BranchId = department.BranchId,
+                Name = department.Name,
+                Description = department.Description,
+                Status = department.Status
+            };
+        }
+
+        private async Task<PositionForm> BuildPositionFormAsync(int? editId)
+        {
+            var position = editId.HasValue ? await _db.Positions.AsNoTracking().FirstOrDefaultAsync(item => item.Id == editId.Value) : null;
+
+            return position is null ? new PositionForm() : new PositionForm
+            {
+                Id = position.Id,
+                Name = position.Name,
+                Description = position.Description,
+                Status = position.Status
+            };
+        }
+
+        private async Task<List<SelectListItem>> BuildBranchOptionsAsync()
+        {
+            return await _db.Branches.AsNoTracking()
+                .Where(branch => branch.Status == 1)
+                .OrderBy(branch => branch.Name)
+                .Select(branch => new SelectListItem { Value = branch.Id.ToString(), Text = branch.Name })
+                .ToListAsync();
+        }
+
+        private static string? CleanOptional(string? value)
+        {
+            var trimmed = (value ?? string.Empty).Trim();
+            return string.IsNullOrWhiteSpace(trimmed) ? null : trimmed;
+        }
     }
 }

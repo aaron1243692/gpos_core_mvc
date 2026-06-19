@@ -8,9 +8,13 @@ namespace gpos.Models
         public string? ContactPerson { get; set; }
         public string? ContactNumber { get; set; }
         public string? Address { get; set; }
+        public int Status { get; set; } = 1;
         public DateTime? CreatedAt { get; set; }
         public DateTime? UpdatedAt { get; set; }
 
         public ICollection<Fuel> Fuels { get; set; } = new List<Fuel>();
+        public ICollection<ProductBatch> ProductBatches { get; set; } = new List<ProductBatch>();
+        public ICollection<StockReceiving> StockReceivings { get; set; } = new List<StockReceiving>();
+        public ICollection<FuelDelivery> FuelDeliveries { get; set; } = new List<FuelDelivery>();
     }
 }

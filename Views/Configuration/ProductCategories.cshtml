@@ -15,8 +15,8 @@
     </div>
 </div>
 
-<section class="card content-card mb-4">
-    <div class="d-flex justify-content-between align-items-center gap-2 flex-wrap mb-3">
+<section class="card content-card table-card full-height-card mb-0">
+    <div class="table-toolbar d-flex justify-content-between align-items-center gap-2 flex-wrap mb-3">
         <form class="products-search-wrap" asp-action="ProductCategories" method="get">
             <label class="visually-hidden" for="product-category-search">Search categories</label>
             <input class="form-control form-control-sm products-search" id="product-category-search" name="search" value="@Model.Search" type="search" placeholder="Search categories" autocomplete="off" />
@@ -26,16 +26,24 @@
         </div>
     </div>
 
-    <div class="table-responsive">
-        <table class="table table-sm table-hover align-middle mb-0">
+    <div class="table-responsive table-scroll-wrap flex-table-wrap">
+        <table class="table table-sm table-hover align-middle admin-table mb-0">
+            <colgroup>
+                <col class="col-no" />
+                <col class="col-id" />
+                <col class="col-name" />
+                <col class="col-description" />
+                <col class="col-normal" />
+                <col class="col-action" />
+            </colgroup>
             <thead>
                 <tr>
-                    <th scope="col">No</th>
-                    <th scope="col">ID</th>
-                    <th scope="col">Name</th>
-                    <th scope="col">Description</th>
-                    <th scope="col">Status</th>
-                    <th scope="col">Action</th>
+                    <th class="col-no" scope="col">No</th>
+                    <th class="col-id" scope="col">ID</th>
+                    <th class="col-name" scope="col">Name</th>
+                    <th class="col-description" scope="col">Description</th>
+                    <th class="col-status" scope="col">Status</th>
+                    <th class="col-action" scope="col">Action</th>
                 </tr>
             </thead>
             <tbody>
@@ -48,13 +56,21 @@
                 @for (var index = 0; index < Model.Categories.Count; index += 1)
                 {
                     <tr>
-                        <td>@(index + 1)</td>
-                        <td>@Model.Categories[index].Id</td>
+                        <td class="col-no">@(index + 1)</td>
+                        <td class="col-id">@Model.Categories[index].Id</td>
                         <td>@Model.Categories[index].Name</td>
                         <td>@Model.Categories[index].Description</td>
-                        <td>@(Model.Categories[index].IsActive ? "Active" : "Inactive")</td>
-                        <td>
-                            <button class="btn btn-outline-secondary btn-sm" type="button" disabled>Edit</button>
+                        <td><span class="badge @(Model.Categories[index].Status == 1 ? "text-bg-success" : "text-bg-secondary")">@(Model.Categories[index].Status == 1 ? "Active" : "Disabled")</span></td>
+                        <td class="col-action">
+                            <div class="setup-row-actions">
+                                <button class="btn btn-outline-secondary btn-sm" type="button" disabled>Edit</button>
+                                <form asp-action="DeleteProductCategory" method="post" onsubmit="return confirm('Disable this category?');">
+                                    @Html.AntiForgeryToken()
+                                    <input name="id" type="hidden" value="@Model.Categories[index].Id" />
+                                    <input name="search" type="hidden" value="@Model.Search" />
+                                    <button class="btn btn-sm btn-outline-danger" type="submit">Delete</button>
+                                </form>
+                            </div>
                         </td>
                     </tr>
                 }
@@ -82,7 +98,7 @@
                         </div>
                         <div>
                             <label class="form-label" asp-for="CategoryForm.Description">Description</label>
-                            <textarea class="form-control" asp-for="CategoryForm.Description" rows="3"></textarea>
+                            <input class="form-control" asp-for="CategoryForm.Description" type="text" />
                         </div>
                         <div>
                             <label class="form-check">

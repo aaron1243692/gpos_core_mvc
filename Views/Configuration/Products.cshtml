@@ -26,29 +26,39 @@
             </div>
 
             <div class="table-responsive products-table-wrap">
-                <table class="table table-sm table-hover align-middle mb-0">
+                <table class="table table-sm table-hover align-middle admin-table mb-0">
+                    <colgroup>
+                        <col class="col-no" />
+                        <col class="col-id" />
+                        <col class="col-normal" />
+                        <col class="col-name" />
+                        <col class="col-normal" />
+                        <col class="col-normal" />
+                        <col class="col-normal" />
+                        <col class="col-action" />
+                    </colgroup>
                     <thead>
                         <tr>
-                            <th scope="col">No</th>
-                            <th scope="col">ID</th>
-                            <th scope="col">Batch #</th>
-                            <th scope="col">Name</th>
-                            <th scope="col">Cost Price</th>
-                            <th scope="col">Selling Price</th>
-                            <th scope="col">Quantity</th>
-                            <th scope="col">Action</th>
+                            <th class="col-no" scope="col">No</th>
+                            <th class="col-id" scope="col">ID</th>
+                            <th class="col-batch" scope="col">Batch #</th>
+                            <th class="col-name" scope="col">Name</th>
+                            <th class="col-money" scope="col">Cost Price</th>
+                            <th class="col-money" scope="col">Selling Price</th>
+                            <th class="col-qty" scope="col">Quantity</th>
+                            <th class="col-action" scope="col">Action</th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr data-product-row>
-                            <td>1</td>
-                            <td>PRD-001</td>
-                            <td>IB-024</td>
-                            <td>Engine Oil 1L</td>
+                            <td class="col-no">1</td>
+                            <td class="col-id">PRD-001</td>
+                            <td class="col-batch">IB-024</td>
+                            <td class="col-name">Engine Oil 1L</td>
                             <td>&#8369;220.00</td>
                             <td>&#8369;320.00</td>
-                            <td>48</td>
-                            <td>
+                            <td class="col-qty">48</td>
+                            <td class="col-action">
                                 <div class="d-flex flex-wrap gap-1">
                                     <button class="btn btn-outline-secondary btn-sm" type="button" disabled>Edit</button>
                                     <button class="btn btn-outline-danger btn-sm" type="button" disabled>Delete</button>
@@ -56,14 +66,14 @@
                             </td>
                         </tr>
                         <tr data-product-row>
-                            <td>2</td>
-                            <td>PRD-002</td>
-                            <td>IB-025</td>
-                            <td>Coolant 1L</td>
+                            <td class="col-no">2</td>
+                            <td class="col-id">PRD-002</td>
+                            <td class="col-batch">IB-025</td>
+                            <td class="col-name">Coolant 1L</td>
                             <td>&#8369;110.00</td>
                             <td>&#8369;180.00</td>
-                            <td>36</td>
-                            <td>
+                            <td class="col-qty">36</td>
+                            <td class="col-action">
                                 <div class="d-flex flex-wrap gap-1">
                                     <button class="btn btn-outline-secondary btn-sm" type="button" disabled>Edit</button>
                                     <button class="btn btn-outline-danger btn-sm" type="button" disabled>Delete</button>
@@ -71,14 +81,14 @@
                             </td>
                         </tr>
                         <tr data-product-row>
-                            <td>3</td>
-                            <td>PRD-003</td>
-                            <td>IB-026</td>
-                            <td>Brake Fluid</td>
+                            <td class="col-no">3</td>
+                            <td class="col-id">PRD-003</td>
+                            <td class="col-batch">IB-026</td>
+                            <td class="col-name">Brake Fluid</td>
                             <td>&#8369;145.00</td>
                             <td>&#8369;210.00</td>
-                            <td>24</td>
-                            <td>
+                            <td class="col-qty">24</td>
+                            <td class="col-action">
                                 <div class="d-flex flex-wrap gap-1">
                                     <button class="btn btn-outline-secondary btn-sm" type="button" disabled>Edit</button>
                                     <button class="btn btn-outline-danger btn-sm" type="button" disabled>Delete</button>

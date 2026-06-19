@@ -27,15 +27,23 @@
         <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#discountModal">Add Discount</button>
     </div>
     <div class="setup-table-scroll">
-        <table class="table app-table table-sm align-middle mb-0">
+        <table class="table app-table table-sm align-middle admin-table mb-0">
+            <colgroup>
+                <col class="col-no" />
+                <col class="col-id" />
+                <col class="col-name" />
+                <col class="col-normal" />
+                <col class="col-normal" />
+                <col class="col-action" />
+            </colgroup>
             <thead>
                 <tr>
-                    <th>No</th>
-                    <th>ID</th>
-                    <th>Name</th>
-                    <th>Earn Rate</th>
-                    <th>Status</th>
-                    <th>Action</th>
+                    <th class="col-no">No</th>
+                    <th class="col-id">ID</th>
+                    <th class="col-name">Name</th>
+                    <th class="col-money">Earn Rate</th>
+                    <th class="col-status">Status</th>
+                    <th class="col-action">Action</th>
                 </tr>
             </thead>
             <tbody>
@@ -46,11 +54,11 @@
                 @for (var i = 0; i < Model.Discounts.Count; i++)
                 {
                     <tr>
-                        <td>@(i + 1)</td>
-                        <td>@Model.Discounts[i].Id</td>
+                        <td class="col-no">@(i + 1)</td>
+                        <td class="col-id">@Model.Discounts[i].Id</td>
                         <td>@Model.Discounts[i].Name</td>
-                        <td>@Model.Discounts[i].EarnRate.ToString("N2")%</td>
-                        <td>
+                        <td>@((Model.Discounts[i].EarnRate % 1 == 0 ? Model.Discounts[i].EarnRate.ToString("N0") : Model.Discounts[i].EarnRate.ToString("0.##")) + "%")</td>
+                        <td class="col-status">
                             @if (Model.Discounts[i].Status == 1)
                             {
                                 <span class="badge text-bg-success">Active</span>
@@ -60,7 +68,7 @@
                                 <span class="badge text-bg-secondary">Disabled</span>
                             }
                         </td>
-                        <td>
+                        <td class="col-action">
                             <div class="setup-row-actions">
                                 <a class="btn btn-sm btn-outline-primary" asp-action="Discounts" asp-route-editId="@Model.Discounts[i].Id" asp-route-search="@Model.Search">Edit</a>
                                 <form asp-action="DeleteDiscount" method="post" onsubmit="return confirm('Disable this discount?');">
@@ -97,7 +105,7 @@
                     </div>
                     <div class="mb-3">
                         <label asp-for="DiscountForm.EarnRate" class="form-label">Earn Rate (%)</label>
-                        <input asp-for="DiscountForm.EarnRate" class="form-control" min="0" step="0.01" type="number" />
+                        <input asp-for="DiscountForm.EarnRate" class="form-control" min="0" max="100" step="0.01" type="number" value="@(Model.DiscountForm.EarnRate.HasValue ? (Model.DiscountForm.EarnRate.Value % 1 == 0 ? Model.DiscountForm.EarnRate.Value.ToString("0") : Model.DiscountForm.EarnRate.Value.ToString("0.##")) : "")" />
                         <span asp-validation-for="DiscountForm.EarnRate" class="text-danger"></span>
                     </div>
                     <div class="mb-3">

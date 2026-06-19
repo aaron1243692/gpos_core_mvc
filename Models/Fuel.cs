@@ -8,10 +8,13 @@ namespace gpos.Models
         public int? SupplierId { get; set; }
         public decimal CurrentPricePerLiter { get; set; }
         public bool IsActive { get; set; } = true;
+        public int Status { get; set; } = 1;
         public DateTime? CreatedAt { get; set; }
         public DateTime? UpdatedAt { get; set; }
 
         public Supplier? Supplier { get; set; }
         public ICollection<Tank> Tanks { get; set; } = new List<Tank>();
+        public ICollection<FuelDelivery> FuelDeliveries { get; set; } = new List<FuelDelivery>();
+        public ICollection<FuelPriceHistory> FuelPriceHistory { get; set; } = new List<FuelPriceHistory>();
     }
 }
