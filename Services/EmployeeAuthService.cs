@@ -33,7 +33,7 @@ namespace gpos.Services
                 await using (var command = connection.CreateCommand())
                 {
                     command.CommandText = """
-                        SELECT id, full_name, username, password_hash, status
+                        SELECT id, full_name, username, password_hash, status, schedule_id
                         FROM employee_account
                         WHERE username = @username
                         LIMIT 1;
@@ -56,7 +56,8 @@ namespace gpos.Services
                         reader.GetString(1),
                         reader.GetString(2),
                         reader.GetString(3),
-                        reader.GetInt32(4));
+                        reader.GetInt32(4),
+                        reader.IsDBNull(5) ? null : reader.GetInt32(5));
                 }
 
                 if (employee.Status != 1)
@@ -69,7 +70,7 @@ namespace gpos.Services
                     return EmployeeSignInResult.Failed("Invalid username or password.");
                 }
 
-                if (!await IsEmployeeScheduledNowAsync(employee.Id))
+                if (!await IsEmployeeScheduledNowAsync(employee.ScheduleId))
                 {
                     return EmployeeSignInResult.Failed("Your account is not scheduled for this time.");
                 }
@@ -109,33 +110,49 @@ namespace gpos.Services
             }
         }
 
-        private async Task<bool> IsEmployeeScheduledNowAsync(int employeeAccountId)
+        private async Task<bool> IsEmployeeScheduledNowAsync(int? scheduleId)
         {
+            if (!scheduleId.HasValue)
+            {
+                return false;
+            }
+
             var now = DateTime.Now;
             var currentDay = ToScheduleDay(now.DayOfWeek);
             var previousDay = currentDay == 1 ? 7 : currentDay - 1;
             var currentTime = now.TimeOfDay;
 
-            var schedules = await _context.EmployeeShiftSchedules.AsNoTracking()
-                .Where(schedule => schedule.EmployeeAccountId == employeeAccountId
-                    && schedule.Status == 1
-                    && (schedule.DayOfWeek == currentDay || schedule.DayOfWeek == previousDay))
-                .ToListAsync();
-
-            return schedules.Any(schedule => IsScheduleActiveNow(schedule.DayOfWeek, schedule.StartTime, schedule.EndTime, currentDay, previousDay, currentTime));
-        }
-
-        private static bool IsScheduleActiveNow(int scheduleDay, TimeSpan startTime, TimeSpan endTime, int currentDay, int previousDay, TimeSpan currentTime)
-        {
-            if (startTime < endTime)
+            var scheduleIsActive = await _context.Schedules.AsNoTracking().AnyAsync(schedule => schedule.Id == scheduleId.Value && schedule.Status == 1);
+            if (!scheduleIsActive)
             {
-                return scheduleDay == currentDay && currentTime >= startTime && currentTime <= endTime;
+                return false;
             }
 
-            if (startTime > endTime)
+            var details = await _context.ScheduleDetails.AsNoTracking()
+                .Where(detail => detail.ScheduleId == scheduleId.Value
+                    && (detail.DayOfWeek == currentDay || detail.DayOfWeek == previousDay))
+                .ToListAsync();
+
+            return details.Any(detail => IsScheduleActiveNow(detail.DayOfWeek, detail.AmIn, detail.AmOut, currentDay, previousDay, currentTime)
+                || IsScheduleActiveNow(detail.DayOfWeek, detail.PmIn, detail.PmOut, currentDay, previousDay, currentTime));
+        }
+
+        private static bool IsScheduleActiveNow(int scheduleDay, TimeSpan? startTime, TimeSpan? endTime, int currentDay, int previousDay, TimeSpan currentTime)
+        {
+            if (!startTime.HasValue || !endTime.HasValue)
             {
-                return scheduleDay == currentDay && currentTime >= startTime
-                    || scheduleDay == previousDay && currentTime <= endTime;
+                return false;
+            }
+
+            if (startTime.Value < endTime.Value)
+            {
+                return scheduleDay == currentDay && currentTime >= startTime.Value && currentTime <= endTime.Value;
+            }
+
+            if (startTime.Value > endTime.Value)
+            {
+                return scheduleDay == currentDay && currentTime >= startTime.Value
+                    || scheduleDay == previousDay && currentTime <= endTime.Value;
             }
 
             return scheduleDay == currentDay;
@@ -157,7 +174,7 @@ namespace gpos.Services
         }
     }
 
-    public sealed record SalesmanEmployeeAccount(int Id, string Name, string Username, string PasswordHash, int Status);
+    public sealed record SalesmanEmployeeAccount(int Id, string Name, string Username, string PasswordHash, int Status, int? ScheduleId);
 
     public sealed class EmployeeSignInResult
     {

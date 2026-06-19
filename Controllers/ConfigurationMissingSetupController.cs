@@ -75,12 +75,23 @@ namespace gpos.Controllers
 
         public async Task<IActionResult> ShiftSettings(string? search, int? editId)
         {
-            return View(await BuildShiftSettingsPageAsync(search, editId: editId, activeModalId: editId.HasValue ? "shiftSettingModal" : ""));
+            return RedirectToAction(nameof(Schedules), new { search });
         }
 
         public async Task<IActionResult> ShiftSchedule(string? search, int? editId)
         {
-            return View(await BuildShiftSchedulePageAsync(search, editId: editId, activeModalId: editId.HasValue ? "shiftScheduleModal" : ""));
+            return RedirectToAction(nameof(EmployeeSchedules), new { search });
+        }
+
+        public async Task<IActionResult> Schedules(string? search, int? editId, int? detailsId)
+        {
+            var activeModalId = editId.HasValue ? "scheduleModal" : detailsId.HasValue ? "scheduleDetailsModal" : "";
+            return View(await BuildSchedulesPageAsync(search, editId: editId, detailsId: detailsId, activeModalId: activeModalId));
+        }
+
+        public async Task<IActionResult> EmployeeSchedules(string? search)
+        {
+            return View(await BuildEmployeeSchedulesPageAsync(search));
         }
 
         public IActionResult Users() => RedirectToAction("Index", "Users");
@@ -614,6 +625,104 @@ namespace gpos.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        public async Task<IActionResult> SaveSchedule([Bind(Prefix = "ScheduleForm")] ScheduleForm form, string? search)
+        {
+            if (!ModelState.IsValid)
+            {
+                return View("Schedules", await BuildSchedulesPageAsync(search, form, activeModalId: "scheduleModal"));
+            }
+
+            var name = form.Name.Trim();
+            var duplicate = await _db.Schedules.AnyAsync(schedule => schedule.Id != form.Id && schedule.Name == name);
+            if (duplicate)
+            {
+                ModelState.AddModelError("ScheduleForm.Name", "Schedule name already exists.");
+                return View("Schedules", await BuildSchedulesPageAsync(search, form, activeModalId: "scheduleModal"));
+            }
+
+            var now = DateTime.UtcNow;
+            var scheduleItem = form.Id > 0 ? await _db.Schedules.FindAsync(form.Id) : new Schedule { CreatedAt = now };
+            if (scheduleItem is null) return NotFound();
+
+            scheduleItem.Name = name;
+            scheduleItem.Status = form.Status;
+            scheduleItem.UpdatedAt = now;
+            if (form.Id == 0) _db.Schedules.Add(scheduleItem);
+            await _db.SaveChangesAsync();
+            return RedirectToAction(nameof(Schedules), new { search });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> SaveScheduleDetails([Bind(Prefix = "ScheduleDetailsForm")] ScheduleDetailsForm form, string? search)
+        {
+            var scheduleExists = await _db.Schedules.AnyAsync(schedule => schedule.Id == form.ScheduleId && schedule.Status == 1);
+            if (!scheduleExists) return NotFound();
+
+            var now = DateTime.UtcNow;
+            var existing = await _db.ScheduleDetails.Where(detail => detail.ScheduleId == form.ScheduleId).ToListAsync();
+            for (var i = 0; i < form.Details.Count; i++)
+            {
+                var line = form.Details[i];
+                var detail = existing.FirstOrDefault(item => item.DayOfWeek == line.DayOfWeek);
+                if (detail is null)
+                {
+                    detail = new ScheduleDetail { ScheduleId = form.ScheduleId, DayOfWeek = line.DayOfWeek, CreatedAt = now };
+                    _db.ScheduleDetails.Add(detail);
+                }
+
+                detail.AmIn = line.AmIn;
+                detail.AmOut = line.AmOut;
+                detail.PmIn = line.PmIn;
+                detail.PmOut = line.PmOut;
+                detail.UpdatedAt = now;
+            }
+
+            await _db.SaveChangesAsync();
+            return RedirectToAction(nameof(Schedules), new { search });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> DeleteSchedule(int id, string? search)
+        {
+            var schedule = await _db.Schedules.FindAsync(id);
+            if (schedule is not null)
+            {
+                schedule.Status = 0;
+                schedule.UpdatedAt = DateTime.UtcNow;
+                var assignedAccounts = await _db.EmployeeAccounts.Where(account => account.ScheduleId == id).ToListAsync();
+                for (var i = 0; i < assignedAccounts.Count; i++)
+                {
+                    assignedAccounts[i].ScheduleId = null;
+                    assignedAccounts[i].UpdatedAt = DateTime.UtcNow;
+                }
+                await _db.SaveChangesAsync();
+            }
+            return RedirectToAction(nameof(Schedules), new { search });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> AssignEmployeeSchedule([Bind(Prefix = "EmployeeScheduleForm")] EmployeeScheduleForm form, string? search)
+        {
+            var account = await _db.EmployeeAccounts.FindAsync(form.EmployeeAccountId);
+            if (account is null) return NotFound();
+
+            if (form.ScheduleId.HasValue)
+            {
+                var scheduleExists = await _db.Schedules.AnyAsync(schedule => schedule.Id == form.ScheduleId.Value && schedule.Status == 1);
+                if (!scheduleExists) form.ScheduleId = null;
+            }
+
+            account.ScheduleId = form.ScheduleId;
+            account.UpdatedAt = DateTime.UtcNow;
+            await _db.SaveChangesAsync();
+            return RedirectToAction(nameof(EmployeeSchedules), new { search });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> SaveShiftSetting([Bind(Prefix = "ShiftSettingForm")] ShiftSettingForm form, string? search)
         {
             if (!ModelState.IsValid)
@@ -929,6 +1038,42 @@ namespace gpos.Controllers
             };
         }
 
+        private async Task<SetupModulesPageViewModel> BuildSchedulesPageAsync(string? search, ScheduleForm? form = null, int? editId = null, int? detailsId = null, string activeModalId = "")
+        {
+            var query = _db.Schedules.AsNoTracking();
+            var searchText = (search ?? string.Empty).Trim();
+            if (!string.IsNullOrWhiteSpace(searchText)) query = query.Where(schedule => schedule.Name.Contains(searchText));
+
+            var selectedDetailsId = detailsId ?? 0;
+            return new SetupModulesPageViewModel
+            {
+                Search = searchText,
+                ActiveModalId = activeModalId,
+                ScheduleForm = form ?? await BuildScheduleFormAsync(editId),
+                ScheduleDetailsForm = await BuildScheduleDetailsFormAsync(selectedDetailsId),
+                Schedules = await query.OrderBy(schedule => schedule.Id).ToListAsync()
+            };
+        }
+
+        private async Task<SetupModulesPageViewModel> BuildEmployeeSchedulesPageAsync(string? search)
+        {
+            IQueryable<EmployeeAccount> query = _db.EmployeeAccounts.AsNoTracking().Include(account => account.Schedule);
+            var searchText = (search ?? string.Empty).Trim();
+            if (!string.IsNullOrWhiteSpace(searchText))
+            {
+                query = query.Where(account => account.FullName.Contains(searchText)
+                    || account.Username.Contains(searchText)
+                    || (account.Schedule != null && account.Schedule.Name.Contains(searchText)));
+            }
+
+            return new SetupModulesPageViewModel
+            {
+                Search = searchText,
+                ScheduleOptions = await BuildScheduleOptionsAsync(),
+                EmployeeScheduleAccounts = await query.OrderBy(account => account.FullName).ToListAsync()
+            };
+        }
+
         private async Task<SetupModulesPageViewModel> BuildRolePermissionsPageAsync(int? roleId, RolePermissionsForm? form = null)
         {
             var selectedRoleId = form?.RoleId ?? roleId ?? 0;
@@ -1024,12 +1169,53 @@ namespace gpos.Controllers
             return item is null ? new EmployeeShiftScheduleForm() : new EmployeeShiftScheduleForm { Id = item.Id, EmployeeAccountId = item.EmployeeAccountId, DayOfWeek = item.DayOfWeek, ShiftSettingId = item.ShiftSettingId, StartTime = item.StartTime, EndTime = item.EndTime, Status = item.Status };
         }
 
+        private async Task<ScheduleForm> BuildScheduleFormAsync(int? editId)
+        {
+            var item = editId.HasValue ? await _db.Schedules.AsNoTracking().FirstOrDefaultAsync(schedule => schedule.Id == editId.Value) : null;
+            return item is null ? new ScheduleForm() : new ScheduleForm { Id = item.Id, Name = item.Name, Status = item.Status };
+        }
+
+        private async Task<ScheduleDetailsForm> BuildScheduleDetailsFormAsync(int scheduleId)
+        {
+            var existing = scheduleId > 0
+                ? await _db.ScheduleDetails.AsNoTracking().Where(detail => detail.ScheduleId == scheduleId).ToListAsync()
+                : new List<ScheduleDetail>();
+
+            return new ScheduleDetailsForm
+            {
+                ScheduleId = scheduleId,
+                Details = BuildDayOptions().Select(day =>
+                {
+                    var dayValue = int.Parse(day.Value);
+                    var detail = existing.FirstOrDefault(item => item.DayOfWeek == dayValue);
+                    return new ScheduleDetailLineForm
+                    {
+                        DayOfWeek = dayValue,
+                        DayName = day.Text,
+                        AmIn = detail?.AmIn,
+                        AmOut = detail?.AmOut,
+                        PmIn = detail?.PmIn,
+                        PmOut = detail?.PmOut
+                    };
+                }).ToList()
+            };
+        }
+
         private async Task<List<SelectListItem>> BuildEmployeeAccountOptionsAsync()
         {
             return await _db.EmployeeAccounts.AsNoTracking()
                 .Where(account => account.Status == 1)
                 .OrderBy(account => account.FullName)
                 .Select(account => new SelectListItem { Value = account.Id.ToString(), Text = $"{account.FullName} ({account.Username})" })
+                .ToListAsync();
+        }
+
+        private async Task<List<SelectListItem>> BuildScheduleOptionsAsync()
+        {
+            return await _db.Schedules.AsNoTracking()
+                .Where(schedule => schedule.Status == 1)
+                .OrderBy(schedule => schedule.Name)
+                .Select(schedule => new SelectListItem { Value = schedule.Id.ToString(), Text = schedule.Name })
                 .ToListAsync();
         }
 

@@ -11,6 +11,7 @@ namespace gpos.Models
         public string? Address { get; set; }
         public int DepartmentId { get; set; }
         public int? PositionId { get; set; }
+        public int? ScheduleId { get; set; }
         public string? Role { get; set; }
         public int Status { get; set; } = 1;
         public DateTime? CreatedAt { get; set; }
@@ -18,6 +19,7 @@ namespace gpos.Models
 
         public Department? Department { get; set; }
         public Position? Position { get; set; }
+        public Schedule? Schedule { get; set; }
         public ICollection<EmployeeShiftSchedule> ShiftSchedules { get; set; } = new List<EmployeeShiftSchedule>();
     }
 }

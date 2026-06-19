@@ -194,6 +194,30 @@ namespace gpos.Models.ViewModels
         public int Status { get; set; } = 1;
     }
 
+    public class ScheduleForm
+    {
+        public int Id { get; set; }
+        [Required(ErrorMessage = "Name is required.")]
+        public string Name { get; set; } = string.Empty;
+        public int Status { get; set; } = 1;
+    }
+
+    public class ScheduleDetailLineForm
+    {
+        public int DayOfWeek { get; set; }
+        public string DayName { get; set; } = string.Empty;
+        public TimeSpan? AmIn { get; set; }
+        public TimeSpan? AmOut { get; set; }
+        public TimeSpan? PmIn { get; set; }
+        public TimeSpan? PmOut { get; set; }
+    }
+
+    public class ScheduleDetailsForm
+    {
+        public int ScheduleId { get; set; }
+        public List<ScheduleDetailLineForm> Details { get; set; } = new();
+    }
+
     public class EmployeeShiftScheduleForm
     {
         public int Id { get; set; }
@@ -207,6 +231,12 @@ namespace gpos.Models.ViewModels
         [Required(ErrorMessage = "End Time is required.")]
         public TimeSpan? EndTime { get; set; }
         public int Status { get; set; } = 1;
+    }
+
+    public class EmployeeScheduleForm
+    {
+        public int EmployeeAccountId { get; set; }
+        public int? ScheduleId { get; set; }
     }
 
     public class RolePermissionsForm
@@ -255,7 +285,10 @@ namespace gpos.Models.ViewModels
         public DiscountRuleForm DiscountRuleForm { get; set; } = new();
         public PaymentMethodForm PaymentMethodForm { get; set; } = new();
         public ShiftSettingForm ShiftSettingForm { get; set; } = new();
+        public ScheduleForm ScheduleForm { get; set; } = new();
+        public ScheduleDetailsForm ScheduleDetailsForm { get; set; } = new();
         public EmployeeShiftScheduleForm EmployeeShiftScheduleForm { get; set; } = new();
+        public EmployeeScheduleForm EmployeeScheduleForm { get; set; } = new();
         public RolePermissionsForm RolePermissionsForm { get; set; } = new();
         public List<SelectListItem> ProductOptions { get; set; } = new();
         public List<ProductSearchOption> ProductSearchOptions { get; set; } = new();
@@ -269,6 +302,7 @@ namespace gpos.Models.ViewModels
         public List<SelectListItem> BranchOptions { get; set; } = new();
         public List<SelectListItem> RoleOptions { get; set; } = new();
         public List<SelectListItem> EmployeeAccountOptions { get; set; } = new();
+        public List<SelectListItem> ScheduleOptions { get; set; } = new();
         public List<SelectListItem> DayOptions { get; set; } = new();
         public List<ShiftScheduleShiftOption> ShiftScheduleShiftOptions { get; set; } = new();
         public List<ProductUnit> ProductUnits { get; set; } = new();
@@ -284,6 +318,9 @@ namespace gpos.Models.ViewModels
         public List<DiscountRule> DiscountRules { get; set; } = new();
         public List<PaymentMethod> PaymentMethods { get; set; } = new();
         public List<ShiftSetting> ShiftSettings { get; set; } = new();
+        public List<Schedule> Schedules { get; set; } = new();
+        public List<ScheduleDetail> ScheduleDetails { get; set; } = new();
+        public List<EmployeeAccount> EmployeeScheduleAccounts { get; set; } = new();
         public List<EmployeeShiftSchedule> EmployeeShiftSchedules { get; set; } = new();
         public List<ActivityLog> ActivityLogs { get; set; } = new();
         public List<Role> Roles { get; set; } = new();

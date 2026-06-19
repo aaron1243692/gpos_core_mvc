@@ -44,6 +44,8 @@ namespace gpos.Data
         public DbSet<EmployeeAccount> EmployeeAccounts { get; set; }
         public DbSet<StationSetting> StationSettings { get; set; }
         public DbSet<PaymentMethod> PaymentMethods { get; set; }
+        public DbSet<Schedule> Schedules { get; set; }
+        public DbSet<ScheduleDetail> ScheduleDetails { get; set; }
         public DbSet<ShiftSetting> ShiftSettings { get; set; }
         public DbSet<EmployeeShiftSchedule> EmployeeShiftSchedules { get; set; }
         public DbSet<ActivityLog> ActivityLogs { get; set; }
@@ -744,6 +746,7 @@ namespace gpos.Data
                 entity.Property(account => account.Address).HasColumnName("address").HasMaxLength(255);
                 entity.Property(account => account.DepartmentId).HasColumnName("department_id");
                 entity.Property(account => account.PositionId).HasColumnName("position_id");
+                entity.Property(account => account.ScheduleId).HasColumnName("schedule_id");
                 entity.Property(account => account.Role).HasColumnName("role").HasMaxLength(50);
                 entity.Property(account => account.Status).HasColumnName("status").HasDefaultValue(1);
                 entity.Property(account => account.CreatedAt).HasColumnName("created_at");
@@ -752,6 +755,7 @@ namespace gpos.Data
                 entity.HasIndex(account => account.Username).IsUnique();
                 entity.HasIndex(account => account.DepartmentId);
                 entity.HasIndex(account => account.PositionId);
+                entity.HasIndex(account => account.ScheduleId);
                 entity.HasOne(account => account.Department)
                     .WithMany(department => department.EmployeeAccounts)
                     .HasForeignKey(account => account.DepartmentId)
@@ -760,6 +764,47 @@ namespace gpos.Data
                     .WithMany(position => position.EmployeeAccounts)
                     .HasForeignKey(account => account.PositionId)
                     .OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne(account => account.Schedule)
+                    .WithMany(schedule => schedule.EmployeeAccounts)
+                    .HasForeignKey(account => account.ScheduleId)
+                    .OnDelete(DeleteBehavior.SetNull);
+            });
+
+            modelBuilder.Entity<Schedule>(entity =>
+            {
+                entity.ToTable("schedules");
+                entity.HasKey(schedule => schedule.Id);
+
+                entity.Property(schedule => schedule.Id).HasColumnName("id");
+                entity.Property(schedule => schedule.Name).HasColumnName("name").HasMaxLength(100).IsRequired();
+                entity.Property(schedule => schedule.Status).HasColumnName("status").HasDefaultValue(1);
+                entity.Property(schedule => schedule.CreatedAt).HasColumnName("created_at");
+                entity.Property(schedule => schedule.UpdatedAt).HasColumnName("updated_at");
+
+                entity.HasIndex(schedule => schedule.Name).IsUnique();
+            });
+
+            modelBuilder.Entity<ScheduleDetail>(entity =>
+            {
+                entity.ToTable("schedule_details");
+                entity.HasKey(detail => detail.Id);
+
+                entity.Property(detail => detail.Id).HasColumnName("id");
+                entity.Property(detail => detail.ScheduleId).HasColumnName("schedule_id");
+                entity.Property(detail => detail.DayOfWeek).HasColumnName("day_of_week");
+                entity.Property(detail => detail.AmIn).HasColumnName("am_in").HasColumnType("time");
+                entity.Property(detail => detail.AmOut).HasColumnName("am_out").HasColumnType("time");
+                entity.Property(detail => detail.PmIn).HasColumnName("pm_in").HasColumnType("time");
+                entity.Property(detail => detail.PmOut).HasColumnName("pm_out").HasColumnType("time");
+                entity.Property(detail => detail.CreatedAt).HasColumnName("created_at");
+                entity.Property(detail => detail.UpdatedAt).HasColumnName("updated_at");
+
+                entity.HasIndex(detail => detail.ScheduleId);
+                entity.HasIndex(detail => new { detail.ScheduleId, detail.DayOfWeek }).IsUnique();
+                entity.HasOne(detail => detail.Schedule)
+                    .WithMany(schedule => schedule.Details)
+                    .HasForeignKey(detail => detail.ScheduleId)
+                    .OnDelete(DeleteBehavior.Cascade);
             });
 
             modelBuilder.Entity<EmployeeShiftSchedule>(entity =>
