@@ -1,0 +1,53 @@
+@model Tuple<string, string[], string[][]>
+
+@{
+    var tableTitle = Model.Item1;
+    var tableColumns = Model.Item2;
+    var rows = Model.Item3;
+}
+
+<section class="content-card table-card mb-4">
+    <div class="card-title-row">
+        <div>
+            <h2>@tableTitle</h2>
+            <p>Mock records for spacing, states, and responsive table behavior.</p>
+        </div>
+        <div class="table-actions">
+            <input class="form-control form-control-sm" type="search" placeholder="Search" disabled />
+            <button class="btn btn-outline-secondary btn-sm" type="button" disabled>Filter</button>
+        </div>
+    </div>
+    <div class="table-responsive">
+        <table class="table app-table align-middle">
+            <thead>
+                <tr>
+                    @foreach (var column in tableColumns)
+                    {
+                        <th>@column</th>
+                    }
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var row in rows)
+                {
+                    <tr>
+                        @for (var i = 0; i < tableColumns.Length; i++)
+                        {
+                            var value = i < row.Length ? row[i] : "";
+                            <td>
+                                @if (tableColumns[i].Contains("Status") || tableColumns[i].Contains("Action") || tableColumns[i].Contains("Movement Type") || tableColumns[i].Contains("Type"))
+                                {
+                                    <span class="status-badge @(value.Contains("Low") || value.Contains("pending") || value.Contains("cash_out") || value.Contains("short") ? "status-badge-muted" : "")">@value</span>
+                                }
+                                else
+                                {
+                                    @value
+                                }
+                            </td>
+                        }
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</section>

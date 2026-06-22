@@ -1,0 +1,182 @@
+@model gpos.Models.ViewModels.DiscountSetupPageViewModel
+
+<div class="page-header">
+    <div class="page-heading">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item">GPOS</li>
+                <li class="breadcrumb-item">Setup</li>
+                <li class="breadcrumb-item">Discounts</li>
+                <li class="breadcrumb-item active" aria-current="page">Members</li>
+            </ol>
+        </nav>
+        <h1>Members</h1>
+        <p class="page-subtitle">Manage discount members.</p>
+    </div>
+</div>
+
+<section class="content-card setup-crud-card setup-table-card">
+    @if (TempData["DiscountSetupFeedback"] is string feedback)
+    {
+        <div class="alert alert-info mb-0" role="alert">@feedback</div>
+    }
+    <div class="table-actions fuel-toolbar">
+        <form asp-action="Members" method="get" class="setup-search-form fuel-toolbar-search">
+            <input class="form-control" name="search" value="@Model.Search" placeholder="Search members" />
+        </form>
+        <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#memberModal">Add Member</button>
+    </div>
+    <div class="setup-table-scroll">
+        <table class="table app-table table-sm align-middle admin-table mb-0">
+            <colgroup>
+                <col class="col-no" />
+                <col class="col-id" />
+                <col class="col-normal" />
+                <col class="col-normal" />
+                <col class="col-name" />
+                <col class="col-normal" />
+                <col class="col-normal" />
+                <col class="col-normal" />
+                <col class="col-action" />
+            </colgroup>
+            <thead>
+                <tr>
+                    <th class="col-no">No</th>
+                    <th class="col-id">ID</th>
+                    <th class="col-code">Member No</th>
+                    <th class="col-code">Card No</th>
+                    <th class="col-name">Full Name</th>
+                    <th>Discount</th>
+                    <th class="col-money">Points</th>
+                    <th class="col-status">Status</th>
+                    <th class="col-action">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model.Members.Count == 0)
+                {
+                    <tr><td class="text-center text-muted fw-bold" colspan="9">No members yet.</td></tr>
+                }
+                @for (var i = 0; i < Model.Members.Count; i++)
+                {
+                    <tr>
+                        <td class="col-no">@(i + 1)</td>
+                        <td class="col-id">@Model.Members[i].Id</td>
+                        <td>@Model.Members[i].MemberNo</td>
+                        <td>@(Model.Members[i].CardNo ?? "-")</td>
+                        <td>@Model.Members[i].FullName</td>
+                        <td>@(Model.Members[i].Discount == null ? "No discount" : Model.Members[i].Discount!.Name)</td>
+                        <td>@Model.Members[i].Points.ToString("N2")</td>
+                        <td class="col-status">
+                            @if (Model.Members[i].Status == 1)
+                            {
+                                <span class="badge text-bg-success">Active</span>
+                            }
+                            @if (Model.Members[i].Status == 0)
+                            {
+                                <span class="badge text-bg-secondary">Disabled</span>
+                            }
+                        </td>
+                        <td class="col-action">
+                            <div class="setup-row-actions">
+                                <a class="btn btn-sm btn-outline-primary" asp-action="Members" asp-route-editId="@Model.Members[i].Id" asp-route-search="@Model.Search">Edit</a>
+                                <form asp-action="DeleteMember" method="post" onsubmit="return confirm('Disable this member?');">
+                                    @Html.AntiForgeryToken()
+                                    <input name="id" type="hidden" value="@Model.Members[i].Id" />
+                                    <input name="search" type="hidden" value="@Model.Search" />
+                                    <button class="btn btn-sm btn-outline-danger" type="submit">Delete</button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<div class="modal fade" id="memberModal" tabindex="-1" aria-labelledby="memberModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <form asp-action="SaveMember" method="post">
+                @Html.AntiForgeryToken()
+                <input asp-for="MemberForm.Id" type="hidden" />
+                <input name="search" type="hidden" value="@Model.Search" />
+                <div class="modal-header">
+                    <h2 class="modal-title fs-5" id="memberModalLabel">Member</h2>
+                    <button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label asp-for="MemberForm.MemberNo" class="form-label">Member No</label>
+                            <input asp-for="MemberForm.MemberNo" class="form-control" autocomplete="off" />
+                            <span asp-validation-for="MemberForm.MemberNo" class="text-danger"></span>
+                        </div>
+                        <div class="col-md-6">
+                            <label asp-for="MemberForm.CardNo" class="form-label">Card No</label>
+                            <input asp-for="MemberForm.CardNo" class="form-control" autocomplete="off" />
+                            <span asp-validation-for="MemberForm.CardNo" class="text-danger"></span>
+                        </div>
+                        <div class="col-md-6">
+                            <label asp-for="MemberForm.FullName" class="form-label">Full Name</label>
+                            <input asp-for="MemberForm.FullName" class="form-control" autocomplete="off" />
+                            <span asp-validation-for="MemberForm.FullName" class="text-danger"></span>
+                        </div>
+                        <div class="col-md-6">
+                            <label asp-for="MemberForm.ContactNumber" class="form-label">Contact Number</label>
+                            <input asp-for="MemberForm.ContactNumber" class="form-control" autocomplete="off" />
+                            <span asp-validation-for="MemberForm.ContactNumber" class="text-danger"></span>
+                        </div>
+                        <div class="col-md-6">
+                            <label asp-for="MemberForm.Email" class="form-label">Email</label>
+                            <input asp-for="MemberForm.Email" class="form-control" autocomplete="off" type="email" />
+                            <span asp-validation-for="MemberForm.Email" class="text-danger"></span>
+                        </div>
+                        <div class="col-md-6">
+                            <label asp-for="MemberForm.DiscountId" class="form-label">Discount</label>
+                            <select asp-for="MemberForm.DiscountId" asp-items="Model.DiscountOptions" class="form-select"></select>
+                            <span asp-validation-for="MemberForm.DiscountId" class="text-danger"></span>
+                        </div>
+                        <div class="col-md-6">
+                            <label asp-for="MemberForm.Points" class="form-label">Points</label>
+                            <input asp-for="MemberForm.Points" class="form-control" min="0" step="0.01" type="number" />
+                            <span asp-validation-for="MemberForm.Points" class="text-danger"></span>
+                        </div>
+                        <div class="col-md-6">
+                            <label asp-for="MemberForm.Status" class="form-label">Status</label>
+                            <select asp-for="MemberForm.Status" class="form-select">
+                                <option value="1">Active</option>
+                                <option value="0">Disabled</option>
+                            </select>
+                            <span asp-validation-for="MemberForm.Status" class="text-danger"></span>
+                        </div>
+                        <div class="col-12">
+                            <label asp-for="MemberForm.Address" class="form-label">Address</label>
+                            <input asp-for="MemberForm.Address" class="form-control" type="text" />
+                            <span asp-validation-for="MemberForm.Address" class="text-danger"></span>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button>
+                    <button class="btn btn-primary" type="submit">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            const modalId = "@Model.ActiveModalId";
+            const modalElement = modalId ? document.getElementById(modalId) : null;
+
+            if (modalElement && window.bootstrap) {
+                bootstrap.Modal.getOrCreateInstance(modalElement).show();
+            }
+        });
+    </script>
+}

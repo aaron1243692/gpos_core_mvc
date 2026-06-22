@@ -31,7 +31,6 @@ builder.Services.AddAuthorization();
 builder.Services.AddDistributedMemoryCache();
 builder.Services.AddSession();
 builder.Services.AddScoped<UserAuthService>();
-builder.Services.AddScoped<EmployeeAuthService>();
 builder.Services.AddScoped<ProductBatchNumberService>();
 
 builder.Services.Configure<CookieAuthenticationOptions>(CookieAuthenticationDefaults.AuthenticationScheme, options =>
@@ -52,7 +51,6 @@ using (var scope = app.Services.CreateScope())
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
         db.Database.Migrate();
         await DatabaseSeeder.SeedDefaultAdminAsync(db, logger);
-        await DatabaseSeeder.EnsureDefaultSalesmanEmployeeAsync(db, logger);
     }
     catch (Exception ex)
     {
@@ -69,6 +67,7 @@ if (!app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+app.UseStaticFiles();
 app.UseRouting();
 
 app.UseSession();

@@ -6,6 +6,11 @@ namespace gpos.Controllers
     [BlockSalesmanSession]
     public class TransactionController : Controller
     {
+        public IActionResult POS()
+        {
+            return View();
+        }
+
         public IActionResult OpenShift() => View();
         public IActionResult DailyBeginningBalance() => View();
         public IActionResult CashDrawerMovement() => View();

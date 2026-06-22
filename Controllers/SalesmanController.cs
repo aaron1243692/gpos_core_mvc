@@ -7,15 +7,7 @@ namespace gpos.Controllers
     {
         public override void OnActionExecuting(ActionExecutingContext context)
         {
-            var employeeId = HttpContext.Session.GetString("EmployeeId");
-
-            if (string.IsNullOrWhiteSpace(employeeId))
-            {
-                context.Result = RedirectToAction("Login", "SalesmanAuth");
-                return;
-            }
-
-            base.OnActionExecuting(context);
+            context.Result = RedirectToAction("Index", "SignIn");
         }
 
         public IActionResult Dashboard() => View();

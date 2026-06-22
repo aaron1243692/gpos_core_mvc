@@ -8,16 +8,12 @@ namespace gpos.Filters
         public override void OnActionExecuting(ActionExecutingContext context)
         {
             var session = context.HttpContext.Session;
-            var employeeRole = session.GetString("EmployeeRole");
-            var adminRole = session.GetString("Role");
+            var hasUserSession =
+                !string.IsNullOrWhiteSpace(session.GetString("UserId")) ||
+                !string.IsNullOrWhiteSpace(session.GetString("Username")) ||
+                context.HttpContext.User.Identity?.IsAuthenticated == true;
 
-            if (string.Equals(employeeRole, "salesman", StringComparison.OrdinalIgnoreCase))
-            {
-                context.Result = new RedirectToActionResult("POS", "Salesman", null);
-                return;
-            }
-
-            if (!string.Equals(adminRole, "admin", StringComparison.OrdinalIgnoreCase))
+            if (!hasUserSession)
             {
                 context.Result = new RedirectToActionResult("Index", "SignIn", null);
                 return;

@@ -1,0 +1,538 @@
+@using Microsoft.EntityFrameworkCore
+@inject gpos.Data.ApplicationDbContext Db
+
+<section class="salesman-pos-page">
+    <form id="posSaleForm" method="post" class="salesman-pos-card">
+        <div class="pos-order-layout">
+            <section class="pos-order-menu" aria-label="Order menu">
+                <div class="pos-order-toolbar">
+                    <h1>Product <span>Category</span></h1>
+                    <div class="pos-order-search">
+                        <input class="form-control" id="productSearch" type="search" placeholder="Search product or fuel" autocomplete="off" />
+                    </div>
+                </div>
+
+                <nav class="pos-category-row" aria-label="POS menu categories">
+                    <button class="pos-category-pill pos-category-btn" id="fuelModeButton" type="button" data-mode="fuel"><span>FUE</span><strong>Fuel</strong></button>
+                    <button class="pos-category-pill pos-category-btn is-active" id="hotModeButton" type="button" data-mode="hot"><span>HOT</span><strong>Hot</strong></button>
+                    @for (var index = 0; index < Db.ProductCategories.AsNoTracking().Where(category => category.Status == 1 && category.IsActive).OrderBy(category => category.Name).ToList().Count; index++)
+                    {
+                        <button class="pos-category-pill pos-category-btn" type="button" data-mode="category" data-category-id="@Db.ProductCategories.AsNoTracking().Where(category => category.Status == 1 && category.IsActive).OrderBy(category => category.Name).ToList()[index].Id">
+                            <span>@(Db.ProductCategories.AsNoTracking().Where(category => category.Status == 1 && category.IsActive).OrderBy(category => category.Name).ToList()[index].Name.Length >= 3 ? Db.ProductCategories.AsNoTracking().Where(category => category.Status == 1 && category.IsActive).OrderBy(category => category.Name).ToList()[index].Name.Substring(0, 3).ToUpper() : Db.ProductCategories.AsNoTracking().Where(category => category.Status == 1 && category.IsActive).OrderBy(category => category.Name).ToList()[index].Name.ToUpper())</span>
+                            <strong>@Db.ProductCategories.AsNoTracking().Where(category => category.Status == 1 && category.IsActive).OrderBy(category => category.Name).ToList()[index].Name</strong>
+                        </button>
+                    }
+                </nav>
+
+                <section id="productMenu">
+                    <div class="pos-menu-heading">
+                        <h2>Products</h2>
+                        <div>Sort By <strong>Popular</strong></div>
+                    </div>
+
+                    <div class="pos-product-grid">
+                        @for (var index = 0; index < Db.Products.AsNoTracking().Include(product => product.ProductBatches).Where(product => product.Status == 1 && product.IsActive && product.CategoryId.HasValue && Db.ProductCategories.Any(category => category.Id == product.CategoryId.Value && category.Status == 1 && category.IsActive)).OrderByDescending(product => product.UpdatedAt ?? product.CreatedAt ?? DateTime.MinValue).ThenBy(product => product.Name).ToList().Count; index++)
+                        {
+                            <article class="pos-menu-product-card" data-category-id="@Db.Products.AsNoTracking().Include(product => product.ProductBatches).Where(product => product.Status == 1 && product.IsActive && product.CategoryId.HasValue && Db.ProductCategories.Any(category => category.Id == product.CategoryId.Value && category.Status == 1 && category.IsActive)).OrderByDescending(product => product.UpdatedAt ?? product.CreatedAt ?? DateTime.MinValue).ThenBy(product => product.Name).ToList()[index].CategoryId" data-product-name="@Db.Products.AsNoTracking().Include(product => product.ProductBatches).Where(product => product.Status == 1 && product.IsActive && product.CategoryId.HasValue && Db.ProductCategories.Any(category => category.Id == product.CategoryId.Value && category.Status == 1 && category.IsActive)).OrderByDescending(product => product.UpdatedAt ?? product.CreatedAt ?? DateTime.MinValue).ThenBy(product => product.Name).ToList()[index].Name.ToLowerInvariant()">
+                                <div class="pos-product-visual">@(Db.Products.AsNoTracking().Include(product => product.ProductBatches).Where(product => product.Status == 1 && product.IsActive && product.CategoryId.HasValue && Db.ProductCategories.Any(category => category.Id == product.CategoryId.Value && category.Status == 1 && category.IsActive)).OrderByDescending(product => product.UpdatedAt ?? product.CreatedAt ?? DateTime.MinValue).ThenBy(product => product.Name).ToList()[index].Name.Length >= 2 ? Db.Products.AsNoTracking().Include(product => product.ProductBatches).Where(product => product.Status == 1 && product.IsActive && product.CategoryId.HasValue && Db.ProductCategories.Any(category => category.Id == product.CategoryId.Value && category.Status == 1 && category.IsActive)).OrderByDescending(product => product.UpdatedAt ?? product.CreatedAt ?? DateTime.MinValue).ThenBy(product => product.Name).ToList()[index].Name.Substring(0, 2).ToUpper() : Db.Products.AsNoTracking().Include(product => product.ProductBatches).Where(product => product.Status == 1 && product.IsActive && product.CategoryId.HasValue && Db.ProductCategories.Any(category => category.Id == product.CategoryId.Value && category.Status == 1 && category.IsActive)).OrderByDescending(product => product.UpdatedAt ?? product.CreatedAt ?? DateTime.MinValue).ThenBy(product => product.Name).ToList()[index].Name.ToUpper())</div>
+                                <h3>@Db.Products.AsNoTracking().Include(product => product.ProductBatches).Where(product => product.Status == 1 && product.IsActive && product.CategoryId.HasValue && Db.ProductCategories.Any(category => category.Id == product.CategoryId.Value && category.Status == 1 && category.IsActive)).OrderByDescending(product => product.UpdatedAt ?? product.CreatedAt ?? DateTime.MinValue).ThenBy(product => product.Name).ToList()[index].Name</h3>
+                                <p>PHP @Db.Products.AsNoTracking().Include(product => product.ProductBatches).Where(product => product.Status == 1 && product.IsActive && product.CategoryId.HasValue && Db.ProductCategories.Any(category => category.Id == product.CategoryId.Value && category.Status == 1 && category.IsActive)).OrderByDescending(product => product.UpdatedAt ?? product.CreatedAt ?? DateTime.MinValue).ThenBy(product => product.Name).ToList()[index].ProductBatches.Where(batch => batch.Status == 1 && batch.IsActive).OrderByDescending(batch => batch.UpdatedAt ?? batch.CreatedAt ?? DateTime.MinValue).ThenByDescending(batch => batch.Id).Select(batch => batch.SellingPrice).FirstOrDefault().ToString("N2")</p>
+                                <label class="pos-quantity-control" for="productQuantity_@Db.Products.AsNoTracking().Include(product => product.ProductBatches).Where(product => product.Status == 1 && product.IsActive && product.CategoryId.HasValue && Db.ProductCategories.Any(category => category.Id == product.CategoryId.Value && category.Status == 1 && category.IsActive)).OrderByDescending(product => product.UpdatedAt ?? product.CreatedAt ?? DateTime.MinValue).ThenBy(product => product.Name).ToList()[index].Id">
+                                    <span>Qty</span>
+                                    <input class="form-control product-quantity-input" id="productQuantity_@Db.Products.AsNoTracking().Include(product => product.ProductBatches).Where(product => product.Status == 1 && product.IsActive && product.CategoryId.HasValue && Db.ProductCategories.Any(category => category.Id == product.CategoryId.Value && category.Status == 1 && category.IsActive)).OrderByDescending(product => product.UpdatedAt ?? product.CreatedAt ?? DateTime.MinValue).ThenBy(product => product.Name).ToList()[index].Id" name="Products[@index].Quantity" type="number" min="0" value="0" data-price="@Db.Products.AsNoTracking().Include(product => product.ProductBatches).Where(product => product.Status == 1 && product.IsActive && product.CategoryId.HasValue && Db.ProductCategories.Any(category => category.Id == product.CategoryId.Value && category.Status == 1 && category.IsActive)).OrderByDescending(product => product.UpdatedAt ?? product.CreatedAt ?? DateTime.MinValue).ThenBy(product => product.Name).ToList()[index].ProductBatches.Where(batch => batch.Status == 1 && batch.IsActive).OrderByDescending(batch => batch.UpdatedAt ?? batch.CreatedAt ?? DateTime.MinValue).ThenByDescending(batch => batch.Id).Select(batch => batch.SellingPrice).FirstOrDefault()" data-no="P-@Db.Products.AsNoTracking().Include(product => product.ProductBatches).Where(product => product.Status == 1 && product.IsActive && product.CategoryId.HasValue && Db.ProductCategories.Any(category => category.Id == product.CategoryId.Value && category.Status == 1 && category.IsActive)).OrderByDescending(product => product.UpdatedAt ?? product.CreatedAt ?? DateTime.MinValue).ThenBy(product => product.Name).ToList()[index].Id.ToString("000")" data-name="@Db.Products.AsNoTracking().Include(product => product.ProductBatches).Where(product => product.Status == 1 && product.IsActive && product.CategoryId.HasValue && Db.ProductCategories.Any(category => category.Id == product.CategoryId.Value && category.Status == 1 && category.IsActive)).OrderByDescending(product => product.UpdatedAt ?? product.CreatedAt ?? DateTime.MinValue).ThenBy(product => product.Name).ToList()[index].Name" aria-label="@Db.Products.AsNoTracking().Include(product => product.ProductBatches).Where(product => product.Status == 1 && product.IsActive && product.CategoryId.HasValue && Db.ProductCategories.Any(category => category.Id == product.CategoryId.Value && category.Status == 1 && category.IsActive)).OrderByDescending(product => product.UpdatedAt ?? product.CreatedAt ?? DateTime.MinValue).ThenBy(product => product.Name).ToList()[index].Name quantity" />
+                                </label>
+                                <input type="hidden" name="Products.Index" value="@index" />
+                                <input type="hidden" name="Products[@index].Code" value="P-@Db.Products.AsNoTracking().Include(product => product.ProductBatches).Where(product => product.Status == 1 && product.IsActive && product.CategoryId.HasValue && Db.ProductCategories.Any(category => category.Id == product.CategoryId.Value && category.Status == 1 && category.IsActive)).OrderByDescending(product => product.UpdatedAt ?? product.CreatedAt ?? DateTime.MinValue).ThenBy(product => product.Name).ToList()[index].Id.ToString("000")" />
+                                <input type="hidden" name="Products[@index].Name" value="@Db.Products.AsNoTracking().Include(product => product.ProductBatches).Where(product => product.Status == 1 && product.IsActive && product.CategoryId.HasValue && Db.ProductCategories.Any(category => category.Id == product.CategoryId.Value && category.Status == 1 && category.IsActive)).OrderByDescending(product => product.UpdatedAt ?? product.CreatedAt ?? DateTime.MinValue).ThenBy(product => product.Name).ToList()[index].Name" />
+                            </article>
+                        }
+                    </div>
+
+                    <div class="pos-empty-cart" id="productEmptyState" hidden>No products found for this category.</div>
+                </section>
+
+                <section class="pos-fuel-menu" id="fuelMenu" hidden aria-label="Fuel order">
+                    <div class="pos-menu-heading">
+                        <h2>Fuel <span>Menu</span></h2>
+                        <div>Cash Sale</div>
+                    </div>
+
+                    <div class="fuel-type-grid">
+                        @for (var index = 0; index < Db.Fuels.AsNoTracking().Where(fuel => fuel.Status == 1 && fuel.IsActive).OrderBy(fuel => fuel.Name).ToList().Count; index++)
+                        {
+                            <label class="fuel-option">
+                                <input class="form-check-input fuel-choice" type="radio" name="FuelType" value="@Db.Fuels.AsNoTracking().Where(fuel => fuel.Status == 1 && fuel.IsActive).OrderBy(fuel => fuel.Name).ToList()[index].Name" data-price="@Db.Fuels.AsNoTracking().Where(fuel => fuel.Status == 1 && fuel.IsActive).OrderBy(fuel => fuel.Name).ToList()[index].CurrentPricePerLiter" @(index == 0 ? "checked" : "") />
+                                <span>@Db.Fuels.AsNoTracking().Where(fuel => fuel.Status == 1 && fuel.IsActive).OrderBy(fuel => fuel.Name).ToList()[index].Name <small>PHP @Db.Fuels.AsNoTracking().Where(fuel => fuel.Status == 1 && fuel.IsActive).OrderBy(fuel => fuel.Name).ToList()[index].CurrentPricePerLiter.ToString("N2")/L</small></span>
+                            </label>
+                        }
+                    </div>
+
+                    <div class="pos-fuel-fields">
+                        <div>
+                            <label class="form-label" for="fuelLiters">Liters</label>
+                            <input class="form-control" id="fuelLiters" name="FuelLiters" type="number" min="0" step="0.01" placeholder="0.00" />
+                        </div>
+                        <div>
+                            <label class="form-label" for="fuelCashAmount">Fuel cash amount</label>
+                            <div class="input-group">
+                                <span class="input-group-text">PHP</span>
+                                <input class="form-control pos-total-input" id="fuelCashAmount" name="FuelCashAmount" type="number" min="0" step="0.01" placeholder="0.00" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <button class="btn btn-primary pos-fuel-add-button" id="addFuelButton" type="button">Add Fuel</button>
+                </section>
+            </section>
+
+            <aside class="pos-order-summary" aria-label="Order summary">
+                <div class="pos-summary-top">
+                    <h2>Cart</h2>
+                    <span aria-hidden="true">Edit</span>
+                </div>
+
+                <div class="pos-cart-list" id="orderCartItems">
+                    <div class="pos-empty-cart">No selected items yet.</div>
+                </div>
+
+                <div class="pos-summary-totals">
+                    <div><span>Products</span><strong id="cartSubTotal">PHP 0.00</strong></div>
+                    <div><span>Fuel</span><strong id="cartFuelLine">PHP 0.00</strong></div>
+                    <div><span>Total</span><strong id="posGrandTotal">PHP 0.00</strong></div>
+                </div>
+
+                <div class="pos-summary-fields">
+                    <div id="cashPaymentField">
+                        <label class="form-label" for="paymentAmount">Cash Amount</label>
+                        <div class="input-group">
+                            <span class="input-group-text">PHP</span>
+                            <input class="form-control" id="paymentAmount" name="PaymentAmount" type="number" min="0" step="0.01" placeholder="0.00" />
+                        </div>
+                    </div>
+                    <div id="memberCardField">
+                        <label class="form-label" for="membershipCardNo">Member Card No</label>
+                        <input class="form-control" id="membershipCardNo" name="MembershipCardNo" placeholder="Enter member card no" autocomplete="off" />
+                    </div>
+                </div>
+
+                <button class="btn btn-primary btn-lg pos-charge-button" id="checkoutButton" type="button">Complete Payment</button>
+            </aside>
+        </div>
+
+        <section class="salesman-receipt-preview" id="receiptPreview" hidden aria-live="polite">
+            <div class="salesman-receipt-print" id="receiptPrintArea">
+                <div class="receipt-title">
+                    <h2>GPOS Main Station</h2>
+                    <p>Sales Receipt Preview</p>
+                </div>
+
+                <div class="receipt-meta">
+                    <div><span>Date / Time</span><strong id="receiptDateTime"></strong></div>
+                    <div><span>Cashier</span><strong id="receiptCashier">Admin</strong></div>
+                    <div><span>Payment Method</span><strong>Cash</strong></div>
+                    <div><span>Cash Amount</span><strong id="receiptPaymentDetail"></strong></div>
+                    <div><span>Member Card No</span><strong id="receiptMemberCardNo"></strong></div>
+                </div>
+
+                <div class="receipt-block">
+                    <h3>Gas / Fuel</h3>
+                    <table class="receipt-product-table">
+                        <thead>
+                            <tr>
+                                <th>Fuel type</th>
+                                <th>Liters</th>
+                                <th>Cash amount</th>
+                            </tr>
+                        </thead>
+                        <tbody id="receiptFuelRows">
+                            <tr><td colspan="3">No selected fuel.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="receipt-block">
+                    <h3>Products</h3>
+                    <table class="receipt-product-table">
+                        <thead>
+                            <tr>
+                                <th>No</th>
+                                <th>Name</th>
+                                <th>Quantity</th>
+                            </tr>
+                        </thead>
+                        <tbody id="receiptProductRows">
+                            <tr><td colspan="3">No selected products.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="receipt-total-line">
+                    <span>Total</span>
+                    <strong id="receiptTotalAmount">PHP 0.00</strong>
+                </div>
+            </div>
+
+            <div class="salesman-receipt-actions">
+                <button class="btn btn-outline-secondary" id="printReceiptButton" type="button">Print</button>
+                <button class="btn btn-primary" id="submitSaleButton" type="submit">Submit</button>
+                <button class="btn btn-outline-secondary" id="newSaleButton" type="button">New Sale</button>
+            </div>
+        </section>
+    </form>
+</section>
+
+@section Scripts {
+    <script>
+        (() => {
+            const peso = new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP" });
+            const form = document.getElementById("posSaleForm");
+            const categoryButtons = Array.from(document.querySelectorAll(".pos-category-btn"));
+            const fuelModeButton = document.getElementById("fuelModeButton");
+            const hotModeButton = document.getElementById("hotModeButton");
+            const productMenu = document.getElementById("productMenu");
+            const fuelMenu = document.getElementById("fuelMenu");
+            const productQuantityInputs = Array.from(document.querySelectorAll(".product-quantity-input"));
+            const productRows = Array.from(document.querySelectorAll(".pos-menu-product-card"));
+            const productEmptyState = document.getElementById("productEmptyState");
+            const productSearch = document.getElementById("productSearch");
+            const fuelChoices = Array.from(document.querySelectorAll(".fuel-choice"));
+            const fuelAmountInput = document.getElementById("fuelCashAmount");
+            const fuelLitersInput = document.getElementById("fuelLiters");
+            const addFuelButton = document.getElementById("addFuelButton");
+            const paymentAmountInput = document.getElementById("paymentAmount");
+            const membershipCardNoInput = document.getElementById("membershipCardNo");
+            const grandTotal = document.getElementById("posGrandTotal");
+            const cartSubTotal = document.getElementById("cartSubTotal");
+            const cartFuelLine = document.getElementById("cartFuelLine");
+            const orderCartItems = document.getElementById("orderCartItems");
+            const checkoutButton = document.getElementById("checkoutButton");
+            const receiptPreview = document.getElementById("receiptPreview");
+            const receiptDateTime = document.getElementById("receiptDateTime");
+            const receiptPaymentDetail = document.getElementById("receiptPaymentDetail");
+            const receiptMemberCardNo = document.getElementById("receiptMemberCardNo");
+            const receiptFuelRows = document.getElementById("receiptFuelRows");
+            const receiptProductRows = document.getElementById("receiptProductRows");
+            const receiptTotalAmount = document.getElementById("receiptTotalAmount");
+            const printReceiptButton = document.getElementById("printReceiptButton");
+            const newSaleButton = document.getElementById("newSaleButton");
+            const fuelCart = [];
+            let activeMode = "hot";
+            let activeCategoryId = "";
+            let activeFuelInput = "amount";
+
+            function numericValue(input) {
+                return Number.parseFloat(input.value) || 0;
+            }
+
+            function selectedFuel() {
+                return fuelChoices.find(choice => choice.checked) || fuelChoices[0] || null;
+            }
+
+            function selectedFuelType() {
+                return selectedFuel()?.value || "Fuel";
+            }
+
+            function selectedFuelPrice() {
+                const selected = selectedFuel();
+                return selected ? Number.parseFloat(selected.dataset.price) || 0 : 0;
+            }
+
+            function currentFuelLiters() {
+                const price = selectedFuelPrice();
+                const amount = Math.max(0, numericValue(fuelAmountInput));
+                return Number.isFinite(price) && price > 0 ? amount / price : 0;
+            }
+
+            function currentFuelAmount() {
+                const price = selectedFuelPrice();
+                const liters = Math.max(0, numericValue(fuelLitersInput));
+                return Number.isFinite(price) && price > 0 ? liters * price : 0;
+            }
+
+            function updateLiters() {
+                fuelLitersInput.value = fuelAmountInput.value.trim() ? currentFuelLiters().toFixed(2) : "";
+            }
+
+            function updateFuelAmount() {
+                fuelAmountInput.value = fuelLitersInput.value.trim() ? currentFuelAmount().toFixed(2) : "";
+            }
+
+            function updateFuelFieldsForPrice() {
+                if (activeFuelInput === "liters") {
+                    updateFuelAmount();
+                } else {
+                    updateLiters();
+                }
+            }
+
+            function selectedProducts() {
+                return productQuantityInputs.reduce((products, input) => {
+                    const quantity = Math.max(0, numericValue(input));
+
+                    if (numericValue(input) < 0) {
+                        input.value = 0;
+                    }
+
+                    if (quantity > 0) {
+                        products.push({
+                            no: input.dataset.no,
+                            name: input.dataset.name,
+                            quantity,
+                            price: Number.parseFloat(input.dataset.price) || 0
+                        });
+                    }
+
+                    return products;
+                }, []);
+            }
+
+            function productTotalAmount() {
+                return selectedProducts().reduce((total, product) => total + (product.quantity * product.price), 0);
+            }
+
+            function fuelTotalAmount() {
+                return fuelCart.reduce((total, fuel) => total + fuel.amount, 0);
+            }
+
+            function totalAmount() {
+                return productTotalAmount() + fuelTotalAmount();
+            }
+
+            function setActiveButton(button) {
+                categoryButtons.forEach(categoryButton => categoryButton.classList.remove("is-active"));
+                button.classList.add("is-active");
+            }
+
+            function showProductCategory(categoryId, button) {
+                activeMode = "category";
+                activeCategoryId = categoryId;
+                setActiveButton(button);
+                productMenu.hidden = false;
+                fuelMenu.hidden = true;
+                filterProducts();
+            }
+
+            function showHotMode() {
+                activeMode = "hot";
+                activeCategoryId = "";
+                setActiveButton(hotModeButton);
+                productMenu.hidden = false;
+                fuelMenu.hidden = true;
+                filterProducts();
+            }
+
+            function showFuelMode() {
+                activeMode = "fuel";
+                setActiveButton(fuelModeButton);
+                productMenu.hidden = true;
+                fuelMenu.hidden = false;
+                filterProducts();
+            }
+
+            function filterProducts() {
+                const query = productSearch.value.trim().toLowerCase();
+                let visibleCount = 0;
+
+                productRows.forEach(row => {
+                    const categoryMatches = activeMode === "hot" || row.dataset.categoryId === activeCategoryId;
+                    const searchMatches = query.length === 0 || row.dataset.productName.includes(query);
+                    const shouldShow = !productMenu.hidden && categoryMatches && searchMatches;
+
+                    row.hidden = !shouldShow;
+
+                    if (shouldShow) {
+                        visibleCount += 1;
+                    }
+                });
+
+                productEmptyState.hidden = productMenu.hidden || visibleCount > 0;
+            }
+
+            function addProductFromCard(card) {
+                const input = card.querySelector(".product-quantity-input");
+
+                if (!input) {
+                    return;
+                }
+
+                input.value = Math.max(0, numericValue(input)) + 1;
+                updateTotal();
+            }
+
+            function addFuelToCart() {
+                const selected = selectedFuel();
+                const price = selectedFuelPrice();
+                const amount = Math.max(0, numericValue(fuelAmountInput));
+                const liters = Math.max(0, numericValue(fuelLitersInput));
+
+                if (!selected || price <= 0 || amount <= 0 || liters <= 0) {
+                    return;
+                }
+
+                fuelCart.push({
+                    id: Date.now().toString() + fuelCart.length.toString(),
+                    type: selectedFuelType(),
+                    price,
+                    liters,
+                    amount
+                });
+
+                fuelAmountInput.value = "";
+                fuelLitersInput.value = "";
+                updateTotal();
+            }
+
+            function removeFuelFromCart(id) {
+                const index = fuelCart.findIndex(fuel => fuel.id === id);
+
+                if (index >= 0) {
+                    fuelCart.splice(index, 1);
+                    updateTotal();
+                }
+            }
+
+            function renderCart() {
+                const products = selectedProducts();
+                const productMarkup = products.map(product => {
+                    return `<div class="pos-cart-item"><div class="pos-cart-thumb">${product.no.substring(0, 2)}</div><div><strong>${product.name}</strong><span>${peso.format(product.price)}</span></div><span>x${product.quantity}</span><b>${peso.format(product.quantity * product.price)}</b></div>`;
+                }).join("");
+                const fuelMarkup = fuelCart.map(fuel => {
+                    return `<div class="pos-cart-item"><div class="pos-cart-thumb">FU</div><div><strong>${fuel.type}</strong><span>${peso.format(fuel.price)}/L - ${fuel.liters.toFixed(2)} L - Cash ${peso.format(fuel.amount)}</span></div><span>${fuel.liters.toFixed(2)} L</span><b>${peso.format(fuel.amount)}</b><button class="pos-cart-remove" type="button" data-remove-fuel="${fuel.id}" aria-label="Remove ${fuel.type} fuel">x</button></div>`;
+                }).join("");
+
+                orderCartItems.innerHTML = productMarkup || fuelMarkup
+                    ? `${productMarkup}${fuelMarkup}`
+                    : `<div class="pos-empty-cart">No selected items yet.</div>`;
+
+                Array.from(orderCartItems.querySelectorAll("[data-remove-fuel]")).forEach(button => {
+                    button.addEventListener("click", () => removeFuelFromCart(button.dataset.removeFuel));
+                });
+            }
+
+            function updateSummaryAmounts() {
+                cartSubTotal.textContent = peso.format(productTotalAmount());
+                cartFuelLine.textContent = peso.format(fuelTotalAmount());
+                grandTotal.textContent = peso.format(totalAmount());
+            }
+
+            function updateTotal() {
+                updateSummaryAmounts();
+                renderCart();
+
+                if (!receiptPreview.hidden) {
+                    renderReceipt();
+                }
+            }
+
+            function renderReceipt() {
+                const products = selectedProducts();
+
+                receiptDateTime.textContent = new Date().toLocaleString();
+                receiptPaymentDetail.textContent = peso.format(Math.max(0, numericValue(paymentAmountInput)));
+                receiptMemberCardNo.textContent = membershipCardNoInput.value.trim() || "None";
+                receiptTotalAmount.textContent = peso.format(totalAmount());
+                receiptFuelRows.innerHTML = fuelCart.length
+                    ? fuelCart.map(fuel => `<tr><td>${fuel.type}<br><small>${peso.format(fuel.price)}/L</small></td><td>${fuel.liters.toFixed(2)} L</td><td>${peso.format(fuel.amount)}</td></tr>`).join("")
+                    : `<tr><td colspan="3">No selected fuel.</td></tr>`;
+                receiptProductRows.innerHTML = products.length
+                    ? products.map(product => `<tr><td>${product.no}</td><td>${product.name}</td><td>${product.quantity}</td></tr>`).join("")
+                    : `<tr><td colspan="3">No selected products.</td></tr>`;
+            }
+
+            function showReceipt() {
+                updateTotal();
+                renderReceipt();
+                receiptPreview.hidden = false;
+                receiptPreview.scrollIntoView({ behavior: "smooth", block: "start" });
+            }
+
+            function restoreProductSubmitFields() {
+                productRows.forEach(row => {
+                    Array.from(row.querySelectorAll("input[type='hidden'], .product-quantity-input")).forEach(input => {
+                        input.disabled = false;
+                    });
+                });
+            }
+
+            function disableZeroQuantityProducts() {
+                productQuantityInputs.forEach(input => {
+                    const rowInputs = Array.from(input.closest(".pos-menu-product-card").querySelectorAll("input[type='hidden'], .product-quantity-input"));
+                    const shouldSubmit = Math.max(0, numericValue(input)) > 0;
+
+                    rowInputs.forEach(rowInput => {
+                        rowInput.disabled = !shouldSubmit;
+                    });
+                });
+            }
+
+            function resetSale() {
+                form.reset();
+                restoreProductSubmitFields();
+                fuelCart.length = 0;
+                productSearch.value = "";
+                productQuantityInputs.forEach(input => {
+                    input.value = 0;
+                });
+                if (fuelChoices[0]) {
+                    fuelChoices[0].checked = true;
+                }
+                fuelLitersInput.value = "";
+                receiptPreview.hidden = true;
+                showHotMode();
+                updateTotal();
+            }
+
+            categoryButtons.forEach(button => {
+                button.addEventListener("click", () => {
+                    if (button.dataset.mode === "fuel") {
+                        showFuelMode();
+                    } else if (button.dataset.mode === "hot") {
+                        showHotMode();
+                    } else {
+                        showProductCategory(button.dataset.categoryId, button);
+                    }
+                });
+            });
+            productRows.forEach(row => {
+                row.addEventListener("click", event => {
+                    if (event.target.closest("input, label")) {
+                        return;
+                    }
+
+                    addProductFromCard(row);
+                });
+            });
+            productQuantityInputs.forEach(input => input.addEventListener("input", updateTotal));
+            fuelAmountInput.addEventListener("input", () => {
+                activeFuelInput = "amount";
+                updateLiters();
+            });
+            fuelLitersInput.addEventListener("input", () => {
+                activeFuelInput = "liters";
+                updateFuelAmount();
+            });
+            fuelChoices.forEach(choice => choice.addEventListener("change", () => {
+                updateFuelFieldsForPrice();
+            }));
+            addFuelButton.addEventListener("click", addFuelToCart);
+            paymentAmountInput.addEventListener("input", () => {
+                if (!receiptPreview.hidden) {
+                    renderReceipt();
+                }
+            });
+            membershipCardNoInput.addEventListener("input", () => {
+                if (!receiptPreview.hidden) {
+                    renderReceipt();
+                }
+            });
+            productSearch.addEventListener("input", filterProducts);
+            checkoutButton.addEventListener("click", showReceipt);
+            printReceiptButton.addEventListener("click", () => window.print());
+            newSaleButton.addEventListener("click", resetSale);
+            form.addEventListener("submit", disableZeroQuantityProducts);
+            window.addEventListener("pageshow", restoreProductSubmitFields);
+            showHotMode();
+            updateTotal();
+        })();
+    </script>
+}

@@ -1,0 +1,74 @@
+@model string[]
+
+<form class="row g-3">
+    @foreach (var field in Model)
+    {
+        <div class="col-12 col-md-6 col-xl-4">
+            <label class="form-label">@field</label>
+            @if (IsSelectField(field))
+            {
+                <select class="form-select" disabled>
+                    @foreach (var option in OptionsFor(field))
+                    {
+                        <option>@option</option>
+                    }
+                </select>
+            }
+            else if (IsDateField(field))
+            {
+                <input class="form-control" type="date" disabled />
+            }
+            else if (IsAmountField(field))
+            {
+                <input class="form-control" type="number" placeholder="0.00" disabled />
+            }
+            else if (field.Contains("Remarks") || field.Contains("Address") || field.Contains("Reason") || field.Contains("Footer"))
+            {
+                <textarea class="form-control" rows="3" placeholder="@SampleFor(field)" disabled></textarea>
+            }
+            else
+            {
+                <input class="form-control" type="text" placeholder="@SampleFor(field)" disabled />
+            }
+        </div>
+    }
+</form>
+
+@functions {
+    bool IsSelectField(string field) => field.Contains("Status") || field.Contains("Type") || field.Contains("Role") || field.Contains("Unit") || field.Contains("Supplier") || field.Contains("Fuel") || field.Contains("Pump") || field.Contains("Shift") || field.Contains("Payment") || field.Contains("Location") || field.Contains("Discount") || field.Contains("Theme") || field.Contains("Cashier");
+    bool IsDateField(string field) => field.Contains("Date") || field.Contains("At");
+    bool IsAmountField(string field) => field.Contains("Price") || field.Contains("Cash") || field.Contains("Amount") || field.Contains("Liters") || field.Contains("Quantity") || field.Contains("Value") || field.Contains("Points");
+
+    string[] OptionsFor(string field)
+    {
+        if (field.Contains("Role")) return new[] { "Admin", "Manager", "Cashier" };
+        if (field.Contains("Status")) return new[] { "active", "inactive", "pending", "received", "short", "over", "disputed" };
+        if (field.Contains("Adjustment Type")) return new[] { "add", "deduct", "damage", "missing", "expired", "correction" };
+        if (field.Contains("Movement Type")) return new[] { "cash_in", "cash_out", "correction" };
+        if (field.Contains("Discount Type")) return new[] { "percentage", "fixed", "points_rebate" };
+        if (field.Contains("Supplier Type")) return new[] { "fuel", "item", "both" };
+        if (field.Contains("Payment")) return new[] { "Cash", "Card", "GCash", "Bank Transfer" };
+        if (field.Contains("Fuel")) return new[] { "Diesel", "Gasoline", "Premium" };
+        if (field.Contains("Pump")) return new[] { "Pump Unit 1", "Pump Unit 2", "Pump 1", "Pump 2" };
+        if (field.Contains("Unit")) return new[] { "Liter / L", "Gallon / gal", "Piece / pc", "Bottle / bottle", "Can / can" };
+        if (field.Contains("Location")) return new[] { "Warehouse", "Display", "Front Island", "Back Island" };
+        if (field.Contains("Shift")) return new[] { "Morning", "Afternoon", "Night" };
+        return new[] { "Option 1", "Option 2", "Option 3" };
+    }
+
+    string SampleFor(string field) => field switch
+    {
+        "Customer Code" => "CUS-001",
+        "Product Code" => "PRD-101",
+        "Batch No" => "IB-024",
+        "Pump Unit Code" => "PU-001",
+        "Tank Code" => "TANK-001",
+        "Name" => "Juan Dela Cruz",
+        "Email" => "admin@gpos.local",
+        "Username" => "admin",
+        "Password" => "Password placeholder",
+        "Plate Number" => "ABC-1234",
+        "Gas Station Name" => "Main Station",
+        _ => $"Enter {field.ToLowerInvariant()}"
+    };
+}

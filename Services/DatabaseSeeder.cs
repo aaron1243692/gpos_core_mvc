@@ -54,11 +54,5 @@ namespace gpos.Services
             await context.SaveChangesAsync();
             logger.LogInformation("Created default admin user and assigned Admin role.");
         }
-
-        public static async Task EnsureDefaultSalesmanEmployeeAsync(ApplicationDbContext context, ILogger logger)
-        {
-            await Task.CompletedTask;
-            logger.LogInformation("Skipped default employee account seeding; employee accounts are managed from Setup > Config > Employees.");
-        }
     }
 }

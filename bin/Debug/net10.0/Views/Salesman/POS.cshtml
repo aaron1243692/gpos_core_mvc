@@ -1,0 +1,519 @@
+@{
+    ViewData["Title"] = "POS";
+    ViewData["Section"] = "Transactions";
+
+    var salesmanName = Context.Session.GetString("EmployeeName")
+        ?? Context.Session.GetString("EmployeeUsername")
+        ?? Context.Session.GetString("Username")
+        ?? Context.Session.GetString("Name")
+        ?? User.Identity?.Name
+        ?? "Salesman";
+}
+
+<section class="salesman-pos-page">
+    <form id="posSaleForm" method="post" class="salesman-pos-card">
+        <div class="pos-order-layout">
+            <section class="pos-order-menu" aria-label="Order menu">
+                <div class="pos-order-toolbar">
+                    <h1>Product <span>Category</span></h1>
+                    <div class="pos-order-search">
+                        <span aria-hidden="true">Search</span>
+                        <input class="form-control" id="productSearch" type="search" placeholder="Search product or fuel" autocomplete="off" />
+                    </div>
+                </div>
+
+                <nav class="pos-category-row" aria-label="Order categories">
+                    <button class="pos-category-pill is-active" type="button"><span>HOT</span><strong>Hot</strong></button>
+                    <button class="pos-category-pill" type="button"><span>PRD</span><strong>Products</strong></button>
+                    <button class="pos-category-pill" type="button"><span>FUE</span><strong>Fuel</strong></button>
+                    <button class="pos-category-pill" type="button"><span>PAY</span><strong>Cash</strong></button>
+                    <button class="pos-category-pill" type="button"><span>REC</span><strong>Receipt</strong></button>
+                </nav>
+
+                <div class="pos-menu-heading">
+                    <h2>Products</h2>
+                    <div>Sort By <strong>Popular</strong></div>
+                </div>
+
+                <div class="pos-product-grid">
+                    <article class="pos-menu-product-card" data-product-name="premium lubricant">
+                        <div class="pos-product-visual">PL</div>
+                        <h3>Premium Lubricant</h3>
+                        <p>PHP 530.00</p>
+                        <label class="pos-quantity-control" for="productQuantity_LUB001">
+                            <span>Qty</span>
+                            <input class="form-control product-quantity-input" id="productQuantity_LUB001" name="Products[0].Quantity" type="number" min="0" value="0" data-price="530" data-no="LUB-001" data-name="Premium Lubricant" aria-label="Premium Lubricant quantity" />
+                        </label>
+                        <input type="hidden" name="Products.Index" value="0" />
+                        <input type="hidden" name="Products[0].Code" value="LUB-001" />
+                        <input type="hidden" name="Products[0].Name" value="Premium Lubricant" />
+                    </article>
+                    <article class="pos-menu-product-card" data-product-name="engine coolant">
+                        <div class="pos-product-visual">EC</div>
+                        <h3>Engine Coolant</h3>
+                        <p>PHP 280.00</p>
+                        <label class="pos-quantity-control" for="productQuantity_CLT001">
+                            <span>Qty</span>
+                            <input class="form-control product-quantity-input" id="productQuantity_CLT001" name="Products[1].Quantity" type="number" min="0" value="0" data-price="280" data-no="CLT-001" data-name="Engine Coolant" aria-label="Engine Coolant quantity" />
+                        </label>
+                        <input type="hidden" name="Products.Index" value="1" />
+                        <input type="hidden" name="Products[1].Code" value="CLT-001" />
+                        <input type="hidden" name="Products[1].Name" value="Engine Coolant" />
+                    </article>
+                    <article class="pos-menu-product-card" data-product-name="brake fluid">
+                        <span class="pos-product-badge">New</span>
+                        <div class="pos-product-visual">BF</div>
+                        <h3>Brake Fluid</h3>
+                        <p>PHP 190.00</p>
+                        <label class="pos-quantity-control" for="productQuantity_BRK001">
+                            <span>Qty</span>
+                            <input class="form-control product-quantity-input" id="productQuantity_BRK001" name="Products[2].Quantity" type="number" min="0" value="0" data-price="190" data-no="BRK-001" data-name="Brake Fluid" aria-label="Brake Fluid quantity" />
+                        </label>
+                        <input type="hidden" name="Products.Index" value="2" />
+                        <input type="hidden" name="Products[2].Code" value="BRK-001" />
+                        <input type="hidden" name="Products[2].Name" value="Brake Fluid" />
+                    </article>
+                    <article class="pos-menu-product-card" data-product-name="wiper fluid">
+                        <div class="pos-product-visual">WF</div>
+                        <h3>Wiper Fluid</h3>
+                        <p>PHP 160.00</p>
+                        <label class="pos-quantity-control" for="productQuantity_WPR001">
+                            <span>Qty</span>
+                            <input class="form-control product-quantity-input" id="productQuantity_WPR001" name="Products[3].Quantity" type="number" min="0" value="0" data-price="160" data-no="WPR-001" data-name="Wiper Fluid" aria-label="Wiper Fluid quantity" />
+                        </label>
+                        <input type="hidden" name="Products.Index" value="3" />
+                        <input type="hidden" name="Products[3].Code" value="WPR-001" />
+                        <input type="hidden" name="Products[3].Name" value="Wiper Fluid" />
+                    </article>
+                </div>
+
+                <section class="pos-fuel-menu" aria-label="Fuel order">
+                    <div class="pos-menu-heading">
+                        <h2>Fuel <span>Menu</span></h2>
+                        <div>Cash Sale</div>
+                    </div>
+
+                    <div class="fuel-type-grid">
+                        <label class="fuel-option">
+                            <input class="form-check-input fuel-choice" type="radio" name="FuelType" value="Diesel" data-price="65" checked />
+                            <span>Diesel <small>PHP 65.00/L</small></span>
+                        </label>
+                        <label class="fuel-option">
+                            <input class="form-check-input fuel-choice" type="radio" name="FuelType" value="Gasoline" data-price="68" />
+                            <span>Gasoline <small>PHP 68.00/L</small></span>
+                        </label>
+                        <label class="fuel-option">
+                            <input class="form-check-input fuel-choice" type="radio" name="FuelType" value="Premium" data-price="72" />
+                            <span>Premium <small>PHP 72.00/L</small></span>
+                        </label>
+                    </div>
+
+                    <div class="pos-fuel-fields">
+                        <div>
+                            <label class="form-label" for="fuelLiters">Liters</label>
+                            <input class="form-control" id="fuelLiters" name="FuelLiters" type="number" min="0" step="0.01" value="0.00" />
+                        </div>
+                        <div>
+                            <label class="form-label" for="fuelCashAmount">Fuel cash amount</label>
+                            <div class="input-group">
+                                <span class="input-group-text">PHP</span>
+                                <input class="form-control pos-total-input" id="fuelCashAmount" name="FuelCashAmount" type="number" min="0" step="0.01" placeholder="0.00" />
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </section>
+
+            <aside class="pos-order-summary" aria-label="Order summary">
+                <div class="pos-summary-top">
+                    <h2>Cart</h2>
+                    <span aria-hidden="true">Edit</span>
+                </div>
+
+                <div class="pos-cart-list" id="orderCartItems">
+                    <div class="pos-empty-cart">No selected items yet.</div>
+                </div>
+
+                <div class="pos-summary-totals">
+                    <div><span>Products</span><strong id="cartSubTotal">PHP 0.00</strong></div>
+                    <div><span>Fuel</span><strong id="cartFuelLine">PHP 0.00</strong></div>
+                    <div><span>Total</span><strong id="posGrandTotal">PHP 0.00</strong></div>
+                </div>
+
+                <div class="pos-summary-fields">
+                    <div>
+                        <label class="form-label" for="paymentMethod">Payment Method</label>
+                        <select class="form-select" id="paymentMethod" name="PaymentMethod">
+                            <option>Cash</option>
+                            <option>Membership Card</option>
+                        </select>
+                    </div>
+                    <div id="cashPaymentField">
+                        <label class="form-label" for="paymentAmount">Cash Received</label>
+                        <div class="input-group">
+                            <span class="input-group-text">PHP</span>
+                            <input class="form-control" id="paymentAmount" name="PaymentAmount" type="number" min="0" step="0.01" placeholder="0.00" />
+                        </div>
+                    </div>
+                    <div id="cashChangeField">
+                        <label class="form-label" for="paymentChange">Change</label>
+                        <div class="input-group">
+                            <span class="input-group-text">PHP</span>
+                            <input class="form-control" id="paymentChange" name="PaymentChange" value="0.00" readonly />
+                        </div>
+                    </div>
+                    <div id="cardPaymentField" hidden>
+                        <label class="form-label" for="membershipCardNo">Card No</label>
+                        <input class="form-control" id="membershipCardNo" name="MembershipCardNo" placeholder="Membership card number" disabled />
+                    </div>
+                </div>
+
+                <button class="btn btn-primary btn-lg pos-charge-button" id="checkoutButton" type="button">Complete Payment</button>
+            </aside>
+        </div>
+
+        <section class="salesman-receipt-preview" id="receiptPreview" hidden aria-live="polite">
+            <div class="salesman-receipt-print" id="receiptPrintArea">
+                <div class="receipt-title">
+                    <h2>GPOS Main Station</h2>
+                    <p>Sales Receipt Preview</p>
+                </div>
+
+                <div class="receipt-meta">
+                    <div><span>Date / Time</span><strong id="receiptDateTime"></strong></div>
+                    <div><span>Salesman</span><strong id="receiptSalesman"></strong></div>
+                    <div><span>Payment Method</span><strong id="receiptPaymentMethod"></strong></div>
+                    <div><span id="receiptPaymentDetailLabel">Amount</span><strong id="receiptPaymentDetail"></strong></div>
+                    <div id="receiptChangeLine"><span>Change</span><strong id="receiptPaymentChange"></strong></div>
+                </div>
+
+                <div class="receipt-block">
+                    <h3>Gas / Fuel</h3>
+                    <div class="receipt-line"><span>Fuel type</span><strong id="receiptFuelType"></strong></div>
+                    <div class="receipt-line"><span>Cash amount</span><strong id="receiptFuelAmount"></strong></div>
+                    <div class="receipt-line"><span>Liters</span><strong id="receiptFuelLiters"></strong></div>
+                </div>
+
+                <div class="receipt-block">
+                    <h3>Products</h3>
+                    <table class="receipt-product-table">
+                        <thead>
+                            <tr>
+                                <th>No</th>
+                                <th>Name</th>
+                                <th>Quantity</th>
+                            </tr>
+                        </thead>
+                        <tbody id="receiptProductRows">
+                            <tr><td colspan="3">No selected products.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="receipt-total-line">
+                    <span>Total</span>
+                    <strong id="receiptTotalAmount">PHP 0.00</strong>
+                </div>
+            </div>
+
+            <div class="salesman-receipt-actions">
+                <button class="btn btn-outline-secondary" id="printReceiptButton" type="button">Print</button>
+                <button class="btn btn-primary" id="submitSaleButton" type="submit">Submit</button>
+                <button class="btn btn-outline-secondary" id="newSaleButton" type="button">New Sale</button>
+            </div>
+        </section>
+    </form>
+</section>
+
+@section Scripts {
+    <script>
+        (() => {
+            const peso = new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP" });
+            const salesmanName = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(salesmanName));
+            const form = document.getElementById("posSaleForm");
+            const productQuantityInputs = Array.from(document.querySelectorAll(".product-quantity-input"));
+            const totalInputs = Array.from(document.querySelectorAll(".pos-total-input"));
+            const fuelChoices = Array.from(document.querySelectorAll(".fuel-choice"));
+            const fuelAmountInput = document.getElementById("fuelCashAmount");
+            const fuelLitersInput = document.getElementById("fuelLiters");
+            const paymentMethodInput = document.getElementById("paymentMethod");
+            const paymentAmountInput = document.getElementById("paymentAmount");
+            const paymentChangeInput = document.getElementById("paymentChange");
+            const membershipCardNoInput = document.getElementById("membershipCardNo");
+            const cashPaymentField = document.getElementById("cashPaymentField");
+            const cashChangeField = document.getElementById("cashChangeField");
+            const cardPaymentField = document.getElementById("cardPaymentField");
+            const grandTotal = document.getElementById("posGrandTotal");
+            const cartSubTotal = document.getElementById("cartSubTotal");
+            const cartFuelLine = document.getElementById("cartFuelLine");
+            const orderCartItems = document.getElementById("orderCartItems");
+            const productSearch = document.getElementById("productSearch");
+            const productRows = Array.from(document.querySelectorAll(".pos-menu-product-card"));
+            const checkoutButton = document.getElementById("checkoutButton");
+            const receiptPreview = document.getElementById("receiptPreview");
+            const receiptDateTime = document.getElementById("receiptDateTime");
+            const receiptSalesman = document.getElementById("receiptSalesman");
+            const receiptPaymentMethod = document.getElementById("receiptPaymentMethod");
+            const receiptPaymentDetailLabel = document.getElementById("receiptPaymentDetailLabel");
+            const receiptPaymentDetail = document.getElementById("receiptPaymentDetail");
+            const receiptChangeLine = document.getElementById("receiptChangeLine");
+            const receiptPaymentChange = document.getElementById("receiptPaymentChange");
+            const receiptFuelType = document.getElementById("receiptFuelType");
+            const receiptFuelAmount = document.getElementById("receiptFuelAmount");
+            const receiptFuelLiters = document.getElementById("receiptFuelLiters");
+            const receiptProductRows = document.getElementById("receiptProductRows");
+            const receiptTotalAmount = document.getElementById("receiptTotalAmount");
+            const printReceiptButton = document.getElementById("printReceiptButton");
+            const newSaleButton = document.getElementById("newSaleButton");
+
+            function numericValue(input) {
+                return Number.parseFloat(input.value) || 0;
+            }
+
+            function selectedFuelType() {
+                return fuelChoices.find(choice => choice.checked)?.value || "Fuel";
+            }
+
+            function selectedFuelPrice() {
+                const selected = fuelChoices.find(choice => choice.checked);
+                return selected ? Number.parseFloat(selected.dataset.price) || 0 : 0;
+            }
+
+            function calculatedLiters() {
+                const price = selectedFuelPrice();
+                const amount = Math.max(0, numericValue(fuelAmountInput));
+
+                return Number.isFinite(price) && price > 0 ? amount / price : 0;
+            }
+
+            function updateLiters() {
+                fuelLitersInput.value = calculatedLiters().toFixed(2);
+            }
+
+            function updateFuelAmountFromLiters() {
+                const price = selectedFuelPrice();
+                const liters = Math.max(0, numericValue(fuelLitersInput));
+                const amount = Number.isFinite(price) && price > 0 ? liters * price : 0;
+
+                if (numericValue(fuelLitersInput) < 0) {
+                    fuelLitersInput.value = 0;
+                }
+
+                fuelAmountInput.value = amount > 0 ? amount.toFixed(2) : "";
+            }
+
+            function selectedPaymentMethod() {
+                return paymentMethodInput.value || "Cash";
+            }
+
+            function cashReceivedAmount() {
+                if (numericValue(paymentAmountInput) < 0) {
+                    paymentAmountInput.value = 0;
+                }
+
+                return Math.max(0, numericValue(paymentAmountInput));
+            }
+
+            function changeAmount() {
+                return Math.max(0, cashReceivedAmount() - totalAmount());
+            }
+
+            function updateChange() {
+                paymentChangeInput.value = changeAmount().toFixed(2);
+            }
+
+            function updatePaymentFields() {
+                const isCash = selectedPaymentMethod() === "Cash";
+
+                cashPaymentField.hidden = !isCash;
+                cashChangeField.hidden = !isCash;
+                cardPaymentField.hidden = isCash;
+                paymentAmountInput.disabled = !isCash;
+                paymentChangeInput.disabled = !isCash;
+                membershipCardNoInput.disabled = isCash;
+
+                if (isCash) {
+                    membershipCardNoInput.value = "";
+                } else {
+                    paymentAmountInput.value = "";
+                    paymentChangeInput.value = "0.00";
+                }
+
+                if (!receiptPreview.hidden) {
+                    renderReceipt();
+                }
+            }
+
+            function selectedProducts() {
+                return productQuantityInputs.reduce((products, input) => {
+                    const quantity = Math.max(0, numericValue(input));
+
+                    if (numericValue(input) < 0) {
+                        input.value = 0;
+                    }
+
+                    if (quantity > 0) {
+                        products.push({
+                            no: input.dataset.no,
+                            name: input.dataset.name,
+                            quantity,
+                            price: Number.parseFloat(input.dataset.price) || 0
+                        });
+                    }
+
+                    return products;
+                }, []);
+            }
+
+            function productTotalAmount() {
+                return selectedProducts().reduce((total, product) => {
+                    return total + (product.quantity * product.price);
+                }, 0);
+            }
+
+            function fuelTotalAmount() {
+                if (numericValue(fuelAmountInput) < 0) {
+                    fuelAmountInput.value = 0;
+                }
+
+                return Math.max(0, numericValue(fuelAmountInput));
+            }
+
+            function totalAmount() {
+                return productTotalAmount() + fuelTotalAmount();
+            }
+
+            function renderCart() {
+                const products = selectedProducts();
+                const fuelAmount = fuelTotalAmount();
+                const productMarkup = products.map(product => {
+                    return `<div class="pos-cart-item"><div class="pos-cart-thumb">${product.no.substring(0, 2)}</div><div><strong>${product.name}</strong><span>${peso.format(product.price)}</span></div><span>x${product.quantity}</span><b>${peso.format(product.quantity * product.price)}</b></div>`;
+                }).join("");
+                const fuelMarkup = fuelAmount > 0
+                    ? `<div class="pos-cart-item"><div class="pos-cart-thumb">FU</div><div><strong>${selectedFuelType()}</strong><span>${calculatedLiters().toFixed(2)} L</span></div><span>x1</span><b>${peso.format(fuelAmount)}</b></div>`
+                    : "";
+
+                orderCartItems.innerHTML = productMarkup || fuelMarkup
+                    ? `${productMarkup}${fuelMarkup}`
+                    : `<div class="pos-empty-cart">No selected items yet.</div>`;
+            }
+
+            function updateSummaryAmounts() {
+                cartSubTotal.textContent = peso.format(productTotalAmount());
+                cartFuelLine.textContent = peso.format(fuelTotalAmount());
+                grandTotal.textContent = peso.format(totalAmount());
+                updateChange();
+            }
+
+            function updateTotal() {
+                updateLiters();
+                updateSummaryAmounts();
+                renderCart();
+
+                if (!receiptPreview.hidden) {
+                    renderReceipt();
+                }
+            }
+
+            function renderReceipt() {
+                const products = selectedProducts();
+                const fuelAmount = fuelTotalAmount();
+
+                receiptDateTime.textContent = new Date().toLocaleString();
+                receiptSalesman.textContent = salesmanName;
+                receiptPaymentMethod.textContent = selectedPaymentMethod();
+                receiptPaymentDetailLabel.textContent = selectedPaymentMethod() === "Cash" ? "Cash Received" : "Card No";
+                receiptPaymentDetail.textContent = selectedPaymentMethod() === "Cash"
+                    ? peso.format(cashReceivedAmount())
+                    : membershipCardNoInput.value.trim();
+                receiptChangeLine.hidden = selectedPaymentMethod() !== "Cash";
+                receiptPaymentChange.textContent = peso.format(changeAmount());
+                receiptFuelType.textContent = selectedFuelType();
+                receiptFuelAmount.textContent = peso.format(fuelAmount);
+                receiptFuelLiters.textContent = `${calculatedLiters().toFixed(2)} L`;
+                receiptTotalAmount.textContent = peso.format(totalAmount());
+                receiptProductRows.innerHTML = products.length
+                    ? products.map(product => `<tr><td>${product.no}</td><td>${product.name}</td><td>${product.quantity}</td></tr>`).join("")
+                    : `<tr><td colspan="3">No selected products.</td></tr>`;
+            }
+
+            function showReceipt() {
+                updateTotal();
+                renderReceipt();
+
+                receiptPreview.hidden = false;
+                receiptPreview.scrollIntoView({ behavior: "smooth", block: "start" });
+            }
+
+            function restoreProductSubmitFields() {
+                productRows.forEach(row => {
+                    Array.from(row.querySelectorAll("input[type='hidden'], .product-quantity-input")).forEach(input => {
+                        input.disabled = false;
+                    });
+                });
+            }
+
+            function disableZeroQuantityProducts() {
+                productQuantityInputs.forEach(input => {
+                    const rowInputs = Array.from(input.closest(".pos-menu-product-card").querySelectorAll("input[type='hidden'], .product-quantity-input"));
+                    const shouldSubmit = Math.max(0, numericValue(input)) > 0;
+
+                    rowInputs.forEach(rowInput => {
+                        rowInput.disabled = !shouldSubmit;
+                    });
+                });
+            }
+
+            function resetSale() {
+                form.reset();
+                restoreProductSubmitFields();
+                productSearch.value = "";
+                productRows.forEach(row => {
+                    row.hidden = false;
+                });
+                productQuantityInputs.forEach(input => {
+                    input.value = 0;
+                });
+                fuelChoices[0].checked = true;
+                fuelLitersInput.value = "0.00";
+                receiptPreview.hidden = true;
+                updatePaymentFields();
+                updateTotal();
+            }
+
+            productQuantityInputs.forEach(input => input.addEventListener("input", updateTotal));
+            totalInputs.forEach(input => input.addEventListener("input", updateTotal));
+            fuelLitersInput.addEventListener("input", () => {
+                updateFuelAmountFromLiters();
+                updateTotal();
+            });
+            paymentMethodInput.addEventListener("change", updatePaymentFields);
+            paymentAmountInput.addEventListener("input", () => {
+                updateChange();
+                if (!receiptPreview.hidden) {
+                    renderReceipt();
+                }
+            });
+            membershipCardNoInput.addEventListener("input", () => {
+                if (!receiptPreview.hidden) {
+                    renderReceipt();
+                }
+            });
+            fuelChoices.forEach(choice => choice.addEventListener("change", updateTotal));
+            productSearch.addEventListener("input", () => {
+                const query = productSearch.value.trim().toLowerCase();
+
+                productRows.forEach(row => {
+                    row.hidden = query.length > 0 && !row.dataset.productName.includes(query);
+                });
+            });
+            checkoutButton.addEventListener("click", showReceipt);
+            printReceiptButton.addEventListener("click", () => window.print());
+            newSaleButton.addEventListener("click", resetSale);
+            form.addEventListener("submit", disableZeroQuantityProducts);
+            window.addEventListener("pageshow", restoreProductSubmitFields);
+            updatePaymentFields();
+            updateTotal();
+        })();
+    </script>
+}

@@ -51,7 +51,12 @@ namespace gpos.ViewComponents
                 return "Configuration";
             }
 
-            if (Is(controller, "Transactions") || Is(controller, "Transaction") || Is(controller, "Salesman") && Is(action, "POS"))
+            if (Is(controller, "Transaction") && Is(action, "POS"))
+            {
+                return "POS";
+            }
+
+            if (Is(controller, "Transactions") || Is(controller, "Transaction"))
             {
                 return "Transactions";
             }
@@ -89,11 +94,6 @@ namespace gpos.ViewComponents
             if (Is(controller, "Transactions"))
             {
                 return $"Transactions.{action}";
-            }
-
-            if (Is(controller, "Salesman") && Is(action, "POS"))
-            {
-                return "Salesman.POS";
             }
 
             if (Is(controller, "Reports"))
@@ -163,6 +163,7 @@ namespace gpos.ViewComponents
             {
                 return action switch
                 {
+                    "POS" => "Transaction.POS",
                     "ProductSales" => "Transaction.ProductSales",
                     "FuelSales" => "Transaction.FuelSales",
                     "EmployeePOS" => "Transaction.EmployeePOS",
