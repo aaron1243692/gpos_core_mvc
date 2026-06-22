@@ -7,6 +7,12 @@ namespace gpos.Controllers
     {
         public override void OnActionExecuting(ActionExecutingContext context)
         {
+            if (string.Equals(context.ActionDescriptor.RouteValues["action"], nameof(POS), StringComparison.OrdinalIgnoreCase))
+            {
+                base.OnActionExecuting(context);
+                return;
+            }
+
             context.Result = RedirectToAction("Index", "SignIn");
         }
 
