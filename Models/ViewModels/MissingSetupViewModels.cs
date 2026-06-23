@@ -135,38 +135,50 @@ namespace gpos.Models.ViewModels
         public int Id { get; set; }
         [Required(ErrorMessage = "Name is required.")]
         public string Name { get; set; } = string.Empty;
+        [Required(ErrorMessage = "Applies To is required.")]
+        public string AppliesTo { get; set; } = "Fuel";
         [Range(0.01, double.MaxValue, ErrorMessage = "Points Required must be greater than 0.")]
-        public decimal PointsRequired { get; set; }
-        [Range(0.01, double.MaxValue, ErrorMessage = "Rebate Value must be greater than 0.")]
-        public decimal RebateValue { get; set; }
+        public decimal? PointsRequired { get; set; }
+        [Range(0.01, double.MaxValue, ErrorMessage = "Rebate Amount must be greater than 0.")]
+        public decimal? RebateValue { get; set; }
+        [Required(ErrorMessage = "Minimum Purchase is required.")]
+        [Range(0, double.MaxValue, ErrorMessage = "Minimum Purchase cannot be negative.")]
+        public decimal? MinimumPurchase { get; set; }
         public int Status { get; set; } = 1;
     }
 
     public class PointsLedgerForm
     {
         public int Id { get; set; }
-        [Range(1, int.MaxValue, ErrorMessage = "Member is required.")]
+        [Range(1, int.MaxValue, ErrorMessage = "Please select a member.")]
         public int MemberId { get; set; }
-        [Required(ErrorMessage = "Transaction Type is required.")]
-        public string TransactionType { get; set; } = "Earned";
+        public string? MemberName { get; set; }
+        [Required(ErrorMessage = "Type is required.")]
+        public string Type { get; set; } = "Earned";
         [Required(ErrorMessage = "Points is required.")]
         public decimal? Points { get; set; }
-        public string? ReferenceType { get; set; }
-        public int? ReferenceId { get; set; }
         public string? Remarks { get; set; }
     }
 
     public class DiscountRuleForm
     {
         public int Id { get; set; }
-        [Required(ErrorMessage = "Name is required.")]
-        public string Name { get; set; } = string.Empty;
-        [Required(ErrorMessage = "Type is required.")]
-        public string DiscountType { get; set; } = "Percentage";
-        [Range(0, double.MaxValue, ErrorMessage = "Value cannot be negative.")]
-        public decimal DiscountValue { get; set; }
+        [Range(1, int.MaxValue, ErrorMessage = "Discount is required.")]
+        public int DiscountId { get; set; }
         [Required(ErrorMessage = "Applies To is required.")]
-        public string AppliesTo { get; set; } = "All";
+        public string AppliesTo { get; set; } = "Fuel";
+        [Required(ErrorMessage = "Discount Type is required.")]
+        public string DiscountType { get; set; } = "Percentage";
+        [Required(ErrorMessage = "Discount Value is required.")]
+        public decimal? DiscountValue { get; set; }
+        [Required(ErrorMessage = "Minimum Amount is required.")]
+        [Range(0, double.MaxValue, ErrorMessage = "Minimum Amount cannot be negative.")]
+        public decimal? MinimumAmount { get; set; }
+        public bool MemberRequired { get; set; }
+        [DataType(DataType.Date)]
+        public DateTime? StartDate { get; set; }
+        [DataType(DataType.Date)]
+        public DateTime? EndDate { get; set; }
         public int Status { get; set; } = 1;
     }
 
@@ -298,6 +310,7 @@ namespace gpos.Models.ViewModels
         public List<SelectListItem> TankOptions { get; set; } = new();
         public List<SelectListItem> PumpOptions { get; set; } = new();
         public List<SelectListItem> NozzleOptions { get; set; } = new();
+        public List<SelectListItem> DiscountOptions { get; set; } = new();
         public List<SelectListItem> MemberOptions { get; set; } = new();
         public List<SelectListItem> BranchOptions { get; set; } = new();
         public List<SelectListItem> RoleOptions { get; set; } = new();

@@ -10,5 +10,6 @@ namespace gpos.Models
         public DateTime? UpdatedAt { get; set; }
 
         public ICollection<Member> Members { get; set; } = new List<Member>();
+        public ICollection<DiscountRule> DiscountRules { get; set; } = new List<DiscountRule>();
     }
 }

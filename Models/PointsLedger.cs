@@ -6,6 +6,8 @@ namespace gpos.Models
         public int MemberId { get; set; }
         public string TransactionType { get; set; } = string.Empty;
         public decimal Points { get; set; }
+        public decimal OldPoints { get; set; }
+        public decimal NewPoints { get; set; }
         public string? ReferenceType { get; set; }
         public int? ReferenceId { get; set; }
         public string? Remarks { get; set; }

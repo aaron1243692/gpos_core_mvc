@@ -63,6 +63,37 @@ namespace gpos.Controllers
             return View(await BuildPointsLedgerPageAsync(search));
         }
 
+        [HttpGet("Configuration/PointsLedger/Members")]
+        public async Task<IActionResult> PointsLedgerMembers(string? search)
+        {
+            var searchText = (search ?? string.Empty).Trim();
+            var query = _db.Members
+                .AsNoTracking()
+                .Where(member => member.Status == 1);
+
+            if (!string.IsNullOrWhiteSpace(searchText))
+            {
+                query = query.Where(member => (member.CardNo != null && member.CardNo.Contains(searchText))
+                    || member.FullName.Contains(searchText)
+                    || (member.ContactNumber != null && member.ContactNumber.Contains(searchText)));
+            }
+
+            var members = await query
+                .OrderBy(member => member.FullName)
+                .Take(50)
+                .Select(member => new
+                {
+                    id = member.Id,
+                    cardNo = member.CardNo ?? string.Empty,
+                    name = member.FullName,
+                    contact = member.ContactNumber ?? string.Empty,
+                    points = member.Points
+                })
+                .ToListAsync();
+
+            return Json(members);
+        }
+
         public async Task<IActionResult> DiscountRules(string? search, int? editId)
         {
             return View(await BuildDiscountRulesPageAsync(search, editId: editId, activeModalId: editId.HasValue ? "discountRuleModal" : ""));
@@ -495,6 +526,13 @@ namespace gpos.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> SaveRebateRule([Bind(Prefix = "RebateRuleForm")] RebateRuleForm form, string? search)
         {
+            var appliesTo = NormalizeRebateAppliesTo(form.AppliesTo);
+
+            if (appliesTo is null)
+            {
+                ModelState.AddModelError("RebateRuleForm.AppliesTo", "Applies To is required.");
+            }
+
             if (!ModelState.IsValid)
             {
                 return View("Rebate", await BuildRebatePageAsync(search, form, activeModalId: "rebateRuleModal"));
@@ -504,8 +542,10 @@ namespace gpos.Controllers
             var rule = form.Id > 0 ? await _db.RebateRules.FindAsync(form.Id) : new RebateRule { CreatedAt = now };
             if (rule is null) return NotFound();
             rule.Name = form.Name.Trim();
-            rule.PointsRequired = form.PointsRequired;
-            rule.RebateValue = form.RebateValue;
+            rule.AppliesTo = appliesTo!;
+            rule.PointsRequired = form.PointsRequired!.Value;
+            rule.RebateValue = form.RebateValue!.Value;
+            rule.MinimumPurchase = form.MinimumPurchase!.Value;
             rule.Status = form.Status;
             rule.UpdatedAt = now;
             if (form.Id == 0) _db.RebateRules.Add(rule);
@@ -531,24 +571,60 @@ namespace gpos.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> SavePointsLedger([Bind(Prefix = "PointsLedgerForm")] PointsLedgerForm form, string? search)
         {
+            var normalizedType = NormalizePointsLedgerType(form.Type);
+
+            if (normalizedType is null)
+            {
+                ModelState.AddModelError("PointsLedgerForm.Type", "Type is required.");
+            }
+
+            if (normalizedType == "set")
+            {
+                if (form.Points < 0)
+                {
+                    ModelState.AddModelError("PointsLedgerForm.Points", "Points must be greater than or equal to 0 for Set.");
+                }
+            }
+            else if (form.Points <= 0)
+            {
+                ModelState.AddModelError("PointsLedgerForm.Points", "Points must be greater than 0.");
+            }
+
             if (!ModelState.IsValid)
             {
                 return View("PointsLedger", await BuildPointsLedgerPageAsync(search, form, "pointsLedgerModal"));
             }
 
-            var member = await _db.Members.FindAsync(form.MemberId);
-            if (member is null) return NotFound();
+            var member = await _db.Members.FirstOrDefaultAsync(item => item.Id == form.MemberId && item.Status == 1);
+
+            if (member is null)
+            {
+                ModelState.AddModelError("PointsLedgerForm.MemberId", "Please select a member.");
+                return View("PointsLedger", await BuildPointsLedgerPageAsync(search, form, "pointsLedgerModal"));
+            }
+
+            var oldPoints = member.Points;
+            var inputPoints = form.Points!.Value;
+            var ledgerPoints = CalculatePointsLedgerDelta(normalizedType!, inputPoints);
+            var newPoints = CalculatePointsLedgerNewPoints(normalizedType!, oldPoints, inputPoints);
+
+            if (newPoints < 0)
+            {
+                ModelState.AddModelError("PointsLedgerForm.Points", "Insufficient member points.");
+                return View("PointsLedger", await BuildPointsLedgerPageAsync(search, form, "pointsLedgerModal"));
+            }
+
             var ledger = new PointsLedger
             {
                 MemberId = form.MemberId,
-                TransactionType = form.TransactionType,
-                Points = form.Points!.Value,
-                ReferenceType = CleanOptional(form.ReferenceType),
-                ReferenceId = form.ReferenceId,
+                TransactionType = normalizedType!,
+                Points = ledgerPoints,
+                OldPoints = oldPoints,
+                NewPoints = newPoints,
                 Remarks = CleanOptional(form.Remarks),
                 CreatedAt = DateTime.UtcNow
             };
-            member.Points += ledger.Points;
+            member.Points = newPoints;
             member.UpdatedAt = DateTime.UtcNow;
             _db.PointsLedger.Add(ledger);
             await _db.SaveChangesAsync();
@@ -559,6 +635,43 @@ namespace gpos.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> SaveDiscountRule([Bind(Prefix = "DiscountRuleForm")] DiscountRuleForm form, string? search)
         {
+            var discountType = NormalizeDiscountRuleType(form.DiscountType);
+            var appliesTo = NormalizeDiscountRuleAppliesTo(form.AppliesTo);
+
+            if (discountType is null)
+            {
+                ModelState.AddModelError("DiscountRuleForm.DiscountType", "Discount Type is required.");
+            }
+
+            if (appliesTo is null)
+            {
+                ModelState.AddModelError("DiscountRuleForm.AppliesTo", "Applies To is required.");
+            }
+
+            if (form.DiscountValue.HasValue && discountType == "Percentage" && (form.DiscountValue.Value <= 0 || form.DiscountValue.Value > 100))
+            {
+                ModelState.AddModelError("DiscountRuleForm.DiscountValue", "Percentage value must be greater than 0 and not greater than 100.");
+            }
+
+            if (form.DiscountValue.HasValue && discountType == "Fixed Amount" && form.DiscountValue.Value <= 0)
+            {
+                ModelState.AddModelError("DiscountRuleForm.DiscountValue", "Fixed Amount value must be greater than 0.");
+            }
+
+            if (form.StartDate.HasValue && form.EndDate.HasValue && form.EndDate.Value.Date < form.StartDate.Value.Date)
+            {
+                ModelState.AddModelError("DiscountRuleForm.EndDate", "End Date must not be earlier than Start Date.");
+            }
+
+            var discount = form.DiscountId > 0
+                ? await _db.Discounts.AsNoTracking().FirstOrDefaultAsync(item => item.Id == form.DiscountId)
+                : null;
+
+            if (discount is null)
+            {
+                ModelState.AddModelError("DiscountRuleForm.DiscountId", "Discount is required.");
+            }
+
             if (!ModelState.IsValid)
             {
                 return View("DiscountRules", await BuildDiscountRulesPageAsync(search, form, activeModalId: "discountRuleModal"));
@@ -567,10 +680,15 @@ namespace gpos.Controllers
             var now = DateTime.UtcNow;
             var rule = form.Id > 0 ? await _db.DiscountRules.FindAsync(form.Id) : new DiscountRule { CreatedAt = now };
             if (rule is null) return NotFound();
-            rule.Name = form.Name.Trim();
-            rule.DiscountType = form.DiscountType;
-            rule.DiscountValue = form.DiscountValue;
-            rule.AppliesTo = form.AppliesTo;
+            rule.Name = discount!.Name;
+            rule.DiscountId = form.DiscountId;
+            rule.AppliesTo = appliesTo!;
+            rule.DiscountType = discountType!;
+            rule.DiscountValue = form.DiscountValue!.Value;
+            rule.MinimumAmount = form.MinimumAmount!.Value;
+            rule.MemberRequired = form.MemberRequired ? 1 : 0;
+            rule.StartDate = form.StartDate?.Date;
+            rule.EndDate = form.EndDate?.Date;
             rule.Status = form.Status;
             rule.UpdatedAt = now;
             if (form.Id == 0) _db.DiscountRules.Add(rule);
@@ -980,24 +1098,137 @@ namespace gpos.Controllers
         {
             var query = _db.RebateRules.AsNoTracking();
             var searchText = (search ?? string.Empty).Trim();
-            if (!string.IsNullOrWhiteSpace(searchText)) query = query.Where(rule => rule.Name.Contains(searchText));
+            if (!string.IsNullOrWhiteSpace(searchText))
+            {
+                query = query.Where(rule => rule.Name.Contains(searchText)
+                    || rule.AppliesTo.Contains(searchText)
+                    || (searchText == "Active" && rule.Status == 1)
+                    || (searchText == "Disabled" && rule.Status == 0));
+            }
+
             return new SetupModulesPageViewModel { Search = searchText, ActiveModalId = activeModalId, RebateRuleForm = form ?? await BuildRebateRuleFormAsync(editId), RebateRules = await query.OrderBy(rule => rule.Id).ToListAsync() };
+        }
+
+        private static string? NormalizeRebateAppliesTo(string? appliesTo)
+        {
+            return appliesTo?.Trim() switch
+            {
+                "Fuel" => "Fuel",
+                "Product" => "Product",
+                "Both" => "Both",
+                _ => null
+            };
         }
 
         private async Task<SetupModulesPageViewModel> BuildPointsLedgerPageAsync(string? search, PointsLedgerForm? form = null, string activeModalId = "")
         {
             IQueryable<PointsLedger> query = _db.PointsLedger.AsNoTracking().Include(ledger => ledger.Member);
             var searchText = (search ?? string.Empty).Trim();
-            if (!string.IsNullOrWhiteSpace(searchText)) query = query.Where(ledger => ledger.TransactionType.Contains(searchText) || (ledger.Member != null && ledger.Member.FullName.Contains(searchText)));
-            return new SetupModulesPageViewModel { Search = searchText, ActiveModalId = activeModalId, PointsLedgerForm = form ?? new PointsLedgerForm(), MemberOptions = await BuildMemberOptionsAsync(), PointsLedger = await query.OrderByDescending(ledger => ledger.CreatedAt).ToListAsync() };
+            if (!string.IsNullOrWhiteSpace(searchText)) query = query.Where(ledger => ledger.TransactionType.Contains(searchText) || (ledger.Member != null && ledger.Member.FullName.Contains(searchText)) || (ledger.Remarks != null && ledger.Remarks.Contains(searchText)));
+            var ledgerForm = form ?? new PointsLedgerForm();
+
+            if (ledgerForm.MemberId > 0 && string.IsNullOrWhiteSpace(ledgerForm.MemberName))
+            {
+                ledgerForm.MemberName = await _db.Members
+                    .AsNoTracking()
+                    .Where(member => member.Id == ledgerForm.MemberId)
+                    .Select(member => member.FullName)
+                    .FirstOrDefaultAsync();
+            }
+
+            return new SetupModulesPageViewModel { Search = searchText, ActiveModalId = activeModalId, PointsLedgerForm = ledgerForm, MemberOptions = await BuildMemberOptionsAsync(), PointsLedger = await query.OrderByDescending(ledger => ledger.CreatedAt).ToListAsync() };
+        }
+
+        private static string? NormalizePointsLedgerType(string? type)
+        {
+            return type?.Trim().ToLowerInvariant() switch
+            {
+                "earned" => "earned",
+                "used" => "used",
+                "deduct" => "deduct",
+                "set" => "set",
+                _ => null
+            };
+        }
+
+        private static decimal CalculatePointsLedgerDelta(string type, decimal points)
+        {
+            return type switch
+            {
+                "earned" => Math.Abs(points),
+                "used" => -Math.Abs(points),
+                "deduct" => -Math.Abs(points),
+                "set" => points,
+                _ => points
+            };
+        }
+
+        private static decimal CalculatePointsLedgerNewPoints(string type, decimal oldPoints, decimal points)
+        {
+            return type switch
+            {
+                "earned" => oldPoints + Math.Abs(points),
+                "used" => oldPoints - Math.Abs(points),
+                "deduct" => oldPoints - Math.Abs(points),
+                "set" => points,
+                _ => oldPoints + points
+            };
         }
 
         private async Task<SetupModulesPageViewModel> BuildDiscountRulesPageAsync(string? search, DiscountRuleForm? form = null, int? editId = null, string activeModalId = "")
         {
-            var query = _db.DiscountRules.AsNoTracking();
+            IQueryable<DiscountRule> query = _db.DiscountRules.AsNoTracking().Include(rule => rule.Discount);
             var searchText = (search ?? string.Empty).Trim();
-            if (!string.IsNullOrWhiteSpace(searchText)) query = query.Where(rule => rule.Name.Contains(searchText) || rule.DiscountType.Contains(searchText) || rule.AppliesTo.Contains(searchText));
-            return new SetupModulesPageViewModel { Search = searchText, ActiveModalId = activeModalId, DiscountRuleForm = form ?? await BuildDiscountRuleFormAsync(editId), DiscountRules = await query.OrderBy(rule => rule.Id).ToListAsync() };
+            if (!string.IsNullOrWhiteSpace(searchText))
+            {
+                query = query.Where(rule => (rule.Discount != null && rule.Discount.Name.Contains(searchText))
+                    || rule.AppliesTo.Contains(searchText)
+                    || rule.DiscountType.Contains(searchText)
+                    || (searchText == "Active" && rule.Status == 1)
+                    || (searchText == "Disabled" && rule.Status == 0));
+            }
+
+            return new SetupModulesPageViewModel
+            {
+                Search = searchText,
+                ActiveModalId = activeModalId,
+                DiscountRuleForm = form ?? await BuildDiscountRuleFormAsync(editId),
+                DiscountOptions = await BuildRequiredDiscountOptionsAsync(),
+                DiscountRules = await query.OrderBy(rule => rule.Id).ToListAsync()
+            };
+        }
+
+        private static string? NormalizeDiscountRuleAppliesTo(string? appliesTo)
+        {
+            return appliesTo?.Trim() switch
+            {
+                "Fuel" => "Fuel",
+                "Product" => "Product",
+                "Both" => "Both",
+                _ => null
+            };
+        }
+
+        private static string? NormalizeDiscountRuleType(string? discountType)
+        {
+            return discountType?.Trim() switch
+            {
+                "Percentage" => "Percentage",
+                "Fixed Amount" => "Fixed Amount",
+                _ => null
+            };
+        }
+
+        private async Task<List<SelectListItem>> BuildRequiredDiscountOptionsAsync()
+        {
+            var options = await _db.Discounts.AsNoTracking()
+                .Where(discount => discount.Status == 1)
+                .OrderBy(discount => discount.Name)
+                .Select(discount => new SelectListItem { Value = discount.Id.ToString(), Text = discount.Name })
+                .ToListAsync();
+
+            options.Insert(0, new SelectListItem { Value = "0", Text = "Select discount" });
+            return options;
         }
 
         private async Task<SetupModulesPageViewModel> BuildPaymentMethodsPageAsync(string? search, PaymentMethodForm? form = null, int? editId = null, string activeModalId = "")
@@ -1154,13 +1385,13 @@ namespace gpos.Controllers
         private async Task<RebateRuleForm> BuildRebateRuleFormAsync(int? editId)
         {
             var item = editId.HasValue ? await _db.RebateRules.AsNoTracking().FirstOrDefaultAsync(rule => rule.Id == editId.Value) : null;
-            return item is null ? new RebateRuleForm() : new RebateRuleForm { Id = item.Id, Name = item.Name, PointsRequired = item.PointsRequired, RebateValue = item.RebateValue, Status = item.Status };
+            return item is null ? new RebateRuleForm() : new RebateRuleForm { Id = item.Id, Name = item.Name, AppliesTo = item.AppliesTo, PointsRequired = item.PointsRequired, RebateValue = item.RebateValue, MinimumPurchase = item.MinimumPurchase, Status = item.Status };
         }
 
         private async Task<DiscountRuleForm> BuildDiscountRuleFormAsync(int? editId)
         {
             var item = editId.HasValue ? await _db.DiscountRules.AsNoTracking().FirstOrDefaultAsync(rule => rule.Id == editId.Value) : null;
-            return item is null ? new DiscountRuleForm() : new DiscountRuleForm { Id = item.Id, Name = item.Name, DiscountType = item.DiscountType, DiscountValue = item.DiscountValue, AppliesTo = item.AppliesTo, Status = item.Status };
+            return item is null ? new DiscountRuleForm() : new DiscountRuleForm { Id = item.Id, DiscountId = item.DiscountId, AppliesTo = item.AppliesTo, DiscountType = item.DiscountType, DiscountValue = item.DiscountValue, MinimumAmount = item.MinimumAmount, MemberRequired = item.MemberRequired == 1, StartDate = item.StartDate, EndDate = item.EndDate, Status = item.Status };
         }
 
         private async Task<PaymentMethodForm> BuildPaymentMethodFormAsync(int? editId)

@@ -658,8 +658,10 @@ namespace gpos.Data
 
                 entity.Property(rule => rule.Id).HasColumnName("id");
                 entity.Property(rule => rule.Name).HasColumnName("name").HasMaxLength(100).IsRequired();
+                entity.Property(rule => rule.AppliesTo).HasColumnName("applies_to").HasMaxLength(50).IsRequired();
                 entity.Property(rule => rule.PointsRequired).HasColumnName("points_required").HasPrecision(18, 2);
                 entity.Property(rule => rule.RebateValue).HasColumnName("rebate_value").HasPrecision(18, 2);
+                entity.Property(rule => rule.MinimumPurchase).HasColumnName("minimum_purchase").HasPrecision(18, 2);
                 entity.Property(rule => rule.Status).HasColumnName("status").HasDefaultValue(1);
                 entity.Property(rule => rule.CreatedAt).HasColumnName("created_at");
                 entity.Property(rule => rule.UpdatedAt).HasColumnName("updated_at");
@@ -674,6 +676,8 @@ namespace gpos.Data
                 entity.Property(ledger => ledger.MemberId).HasColumnName("member_id");
                 entity.Property(ledger => ledger.TransactionType).HasColumnName("transaction_type").HasMaxLength(50).IsRequired();
                 entity.Property(ledger => ledger.Points).HasColumnName("points").HasPrecision(18, 2);
+                entity.Property(ledger => ledger.OldPoints).HasColumnName("old_points").HasPrecision(18, 2);
+                entity.Property(ledger => ledger.NewPoints).HasColumnName("new_points").HasPrecision(18, 2);
                 entity.Property(ledger => ledger.ReferenceType).HasColumnName("reference_type").HasMaxLength(100);
                 entity.Property(ledger => ledger.ReferenceId).HasColumnName("reference_id");
                 entity.Property(ledger => ledger.Remarks).HasColumnName("remarks").HasMaxLength(255);
@@ -693,12 +697,23 @@ namespace gpos.Data
 
                 entity.Property(rule => rule.Id).HasColumnName("id");
                 entity.Property(rule => rule.Name).HasColumnName("name").HasMaxLength(100).IsRequired();
+                entity.Property(rule => rule.DiscountId).HasColumnName("discount_id");
                 entity.Property(rule => rule.DiscountType).HasColumnName("discount_type").HasMaxLength(50).IsRequired();
                 entity.Property(rule => rule.DiscountValue).HasColumnName("discount_value").HasPrecision(18, 2);
                 entity.Property(rule => rule.AppliesTo).HasColumnName("applies_to").HasMaxLength(50).IsRequired();
+                entity.Property(rule => rule.MinimumAmount).HasColumnName("minimum_amount").HasPrecision(18, 2);
+                entity.Property(rule => rule.MemberRequired).HasColumnName("member_required").HasDefaultValue(0);
+                entity.Property(rule => rule.StartDate).HasColumnName("start_date");
+                entity.Property(rule => rule.EndDate).HasColumnName("end_date");
                 entity.Property(rule => rule.Status).HasColumnName("status").HasDefaultValue(1);
                 entity.Property(rule => rule.CreatedAt).HasColumnName("created_at");
                 entity.Property(rule => rule.UpdatedAt).HasColumnName("updated_at");
+
+                entity.HasIndex(rule => rule.DiscountId);
+                entity.HasOne(rule => rule.Discount)
+                    .WithMany(discount => discount.DiscountRules)
+                    .HasForeignKey(rule => rule.DiscountId)
+                    .OnDelete(DeleteBehavior.Restrict);
             });
 
             modelBuilder.Entity<Branch>(entity =>
