@@ -63,12 +63,24 @@ namespace gpos.Data
                 entity.Property(user => user.Username).HasColumnName("username");
                 entity.Property(user => user.Email).HasColumnName("email");
                 entity.Property(user => user.PasswordHash).HasColumnName("password_hash");
+                entity.Property(user => user.BranchId).HasColumnName("branch_id");
+                entity.Property(user => user.DepartmentId).HasColumnName("department_id");
                 entity.Property(user => user.Status).HasColumnName("status").HasDefaultValue(1);
                 entity.Property(user => user.CreatedAt).HasColumnName("created_at");
                 entity.Property(user => user.UpdatedAt).HasColumnName("updated_at");
 
                 entity.HasIndex(user => user.Username).IsUnique();
                 entity.HasIndex(user => user.Email).IsUnique();
+                entity.HasIndex(user => user.BranchId);
+                entity.HasIndex(user => user.DepartmentId);
+                entity.HasOne(user => user.Branch)
+                    .WithMany()
+                    .HasForeignKey(user => user.BranchId)
+                    .OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne(user => user.Department)
+                    .WithMany()
+                    .HasForeignKey(user => user.DepartmentId)
+                    .OnDelete(DeleteBehavior.Restrict);
             });
 
             modelBuilder.Entity<Role>(entity =>

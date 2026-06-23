@@ -23,6 +23,100 @@ namespace gpos.Controllers
             return View(await BuildRolesPageAsync(search, editId: editId, activeModalId: editId.HasValue ? "roleModal" : ""));
         }
 
+        [HttpGet("Roles/{roleId:int}/Permissions")]
+        public async Task<IActionResult> Permissions(int roleId)
+        {
+            var roleExists = await _db.Roles
+                .AsNoTracking()
+                .AnyAsync(role => role.Id == roleId && role.Status == 1);
+
+            if (!roleExists)
+            {
+                return NotFound(new { success = false, message = "Role not found." });
+            }
+
+            var assignedPermissionIds = await _db.RolePermissions
+                .AsNoTracking()
+                .Where(rolePermission => rolePermission.RoleId == roleId && rolePermission.Status == 1)
+                .Select(rolePermission => rolePermission.PermissionId)
+                .ToListAsync();
+            var assigned = assignedPermissionIds.ToHashSet();
+            var permissions = await _db.Permissions
+                .AsNoTracking()
+                .Where(permission => permission.Status == 1)
+                .OrderBy(permission => permission.Name)
+                .ToListAsync();
+            var parentPermissions = permissions
+                .Where(permission => permission.ParentId == null)
+                .Select(permission => new
+                {
+                    permission.Id,
+                    permission.Name,
+                    Checked = assigned.Contains(permission.Id),
+                    Children = permissions
+                        .Where(child => child.ParentId == permission.Id)
+                        .OrderBy(child => child.Name)
+                        .Select(child => new
+                        {
+                            child.Id,
+                            child.Name,
+                            Checked = assigned.Contains(child.Id)
+                        })
+                        .ToList()
+                })
+                .ToList();
+
+            return Json(new { success = true, permissions = parentPermissions });
+        }
+
+        [HttpPost("Roles/{roleId:int}/Permissions")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Permissions(int roleId, [FromForm] List<int> permissionIds)
+        {
+            permissionIds ??= new List<int>();
+            var roleExists = await _db.Roles
+                .AnyAsync(role => role.Id == roleId && role.Status == 1);
+
+            if (!roleExists)
+            {
+                return NotFound(new { success = false, message = "Role not found." });
+            }
+
+            var validPermissionIds = await _db.Permissions
+                .AsNoTracking()
+                .Where(permission => permission.Status == 1 && permissionIds.Contains(permission.Id))
+                .Select(permission => permission.Id)
+                .ToListAsync();
+            var selected = validPermissionIds.Distinct().ToHashSet();
+            var now = DateTime.UtcNow;
+            var existingRolePermissions = await _db.RolePermissions
+                .Where(rolePermission => rolePermission.RoleId == roleId)
+                .ToListAsync();
+
+            for (var i = 0; i < existingRolePermissions.Count; i++)
+            {
+                var rolePermission = existingRolePermissions[i];
+                rolePermission.Status = selected.Contains(rolePermission.PermissionId) ? 1 : 0;
+                rolePermission.UpdatedAt = now;
+                selected.Remove(rolePermission.PermissionId);
+            }
+
+            foreach (var permissionId in selected)
+            {
+                _db.RolePermissions.Add(new RolePermission
+                {
+                    RoleId = roleId,
+                    PermissionId = permissionId,
+                    Status = 1,
+                    CreatedAt = now,
+                    UpdatedAt = now
+                });
+            }
+
+            await _db.SaveChangesAsync();
+            return Json(new { success = true, message = "Permissions saved successfully." });
+        }
+
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Save([Bind(Prefix = "RoleForm")] RoleForm form, string? search)

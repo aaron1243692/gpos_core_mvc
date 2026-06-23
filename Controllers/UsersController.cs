@@ -23,6 +23,23 @@ namespace gpos.Controllers
             return View(await BuildUsersPageAsync(search, editId: editId, activeModalId: editId.HasValue ? "userModal" : ""));
         }
 
+        [HttpGet]
+        public async Task<IActionResult> DepartmentsByBranch(int branchId)
+        {
+            var departments = await _db.Departments
+                .AsNoTracking()
+                .Where(department => department.Status == 1 && department.BranchId == branchId)
+                .OrderBy(department => department.Name)
+                .Select(department => new
+                {
+                    id = department.Id,
+                    name = department.Name
+                })
+                .ToListAsync();
+
+            return Json(departments);
+        }
+
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Save([Bind(Prefix = "UserForm")] UserForm form, string? search)
@@ -45,6 +62,8 @@ namespace gpos.Controllers
 
             user.Username = form.Username;
             user.Email = form.Email;
+            user.BranchId = form.BranchId;
+            user.DepartmentId = form.DepartmentId;
             user.Status = 1;
             user.UpdatedAt = now;
 
@@ -115,6 +134,8 @@ namespace gpos.Controllers
         {
             IQueryable<User> query = _db.Users
                 .AsNoTracking()
+                .Include(user => user.Branch)
+                .Include(user => user.Department)
                 .Include(user => user.UserRoles)
                     .ThenInclude(userRole => userRole.Role)
                 .Where(user => user.Status == 1);
@@ -124,17 +145,23 @@ namespace gpos.Controllers
             {
                 query = query.Where(user => user.Username.Contains(searchText)
                     || user.Email.Contains(searchText)
+                    || (user.Branch != null && user.Branch.Name.Contains(searchText))
+                    || (user.Department != null && user.Department.Name.Contains(searchText))
                     || user.UserRoles.Any(userRole => userRole.Role != null && userRole.Role.Name.Contains(searchText)));
             }
+
+            var userForm = form ?? await BuildUserFormAsync(editId);
 
             return new UsersPageViewModel
             {
                 Search = searchText,
                 ActiveModalId = activeModalId,
-                UserForm = form ?? await BuildUserFormAsync(editId),
+                UserForm = userForm,
                 ResetPasswordForm = resetForm ?? new ResetUserPasswordForm(),
                 Users = await query.OrderBy(user => user.Id).ToListAsync(),
-                RoleOptions = await BuildRoleOptionsAsync()
+                RoleOptions = await BuildRoleOptionsAsync(),
+                BranchOptions = await BuildBranchOptionsAsync(),
+                DepartmentOptions = await BuildDepartmentOptionsAsync(userForm.BranchId)
             };
         }
 
@@ -152,8 +179,43 @@ namespace gpos.Controllers
                 Id = user.Id,
                 Username = user.Username,
                 Email = user.Email,
+                BranchId = user.BranchId ?? 0,
+                DepartmentId = user.DepartmentId ?? 0,
                 RoleId = user.UserRoles.FirstOrDefault()?.RoleId ?? 0
             };
+        }
+
+        private async Task<List<SelectListItem>> BuildBranchOptionsAsync()
+        {
+            return await _db.Branches
+                .AsNoTracking()
+                .Where(branch => branch.Status == 1)
+                .OrderBy(branch => branch.Name)
+                .Select(branch => new SelectListItem
+                {
+                    Value = branch.Id.ToString(),
+                    Text = branch.Name
+                })
+                .ToListAsync();
+        }
+
+        private async Task<List<SelectListItem>> BuildDepartmentOptionsAsync(int branchId)
+        {
+            if (branchId <= 0)
+            {
+                return new List<SelectListItem>();
+            }
+
+            return await _db.Departments
+                .AsNoTracking()
+                .Where(department => department.Status == 1 && department.BranchId == branchId)
+                .OrderBy(department => department.Name)
+                .Select(department => new SelectListItem
+                {
+                    Value = department.Id.ToString(),
+                    Text = department.Name
+                })
+                .ToListAsync();
         }
 
         private async Task<List<SelectListItem>> BuildRoleOptionsAsync()
@@ -203,6 +265,24 @@ namespace gpos.Controllers
             if (!await _db.Roles.AnyAsync(role => role.Id == form.RoleId && role.Status == 1))
             {
                 ModelState.AddModelError("UserForm.RoleId", "Role is required.");
+            }
+
+            if (!await _db.Branches.AnyAsync(branch => branch.Id == form.BranchId && branch.Status == 1))
+            {
+                ModelState.AddModelError("UserForm.BranchId", "Branch is required.");
+            }
+
+            var department = await _db.Departments
+                .AsNoTracking()
+                .FirstOrDefaultAsync(item => item.Id == form.DepartmentId && item.Status == 1);
+
+            if (department is null)
+            {
+                ModelState.AddModelError("UserForm.DepartmentId", "Department is required.");
+            }
+            else if (department.BranchId != form.BranchId)
+            {
+                ModelState.AddModelError("UserForm.DepartmentId", "Selected department does not belong to the selected branch.");
             }
         }
 
