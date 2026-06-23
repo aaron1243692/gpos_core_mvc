@@ -34,6 +34,10 @@ namespace gpos.Models.ViewModels
         public string? Password { get; set; }
         public string? ConfirmPassword { get; set; }
 
+        public string? FullName { get; set; }
+        public string? ContactNumber { get; set; }
+        public string? Address { get; set; }
+
         [Range(1, int.MaxValue, ErrorMessage = "Branch is required.")]
         public int BranchId { get; set; }
 
@@ -42,6 +46,8 @@ namespace gpos.Models.ViewModels
 
         [Range(1, int.MaxValue, ErrorMessage = "Role is required.")]
         public int RoleId { get; set; }
+
+        public int Status { get; set; } = 1;
     }
 
     public class ResetUserPasswordForm

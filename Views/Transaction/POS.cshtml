@@ -1,8 +1,10 @@
 @using Microsoft.EntityFrameworkCore
+@using System.Security.Claims
 @inject gpos.Data.ApplicationDbContext Db
 
 <section class="salesman-pos-page">
     <form id="posSaleForm" method="post" class="salesman-pos-card">
+        <input name="CashierUserId" type="hidden" value="@(Context.Session.GetString("UserId") ?? User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "")" />
         <div class="pos-order-layout">
             <section class="pos-order-menu" aria-label="Order menu">
                 <div class="pos-order-toolbar">
@@ -128,7 +130,7 @@
 
                 <div class="receipt-meta">
                     <div><span>Date / Time</span><strong id="receiptDateTime"></strong></div>
-                    <div><span>Cashier</span><strong id="receiptCashier">Admin</strong></div>
+                    <div><span>Cashier</span><strong id="receiptCashier">@(Context.Session.GetString("Username") ?? Context.Session.GetString("Name") ?? User.Identity?.Name ?? "User")</strong></div>
                     <div><span>Payment Method</span><strong>Cash</strong></div>
                     <div><span>Cash Amount</span><strong id="receiptPaymentDetail"></strong></div>
                     <div><span>Member Card No</span><strong id="receiptMemberCardNo"></strong></div>

@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc.Filters;
 
 namespace gpos.Controllers
 {
+    [NonController]
     public class SalesmanController : Controller
     {
         public override void OnActionExecuting(ActionExecutingContext context)

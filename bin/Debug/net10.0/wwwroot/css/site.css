@@ -1487,6 +1487,54 @@ textarea.form-control {
   white-space: nowrap;
 }
 
+.admin-table.points-ledger-table {
+  min-width: 1220px;
+  table-layout: fixed;
+}
+
+.points-ledger-table th {
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+.points-ledger-table td {
+  vertical-align: middle;
+}
+
+.points-ledger-table .col-no {
+  width: 60px;
+}
+
+.points-ledger-table .col-id {
+  width: 80px;
+}
+
+.points-ledger-table .col-member {
+  width: 220px;
+}
+
+.points-ledger-table .col-transaction-type {
+  width: 180px;
+  white-space: nowrap;
+}
+
+.points-ledger-table .col-points {
+  width: 100px;
+}
+
+.points-ledger-table .col-reference {
+  width: 160px;
+}
+
+.points-ledger-table .col-remarks {
+  min-width: 260px;
+}
+
+.points-ledger-table .col-date {
+  width: 160px;
+  white-space: nowrap;
+}
+
 @media (max-width: 767.98px) {
   .admin-table {
     min-width: 760px;

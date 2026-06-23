@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace gpos.Controllers
 {
+    [NonController]
     [Route("Salesman")]
     public class SalesmanAuthController : Controller
     {

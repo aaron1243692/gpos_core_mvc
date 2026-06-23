@@ -6,6 +6,9 @@ namespace gpos.Models
         public string Username { get; set; } = string.Empty;
         public string Email { get; set; } = string.Empty;
         public string PasswordHash { get; set; } = string.Empty;
+        public string? FullName { get; set; }
+        public string? ContactNumber { get; set; }
+        public string? Address { get; set; }
         public int? BranchId { get; set; }
         public int? DepartmentId { get; set; }
         public int Status { get; set; } = 1;

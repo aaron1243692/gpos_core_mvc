@@ -73,22 +73,26 @@ namespace gpos.Controllers
             return View(await BuildPaymentMethodsPageAsync(search, editId: editId, activeModalId: editId.HasValue ? "paymentMethodModal" : ""));
         }
 
+        [NonAction]
         public async Task<IActionResult> ShiftSettings(string? search, int? editId)
         {
             return RedirectToAction(nameof(Schedules), new { search });
         }
 
+        [NonAction]
         public async Task<IActionResult> ShiftSchedule(string? search, int? editId)
         {
             return RedirectToAction(nameof(EmployeeSchedules), new { search });
         }
 
+        [NonAction]
         public async Task<IActionResult> Schedules(string? search, int? editId, int? detailsId)
         {
             var activeModalId = editId.HasValue ? "scheduleModal" : detailsId.HasValue ? "scheduleDetailsModal" : "";
             return View(await BuildSchedulesPageAsync(search, editId: editId, detailsId: detailsId, activeModalId: activeModalId));
         }
 
+        [NonAction]
         public async Task<IActionResult> EmployeeSchedules(string? search)
         {
             return View(await BuildEmployeeSchedulesPageAsync(search));
@@ -625,6 +629,7 @@ namespace gpos.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [NonAction]
         public async Task<IActionResult> SaveSchedule([Bind(Prefix = "ScheduleForm")] ScheduleForm form, string? search)
         {
             if (!ModelState.IsValid)
@@ -654,6 +659,7 @@ namespace gpos.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [NonAction]
         public async Task<IActionResult> SaveScheduleDetails([Bind(Prefix = "ScheduleDetailsForm")] ScheduleDetailsForm form, string? search)
         {
             var scheduleExists = await _db.Schedules.AnyAsync(schedule => schedule.Id == form.ScheduleId && schedule.Status == 1);
@@ -684,6 +690,7 @@ namespace gpos.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [NonAction]
         public async Task<IActionResult> DeleteSchedule(int id, string? search)
         {
             var schedule = await _db.Schedules.FindAsync(id);
@@ -704,6 +711,7 @@ namespace gpos.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [NonAction]
         public async Task<IActionResult> AssignEmployeeSchedule([Bind(Prefix = "EmployeeScheduleForm")] EmployeeScheduleForm form, string? search)
         {
             var account = await _db.EmployeeAccounts.FindAsync(form.EmployeeAccountId);
@@ -723,6 +731,7 @@ namespace gpos.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [NonAction]
         public async Task<IActionResult> SaveShiftSetting([Bind(Prefix = "ShiftSettingForm")] ShiftSettingForm form, string? search)
         {
             if (!ModelState.IsValid)
@@ -749,6 +758,7 @@ namespace gpos.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [NonAction]
         public async Task<IActionResult> DeleteShiftSetting(int id, string? search)
         {
             var setting = await _db.ShiftSettings.FindAsync(id);
@@ -763,6 +773,7 @@ namespace gpos.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [NonAction]
         public async Task<IActionResult> SaveShiftSchedule([Bind(Prefix = "EmployeeShiftScheduleForm")] EmployeeShiftScheduleForm form, string? search)
         {
             if (!ModelState.IsValid)
@@ -839,6 +850,7 @@ namespace gpos.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [NonAction]
         public async Task<IActionResult> DeleteShiftSchedule(int id, string? search)
         {
             var schedule = await _db.EmployeeShiftSchedules.FindAsync(id);

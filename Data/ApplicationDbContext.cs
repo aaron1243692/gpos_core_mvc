@@ -63,6 +63,9 @@ namespace gpos.Data
                 entity.Property(user => user.Username).HasColumnName("username");
                 entity.Property(user => user.Email).HasColumnName("email");
                 entity.Property(user => user.PasswordHash).HasColumnName("password_hash");
+                entity.Property(user => user.FullName).HasColumnName("full_name").HasMaxLength(150);
+                entity.Property(user => user.ContactNumber).HasColumnName("contact_number").HasMaxLength(50);
+                entity.Property(user => user.Address).HasColumnName("address").HasMaxLength(255);
                 entity.Property(user => user.BranchId).HasColumnName("branch_id");
                 entity.Property(user => user.DepartmentId).HasColumnName("department_id");
                 entity.Property(user => user.Status).HasColumnName("status").HasDefaultValue(1);

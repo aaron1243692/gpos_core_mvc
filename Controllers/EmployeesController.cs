@@ -8,6 +8,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace gpos.Controllers
 {
+    [NonController]
     [BlockSalesmanSession]
     public class EmployeesController : Controller
     {

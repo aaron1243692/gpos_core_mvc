@@ -2297,7 +2297,6 @@ C:\project\gpos_core_mvc\bin\Debug\net10.0\artifacts\verify-schedules-build\gpos
 C:\project\gpos_core_mvc\bin\Debug\net10.0\artifacts\verify-schedules-build\gpos_core_mvc.runtimeconfig.json
 C:\project\gpos_core_mvc\bin\Debug\net10.0\artifacts\verify-schedules-build\gpos_core_mvc.staticwebassets.endpoints.json
 C:\project\gpos_core_mvc\bin\Debug\net10.0\artifacts\verify-schedules-build\gpos_core_mvc.staticwebassets.runtime.json
-C:\project\gpos_core_mvc\obj\Debug\net10.0\compressed\ios0330fcj-{0}-kxqy968dfn-kxqy968dfn.gz
 C:\project\gpos_core_mvc\bin\Debug\net10.0\Views\Branches\Index.cshtml
 C:\project\gpos_core_mvc\bin\Debug\net10.0\Views\Configuration\ActivityLogs.cshtml
 C:\project\gpos_core_mvc\bin\Debug\net10.0\Views\Configuration\Branch.cshtml
@@ -2928,3 +2927,4 @@ C:\project\gpos_core_mvc\.build-verify\ru\Microsoft.CodeAnalysis.Workspaces.MSBu
 C:\project\gpos_core_mvc\.build-verify\tr\Microsoft.CodeAnalysis.Workspaces.MSBuild.BuildHost.resources.dll
 C:\project\gpos_core_mvc\.build-verify\zh-Hans\Microsoft.CodeAnalysis.Workspaces.MSBuild.BuildHost.resources.dll
 C:\project\gpos_core_mvc\.build-verify\zh-Hant\Microsoft.CodeAnalysis.Workspaces.MSBuild.BuildHost.resources.dll
+C:\project\gpos_core_mvc\obj\Debug\net10.0\compressed\ios0330fcj-{0}-b1womzh75y-b1womzh75y.gz

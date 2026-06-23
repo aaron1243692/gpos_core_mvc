@@ -290,6 +290,7 @@ namespace gpos.Controllers
             return RedirectToAction(nameof(Members), new { search });
         }
 
+        [NonAction]
         public async Task<IActionResult> Position(string? search, int? editId)
         {
             return View(await BuildPositionsPageAsync(search, editId: editId, activeModalId: editId.HasValue ? "positionModal" : ""));
@@ -413,13 +414,13 @@ namespace gpos.Controllers
 
             if (department is not null)
             {
-                var isUsed = await _db.EmployeeAccounts.AnyAsync(employee => employee.DepartmentId == id);
+                var isUsed = await _db.Users.AnyAsync(user => user.DepartmentId == id);
 
                 if (isUsed)
                 {
                     department.Status = 0;
                     department.UpdatedAt = DateTime.UtcNow;
-                    TempData["ConfigSetupFeedback"] = "Department disabled because employees are assigned to it.";
+                    TempData["ConfigSetupFeedback"] = "Department disabled because users are assigned to it.";
                 }
                 else
                 {
@@ -436,6 +437,7 @@ namespace gpos.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [NonAction]
         public async Task<IActionResult> SavePosition([Bind(Prefix = "PositionForm")] PositionForm form, string? search)
         {
             if (!ModelState.IsValid)
@@ -467,26 +469,16 @@ namespace gpos.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [NonAction]
         public async Task<IActionResult> DeletePosition(int id, string? search)
         {
             var position = await _db.Positions.FindAsync(id);
 
             if (position is not null)
             {
-                var isUsed = await _db.EmployeeAccounts.AnyAsync(employee => employee.PositionId == id);
-
-                if (isUsed)
-                {
-                    position.Status = 0;
-                    position.UpdatedAt = DateTime.UtcNow;
-                    TempData["ConfigSetupFeedback"] = "Position disabled because employees are assigned to it.";
-                }
-                else
-                {
-                    position.Status = 0;
-                    position.UpdatedAt = DateTime.UtcNow;
-                    TempData["ConfigSetupFeedback"] = "Position disabled.";
-                }
+                position.Status = 0;
+                position.UpdatedAt = DateTime.UtcNow;
+                TempData["ConfigSetupFeedback"] = "Position disabled.";
 
                 await _db.SaveChangesAsync();
             }

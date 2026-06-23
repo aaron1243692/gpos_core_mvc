@@ -62,9 +62,12 @@ namespace gpos.Controllers
 
             user.Username = form.Username;
             user.Email = form.Email;
+            user.FullName = form.FullName;
+            user.ContactNumber = form.ContactNumber;
+            user.Address = form.Address;
             user.BranchId = form.BranchId;
             user.DepartmentId = form.DepartmentId;
-            user.Status = 1;
+            user.Status = form.Status;
             user.UpdatedAt = now;
 
             if (form.Id == 0)
@@ -138,13 +141,14 @@ namespace gpos.Controllers
                 .Include(user => user.Department)
                 .Include(user => user.UserRoles)
                     .ThenInclude(userRole => userRole.Role)
-                .Where(user => user.Status == 1);
+                .Where(user => user.Status == 1 || user.Status == 0);
             var searchText = (search ?? string.Empty).Trim();
 
             if (!string.IsNullOrWhiteSpace(searchText))
             {
                 query = query.Where(user => user.Username.Contains(searchText)
                     || user.Email.Contains(searchText)
+                    || (user.FullName != null && user.FullName.Contains(searchText))
                     || (user.Branch != null && user.Branch.Name.Contains(searchText))
                     || (user.Department != null && user.Department.Name.Contains(searchText))
                     || user.UserRoles.Any(userRole => userRole.Role != null && userRole.Role.Name.Contains(searchText)));
@@ -171,7 +175,7 @@ namespace gpos.Controllers
                 ? await _db.Users
                     .AsNoTracking()
                     .Include(item => item.UserRoles)
-                    .FirstOrDefaultAsync(item => item.Id == editId.Value && item.Status == 1)
+                    .FirstOrDefaultAsync(item => item.Id == editId.Value)
                 : null;
 
             return user is null ? new UserForm() : new UserForm
@@ -179,9 +183,13 @@ namespace gpos.Controllers
                 Id = user.Id,
                 Username = user.Username,
                 Email = user.Email,
+                FullName = user.FullName,
+                ContactNumber = user.ContactNumber,
+                Address = user.Address,
                 BranchId = user.BranchId ?? 0,
                 DepartmentId = user.DepartmentId ?? 0,
-                RoleId = user.UserRoles.FirstOrDefault()?.RoleId ?? 0
+                RoleId = user.UserRoles.FirstOrDefault()?.RoleId ?? 0,
+                Status = user.Status
             };
         }
 
@@ -267,6 +275,11 @@ namespace gpos.Controllers
                 ModelState.AddModelError("UserForm.RoleId", "Role is required.");
             }
 
+            if (form.Status is not 0 and not 1)
+            {
+                ModelState.AddModelError("UserForm.Status", "Status is required.");
+            }
+
             if (!await _db.Branches.AnyAsync(branch => branch.Id == form.BranchId && branch.Status == 1))
             {
                 ModelState.AddModelError("UserForm.BranchId", "Branch is required.");
@@ -310,6 +323,9 @@ namespace gpos.Controllers
             form.Email = form.Email.Trim();
             form.Password = form.Password?.Trim();
             form.ConfirmPassword = form.ConfirmPassword?.Trim();
+            form.FullName = string.IsNullOrWhiteSpace(form.FullName) ? null : form.FullName.Trim();
+            form.ContactNumber = string.IsNullOrWhiteSpace(form.ContactNumber) ? null : form.ContactNumber.Trim();
+            form.Address = string.IsNullOrWhiteSpace(form.Address) ? null : form.Address.Trim();
         }
     }
 }
