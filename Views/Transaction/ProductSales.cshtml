@@ -1,20 +1,122 @@
-<section class="content-card mb-4">
-    <div class="card-title-row">
-        <div>
-            <h1>Product Sales</h1>
-            <p>Placeholder workspace for product sales transactions.</p>
+@model gpos.Models.ViewModels.ProductSalesPageViewModel
+
+<section class="transaction-ui-page">
+    <div class="content-card transaction-ui-card">
+        <div class="card-title-row">
+            <div>
+                <h1>Product Sales</h1>
+                <p>Product items sold from saved POS sales.</p>
+            </div>
+            <span class="status-badge">Latest 100</span>
         </div>
-        <span class="status-badge">Preview</span>
-    </div>
-    <div class="row g-3 mb-3">
-        <div class="col-12 col-md-5"><input class="form-control" type="search" placeholder="Search product sale" disabled /></div>
-        <div class="col-12 col-md-3"><select class="form-select" disabled><option>All statuses</option></select></div>
-        <div class="col-12 col-md-4"><input class="form-control" type="date" disabled /></div>
-    </div>
-    <div class="table-responsive">
-        <table class="table table-sm align-middle mb-0">
-            <thead><tr><th>Reference</th><th>Product</th><th>Quantity</th><th>Total</th><th>Status</th></tr></thead>
-            <tbody><tr><td>PS-0001</td><td>Engine Oil 1L</td><td>2</td><td>PHP 640.00</td><td>Draft</td></tr></tbody>
-        </table>
+
+        <form asp-action="ProductSales" method="get" class="row g-2 mb-3">
+            <div class="col-12 col-lg-4">
+                <input class="form-control" name="search" value="@Model.Search" type="search" placeholder="Search receipt, product, batch, cashier, member..." />
+            </div>
+            <div class="col-6 col-lg-2">
+                <input class="form-control" name="dateFrom" value="@Model.DateFrom?.ToString("yyyy-MM-dd")" type="date" />
+            </div>
+            <div class="col-6 col-lg-2">
+                <input class="form-control" name="dateTo" value="@Model.DateTo?.ToString("yyyy-MM-dd")" type="date" />
+            </div>
+            <div class="col-6 col-lg-2">
+                <select class="form-select" name="status">
+                    @for (var i = 0; i < Model.StatusOptions.Count; i += 1)
+                    {
+                        if (Model.StatusOptions[i].Selected)
+                        {
+                            <option value="@Model.StatusOptions[i].Value" selected>@Model.StatusOptions[i].Text</option>
+                        }
+                        else
+                        {
+                            <option value="@Model.StatusOptions[i].Value">@Model.StatusOptions[i].Text</option>
+                        }
+                    }
+                </select>
+            </div>
+            <div class="col-6 col-lg-2 d-grid">
+                <button class="btn btn-primary" type="submit">Filter</button>
+            </div>
+        </form>
+
+        <div class="table-responsive transaction-ui-table-wrap">
+            <table class="table app-table table-sm align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>No</th>
+                        <th>Receipt No</th>
+                        <th>Product</th>
+                        <th>Batch</th>
+                        <th>Quantity</th>
+                        <th>Price</th>
+                        <th>Subtotal</th>
+                        <th>Cashier/User</th>
+                        <th>Member</th>
+                        <th>Date</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.Sales.Count == 0)
+                    {
+                        <tr><td class="text-center text-muted fw-bold" colspan="12">No sales found.</td></tr>
+                    }
+                    @for (var i = 0; i < Model.Sales.Count; i += 1)
+                    {
+                        <tr>
+                            <td>@(i + 1)</td>
+                            <td>@Model.Sales[i].ReceiptNo</td>
+                            <td>@Model.Sales[i].ProductName</td>
+                            <td>@Model.Sales[i].BatchNo</td>
+                            <td>@Model.Sales[i].Quantity.ToString("N2")</td>
+                            <td>PHP @Model.Sales[i].Price.ToString("N2")</td>
+                            <td>PHP @Model.Sales[i].Subtotal.ToString("N2")</td>
+                            <td>@Model.Sales[i].CashierName</td>
+                            <td>@Model.Sales[i].MemberName</td>
+                            <td>@Model.Sales[i].SaleDate?.ToString("yyyy-MM-dd HH:mm")</td>
+                            <td><span class="badge @(Model.Sales[i].Status == "Completed" ? "text-bg-success" : Model.Sales[i].Status == "Voided" ? "text-bg-secondary" : Model.Sales[i].Status == "Returned" ? "text-bg-primary" : "text-bg-warning")">@Model.Sales[i].Status</span></td>
+                            <td><button class="btn btn-sm btn-outline-primary" type="button" data-bs-toggle="modal" data-bs-target="#productSaleViewModal_@Model.Sales[i].SaleItemId">View</button></td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
     </div>
 </section>
+
+@for (var i = 0; i < Model.Sales.Count; i += 1)
+{
+    <div class="modal fade" id="productSaleViewModal_@Model.Sales[i].SaleItemId" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 class="modal-title fs-5">Product Sale Details</h2>
+                    <button class="btn-close" type="button" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <dl class="row mb-0">
+                        <dt class="col-sm-4">Receipt No</dt><dd class="col-sm-8">@Model.Sales[i].ReceiptNo</dd>
+                        <dt class="col-sm-4">Product</dt><dd class="col-sm-8">@Model.Sales[i].ProductName</dd>
+                        <dt class="col-sm-4">Batch</dt><dd class="col-sm-8">@Model.Sales[i].BatchNo</dd>
+                        <dt class="col-sm-4">Quantity</dt><dd class="col-sm-8">@Model.Sales[i].Quantity.ToString("N2")</dd>
+                        <dt class="col-sm-4">Price</dt><dd class="col-sm-8">PHP @Model.Sales[i].Price.ToString("N2")</dd>
+                        <dt class="col-sm-4">Subtotal</dt><dd class="col-sm-8">PHP @Model.Sales[i].Subtotal.ToString("N2")</dd>
+                        <dt class="col-sm-4">Cashier/User</dt><dd class="col-sm-8">@Model.Sales[i].CashierName</dd>
+                        <dt class="col-sm-4">Member</dt><dd class="col-sm-8">@Model.Sales[i].MemberName</dd>
+                        <dt class="col-sm-4">Sale Date</dt><dd class="col-sm-8">@Model.Sales[i].SaleDate?.ToString("yyyy-MM-dd HH:mm")</dd>
+                        <dt class="col-sm-4">Payment Type</dt><dd class="col-sm-8">@Model.Sales[i].PaymentType</dd>
+                        <dt class="col-sm-4">Gross Total</dt><dd class="col-sm-8">PHP @Model.Sales[i].GrossTotal.ToString("N2")</dd>
+                        <dt class="col-sm-4">Rebate Amount</dt><dd class="col-sm-8">PHP @Model.Sales[i].RebateAmount.ToString("N2")</dd>
+                        <dt class="col-sm-4">Net Total</dt><dd class="col-sm-8">PHP @Model.Sales[i].NetTotal.ToString("N2")</dd>
+                        <dt class="col-sm-4">Status</dt><dd class="col-sm-8">@Model.Sales[i].Status</dd>
+                    </dl>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}

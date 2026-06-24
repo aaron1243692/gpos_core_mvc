@@ -38,6 +38,8 @@ namespace gpos.Migrations
 
         private static void AddColumnIfMissing(MigrationBuilder migrationBuilder, string table, string column, string definition)
         {
+            var escapedDefinition = definition.Replace("'", "''");
+
             migrationBuilder.Sql(
                 $"""
                 SET @column_exists = (
@@ -49,7 +51,7 @@ namespace gpos.Migrations
                 );
                 SET @statement = IF(
                     @column_exists = 0,
-                    'ALTER TABLE `{table}` ADD COLUMN `{column}` {definition}',
+                    'ALTER TABLE `{table}` ADD COLUMN `{column}` {escapedDefinition}',
                     'SELECT 1'
                 );
                 PREPARE add_rebate_column FROM @statement;

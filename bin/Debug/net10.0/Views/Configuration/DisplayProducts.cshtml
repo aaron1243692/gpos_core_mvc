@@ -22,7 +22,7 @@
             <input class="form-control form-control-sm products-search" id="display-product-search" name="search" value="@Model.Search" type="search" placeholder="Search display products" autocomplete="off" />
         </form>
         <div class="col-12 col-sm-auto ms-sm-auto">
-            <button class="btn btn-primary btn-sm w-100" type="button" data-bs-toggle="modal" data-bs-target="#displayProductModal">Add Product</button>
+            <button class="btn btn-primary btn-sm w-100" id="addDisplayProductButton" type="button" data-bs-toggle="modal" data-bs-target="#displayProductModal">Add Product</button>
         </div>
     </div>
 
@@ -69,9 +69,9 @@
                         <td>@(Model.DisplayStocks[index].Product?.Category?.Name ?? "No category")</td>
                         <td>₱@(Model.DisplayStocks[index].Batch?.CostPrice.ToString("N2") ?? "0.00")</td>
                         <td>₱@(Model.DisplayStocks[index].Batch?.SellingPrice.ToString("N2") ?? "0.00")</td>
-                        <td class="col-qty">@Model.DisplayStocks[index].Quantity.ToString("N2")</td>
+                        <td class="col-qty">@Model.DisplayStocks[index].Quantity.ToString("N0")</td>
                         <td class="col-action">
-                            <button class="btn btn-outline-secondary btn-sm" type="button" disabled>Edit</button>
+                            <button class="btn btn-outline-secondary btn-sm display-product-edit-button" type="button" data-bs-toggle="modal" data-bs-target="#displayProductModal" data-stock-id="@Model.DisplayStocks[index].Id" data-category-id="@Model.DisplayStocks[index].Product?.CategoryId" data-product-name="@Model.DisplayStocks[index].Product?.Name" data-batch-no="@Model.DisplayStocks[index].Batch?.BatchNo" data-cost-price="@Model.DisplayStocks[index].Batch?.CostPrice" data-selling-price="@Model.DisplayStocks[index].Batch?.SellingPrice" data-quantity="@Model.DisplayStocks[index].Quantity.ToString("N0")" data-is-active="@((Model.DisplayStocks[index].Product?.IsActive ?? true) && (Model.DisplayStocks[index].Batch?.IsActive ?? true))">Edit</button>
                         </td>
                     </tr>
                 }
@@ -86,6 +86,7 @@
             <form asp-action="SaveDisplayProduct" method="post">
                 @Html.AntiForgeryToken()
                 <input type="hidden" name="search" value="@Model.Search" />
+                <input asp-for="StockForm.Id" type="hidden" />
                 <div class="modal-header">
                     <h2 class="modal-title fs-5" id="displayProductModalLabel">Add Display Product</h2>
                     <button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -105,6 +106,10 @@
                             <span class="text-danger small" asp-validation-for="StockForm.ProductName"></span>
                         </div>
                         <div>
+                            <label class="form-label" for="displayProductBatchNo">Batch #</label>
+                            <input class="form-control" id="displayProductBatchNo" type="text" readonly />
+                        </div>
+                        <div>
                             <label class="form-label" asp-for="StockForm.CostPrice">Cost Price</label>
                             <input class="form-control" asp-for="StockForm.CostPrice" type="number" min="0" step="0.01" placeholder="Enter cost price" />
                             <span class="text-danger small" asp-validation-for="StockForm.CostPrice"></span>
@@ -116,7 +121,7 @@
                         </div>
                         <div>
                             <label class="form-label" asp-for="StockForm.Quantity">Quantity</label>
-                            <input class="form-control" asp-for="StockForm.Quantity" type="number" min="0" step="0.01" placeholder="Enter quantity" />
+                            <input class="form-control" asp-for="StockForm.Quantity" type="number" min="0" step="1" placeholder="Enter quantity" />
                             <span class="text-danger small" asp-validation-for="StockForm.Quantity"></span>
                         </div>
                         <div>
@@ -141,6 +146,53 @@
     <script>
         document.addEventListener("DOMContentLoaded", () => {
             const activeModalId = "@Model.ActiveModalId";
+            const addButton = document.getElementById("addDisplayProductButton");
+            const modalTitle = document.getElementById("displayProductModalLabel");
+            const stockIdInput = document.getElementById("StockForm_Id");
+            const categoryInput = document.getElementById("StockForm_CategoryId");
+            const productNameInput = document.getElementById("StockForm_ProductName");
+            const batchNoInput = document.getElementById("displayProductBatchNo");
+            const costPriceInput = document.getElementById("StockForm_CostPrice");
+            const sellingPriceInput = document.getElementById("StockForm_SellingPrice");
+            const quantityInput = document.getElementById("StockForm_Quantity");
+            const isActiveInput = document.getElementById("StockForm_IsActive");
+
+            function setModalMode(title) {
+                modalTitle.textContent = title;
+            }
+
+            function resetModal() {
+                setModalMode("Add Display Product");
+                stockIdInput.value = "";
+                categoryInput.value = "";
+                productNameInput.value = "";
+                batchNoInput.value = "";
+                costPriceInput.value = "";
+                sellingPriceInput.value = "";
+                quantityInput.value = "";
+                isActiveInput.checked = true;
+            }
+
+            function fillEditModal(button) {
+                setModalMode("Edit Display Product");
+                stockIdInput.value = button.dataset.stockId || "";
+                categoryInput.value = button.dataset.categoryId || "";
+                productNameInput.value = button.dataset.productName || "";
+                batchNoInput.value = button.dataset.batchNo || "";
+                costPriceInput.value = button.dataset.costPrice || "0";
+                sellingPriceInput.value = button.dataset.sellingPrice || "0";
+                quantityInput.value = button.dataset.quantity || "0";
+                isActiveInput.checked = (button.dataset.isActive || "True").toLowerCase() === "true";
+            }
+
+            addButton.addEventListener("click", resetModal);
+            document.addEventListener("click", event => {
+                const editButton = event.target.closest(".display-product-edit-button");
+
+                if (editButton) {
+                    fillEditModal(editButton);
+                }
+            });
 
             if (!activeModalId || !window.bootstrap) {
                 return;

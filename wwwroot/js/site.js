@@ -184,4 +184,33 @@ document.addEventListener("DOMContentLoaded", () => {
 
   enableWheelScroll(ribbon.querySelector(".eg-rb-tabs"));
   enableWheelScroll(ribbon.querySelector(".eg-rb-ribbon"));
+
+  document.querySelectorAll("[data-transaction-search]").forEach((input) => {
+    const table = document.querySelector(input.dataset.transactionSearch);
+
+    if (!table) {
+      return;
+    }
+
+    const rows = Array.from(table.querySelectorAll("tbody tr[data-search-row]"));
+    const emptyRow = table.querySelector("tbody tr[data-empty-row]");
+
+    input.addEventListener("input", () => {
+      const query = input.value.trim().toLowerCase();
+      let visibleCount = 0;
+
+      rows.forEach((row) => {
+        const isVisible = row.textContent.toLowerCase().includes(query);
+        row.hidden = !isVisible;
+
+        if (isVisible) {
+          visibleCount += 1;
+        }
+      });
+
+      if (emptyRow) {
+        emptyRow.hidden = visibleCount > 0;
+      }
+    });
+  });
 });

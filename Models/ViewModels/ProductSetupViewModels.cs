@@ -5,6 +5,8 @@ namespace gpos.Models.ViewModels
 {
     public class ProductStockForm
     {
+        public int? Id { get; set; }
+
         public int? CategoryId { get; set; }
 
         [Required(ErrorMessage = "Product Name is required.")]

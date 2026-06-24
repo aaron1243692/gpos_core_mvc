@@ -49,6 +49,11 @@ namespace gpos.Data
         public DbSet<ShiftSetting> ShiftSettings { get; set; }
         public DbSet<EmployeeShiftSchedule> EmployeeShiftSchedules { get; set; }
         public DbSet<ActivityLog> ActivityLogs { get; set; }
+        public DbSet<Sale> Sales { get; set; }
+        public DbSet<SaleItem> SaleItems { get; set; }
+        public DbSet<ProductSale> ProductSales { get; set; }
+        public DbSet<FuelSale> FuelSales { get; set; }
+        public DbSet<Payment> Payments { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -941,6 +946,194 @@ namespace gpos.Data
                 entity.HasOne(log => log.User)
                     .WithMany()
                     .HasForeignKey(log => log.UserId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            modelBuilder.Entity<Sale>(entity =>
+            {
+                entity.ToTable("sales");
+                entity.HasKey(sale => sale.Id);
+
+                entity.Property(sale => sale.Id).HasColumnName("id");
+                entity.Property(sale => sale.ReceiptNo).HasColumnName("receipt_no").HasMaxLength(100).IsRequired();
+                entity.Property(sale => sale.UserId).HasColumnName("user_id");
+                entity.Property(sale => sale.MemberId).HasColumnName("member_id");
+                entity.Property(sale => sale.GrossTotal).HasColumnName("gross_total").HasPrecision(18, 2);
+                entity.Property(sale => sale.DiscountAmount).HasColumnName("discount_amount").HasPrecision(18, 2).HasDefaultValue(0m);
+                entity.Property(sale => sale.RebateAmount).HasColumnName("rebate_amount").HasPrecision(18, 2).HasDefaultValue(0m);
+                entity.Property(sale => sale.NetTotal).HasColumnName("net_total").HasPrecision(18, 2);
+                entity.Property(sale => sale.CashAmount).HasColumnName("cash_amount").HasPrecision(18, 2).HasDefaultValue(0m);
+                entity.Property(sale => sale.Status).HasColumnName("status").HasMaxLength(50).HasDefaultValue("Completed");
+                entity.Property(sale => sale.CreatedAt).HasColumnName("created_at");
+                entity.Property(sale => sale.UpdatedAt).HasColumnName("updated_at");
+
+                entity.HasIndex(sale => sale.ReceiptNo).IsUnique();
+                entity.HasIndex(sale => sale.UserId);
+                entity.HasIndex(sale => sale.MemberId);
+                entity.HasOne(sale => sale.User)
+                    .WithMany()
+                    .HasForeignKey(sale => sale.UserId)
+                    .OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne(sale => sale.Member)
+                    .WithMany()
+                    .HasForeignKey(sale => sale.MemberId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            modelBuilder.Entity<SaleItem>(entity =>
+            {
+                entity.ToTable("sale_items");
+                entity.HasKey(item => item.Id);
+
+                entity.Property(item => item.Id).HasColumnName("id");
+                entity.Property(item => item.SaleId).HasColumnName("sale_id");
+                entity.Property(item => item.ItemType).HasColumnName("item_type").HasMaxLength(50).IsRequired();
+                entity.Property(item => item.ProductId).HasColumnName("product_id");
+                entity.Property(item => item.FuelId).HasColumnName("fuel_id");
+                entity.Property(item => item.TankId).HasColumnName("tank_id");
+                entity.Property(item => item.NozzleId).HasColumnName("nozzle_id");
+                entity.Property(item => item.BatchId).HasColumnName("batch_id");
+                entity.Property(item => item.Quantity).HasColumnName("quantity").HasPrecision(18, 2);
+                entity.Property(item => item.Liters).HasColumnName("liters").HasPrecision(18, 2);
+                entity.Property(item => item.Price).HasColumnName("price").HasPrecision(18, 2);
+                entity.Property(item => item.Subtotal).HasColumnName("subtotal").HasPrecision(18, 2);
+                entity.Property(item => item.Status).HasColumnName("status").HasMaxLength(50).HasDefaultValue("Completed");
+                entity.Property(item => item.CreatedAt).HasColumnName("created_at");
+                entity.Property(item => item.UpdatedAt).HasColumnName("updated_at");
+
+                entity.HasIndex(item => item.SaleId);
+                entity.HasIndex(item => item.ItemType);
+                entity.HasIndex(item => item.ProductId);
+                entity.HasIndex(item => item.FuelId);
+                entity.HasIndex(item => item.TankId);
+                entity.HasIndex(item => item.NozzleId);
+                entity.HasIndex(item => item.BatchId);
+                entity.HasOne(item => item.Sale)
+                    .WithMany(sale => sale.Items)
+                    .HasForeignKey(item => item.SaleId)
+                    .OnDelete(DeleteBehavior.Cascade);
+                entity.HasOne(item => item.Product)
+                    .WithMany()
+                    .HasForeignKey(item => item.ProductId)
+                    .OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne(item => item.Fuel)
+                    .WithMany()
+                    .HasForeignKey(item => item.FuelId)
+                    .OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne(item => item.Tank)
+                    .WithMany()
+                    .HasForeignKey(item => item.TankId)
+                    .OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne(item => item.Nozzle)
+                    .WithMany()
+                    .HasForeignKey(item => item.NozzleId)
+                    .OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne(item => item.Batch)
+                    .WithMany()
+                    .HasForeignKey(item => item.BatchId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            modelBuilder.Entity<ProductSale>(entity =>
+            {
+                entity.ToTable("product_sales");
+                entity.HasKey(item => item.Id);
+
+                entity.Property(item => item.Id).HasColumnName("id");
+                entity.Property(item => item.SaleId).HasColumnName("sale_id");
+                entity.Property(item => item.ProductId).HasColumnName("product_id");
+                entity.Property(item => item.BatchId).HasColumnName("batch_id");
+                entity.Property(item => item.Quantity).HasColumnName("quantity").HasPrecision(18, 2);
+                entity.Property(item => item.Price).HasColumnName("price").HasPrecision(18, 2);
+                entity.Property(item => item.Subtotal).HasColumnName("subtotal").HasPrecision(18, 2);
+                entity.Property(item => item.DisplayStockBefore).HasColumnName("display_stock_before").HasPrecision(18, 2);
+                entity.Property(item => item.DisplayStockAfter).HasColumnName("display_stock_after").HasPrecision(18, 2);
+                entity.Property(item => item.Status).HasColumnName("status").HasMaxLength(50).HasDefaultValue("Completed");
+                entity.Property(item => item.CreatedAt).HasColumnName("created_at");
+                entity.Property(item => item.UpdatedAt).HasColumnName("updated_at");
+
+                entity.HasIndex(item => item.SaleId);
+                entity.HasIndex(item => item.ProductId);
+                entity.HasIndex(item => item.BatchId);
+                entity.HasOne(item => item.Sale)
+                    .WithMany(sale => sale.ProductSales)
+                    .HasForeignKey(item => item.SaleId)
+                    .OnDelete(DeleteBehavior.Cascade);
+                entity.HasOne(item => item.Product)
+                    .WithMany()
+                    .HasForeignKey(item => item.ProductId)
+                    .OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne(item => item.Batch)
+                    .WithMany()
+                    .HasForeignKey(item => item.BatchId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            modelBuilder.Entity<FuelSale>(entity =>
+            {
+                entity.ToTable("fuel_sales");
+                entity.HasKey(item => item.Id);
+
+                entity.Property(item => item.Id).HasColumnName("id");
+                entity.Property(item => item.SaleId).HasColumnName("sale_id");
+                entity.Property(item => item.FuelId).HasColumnName("fuel_id");
+                entity.Property(item => item.TankId).HasColumnName("tank_id");
+                entity.Property(item => item.NozzleId).HasColumnName("nozzle_id");
+                entity.Property(item => item.Liters).HasColumnName("liters").HasPrecision(18, 2);
+                entity.Property(item => item.PricePerLiter).HasColumnName("price_per_liter").HasPrecision(18, 2);
+                entity.Property(item => item.Subtotal).HasColumnName("subtotal").HasPrecision(18, 2);
+                entity.Property(item => item.TankLitersBefore).HasColumnName("tank_liters_before").HasPrecision(18, 2);
+                entity.Property(item => item.TankLitersAfter).HasColumnName("tank_liters_after").HasPrecision(18, 2);
+                entity.Property(item => item.Status).HasColumnName("status").HasMaxLength(50).HasDefaultValue("Completed");
+                entity.Property(item => item.CreatedAt).HasColumnName("created_at");
+                entity.Property(item => item.UpdatedAt).HasColumnName("updated_at");
+
+                entity.HasIndex(item => item.SaleId);
+                entity.HasIndex(item => item.FuelId);
+                entity.HasIndex(item => item.TankId);
+                entity.HasIndex(item => item.NozzleId);
+                entity.HasOne(item => item.Sale)
+                    .WithMany(sale => sale.FuelSales)
+                    .HasForeignKey(item => item.SaleId)
+                    .OnDelete(DeleteBehavior.Cascade);
+                entity.HasOne(item => item.Fuel)
+                    .WithMany()
+                    .HasForeignKey(item => item.FuelId)
+                    .OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne(item => item.Tank)
+                    .WithMany()
+                    .HasForeignKey(item => item.TankId)
+                    .OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne(item => item.Nozzle)
+                    .WithMany()
+                    .HasForeignKey(item => item.NozzleId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            modelBuilder.Entity<Payment>(entity =>
+            {
+                entity.ToTable("payments");
+                entity.HasKey(payment => payment.Id);
+
+                entity.Property(payment => payment.Id).HasColumnName("id");
+                entity.Property(payment => payment.SaleId).HasColumnName("sale_id");
+                entity.Property(payment => payment.PaymentMethodId).HasColumnName("payment_method_id");
+                entity.Property(payment => payment.PaymentType).HasColumnName("payment_type").HasMaxLength(50).IsRequired();
+                entity.Property(payment => payment.Amount).HasColumnName("amount").HasPrecision(18, 2);
+                entity.Property(payment => payment.ReferenceNo).HasColumnName("reference_no").HasMaxLength(100);
+                entity.Property(payment => payment.Status).HasColumnName("status").HasMaxLength(50).HasDefaultValue("Completed");
+                entity.Property(payment => payment.CreatedAt).HasColumnName("created_at");
+                entity.Property(payment => payment.UpdatedAt).HasColumnName("updated_at");
+
+                entity.HasIndex(payment => payment.SaleId);
+                entity.HasIndex(payment => payment.PaymentMethodId);
+                entity.HasOne(payment => payment.Sale)
+                    .WithMany(sale => sale.Payments)
+                    .HasForeignKey(payment => payment.SaleId)
+                    .OnDelete(DeleteBehavior.Cascade);
+                entity.HasOne(payment => payment.PaymentMethod)
+                    .WithMany()
+                    .HasForeignKey(payment => payment.PaymentMethodId)
                     .OnDelete(DeleteBehavior.Restrict);
             });
         }

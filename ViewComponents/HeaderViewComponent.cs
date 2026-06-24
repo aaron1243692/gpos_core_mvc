@@ -162,33 +162,7 @@ namespace gpos.ViewComponents
 
             if (Is(controller, "Transaction"))
             {
-                return action switch
-                {
-                    "POS" => "Transaction.POS",
-                    "ProductSales" => "Transaction.ProductSales",
-                    "FuelSales" => "Transaction.FuelSales",
-                    "EmployeePOS" => "Transaction.EmployeePOS",
-                    "EmployeeProductSales" => "Transaction.EmployeeProductSales",
-                    "EmployeeFuelSales" => "Transaction.EmployeeFuelSales",
-                    "DailyCash" => "Transaction.DailyCash",
-                    "WarehouseTransfer" => "Transaction.WarehouseTransfer",
-                    "DisplayTransfer" => "Transaction.DisplayTransfer",
-                    "FuelTransfer" => "Transaction.FuelTransfer",
-                    "WarehouseAdjustment" => "Transaction.WarehouseAdjustment",
-                    "ProductAdjustment" => "Transaction.ProductAdjustment",
-                    "FuelAdjustment" => "Transaction.FuelAdjustment",
-                    "WarehouseReturn" => "Transaction.WarehouseReturn",
-                    "ProductReturn" => "Transaction.ProductReturn",
-                    "FuelReturn" => "Transaction.FuelReturn",
-                    "WarehouseVoid" => "Transaction.WarehouseVoid",
-                    "ProductVoid" => "Transaction.ProductVoid",
-                    "FuelVoid" => "Transaction.FuelVoid",
-                    "OpenShift" => "Transactions.OpenShift",
-                    "DailyClosingBalance" => "Transactions.CloseShift",
-                    "PumpTransaction" => "Transactions.FuelTransactions",
-                    "PosProductSales" => "Transactions.ProductSales",
-                    _ => string.Empty
-                };
+                return $"Transaction.{action}";
             }
 
             return string.Empty;

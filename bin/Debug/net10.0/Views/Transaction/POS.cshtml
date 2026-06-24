@@ -1,8 +1,12 @@
 @using Microsoft.EntityFrameworkCore
+@using System.Security.Claims
 @inject gpos.Data.ApplicationDbContext Db
 
 <section class="salesman-pos-page">
     <form id="posSaleForm" method="post" class="salesman-pos-card">
+        @Html.AntiForgeryToken()
+        <input name="CashierUserId" type="hidden" value="@(Context.Session.GetString("UserId") ?? User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "")" />
+        <div class="alert d-none" id="posSubmitMessage" role="alert"></div>
         <div class="pos-order-layout">
             <section class="pos-order-menu" aria-label="Order menu">
                 <div class="pos-order-toolbar">
@@ -15,11 +19,11 @@
                 <nav class="pos-category-row" aria-label="POS menu categories">
                     <button class="pos-category-pill pos-category-btn" id="fuelModeButton" type="button" data-mode="fuel"><span>FUE</span><strong>Fuel</strong></button>
                     <button class="pos-category-pill pos-category-btn is-active" id="hotModeButton" type="button" data-mode="hot"><span>HOT</span><strong>Hot</strong></button>
-                    @for (var index = 0; index < Db.ProductCategories.AsNoTracking().Where(category => category.Status == 1 && category.IsActive).OrderBy(category => category.Name).ToList().Count; index++)
+                    @for (var index = 0; index < Db.ProductCategories.AsNoTracking().Where(category => category.Status == 1 && category.IsActive && Db.DisplayStocks.Any(stock => stock.Quantity > 0 && stock.Product != null && stock.Product.CategoryId == category.Id && stock.Product.Status == 1 && stock.Product.IsActive && stock.Batch != null && stock.Batch.Status == 1 && stock.Batch.IsActive)).OrderBy(category => category.Name).ToList().Count; index++)
                     {
-                        <button class="pos-category-pill pos-category-btn" type="button" data-mode="category" data-category-id="@Db.ProductCategories.AsNoTracking().Where(category => category.Status == 1 && category.IsActive).OrderBy(category => category.Name).ToList()[index].Id">
-                            <span>@(Db.ProductCategories.AsNoTracking().Where(category => category.Status == 1 && category.IsActive).OrderBy(category => category.Name).ToList()[index].Name.Length >= 3 ? Db.ProductCategories.AsNoTracking().Where(category => category.Status == 1 && category.IsActive).OrderBy(category => category.Name).ToList()[index].Name.Substring(0, 3).ToUpper() : Db.ProductCategories.AsNoTracking().Where(category => category.Status == 1 && category.IsActive).OrderBy(category => category.Name).ToList()[index].Name.ToUpper())</span>
-                            <strong>@Db.ProductCategories.AsNoTracking().Where(category => category.Status == 1 && category.IsActive).OrderBy(category => category.Name).ToList()[index].Name</strong>
+                        <button class="pos-category-pill pos-category-btn" type="button" data-mode="category" data-category-id="@Db.ProductCategories.AsNoTracking().Where(category => category.Status == 1 && category.IsActive && Db.DisplayStocks.Any(stock => stock.Quantity > 0 && stock.Product != null && stock.Product.CategoryId == category.Id && stock.Product.Status == 1 && stock.Product.IsActive && stock.Batch != null && stock.Batch.Status == 1 && stock.Batch.IsActive)).OrderBy(category => category.Name).ToList()[index].Id">
+                            <span>@(Db.ProductCategories.AsNoTracking().Where(category => category.Status == 1 && category.IsActive && Db.DisplayStocks.Any(stock => stock.Quantity > 0 && stock.Product != null && stock.Product.CategoryId == category.Id && stock.Product.Status == 1 && stock.Product.IsActive && stock.Batch != null && stock.Batch.Status == 1 && stock.Batch.IsActive)).OrderBy(category => category.Name).ToList()[index].Name.Length >= 3 ? Db.ProductCategories.AsNoTracking().Where(category => category.Status == 1 && category.IsActive && Db.DisplayStocks.Any(stock => stock.Quantity > 0 && stock.Product != null && stock.Product.CategoryId == category.Id && stock.Product.Status == 1 && stock.Product.IsActive && stock.Batch != null && stock.Batch.Status == 1 && stock.Batch.IsActive)).OrderBy(category => category.Name).ToList()[index].Name.Substring(0, 3).ToUpper() : Db.ProductCategories.AsNoTracking().Where(category => category.Status == 1 && category.IsActive && Db.DisplayStocks.Any(stock => stock.Quantity > 0 && stock.Product != null && stock.Product.CategoryId == category.Id && stock.Product.Status == 1 && stock.Product.IsActive && stock.Batch != null && stock.Batch.Status == 1 && stock.Batch.IsActive)).OrderBy(category => category.Name).ToList()[index].Name.ToUpper())</span>
+                            <strong>@Db.ProductCategories.AsNoTracking().Where(category => category.Status == 1 && category.IsActive && Db.DisplayStocks.Any(stock => stock.Quantity > 0 && stock.Product != null && stock.Product.CategoryId == category.Id && stock.Product.Status == 1 && stock.Product.IsActive && stock.Batch != null && stock.Batch.Status == 1 && stock.Batch.IsActive)).OrderBy(category => category.Name).ToList()[index].Name</strong>
                         </button>
                     }
                 </nav>
@@ -31,19 +35,20 @@
                     </div>
 
                     <div class="pos-product-grid">
-                        @for (var index = 0; index < Db.Products.AsNoTracking().Include(product => product.ProductBatches).Where(product => product.Status == 1 && product.IsActive && product.CategoryId.HasValue && Db.ProductCategories.Any(category => category.Id == product.CategoryId.Value && category.Status == 1 && category.IsActive)).OrderByDescending(product => product.UpdatedAt ?? product.CreatedAt ?? DateTime.MinValue).ThenBy(product => product.Name).ToList().Count; index++)
+                        @for (var index = 0; index < Db.DisplayStocks.AsNoTracking().Include(stock => stock.Product).Include(stock => stock.Batch).Where(stock => stock.Quantity > 0 && stock.Product != null && stock.Product.Status == 1 && stock.Product.IsActive && stock.Product.CategoryId.HasValue && stock.Batch != null && stock.Batch.Status == 1 && stock.Batch.IsActive && Db.ProductCategories.Any(category => category.Id == stock.Product.CategoryId.Value && category.Status == 1 && category.IsActive)).OrderByDescending(stock => stock.UpdatedAt ?? stock.CreatedAt ?? DateTime.MinValue).ThenBy(stock => stock.Product!.Name).ThenBy(stock => stock.Id).ToList().Count; index++)
                         {
-                            <article class="pos-menu-product-card" data-category-id="@Db.Products.AsNoTracking().Include(product => product.ProductBatches).Where(product => product.Status == 1 && product.IsActive && product.CategoryId.HasValue && Db.ProductCategories.Any(category => category.Id == product.CategoryId.Value && category.Status == 1 && category.IsActive)).OrderByDescending(product => product.UpdatedAt ?? product.CreatedAt ?? DateTime.MinValue).ThenBy(product => product.Name).ToList()[index].CategoryId" data-product-name="@Db.Products.AsNoTracking().Include(product => product.ProductBatches).Where(product => product.Status == 1 && product.IsActive && product.CategoryId.HasValue && Db.ProductCategories.Any(category => category.Id == product.CategoryId.Value && category.Status == 1 && category.IsActive)).OrderByDescending(product => product.UpdatedAt ?? product.CreatedAt ?? DateTime.MinValue).ThenBy(product => product.Name).ToList()[index].Name.ToLowerInvariant()">
-                                <div class="pos-product-visual">@(Db.Products.AsNoTracking().Include(product => product.ProductBatches).Where(product => product.Status == 1 && product.IsActive && product.CategoryId.HasValue && Db.ProductCategories.Any(category => category.Id == product.CategoryId.Value && category.Status == 1 && category.IsActive)).OrderByDescending(product => product.UpdatedAt ?? product.CreatedAt ?? DateTime.MinValue).ThenBy(product => product.Name).ToList()[index].Name.Length >= 2 ? Db.Products.AsNoTracking().Include(product => product.ProductBatches).Where(product => product.Status == 1 && product.IsActive && product.CategoryId.HasValue && Db.ProductCategories.Any(category => category.Id == product.CategoryId.Value && category.Status == 1 && category.IsActive)).OrderByDescending(product => product.UpdatedAt ?? product.CreatedAt ?? DateTime.MinValue).ThenBy(product => product.Name).ToList()[index].Name.Substring(0, 2).ToUpper() : Db.Products.AsNoTracking().Include(product => product.ProductBatches).Where(product => product.Status == 1 && product.IsActive && product.CategoryId.HasValue && Db.ProductCategories.Any(category => category.Id == product.CategoryId.Value && category.Status == 1 && category.IsActive)).OrderByDescending(product => product.UpdatedAt ?? product.CreatedAt ?? DateTime.MinValue).ThenBy(product => product.Name).ToList()[index].Name.ToUpper())</div>
-                                <h3>@Db.Products.AsNoTracking().Include(product => product.ProductBatches).Where(product => product.Status == 1 && product.IsActive && product.CategoryId.HasValue && Db.ProductCategories.Any(category => category.Id == product.CategoryId.Value && category.Status == 1 && category.IsActive)).OrderByDescending(product => product.UpdatedAt ?? product.CreatedAt ?? DateTime.MinValue).ThenBy(product => product.Name).ToList()[index].Name</h3>
-                                <p>PHP @Db.Products.AsNoTracking().Include(product => product.ProductBatches).Where(product => product.Status == 1 && product.IsActive && product.CategoryId.HasValue && Db.ProductCategories.Any(category => category.Id == product.CategoryId.Value && category.Status == 1 && category.IsActive)).OrderByDescending(product => product.UpdatedAt ?? product.CreatedAt ?? DateTime.MinValue).ThenBy(product => product.Name).ToList()[index].ProductBatches.Where(batch => batch.Status == 1 && batch.IsActive).OrderByDescending(batch => batch.UpdatedAt ?? batch.CreatedAt ?? DateTime.MinValue).ThenByDescending(batch => batch.Id).Select(batch => batch.SellingPrice).FirstOrDefault().ToString("N2")</p>
-                                <label class="pos-quantity-control" for="productQuantity_@Db.Products.AsNoTracking().Include(product => product.ProductBatches).Where(product => product.Status == 1 && product.IsActive && product.CategoryId.HasValue && Db.ProductCategories.Any(category => category.Id == product.CategoryId.Value && category.Status == 1 && category.IsActive)).OrderByDescending(product => product.UpdatedAt ?? product.CreatedAt ?? DateTime.MinValue).ThenBy(product => product.Name).ToList()[index].Id">
+                            <article class="pos-menu-product-card" data-category-id="@Db.DisplayStocks.AsNoTracking().Include(stock => stock.Product).Include(stock => stock.Batch).Where(stock => stock.Quantity > 0 && stock.Product != null && stock.Product.Status == 1 && stock.Product.IsActive && stock.Product.CategoryId.HasValue && stock.Batch != null && stock.Batch.Status == 1 && stock.Batch.IsActive && Db.ProductCategories.Any(category => category.Id == stock.Product.CategoryId.Value && category.Status == 1 && category.IsActive)).OrderByDescending(stock => stock.UpdatedAt ?? stock.CreatedAt ?? DateTime.MinValue).ThenBy(stock => stock.Product!.Name).ThenBy(stock => stock.Id).ToList()[index].Product!.CategoryId" data-product-name="@Db.DisplayStocks.AsNoTracking().Include(stock => stock.Product).Include(stock => stock.Batch).Where(stock => stock.Quantity > 0 && stock.Product != null && stock.Product.Status == 1 && stock.Product.IsActive && stock.Product.CategoryId.HasValue && stock.Batch != null && stock.Batch.Status == 1 && stock.Batch.IsActive && Db.ProductCategories.Any(category => category.Id == stock.Product.CategoryId.Value && category.Status == 1 && category.IsActive)).OrderByDescending(stock => stock.UpdatedAt ?? stock.CreatedAt ?? DateTime.MinValue).ThenBy(stock => stock.Product!.Name).ThenBy(stock => stock.Id).ToList()[index].Product!.Name.ToLowerInvariant()" data-display-stock-id="@Db.DisplayStocks.AsNoTracking().Include(stock => stock.Product).Include(stock => stock.Batch).Where(stock => stock.Quantity > 0 && stock.Product != null && stock.Product.Status == 1 && stock.Product.IsActive && stock.Product.CategoryId.HasValue && stock.Batch != null && stock.Batch.Status == 1 && stock.Batch.IsActive && Db.ProductCategories.Any(category => category.Id == stock.Product.CategoryId.Value && category.Status == 1 && category.IsActive)).OrderByDescending(stock => stock.UpdatedAt ?? stock.CreatedAt ?? DateTime.MinValue).ThenBy(stock => stock.Product!.Name).ThenBy(stock => stock.Id).ToList()[index].Id" data-product-id="@Db.DisplayStocks.AsNoTracking().Include(stock => stock.Product).Include(stock => stock.Batch).Where(stock => stock.Quantity > 0 && stock.Product != null && stock.Product.Status == 1 && stock.Product.IsActive && stock.Product.CategoryId.HasValue && stock.Batch != null && stock.Batch.Status == 1 && stock.Batch.IsActive && Db.ProductCategories.Any(category => category.Id == stock.Product.CategoryId.Value && category.Status == 1 && category.IsActive)).OrderByDescending(stock => stock.UpdatedAt ?? stock.CreatedAt ?? DateTime.MinValue).ThenBy(stock => stock.Product!.Name).ThenBy(stock => stock.Id).ToList()[index].ProductId" data-batch-id="@Db.DisplayStocks.AsNoTracking().Include(stock => stock.Product).Include(stock => stock.Batch).Where(stock => stock.Quantity > 0 && stock.Product != null && stock.Product.Status == 1 && stock.Product.IsActive && stock.Product.CategoryId.HasValue && stock.Batch != null && stock.Batch.Status == 1 && stock.Batch.IsActive && Db.ProductCategories.Any(category => category.Id == stock.Product.CategoryId.Value && category.Status == 1 && category.IsActive)).OrderByDescending(stock => stock.UpdatedAt ?? stock.CreatedAt ?? DateTime.MinValue).ThenBy(stock => stock.Product!.Name).ThenBy(stock => stock.Id).ToList()[index].BatchId" data-available-quantity="@Db.DisplayStocks.AsNoTracking().Include(stock => stock.Product).Include(stock => stock.Batch).Where(stock => stock.Quantity > 0 && stock.Product != null && stock.Product.Status == 1 && stock.Product.IsActive && stock.Product.CategoryId.HasValue && stock.Batch != null && stock.Batch.Status == 1 && stock.Batch.IsActive && Db.ProductCategories.Any(category => category.Id == stock.Product.CategoryId.Value && category.Status == 1 && category.IsActive)).OrderByDescending(stock => stock.UpdatedAt ?? stock.CreatedAt ?? DateTime.MinValue).ThenBy(stock => stock.Product!.Name).ThenBy(stock => stock.Id).ToList()[index].Quantity">
+                                <div class="pos-product-visual">@(Db.DisplayStocks.AsNoTracking().Include(stock => stock.Product).Include(stock => stock.Batch).Where(stock => stock.Quantity > 0 && stock.Product != null && stock.Product.Status == 1 && stock.Product.IsActive && stock.Product.CategoryId.HasValue && stock.Batch != null && stock.Batch.Status == 1 && stock.Batch.IsActive && Db.ProductCategories.Any(category => category.Id == stock.Product.CategoryId.Value && category.Status == 1 && category.IsActive)).OrderByDescending(stock => stock.UpdatedAt ?? stock.CreatedAt ?? DateTime.MinValue).ThenBy(stock => stock.Product!.Name).ThenBy(stock => stock.Id).ToList()[index].Product!.Name.Length >= 2 ? Db.DisplayStocks.AsNoTracking().Include(stock => stock.Product).Include(stock => stock.Batch).Where(stock => stock.Quantity > 0 && stock.Product != null && stock.Product.Status == 1 && stock.Product.IsActive && stock.Product.CategoryId.HasValue && stock.Batch != null && stock.Batch.Status == 1 && stock.Batch.IsActive && Db.ProductCategories.Any(category => category.Id == stock.Product.CategoryId.Value && category.Status == 1 && category.IsActive)).OrderByDescending(stock => stock.UpdatedAt ?? stock.CreatedAt ?? DateTime.MinValue).ThenBy(stock => stock.Product!.Name).ThenBy(stock => stock.Id).ToList()[index].Product!.Name.Substring(0, 2).ToUpper() : Db.DisplayStocks.AsNoTracking().Include(stock => stock.Product).Include(stock => stock.Batch).Where(stock => stock.Quantity > 0 && stock.Product != null && stock.Product.Status == 1 && stock.Product.IsActive && stock.Product.CategoryId.HasValue && stock.Batch != null && stock.Batch.Status == 1 && stock.Batch.IsActive && Db.ProductCategories.Any(category => category.Id == stock.Product.CategoryId.Value && category.Status == 1 && category.IsActive)).OrderByDescending(stock => stock.UpdatedAt ?? stock.CreatedAt ?? DateTime.MinValue).ThenBy(stock => stock.Product!.Name).ThenBy(stock => stock.Id).ToList()[index].Product!.Name.ToUpper())</div>
+                                <h3>@Db.DisplayStocks.AsNoTracking().Include(stock => stock.Product).Include(stock => stock.Batch).Where(stock => stock.Quantity > 0 && stock.Product != null && stock.Product.Status == 1 && stock.Product.IsActive && stock.Product.CategoryId.HasValue && stock.Batch != null && stock.Batch.Status == 1 && stock.Batch.IsActive && Db.ProductCategories.Any(category => category.Id == stock.Product.CategoryId.Value && category.Status == 1 && category.IsActive)).OrderByDescending(stock => stock.UpdatedAt ?? stock.CreatedAt ?? DateTime.MinValue).ThenBy(stock => stock.Product!.Name).ThenBy(stock => stock.Id).ToList()[index].Product!.Name</h3>
+                                <p>PHP @Db.DisplayStocks.AsNoTracking().Include(stock => stock.Product).Include(stock => stock.Batch).Where(stock => stock.Quantity > 0 && stock.Product != null && stock.Product.Status == 1 && stock.Product.IsActive && stock.Product.CategoryId.HasValue && stock.Batch != null && stock.Batch.Status == 1 && stock.Batch.IsActive && Db.ProductCategories.Any(category => category.Id == stock.Product.CategoryId.Value && category.Status == 1 && category.IsActive)).OrderByDescending(stock => stock.UpdatedAt ?? stock.CreatedAt ?? DateTime.MinValue).ThenBy(stock => stock.Product!.Name).ThenBy(stock => stock.Id).ToList()[index].Batch!.SellingPrice.ToString("N2")</p>
+                                <small>Available: @Db.DisplayStocks.AsNoTracking().Include(stock => stock.Product).Include(stock => stock.Batch).Where(stock => stock.Quantity > 0 && stock.Product != null && stock.Product.Status == 1 && stock.Product.IsActive && stock.Product.CategoryId.HasValue && stock.Batch != null && stock.Batch.Status == 1 && stock.Batch.IsActive && Db.ProductCategories.Any(category => category.Id == stock.Product.CategoryId.Value && category.Status == 1 && category.IsActive)).OrderByDescending(stock => stock.UpdatedAt ?? stock.CreatedAt ?? DateTime.MinValue).ThenBy(stock => stock.Product!.Name).ThenBy(stock => stock.Id).ToList()[index].Quantity.ToString("N0")</small>
+                                <label class="pos-quantity-control" for="productQuantity_@Db.DisplayStocks.AsNoTracking().Include(stock => stock.Product).Include(stock => stock.Batch).Where(stock => stock.Quantity > 0 && stock.Product != null && stock.Product.Status == 1 && stock.Product.IsActive && stock.Product.CategoryId.HasValue && stock.Batch != null && stock.Batch.Status == 1 && stock.Batch.IsActive && Db.ProductCategories.Any(category => category.Id == stock.Product.CategoryId.Value && category.Status == 1 && category.IsActive)).OrderByDescending(stock => stock.UpdatedAt ?? stock.CreatedAt ?? DateTime.MinValue).ThenBy(stock => stock.Product!.Name).ThenBy(stock => stock.Id).ToList()[index].Id">
                                     <span>Qty</span>
-                                    <input class="form-control product-quantity-input" id="productQuantity_@Db.Products.AsNoTracking().Include(product => product.ProductBatches).Where(product => product.Status == 1 && product.IsActive && product.CategoryId.HasValue && Db.ProductCategories.Any(category => category.Id == product.CategoryId.Value && category.Status == 1 && category.IsActive)).OrderByDescending(product => product.UpdatedAt ?? product.CreatedAt ?? DateTime.MinValue).ThenBy(product => product.Name).ToList()[index].Id" name="Products[@index].Quantity" type="number" min="0" value="0" data-price="@Db.Products.AsNoTracking().Include(product => product.ProductBatches).Where(product => product.Status == 1 && product.IsActive && product.CategoryId.HasValue && Db.ProductCategories.Any(category => category.Id == product.CategoryId.Value && category.Status == 1 && category.IsActive)).OrderByDescending(product => product.UpdatedAt ?? product.CreatedAt ?? DateTime.MinValue).ThenBy(product => product.Name).ToList()[index].ProductBatches.Where(batch => batch.Status == 1 && batch.IsActive).OrderByDescending(batch => batch.UpdatedAt ?? batch.CreatedAt ?? DateTime.MinValue).ThenByDescending(batch => batch.Id).Select(batch => batch.SellingPrice).FirstOrDefault()" data-no="P-@Db.Products.AsNoTracking().Include(product => product.ProductBatches).Where(product => product.Status == 1 && product.IsActive && product.CategoryId.HasValue && Db.ProductCategories.Any(category => category.Id == product.CategoryId.Value && category.Status == 1 && category.IsActive)).OrderByDescending(product => product.UpdatedAt ?? product.CreatedAt ?? DateTime.MinValue).ThenBy(product => product.Name).ToList()[index].Id.ToString("000")" data-name="@Db.Products.AsNoTracking().Include(product => product.ProductBatches).Where(product => product.Status == 1 && product.IsActive && product.CategoryId.HasValue && Db.ProductCategories.Any(category => category.Id == product.CategoryId.Value && category.Status == 1 && category.IsActive)).OrderByDescending(product => product.UpdatedAt ?? product.CreatedAt ?? DateTime.MinValue).ThenBy(product => product.Name).ToList()[index].Name" aria-label="@Db.Products.AsNoTracking().Include(product => product.ProductBatches).Where(product => product.Status == 1 && product.IsActive && product.CategoryId.HasValue && Db.ProductCategories.Any(category => category.Id == product.CategoryId.Value && category.Status == 1 && category.IsActive)).OrderByDescending(product => product.UpdatedAt ?? product.CreatedAt ?? DateTime.MinValue).ThenBy(product => product.Name).ToList()[index].Name quantity" />
+                                    <input class="form-control product-quantity-input" id="productQuantity_@Db.DisplayStocks.AsNoTracking().Include(stock => stock.Product).Include(stock => stock.Batch).Where(stock => stock.Quantity > 0 && stock.Product != null && stock.Product.Status == 1 && stock.Product.IsActive && stock.Product.CategoryId.HasValue && stock.Batch != null && stock.Batch.Status == 1 && stock.Batch.IsActive && Db.ProductCategories.Any(category => category.Id == stock.Product.CategoryId.Value && category.Status == 1 && category.IsActive)).OrderByDescending(stock => stock.UpdatedAt ?? stock.CreatedAt ?? DateTime.MinValue).ThenBy(stock => stock.Product!.Name).ThenBy(stock => stock.Id).ToList()[index].Id" name="Products[@index].Quantity" type="number" min="0" max="@Db.DisplayStocks.AsNoTracking().Include(stock => stock.Product).Include(stock => stock.Batch).Where(stock => stock.Quantity > 0 && stock.Product != null && stock.Product.Status == 1 && stock.Product.IsActive && stock.Product.CategoryId.HasValue && stock.Batch != null && stock.Batch.Status == 1 && stock.Batch.IsActive && Db.ProductCategories.Any(category => category.Id == stock.Product.CategoryId.Value && category.Status == 1 && category.IsActive)).OrderByDescending(stock => stock.UpdatedAt ?? stock.CreatedAt ?? DateTime.MinValue).ThenBy(stock => stock.Product!.Name).ThenBy(stock => stock.Id).ToList()[index].Quantity" value="0" data-price="@Db.DisplayStocks.AsNoTracking().Include(stock => stock.Product).Include(stock => stock.Batch).Where(stock => stock.Quantity > 0 && stock.Product != null && stock.Product.Status == 1 && stock.Product.IsActive && stock.Product.CategoryId.HasValue && stock.Batch != null && stock.Batch.Status == 1 && stock.Batch.IsActive && Db.ProductCategories.Any(category => category.Id == stock.Product.CategoryId.Value && category.Status == 1 && category.IsActive)).OrderByDescending(stock => stock.UpdatedAt ?? stock.CreatedAt ?? DateTime.MinValue).ThenBy(stock => stock.Product!.Name).ThenBy(stock => stock.Id).ToList()[index].Batch!.SellingPrice" data-no="P-@Db.DisplayStocks.AsNoTracking().Include(stock => stock.Product).Include(stock => stock.Batch).Where(stock => stock.Quantity > 0 && stock.Product != null && stock.Product.Status == 1 && stock.Product.IsActive && stock.Product.CategoryId.HasValue && stock.Batch != null && stock.Batch.Status == 1 && stock.Batch.IsActive && Db.ProductCategories.Any(category => category.Id == stock.Product.CategoryId.Value && category.Status == 1 && category.IsActive)).OrderByDescending(stock => stock.UpdatedAt ?? stock.CreatedAt ?? DateTime.MinValue).ThenBy(stock => stock.Product!.Name).ThenBy(stock => stock.Id).ToList()[index].ProductId.ToString("000")" data-name="@Db.DisplayStocks.AsNoTracking().Include(stock => stock.Product).Include(stock => stock.Batch).Where(stock => stock.Quantity > 0 && stock.Product != null && stock.Product.Status == 1 && stock.Product.IsActive && stock.Product.CategoryId.HasValue && stock.Batch != null && stock.Batch.Status == 1 && stock.Batch.IsActive && Db.ProductCategories.Any(category => category.Id == stock.Product.CategoryId.Value && category.Status == 1 && category.IsActive)).OrderByDescending(stock => stock.UpdatedAt ?? stock.CreatedAt ?? DateTime.MinValue).ThenBy(stock => stock.Product!.Name).ThenBy(stock => stock.Id).ToList()[index].Product!.Name" aria-label="@Db.DisplayStocks.AsNoTracking().Include(stock => stock.Product).Include(stock => stock.Batch).Where(stock => stock.Quantity > 0 && stock.Product != null && stock.Product.Status == 1 && stock.Product.IsActive && stock.Product.CategoryId.HasValue && stock.Batch != null && stock.Batch.Status == 1 && stock.Batch.IsActive && Db.ProductCategories.Any(category => category.Id == stock.Product.CategoryId.Value && category.Status == 1 && category.IsActive)).OrderByDescending(stock => stock.UpdatedAt ?? stock.CreatedAt ?? DateTime.MinValue).ThenBy(stock => stock.Product!.Name).ThenBy(stock => stock.Id).ToList()[index].Product!.Name quantity" />
                                 </label>
                                 <input type="hidden" name="Products.Index" value="@index" />
-                                <input type="hidden" name="Products[@index].Code" value="P-@Db.Products.AsNoTracking().Include(product => product.ProductBatches).Where(product => product.Status == 1 && product.IsActive && product.CategoryId.HasValue && Db.ProductCategories.Any(category => category.Id == product.CategoryId.Value && category.Status == 1 && category.IsActive)).OrderByDescending(product => product.UpdatedAt ?? product.CreatedAt ?? DateTime.MinValue).ThenBy(product => product.Name).ToList()[index].Id.ToString("000")" />
-                                <input type="hidden" name="Products[@index].Name" value="@Db.Products.AsNoTracking().Include(product => product.ProductBatches).Where(product => product.Status == 1 && product.IsActive && product.CategoryId.HasValue && Db.ProductCategories.Any(category => category.Id == product.CategoryId.Value && category.Status == 1 && category.IsActive)).OrderByDescending(product => product.UpdatedAt ?? product.CreatedAt ?? DateTime.MinValue).ThenBy(product => product.Name).ToList()[index].Name" />
+                                <input type="hidden" name="Products[@index].Code" value="P-@Db.DisplayStocks.AsNoTracking().Include(stock => stock.Product).Include(stock => stock.Batch).Where(stock => stock.Quantity > 0 && stock.Product != null && stock.Product.Status == 1 && stock.Product.IsActive && stock.Product.CategoryId.HasValue && stock.Batch != null && stock.Batch.Status == 1 && stock.Batch.IsActive && Db.ProductCategories.Any(category => category.Id == stock.Product.CategoryId.Value && category.Status == 1 && category.IsActive)).OrderByDescending(stock => stock.UpdatedAt ?? stock.CreatedAt ?? DateTime.MinValue).ThenBy(stock => stock.Product!.Name).ThenBy(stock => stock.Id).ToList()[index].ProductId.ToString("000")" />
+                                <input type="hidden" name="Products[@index].Name" value="@Db.DisplayStocks.AsNoTracking().Include(stock => stock.Product).Include(stock => stock.Batch).Where(stock => stock.Quantity > 0 && stock.Product != null && stock.Product.Status == 1 && stock.Product.IsActive && stock.Product.CategoryId.HasValue && stock.Batch != null && stock.Batch.Status == 1 && stock.Batch.IsActive && Db.ProductCategories.Any(category => category.Id == stock.Product.CategoryId.Value && category.Status == 1 && category.IsActive)).OrderByDescending(stock => stock.UpdatedAt ?? stock.CreatedAt ?? DateTime.MinValue).ThenBy(stock => stock.Product!.Name).ThenBy(stock => stock.Id).ToList()[index].Product!.Name" />
                             </article>
                         }
                     </div>
@@ -61,7 +66,7 @@
                         @for (var index = 0; index < Db.Fuels.AsNoTracking().Where(fuel => fuel.Status == 1 && fuel.IsActive).OrderBy(fuel => fuel.Name).ToList().Count; index++)
                         {
                             <label class="fuel-option">
-                                <input class="form-check-input fuel-choice" type="radio" name="FuelType" value="@Db.Fuels.AsNoTracking().Where(fuel => fuel.Status == 1 && fuel.IsActive).OrderBy(fuel => fuel.Name).ToList()[index].Name" data-price="@Db.Fuels.AsNoTracking().Where(fuel => fuel.Status == 1 && fuel.IsActive).OrderBy(fuel => fuel.Name).ToList()[index].CurrentPricePerLiter" @(index == 0 ? "checked" : "") />
+                                <input class="form-check-input fuel-choice" type="radio" name="FuelType" value="@Db.Fuels.AsNoTracking().Where(fuel => fuel.Status == 1 && fuel.IsActive).OrderBy(fuel => fuel.Name).ToList()[index].Name" data-fuel-id="@Db.Fuels.AsNoTracking().Where(fuel => fuel.Status == 1 && fuel.IsActive).OrderBy(fuel => fuel.Name).Skip(index).Select(fuel => fuel.Id).FirstOrDefault()" data-tank-id="@Db.Tanks.AsNoTracking().Where(tank => tank.Status == 1 && tank.IsActive && tank.FuelId == Db.Fuels.AsNoTracking().Where(fuel => fuel.Status == 1 && fuel.IsActive).OrderBy(fuel => fuel.Name).Skip(index).Select(fuel => fuel.Id).FirstOrDefault()).OrderBy(tank => tank.Id).Select(tank => tank.Id).FirstOrDefault()" data-nozzle-id="@Db.Nozzles.AsNoTracking().Include(nozzle => nozzle.Pump).Where(nozzle => nozzle.Status == 1 && nozzle.Pump != null && Db.Tanks.Any(tank => tank.Id == nozzle.Pump.TankId && tank.Status == 1 && tank.IsActive && tank.FuelId == Db.Fuels.AsNoTracking().Where(fuel => fuel.Status == 1 && fuel.IsActive).OrderBy(fuel => fuel.Name).Skip(index).Select(fuel => fuel.Id).FirstOrDefault())).OrderBy(nozzle => nozzle.Id).Select(nozzle => nozzle.Id).FirstOrDefault()" data-price="@Db.Fuels.AsNoTracking().Where(fuel => fuel.Status == 1 && fuel.IsActive).OrderBy(fuel => fuel.Name).ToList()[index].CurrentPricePerLiter" @(index == 0 ? "checked" : "") />
                                 <span>@Db.Fuels.AsNoTracking().Where(fuel => fuel.Status == 1 && fuel.IsActive).OrderBy(fuel => fuel.Name).ToList()[index].Name <small>PHP @Db.Fuels.AsNoTracking().Where(fuel => fuel.Status == 1 && fuel.IsActive).OrderBy(fuel => fuel.Name).ToList()[index].CurrentPricePerLiter.ToString("N2")/L</small></span>
                             </label>
                         }
@@ -113,10 +118,45 @@
                         <label class="form-label" for="membershipCardNo">Member Card No</label>
                         <input class="form-control" id="membershipCardNo" name="MembershipCardNo" placeholder="Enter member card no" autocomplete="off" />
                     </div>
+                    <div id="rebateField">
+                        <label class="form-label" for="rebateRuleId">Rebate</label>
+                        <select class="form-select" id="rebateRuleId" name="RebateRuleId">
+                            <option value="">No rebate</option>
+                            @for (var index = 0; index < Db.RebateRules.AsNoTracking().Where(rebate => rebate.Status == 1).OrderBy(rebate => rebate.Name).ToList().Count; index++)
+                            {
+                                <option value="@Db.RebateRules.AsNoTracking().Where(rebate => rebate.Status == 1).OrderBy(rebate => rebate.Name).ToList()[index].Id" data-rebate-value="@Db.RebateRules.AsNoTracking().Where(rebate => rebate.Status == 1).OrderBy(rebate => rebate.Name).ToList()[index].RebateValue">@Db.RebateRules.AsNoTracking().Where(rebate => rebate.Status == 1).OrderBy(rebate => rebate.Name).ToList()[index].Name - @Db.RebateRules.AsNoTracking().Where(rebate => rebate.Status == 1).OrderBy(rebate => rebate.Name).ToList()[index].PointsRequired.ToString("N2") pts</option>
+                            }
+                        </select>
+                    </div>
                 </div>
 
-                <button class="btn btn-primary btn-lg pos-charge-button" id="checkoutButton" type="button">Complete Payment</button>
+                <button class="btn btn-primary btn-lg pos-charge-button" id="checkoutButton" type="button">Checkout</button>
             </aside>
+        </div>
+
+        <div class="modal fade" id="insufficientCashModal" tabindex="-1" aria-labelledby="insufficientCashModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h2 class="modal-title fs-5" id="insufficientCashModalLabel">Insufficient Cash</h2>
+                        <button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p id="insufficientCashMessage">Cash amount is lower than the total amount to pay.</p>
+                        <dl class="row mb-0">
+                            <dt class="col-6">Amount To Pay</dt>
+                            <dd class="col-6 text-end" id="insufficientAmountToPay">PHP 0.00</dd>
+                            <dt class="col-6">Cash Amount</dt>
+                            <dd class="col-6 text-end" id="insufficientCashAmount">PHP 0.00</dd>
+                            <dt class="col-6">Missing Amount</dt>
+                            <dd class="col-6 text-end" id="insufficientMissingAmount">PHP 0.00</dd>
+                        </dl>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn btn-primary" type="button" data-bs-dismiss="modal">OK</button>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <section class="salesman-receipt-preview" id="receiptPreview" hidden aria-live="polite">
@@ -128,7 +168,7 @@
 
                 <div class="receipt-meta">
                     <div><span>Date / Time</span><strong id="receiptDateTime"></strong></div>
-                    <div><span>Cashier</span><strong id="receiptCashier">Admin</strong></div>
+                    <div><span>Cashier</span><strong id="receiptCashier">@(Context.Session.GetString("Username") ?? Context.Session.GetString("Name") ?? User.Identity?.Name ?? "User")</strong></div>
                     <div><span>Payment Method</span><strong>Cash</strong></div>
                     <div><span>Cash Amount</span><strong id="receiptPaymentDetail"></strong></div>
                     <div><span>Member Card No</span><strong id="receiptMemberCardNo"></strong></div>
@@ -186,6 +226,8 @@
         (() => {
             const peso = new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP" });
             const form = document.getElementById("posSaleForm");
+            const submitMessage = document.getElementById("posSubmitMessage");
+            const antiForgeryToken = form.querySelector("input[name='__RequestVerificationToken']")?.value || "";
             const categoryButtons = Array.from(document.querySelectorAll(".pos-category-btn"));
             const fuelModeButton = document.getElementById("fuelModeButton");
             const hotModeButton = document.getElementById("hotModeButton");
@@ -201,11 +243,18 @@
             const addFuelButton = document.getElementById("addFuelButton");
             const paymentAmountInput = document.getElementById("paymentAmount");
             const membershipCardNoInput = document.getElementById("membershipCardNo");
+            const rebateRuleIdInput = document.getElementById("rebateRuleId");
             const grandTotal = document.getElementById("posGrandTotal");
             const cartSubTotal = document.getElementById("cartSubTotal");
             const cartFuelLine = document.getElementById("cartFuelLine");
             const orderCartItems = document.getElementById("orderCartItems");
             const checkoutButton = document.getElementById("checkoutButton");
+            const insufficientCashModalElement = document.getElementById("insufficientCashModal");
+            const insufficientCashModalLabel = document.getElementById("insufficientCashModalLabel");
+            const insufficientCashMessage = document.getElementById("insufficientCashMessage");
+            const insufficientAmountToPay = document.getElementById("insufficientAmountToPay");
+            const insufficientCashAmount = document.getElementById("insufficientCashAmount");
+            const insufficientMissingAmount = document.getElementById("insufficientMissingAmount");
             const receiptPreview = document.getElementById("receiptPreview");
             const receiptDateTime = document.getElementById("receiptDateTime");
             const receiptPaymentDetail = document.getElementById("receiptPaymentDetail");
@@ -214,6 +263,7 @@
             const receiptProductRows = document.getElementById("receiptProductRows");
             const receiptTotalAmount = document.getElementById("receiptTotalAmount");
             const printReceiptButton = document.getElementById("printReceiptButton");
+            const submitSaleButton = document.getElementById("submitSaleButton");
             const newSaleButton = document.getElementById("newSaleButton");
             const fuelCart = [];
             let activeMode = "hot";
@@ -265,20 +315,41 @@
                 }
             }
 
+            function availableDisplayQuantity(input) {
+                const card = input.closest(".pos-menu-product-card");
+                return card ? Math.max(0, Number.parseFloat(card.dataset.availableQuantity) || 0) : 0;
+            }
+
+            function showDisplayStockWarning() {
+                showSubmitMessage("Not enough display stock.", false);
+            }
+
             function selectedProducts() {
                 return productQuantityInputs.reduce((products, input) => {
-                    const quantity = Math.max(0, numericValue(input));
+                    const availableQuantity = availableDisplayQuantity(input);
+                    let quantity = Math.max(0, numericValue(input));
 
                     if (numericValue(input) < 0) {
                         input.value = 0;
                     }
 
+                    if (quantity > availableQuantity) {
+                        quantity = availableQuantity;
+                        input.value = availableQuantity;
+                        showDisplayStockWarning();
+                    }
+
                     if (quantity > 0) {
+                        const card = input.closest(".pos-menu-product-card");
                         products.push({
+                            displayStockId: Number.parseInt(card.dataset.displayStockId, 10) || 0,
+                            productId: Number.parseInt(card.dataset.productId, 10) || 0,
+                            batchId: Number.parseInt(card.dataset.batchId, 10) || 0,
                             no: input.dataset.no,
                             name: input.dataset.name,
                             quantity,
-                            price: Number.parseFloat(input.dataset.price) || 0
+                            price: Number.parseFloat(input.dataset.price) || 0,
+                            subtotal: quantity * (Number.parseFloat(input.dataset.price) || 0)
                         });
                     }
 
@@ -296,6 +367,67 @@
 
             function totalAmount() {
                 return productTotalAmount() + fuelTotalAmount();
+            }
+
+            function discountAmount() {
+                return 0;
+            }
+
+            function selectedRebateAmount() {
+                const selected = rebateRuleIdInput.options[rebateRuleIdInput.selectedIndex];
+                const value = selected ? Number.parseFloat(selected.dataset.rebateValue) || 0 : 0;
+                return Math.min(totalAmount(), Math.max(0, value));
+            }
+
+            function amountToPay() {
+                return Math.max(0, totalAmount() - discountAmount() - selectedRebateAmount());
+            }
+
+            function cashAmount() {
+                return Math.max(0, numericValue(paymentAmountInput));
+            }
+
+            function cartHasItems() {
+                return selectedProducts().length > 0 || fuelCart.length > 0;
+            }
+
+            function canCheckout() {
+                return cartHasItems() && paymentAmountInput.value.trim().length > 0 && cashAmount() >= amountToPay();
+            }
+
+            function showCheckoutWarningModal(title, message) {
+                const due = amountToPay();
+                const cash = cashAmount();
+                insufficientCashModalLabel.textContent = title;
+                insufficientCashMessage.textContent = message;
+                insufficientAmountToPay.textContent = peso.format(due);
+                insufficientCashAmount.textContent = peso.format(cash);
+                insufficientMissingAmount.textContent = peso.format(Math.max(0, due - cash));
+
+                if (window.bootstrap) {
+                    bootstrap.Modal.getOrCreateInstance(insufficientCashModalElement).show();
+                } else {
+                    showSubmitMessage(message, false);
+                }
+            }
+
+            function validateCheckout() {
+                if (!cartHasItems()) {
+                    showCheckoutWarningModal("Checkout Warning", "Cart is empty. Please add product or fuel first.");
+                    return false;
+                }
+
+                if (paymentAmountInput.value.trim().length === 0) {
+                    showCheckoutWarningModal("Checkout Warning", "Please enter cash amount.");
+                    return false;
+                }
+
+                if (cashAmount() < amountToPay()) {
+                    showCheckoutWarningModal("Insufficient Cash", "Cash amount is lower than the total amount to pay.");
+                    return false;
+                }
+
+                return true;
             }
 
             function setActiveButton(button) {
@@ -355,7 +487,17 @@
                     return;
                 }
 
-                input.value = Math.max(0, numericValue(input)) + 1;
+                const availableQuantity = availableDisplayQuantity(input);
+                const nextQuantity = Math.max(0, numericValue(input)) + 1;
+
+                if (nextQuantity > availableQuantity) {
+                    input.value = availableQuantity;
+                    showDisplayStockWarning();
+                    updateTotal();
+                    return;
+                }
+
+                input.value = nextQuantity;
                 updateTotal();
             }
 
@@ -371,10 +513,14 @@
 
                 fuelCart.push({
                     id: Date.now().toString() + fuelCart.length.toString(),
+                    fuelId: Number.parseInt(selected.dataset.fuelId, 10) || 0,
+                    tankId: Number.parseInt(selected.dataset.tankId, 10) || 0,
+                    nozzleId: Number.parseInt(selected.dataset.nozzleId, 10) || 0,
                     type: selectedFuelType(),
                     price,
                     liters,
-                    amount
+                    amount,
+                    subtotal: amount
                 });
 
                 fuelAmountInput.value = "";
@@ -440,10 +586,93 @@
             }
 
             function showReceipt() {
+                if (!validateCheckout()) {
+                    return;
+                }
+
                 updateTotal();
                 renderReceipt();
                 receiptPreview.hidden = false;
                 receiptPreview.scrollIntoView({ behavior: "smooth", block: "start" });
+            }
+
+            function showSubmitMessage(message, isSuccess) {
+                submitMessage.textContent = message;
+                submitMessage.classList.remove("d-none", "alert-success", "alert-danger");
+                submitMessage.classList.add(isSuccess ? "alert-success" : "alert-danger");
+            }
+
+            function buildSalePayload() {
+                const products = selectedProducts().map(product => {
+                    return {
+                        displayStockId: product.displayStockId,
+                        productId: product.productId,
+                        batchId: product.batchId,
+                        quantity: product.quantity,
+                        price: product.price,
+                        subtotal: product.subtotal
+                    };
+                });
+                const fuels = fuelCart.map(fuel => {
+                    return {
+                        fuelId: fuel.fuelId,
+                        tankId: fuel.tankId,
+                        nozzleId: fuel.nozzleId,
+                        liters: fuel.liters,
+                        price: fuel.price,
+                        subtotal: fuel.subtotal
+                    };
+                });
+
+                return {
+                    products,
+                    fuels,
+                    cashAmount: Math.max(0, numericValue(paymentAmountInput)),
+                    membershipCardNo: membershipCardNoInput.value.trim(),
+                    rebateRuleId: Number.parseInt(rebateRuleIdInput.value, 10) || null
+                };
+            }
+
+            async function submitSale(event) {
+                event.preventDefault();
+                const payload = buildSalePayload();
+
+                if (!payload.products.length && !payload.fuels.length) {
+                    showSubmitMessage("Cart is empty. Add at least one product or fuel item.", false);
+                    return;
+                }
+
+                if (!validateCheckout()) {
+                    return;
+                }
+
+                submitSaleButton.disabled = true;
+                showSubmitMessage("Saving sale...", true);
+
+                try {
+                    const response = await fetch("/Transaction/SubmitSale", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                            "RequestVerificationToken": antiForgeryToken
+                        },
+                        body: JSON.stringify(payload)
+                    });
+                    const result = await response.json();
+
+                    if (!response.ok || !result.success) {
+                        showSubmitMessage(result.message || "Unable to save sale.", false);
+                        return;
+                    }
+
+                    showSubmitMessage(`${result.message} Receipt No: ${result.receiptNo}`, true);
+                    resetSale();
+                    showSubmitMessage(`${result.message} Receipt No: ${result.receiptNo}`, true);
+                } catch {
+                    showSubmitMessage("Unable to save sale. Please try again.", false);
+                } finally {
+                    submitSaleButton.disabled = false;
+                }
             }
 
             function restoreProductSubmitFields() {
@@ -477,6 +706,7 @@
                     fuelChoices[0].checked = true;
                 }
                 fuelLitersInput.value = "";
+                rebateRuleIdInput.value = "";
                 receiptPreview.hidden = true;
                 showHotMode();
                 updateTotal();
@@ -525,11 +755,16 @@
                     renderReceipt();
                 }
             });
+            rebateRuleIdInput.addEventListener("change", () => {
+                if (!receiptPreview.hidden) {
+                    renderReceipt();
+                }
+            });
             productSearch.addEventListener("input", filterProducts);
             checkoutButton.addEventListener("click", showReceipt);
             printReceiptButton.addEventListener("click", () => window.print());
             newSaleButton.addEventListener("click", resetSale);
-            form.addEventListener("submit", disableZeroQuantityProducts);
+            form.addEventListener("submit", submitSale);
             window.addEventListener("pageshow", restoreProductSubmitFields);
             showHotMode();
             updateTotal();

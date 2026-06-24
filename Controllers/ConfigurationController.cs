@@ -53,6 +53,45 @@ namespace gpos.Controllers
             }
 
             var now = DateTime.UtcNow;
+
+            if (form.Id.HasValue && form.Id.Value > 0)
+            {
+                var displayStock = await _db.DisplayStocks
+                    .Include(stock => stock.Product)
+                    .Include(stock => stock.Batch)
+                    .FirstOrDefaultAsync(stock => stock.Id == form.Id.Value);
+
+                if (displayStock is null)
+                {
+                    ModelState.AddModelError(string.Empty, "Display product was not found.");
+                    return View("DisplayProducts", await BuildDisplayProductsPageAsync(search, form, "displayProductModal"));
+                }
+
+                if (displayStock.Product is not null)
+                {
+                    displayStock.Product.CategoryId = form.CategoryId;
+                    displayStock.Product.Name = form.ProductName.Trim();
+                    displayStock.Product.IsActive = form.IsActive;
+                    displayStock.Product.Status = form.IsActive ? 1 : 0;
+                    displayStock.Product.UpdatedAt = now;
+                }
+
+                if (displayStock.Batch is not null)
+                {
+                    displayStock.Batch.CostPrice = form.CostPrice!.Value;
+                    displayStock.Batch.SellingPrice = form.SellingPrice ?? 0m;
+                    displayStock.Batch.IsActive = form.IsActive;
+                    displayStock.Batch.Status = form.IsActive ? 1 : 0;
+                    displayStock.Batch.UpdatedAt = now;
+                }
+
+                displayStock.Quantity = form.Quantity!.Value;
+                displayStock.UpdatedAt = now;
+
+                await _db.SaveChangesAsync();
+                return RedirectToAction(nameof(DisplayProducts), new { search });
+            }
+
             var product = await CreateOrGetProductAsync(form, now);
             var batch = await CreateProductBatchAsync(product, form, now);
 

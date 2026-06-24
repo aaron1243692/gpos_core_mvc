@@ -71,48 +71,62 @@
                     <div class="dropend eg-rb-dropdown-group">
                         <button class="dropdown-item eg-rb-dropdown-group-toggle" type="button">Sales</button>
                         <div class="dropdown-menu eg-rb-submenu">
-                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Transaction.ProductSales" ? "active" : "")" asp-controller="Transaction" asp-action="ProductSales">Product</a>
-                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Transaction.FuelSales" ? "active" : "")" asp-controller="Transaction" asp-action="FuelSales">Fuel</a>
+                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Transaction.ProductSales" ? "active" : "")" asp-controller="Transaction" asp-action="ProductSales">Product Sales</a>
+                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Transaction.FuelSales" ? "active" : "")" asp-controller="Transaction" asp-action="FuelSales">Fuel Sales</a>
                         </div>
                     </div>
                     <div class="dropend eg-rb-dropdown-group">
-                        <button class="dropdown-item eg-rb-dropdown-group-toggle" type="button">Employee</button>
+                        <button class="dropdown-item eg-rb-dropdown-group-toggle" type="button">Cash</button>
                         <div class="dropdown-menu eg-rb-submenu">
-                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Transaction.EmployeeProductSales" ? "active" : "")" asp-controller="Transaction" asp-action="EmployeeProductSales">Product</a>
-                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Transaction.EmployeeFuelSales" ? "active" : "")" asp-controller="Transaction" asp-action="EmployeeFuelSales">Fuel</a>
                             <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Transaction.DailyCash" ? "active" : "")" asp-controller="Transaction" asp-action="DailyCash">Daily Cash</a>
+                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Transaction.CashIn" ? "active" : "")" asp-controller="Transaction" asp-action="CashIn">Cash In</a>
+                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Transaction.CashOut" ? "active" : "")" asp-controller="Transaction" asp-action="CashOut">Cash Out</a>
+                        </div>
+                    </div>
+                    <div class="dropend eg-rb-dropdown-group">
+                        <button class="dropdown-item eg-rb-dropdown-group-toggle" type="button">Stock Receiving</button>
+                        <div class="dropdown-menu eg-rb-submenu">
+                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Transaction.ProductReceiving" ? "active" : "")" asp-controller="Transaction" asp-action="ProductReceiving">Product Receiving</a>
+                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Transaction.FuelReceiving" ? "active" : "")" asp-controller="Transaction" asp-action="FuelReceiving">Fuel Receiving</a>
                         </div>
                     </div>
                     <div class="dropend eg-rb-dropdown-group">
                         <button class="dropdown-item eg-rb-dropdown-group-toggle" type="button">Stock Transfer</button>
                         <div class="dropdown-menu eg-rb-submenu">
-                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Transaction.WarehouseTransfer" ? "active" : "")" asp-controller="Transaction" asp-action="WarehouseTransfer">Warehouse</a>
-                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Transaction.DisplayTransfer" ? "active" : "")" asp-controller="Transaction" asp-action="DisplayTransfer">Display</a>
-                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Transaction.FuelTransfer" ? "active" : "")" asp-controller="Transaction" asp-action="FuelTransfer">Fuel</a>
-                        </div>
-                    </div>
-                    <div class="dropend eg-rb-dropdown-group">
-                        <button class="dropdown-item eg-rb-dropdown-group-toggle" type="button">Adjustment</button>
-                        <div class="dropdown-menu eg-rb-submenu">
-                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Transaction.WarehouseAdjustment" ? "active" : "")" asp-controller="Transaction" asp-action="WarehouseAdjustment">Warehouse</a>
-                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Transaction.ProductAdjustment" ? "active" : "")" asp-controller="Transaction" asp-action="ProductAdjustment">Product</a>
-                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Transaction.FuelAdjustment" ? "active" : "")" asp-controller="Transaction" asp-action="FuelAdjustment">Fuel</a>
+                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Transaction.WarehouseToDisplay" ? "active" : "")" asp-controller="Transaction" asp-action="WarehouseToDisplay">Warehouse to Display</a>
+                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Transaction.DisplayToWarehouse" ? "active" : "")" asp-controller="Transaction" asp-action="DisplayToWarehouse">Display to Warehouse</a>
+                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Transaction.BranchProductTransfer" ? "active" : "")" asp-controller="Transaction" asp-action="BranchProductTransfer">Branch to Branch Product Transfer</a>
+                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Transaction.BranchFuelTransfer" ? "active" : "")" asp-controller="Transaction" asp-action="BranchFuelTransfer">Branch to Branch Fuel Transfer</a>
                         </div>
                     </div>
                     <div class="dropend eg-rb-dropdown-group">
                         <button class="dropdown-item eg-rb-dropdown-group-toggle" type="button">Returns</button>
                         <div class="dropdown-menu eg-rb-submenu">
-                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Transaction.WarehouseReturn" ? "active" : "")" asp-controller="Transaction" asp-action="WarehouseReturn">Warehouse</a>
-                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Transaction.ProductReturn" ? "active" : "")" asp-controller="Transaction" asp-action="ProductReturn">Product</a>
-                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Transaction.FuelReturn" ? "active" : "")" asp-controller="Transaction" asp-action="FuelReturn">Fuel</a>
+                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Transaction.ProductReturn" ? "active" : "")" asp-controller="Transaction" asp-action="ProductReturn">Product Return</a>
+                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Transaction.FuelReturn" ? "active" : "")" asp-controller="Transaction" asp-action="FuelReturn">Fuel Return</a>
                         </div>
                     </div>
                     <div class="dropend eg-rb-dropdown-group">
                         <button class="dropdown-item eg-rb-dropdown-group-toggle" type="button">Void</button>
                         <div class="dropdown-menu eg-rb-submenu">
-                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Transaction.WarehouseVoid" ? "active" : "")" asp-controller="Transaction" asp-action="WarehouseVoid">Warehouse</a>
-                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Transaction.ProductVoid" ? "active" : "")" asp-controller="Transaction" asp-action="ProductVoid">Product</a>
-                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Transaction.FuelVoid" ? "active" : "")" asp-controller="Transaction" asp-action="FuelVoid">Fuel</a>
+                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Transaction.VoidSale" ? "active" : "")" asp-controller="Transaction" asp-action="VoidSale">Void Sale</a>
+                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Transaction.VoidProduct" ? "active" : "")" asp-controller="Transaction" asp-action="VoidProduct">Void Product</a>
+                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Transaction.VoidFuel" ? "active" : "")" asp-controller="Transaction" asp-action="VoidFuel">Void Fuel</a>
+                        </div>
+                    </div>
+                    <div class="dropend eg-rb-dropdown-group">
+                        <button class="dropdown-item eg-rb-dropdown-group-toggle" type="button">Adjustments</button>
+                        <div class="dropdown-menu eg-rb-submenu">
+                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Transaction.DisplayStockAdjustment" ? "active" : "")" asp-controller="Transaction" asp-action="DisplayStockAdjustment">Display Stock Adjustment</a>
+                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Transaction.WarehouseStockAdjustment" ? "active" : "")" asp-controller="Transaction" asp-action="WarehouseStockAdjustment">Warehouse Stock Adjustment</a>
+                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Transaction.TankFuelAdjustment" ? "active" : "")" asp-controller="Transaction" asp-action="TankFuelAdjustment">Tank Fuel Adjustment</a>
+                        </div>
+                    </div>
+                    <div class="dropend eg-rb-dropdown-group">
+                        <button class="dropdown-item eg-rb-dropdown-group-toggle" type="button">Price Adjustment</button>
+                        <div class="dropdown-menu eg-rb-submenu">
+                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Transaction.ProductPriceAdjustment" ? "active" : "")" asp-controller="Transaction" asp-action="ProductPriceAdjustment">Product Price Adjustment</a>
+                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Transaction.FuelPriceAdjustment" ? "active" : "")" asp-controller="Transaction" asp-action="FuelPriceAdjustment">Fuel Price Adjustment</a>
                         </div>
                     </div>
                 </div>

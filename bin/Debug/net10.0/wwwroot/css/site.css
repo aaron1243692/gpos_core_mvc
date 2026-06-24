@@ -1488,7 +1488,7 @@ textarea.form-control {
 }
 
 .admin-table.points-ledger-table {
-  min-width: 1220px;
+  min-width: 1240px;
   table-layout: fixed;
 }
 
@@ -1513,17 +1513,19 @@ textarea.form-control {
   width: 220px;
 }
 
-.points-ledger-table .col-transaction-type {
-  width: 180px;
+.points-ledger-table .col-type {
+  width: 120px;
   white-space: nowrap;
 }
 
 .points-ledger-table .col-points {
-  width: 100px;
+  width: 120px;
 }
 
-.points-ledger-table .col-reference {
-  width: 160px;
+.points-ledger-table .col-old-points,
+.points-ledger-table .col-new-points {
+  width: 130px;
+  white-space: nowrap;
 }
 
 .points-ledger-table .col-remarks {
@@ -1533,6 +1535,135 @@ textarea.form-control {
 .points-ledger-table .col-date {
   width: 160px;
   white-space: nowrap;
+}
+
+.member-picker-field .form-control[readonly] {
+  background: #ffffff;
+  cursor: default;
+}
+
+.member-picker-button {
+  width: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.35rem;
+}
+
+.member-picker-button img {
+  width: 18px;
+  height: 18px;
+  display: block;
+}
+
+.member-picker-modal {
+  z-index: 1065;
+}
+
+.member-picker-table-wrap {
+  max-height: 55vh;
+}
+
+.admin-table.member-picker-table {
+  min-width: 920px;
+  table-layout: fixed;
+}
+
+.member-picker-table th {
+  white-space: nowrap;
+}
+
+.member-picker-table .col-no {
+  width: 60px;
+}
+
+.member-picker-table .col-id {
+  width: 80px;
+}
+
+.member-picker-table .col-card {
+  width: 150px;
+}
+
+.member-picker-table .col-name {
+  width: 240px;
+}
+
+.member-picker-table .col-contact {
+  width: 180px;
+}
+
+.member-picker-table .col-points {
+  width: 120px;
+}
+
+.member-picker-table .col-action {
+  width: 110px;
+}
+
+.admin-table.discount-rules-table {
+  min-width: 1400px;
+  table-layout: fixed;
+}
+
+.discount-rules-table th {
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+.discount-rules-table td {
+  vertical-align: middle;
+}
+
+.discount-rules-table .col-discount {
+  width: 220px;
+}
+
+.discount-rules-table .col-applies-to,
+.discount-rules-table .col-type {
+  width: 140px;
+}
+
+.discount-rules-table .col-value,
+.discount-rules-table .col-minimum {
+  width: 150px;
+}
+
+.discount-rules-table .col-member-required {
+  width: 160px;
+}
+
+.discount-rules-table .col-date {
+  width: 140px;
+}
+
+.discount-rules-table .col-status {
+  width: 110px;
+}
+
+.admin-table.rebate-table {
+  min-width: 1100px;
+  table-layout: fixed;
+}
+
+.rebate-table th {
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+.rebate-table td {
+  vertical-align: middle;
+}
+
+.rebate-table .col-applies-to,
+.rebate-table .col-points,
+.rebate-table .col-amount,
+.rebate-table .col-minimum {
+  width: 150px;
+}
+
+.rebate-table .col-status {
+  width: 110px;
 }
 
 @media (max-width: 767.98px) {
@@ -4032,5 +4163,76 @@ textarea.form-control {
   .salesman-pos-panels,
   .salesman-pos-bottom-bar {
     display: none !important;
+  }
+}
+
+.transaction-ui-page {
+  display: grid;
+  min-height: 0;
+  gap: 1rem;
+}
+
+.transaction-ui-card {
+  display: flex;
+  min-height: 0;
+  flex-direction: column;
+}
+
+.transaction-ui-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.9rem;
+}
+
+.transaction-ui-search {
+  width: min(100%, 420px);
+}
+
+.transaction-ui-table-wrap {
+  flex: 1 1 auto;
+  min-height: 18rem;
+  overflow: auto;
+}
+
+.transaction-ui-actions {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.transaction-db-card {
+  border-style: dashed;
+}
+
+.transaction-db-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin: 0.65rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.transaction-db-list li {
+  padding: 0.35rem 0.55rem;
+  border: 1px solid var(--app-line);
+  border-radius: var(--app-radius);
+  background: var(--app-primary-soft);
+  color: var(--app-primary-dark);
+  font-size: 0.82rem;
+  font-weight: 850;
+}
+
+@media (max-width: 575.98px) {
+  .transaction-ui-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .transaction-ui-search,
+  .transaction-ui-toolbar .btn {
+    width: 100%;
   }
 }
