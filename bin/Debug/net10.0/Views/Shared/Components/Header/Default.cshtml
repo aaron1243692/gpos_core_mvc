@@ -36,6 +36,7 @@
                         <button class="dropdown-item eg-rb-dropdown-group-toggle" type="button">Discounts</button>
                         <div class="dropdown-menu eg-rb-submenu">
                             <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Configuration.Discounts" ? "active" : "")" asp-controller="Configuration" asp-action="Discounts">Discounts</a>
+                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Configuration.EarningRules" ? "active" : "")" asp-controller="Configuration" asp-action="EarningRules">Earning Rules</a>
                             <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Configuration.Members" ? "active" : "")" asp-controller="Configuration" asp-action="Members">Members</a>
                             <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Configuration.Rebate" ? "active" : "")" asp-controller="Configuration" asp-action="Rebate">Rebate</a>
                             <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Configuration.PointsLedger" ? "active" : "")" asp-controller="Configuration" asp-action="PointsLedger">Points Ledger</a>

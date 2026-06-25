@@ -21,5 +21,6 @@ namespace gpos.Models
         public ICollection<ProductSale> ProductSales { get; set; } = new List<ProductSale>();
         public ICollection<FuelSale> FuelSales { get; set; } = new List<FuelSale>();
         public ICollection<Payment> Payments { get; set; } = new List<Payment>();
+        public ICollection<PointsLedger> PointsLedger { get; set; } = new List<PointsLedger>();
     }
 }

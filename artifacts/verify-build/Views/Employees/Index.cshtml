@@ -1,0 +1,313 @@
+@model gpos.Models.ViewModels.EmployeeSetupPageViewModel
+
+<div class="page-header">
+    <div class="page-heading">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item">GPOS</li>
+                <li class="breadcrumb-item">Setup</li>
+                <li class="breadcrumb-item">Config</li>
+                <li class="breadcrumb-item active" aria-current="page">Employees</li>
+            </ol>
+        </nav>
+        <h1>Employees</h1>
+        <p class="page-subtitle">Assign employees to departments and positions.</p>
+    </div>
+</div>
+
+<section class="content-card setup-crud-card setup-table-card">
+    @if (TempData["EmployeeSetupFeedback"] is string feedback)
+    {
+        <div class="alert alert-info mb-0" role="alert">@feedback</div>
+    }
+    <div class="table-actions fuel-toolbar">
+        <form asp-action="Index" method="get" class="setup-search-form fuel-toolbar-search">
+            <input class="form-control" name="search" value="@Model.Search" placeholder="Search employees" />
+        </form>
+        <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#employeeModal">Add Employee</button>
+    </div>
+    <div class="setup-table-scroll">
+        <table class="table app-table table-sm align-middle admin-table employee-table mb-0">
+            <colgroup>
+                <col class="col-no" />
+                <col class="col-id" />
+                <col class="col-username" />
+                <col class="col-name" />
+                <col class="col-normal" />
+                <col class="col-normal" />
+                <col class="col-normal" />
+                <col class="col-status" />
+                <col class="col-action-wide" />
+            </colgroup>
+            <thead>
+                <tr>
+                    <th>No</th>
+                    <th>ID</th>
+                    <th>Username</th>
+                    <th>Full Name</th>
+                    <th>Branch</th>
+                    <th>Department</th>
+                    <th>Position</th>
+                    <th>Status</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model.EmployeeAccounts.Count == 0)
+                {
+                    <tr><td class="text-center text-muted fw-bold" colspan="9">No employees yet.</td></tr>
+                }
+                @for (var i = 0; i < Model.EmployeeAccounts.Count; i++)
+                {
+                    <tr>
+                        <td>@(i + 1)</td>
+                        <td>@Model.EmployeeAccounts[i].Id</td>
+                        <td>@Model.EmployeeAccounts[i].Username</td>
+                        <td>@Model.EmployeeAccounts[i].FullName</td>
+                        <td>@Model.EmployeeAccounts[i].Department?.Branch?.Name</td>
+                        <td>@Model.EmployeeAccounts[i].Department?.Name</td>
+                        <td>@Model.EmployeeAccounts[i].Position?.Name</td>
+                        <td>@(Model.EmployeeAccounts[i].Status == 1 ? "Active" : "Disabled")</td>
+                        <td>
+                            <div class="table-actions employee-action-buttons">
+                                <a class="btn btn-sm btn-outline-primary" asp-action="Index" asp-route-editId="@Model.EmployeeAccounts[i].Id" asp-route-search="@Model.Search">Edit</a>
+                                <a class="btn btn-sm btn-outline-success" asp-action="Index" asp-route-resetPasswordId="@Model.EmployeeAccounts[i].Id" asp-route-search="@Model.Search">Reset Password</a>
+                                <form asp-action="Delete" method="post" onsubmit="return confirm('Disable this employee?');">
+                                    @Html.AntiForgeryToken()
+                                    <input name="id" type="hidden" value="@Model.EmployeeAccounts[i].Id" />
+                                    <input name="search" type="hidden" value="@Model.Search" />
+                                    <button class="btn btn-sm btn-outline-danger" type="submit">Delete</button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<div class="modal fade" id="employeeModal" tabindex="-1" aria-labelledby="employeeModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <form asp-action="Save" method="post">
+                @Html.AntiForgeryToken()
+                <input asp-for="EmployeeForm.Id" type="hidden" />
+                <input name="search" type="hidden" value="@Model.Search" />
+                <div class="modal-header">
+                    <h2 class="modal-title fs-5" id="employeeModalLabel">Employee</h2>
+                    <button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    @if (Model.EmployeeForm.Id == 0)
+                    {
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <h3 class="fs-6 mb-0">Account Information</h3>
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <label asp-for="EmployeeForm.Username" class="form-label">Username</label>
+                                <input asp-for="EmployeeForm.Username" class="form-control" autocomplete="off" />
+                                <span asp-validation-for="EmployeeForm.Username" class="text-danger"></span>
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <label asp-for="EmployeeForm.Password" class="form-label">Password</label>
+                                <input asp-for="EmployeeForm.Password" type="password" class="form-control" autocomplete="new-password" />
+                                <span asp-validation-for="EmployeeForm.Password" class="text-danger"></span>
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <label asp-for="EmployeeForm.FullName" class="form-label">Full Name</label>
+                                <input asp-for="EmployeeForm.FullName" class="form-control" autocomplete="off" />
+                                <span asp-validation-for="EmployeeForm.FullName" class="text-danger"></span>
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <label asp-for="EmployeeForm.Email" class="form-label">Email</label>
+                                <input asp-for="EmployeeForm.Email" class="form-control" autocomplete="off" />
+                                <span asp-validation-for="EmployeeForm.Email" class="text-danger"></span>
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <label asp-for="EmployeeForm.ContactNumber" class="form-label">Contact Number</label>
+                                <input asp-for="EmployeeForm.ContactNumber" class="form-control" autocomplete="off" />
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <label asp-for="EmployeeForm.Address" class="form-label">Address</label>
+                                <textarea asp-for="EmployeeForm.Address" class="form-control" rows="2"></textarea>
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <label asp-for="EmployeeForm.BranchId" class="form-label">Branch</label>
+                                <select asp-for="EmployeeForm.BranchId" asp-items="Model.BranchOptions" class="form-select" id="employeeBranchSelect">
+                                    <option value="0">Select branch</option>
+                                </select>
+                                <span asp-validation-for="EmployeeForm.BranchId" class="text-danger"></span>
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <label asp-for="EmployeeForm.DepartmentId" class="form-label">Department</label>
+                                <select asp-for="EmployeeForm.DepartmentId" class="form-select" id="employeeDepartmentSelect">
+                                    <option value="0" data-branch-id="">Select department</option>
+                                    @for (var i = 0; i < Model.Departments.Count; i++)
+                                    {
+                                        <option value="@Model.Departments[i].Id" data-branch-id="@Model.Departments[i].BranchId" selected="@(Model.EmployeeForm.DepartmentId == Model.Departments[i].Id ? "selected" : null)">@Model.Departments[i].Name</option>
+                                    }
+                                </select>
+                                <span asp-validation-for="EmployeeForm.DepartmentId" class="text-danger"></span>
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <label asp-for="EmployeeForm.PositionId" class="form-label">Position</label>
+                                <select asp-for="EmployeeForm.PositionId" asp-items="Model.PositionOptions" class="form-select">
+                                    <option value="0">Select position</option>
+                                </select>
+                                <span asp-validation-for="EmployeeForm.PositionId" class="text-danger"></span>
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <label asp-for="EmployeeForm.Status" class="form-label">Status</label>
+                                <select asp-for="EmployeeForm.Status" class="form-select">
+                                    <option value="1">Active</option>
+                                    <option value="0">Inactive</option>
+                                </select>
+                            </div>
+                        </div>
+                    }
+                    @if (Model.EmployeeForm.Id > 0)
+                    {
+                        <div class="row g-3">
+                            <div class="col-12 col-md-6">
+                                <label asp-for="EmployeeForm.Username" class="form-label">Username</label>
+                                <input asp-for="EmployeeForm.Username" class="form-control" autocomplete="off" />
+                                <span asp-validation-for="EmployeeForm.Username" class="text-danger"></span>
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <label asp-for="EmployeeForm.FullName" class="form-label">Full Name</label>
+                                <input asp-for="EmployeeForm.FullName" class="form-control" autocomplete="off" />
+                                <span asp-validation-for="EmployeeForm.FullName" class="text-danger"></span>
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <label asp-for="EmployeeForm.Email" class="form-label">Email</label>
+                                <input asp-for="EmployeeForm.Email" class="form-control" autocomplete="off" />
+                                <span asp-validation-for="EmployeeForm.Email" class="text-danger"></span>
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <label asp-for="EmployeeForm.ContactNumber" class="form-label">Contact Number</label>
+                                <input asp-for="EmployeeForm.ContactNumber" class="form-control" autocomplete="off" />
+                            </div>
+                            <div class="col-12">
+                                <label asp-for="EmployeeForm.Address" class="form-label">Address</label>
+                                <textarea asp-for="EmployeeForm.Address" class="form-control" rows="3"></textarea>
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <label asp-for="EmployeeForm.BranchId" class="form-label">Branch</label>
+                                <select asp-for="EmployeeForm.BranchId" asp-items="Model.BranchOptions" class="form-select" id="employeeBranchSelect">
+                                    <option value="0">Select branch</option>
+                                </select>
+                                <span asp-validation-for="EmployeeForm.BranchId" class="text-danger"></span>
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <label asp-for="EmployeeForm.DepartmentId" class="form-label">Department</label>
+                                <select asp-for="EmployeeForm.DepartmentId" class="form-select" id="employeeDepartmentSelect">
+                                    <option value="0" data-branch-id="">Select department</option>
+                                    @for (var i = 0; i < Model.Departments.Count; i++)
+                                    {
+                                        <option value="@Model.Departments[i].Id" data-branch-id="@Model.Departments[i].BranchId" selected="@(Model.EmployeeForm.DepartmentId == Model.Departments[i].Id ? "selected" : null)">@Model.Departments[i].Name</option>
+                                    }
+                                </select>
+                                <span asp-validation-for="EmployeeForm.DepartmentId" class="text-danger"></span>
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <label asp-for="EmployeeForm.PositionId" class="form-label">Position</label>
+                                <select asp-for="EmployeeForm.PositionId" asp-items="Model.PositionOptions" class="form-select">
+                                    <option value="0">Select position</option>
+                                </select>
+                                <span asp-validation-for="EmployeeForm.PositionId" class="text-danger"></span>
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <label asp-for="EmployeeForm.Status" class="form-label">Status</label>
+                                <select asp-for="EmployeeForm.Status" class="form-select">
+                                    <option value="1">Active</option>
+                                    <option value="0">Inactive</option>
+                                </select>
+                            </div>
+                        </div>
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button>
+                    <button class="btn btn-primary" type="submit">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="resetPasswordModal" tabindex="-1" aria-labelledby="resetPasswordModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <form asp-action="ResetPassword" method="post">
+                @Html.AntiForgeryToken()
+                <input asp-for="ResetPasswordForm.Id" type="hidden" />
+                <input asp-for="ResetPasswordForm.DisplayName" type="hidden" />
+                <input name="search" type="hidden" value="@Model.Search" />
+                <div class="modal-header">
+                    <h2 class="modal-title fs-5" id="resetPasswordModalLabel">Reset Password</h2>
+                    <button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="mb-3">Reset password for <strong>@Model.ResetPasswordForm.DisplayName</strong>.</p>
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label asp-for="ResetPasswordForm.NewPassword" class="form-label">New Password</label>
+                            <input asp-for="ResetPasswordForm.NewPassword" type="password" class="form-control" autocomplete="new-password" />
+                            <span asp-validation-for="ResetPasswordForm.NewPassword" class="text-danger"></span>
+                        </div>
+                        <div class="col-12">
+                            <label asp-for="ResetPasswordForm.ConfirmPassword" class="form-label">Confirm Password</label>
+                            <input asp-for="ResetPasswordForm.ConfirmPassword" type="password" class="form-control" autocomplete="new-password" />
+                            <span asp-validation-for="ResetPasswordForm.ConfirmPassword" class="text-danger"></span>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button>
+                    <button class="btn btn-primary" type="submit">Reset Password</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            const modalId = "@Model.ActiveModalId";
+            const modalElement = modalId ? document.getElementById(modalId) : null;
+
+            if (modalElement && window.bootstrap) {
+                bootstrap.Modal.getOrCreateInstance(modalElement).show();
+            }
+
+            const branchSelect = document.getElementById("employeeBranchSelect");
+            const departmentSelect = document.getElementById("employeeDepartmentSelect");
+
+            if (!branchSelect || !departmentSelect) {
+                return;
+            }
+
+            const departmentOptions = Array.from(departmentSelect.options);
+
+            const filterDepartments = (clearSelected) => {
+                const branchId = branchSelect.value;
+
+                departmentOptions.forEach(option => {
+                    const optionBranchId = option.dataset.branchId || "";
+                    option.hidden = option.value !== "0" && optionBranchId !== branchId;
+                });
+
+                if (clearSelected || departmentSelect.selectedOptions[0]?.hidden) {
+                    departmentSelect.value = "0";
+                }
+            };
+
+            filterDepartments(false);
+            branchSelect.addEventListener("change", () => filterDepartments(true));
+        });
+    </script>
+}

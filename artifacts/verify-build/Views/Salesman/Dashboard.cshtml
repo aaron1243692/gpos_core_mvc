@@ -1,0 +1,106 @@
+@{
+    ViewData["Title"] = "Dashboard";
+    ViewData["Section"] = "Salesman";
+}
+
+<section class="salesman-page">
+    <div class="salesman-dashboard-grid">
+        @foreach (var metric in new[] {
+            ("Current shift status", "Open", "Morning Shift"),
+            ("Beginning cash", "PHP 5,000.00", "Added 6:04 AM"),
+            ("My fuel sales today", "PHP 42,850.00", "28 pump sales"),
+            ("My POS sales today", "PHP 8,420.00", "17 product sales"),
+            ("My total sales today", "PHP 51,270.00", "Fuel + POS"),
+            ("My cash payments", "PHP 31,900.00", "Cash collected"),
+            ("My non-cash payments", "PHP 19,370.00", "GCash, card, bank"),
+            ("Expected cash", "PHP 36,900.00", "Beginning + cash sales"),
+            ("Pending closing balance", "Ready", "Close shift when done")
+        })
+        {
+            <article class="metric-card salesman-metric">
+                <span class="metric-label">@metric.Item1</span>
+                <strong>@metric.Item2</strong>
+                <small>@metric.Item3</small>
+            </article>
+        }
+    </div>
+
+    <div class="salesman-grid-2">
+        <section class="content-card">
+            <div class="card-title-row">
+                <div>
+                    <h2>Quick Actions</h2>
+                    <p>Salesman-only actions for today&apos;s shift.</p>
+                </div>
+            </div>
+            <div class="salesman-action-grid">
+                <a class="btn btn-primary" asp-controller="Salesman" asp-action="OpenShift">Open Shift</a>
+                <a class="btn btn-outline-secondary" asp-controller="Salesman" asp-action="BeginningCash">Add Beginning Cash</a>
+                <a class="btn btn-outline-secondary" asp-controller="Salesman" asp-action="PumpTransaction">Pump Transaction</a>
+                <a class="btn btn-outline-secondary" asp-controller="Salesman" asp-action="POS">POS Sale</a>
+                <a class="btn btn-outline-secondary" asp-controller="Salesman" asp-action="CustomerSearch">Customer Search</a>
+                <a class="btn btn-outline-secondary" asp-controller="Salesman" asp-action="CloseShift">Close Shift</a>
+            </div>
+        </section>
+
+        <section class="content-card">
+            <div class="card-title-row">
+                <div>
+                    <h2>Payment Summary</h2>
+                    <p>Frontend sample totals for the active shift.</p>
+                </div>
+            </div>
+            <div class="salesman-summary-list">
+                <div><span>Cash</span><strong>PHP 31,900.00</strong></div>
+                <div><span>GCash</span><strong>PHP 8,300.00</strong></div>
+                <div><span>Card</span><strong>PHP 7,820.00</strong></div>
+                <div><span>Bank Transfer</span><strong>PHP 3,250.00</strong></div>
+            </div>
+        </section>
+    </div>
+
+    <section class="content-card">
+        <div class="card-title-row">
+            <div>
+                <h2>Recent Transactions</h2>
+                <p>Latest pump and POS transactions for this salesman.</p>
+            </div>
+        </div>
+        <div class="table-responsive">
+            <table class="table app-table">
+                <thead>
+                    <tr>
+                        <th>Transaction no</th>
+                        <th>Type</th>
+                        <th>Customer</th>
+                        <th>Amount</th>
+                        <th>Payment method</th>
+                        <th>Status</th>
+                        <th>Date/time</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td>TXN-2026-001</td><td>Fuel</td><td>Juan Dela Cruz</td><td>PHP 2,600.00</td><td>Cash</td><td><span class="status-badge">Paid</span></td><td>Jun 15, 2026 08:12</td><td><button class="btn btn-outline-secondary btn-sm" disabled>View</button></td></tr>
+                    <tr><td>TXN-2026-002</td><td>POS</td><td>Walk-in</td><td>PHP 530.00</td><td>GCash</td><td><span class="status-badge">Paid</span></td><td>Jun 15, 2026 08:31</td><td><button class="btn btn-outline-secondary btn-sm" disabled>View</button></td></tr>
+                    <tr><td>TXN-2026-003</td><td>Fuel</td><td>Maria Santos</td><td>PHP 1,850.00</td><td>Card</td><td><span class="status-badge">Paid</span></td><td>Jun 15, 2026 09:02</td><td><button class="btn btn-outline-secondary btn-sm" disabled>View</button></td></tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <section class="content-card">
+        <div class="card-title-row">
+            <div>
+                <h2>Shift Summary</h2>
+                <p>Open shift snapshot before closing balance.</p>
+            </div>
+        </div>
+        <div class="salesman-summary-list salesman-summary-grid">
+            <div><span>Shift</span><strong>Morning Shift</strong></div>
+            <div><span>Opened at</span><strong>6:00 AM</strong></div>
+            <div><span>Beginning cash</span><strong>PHP 5,000.00</strong></div>
+            <div><span>Expected cash</span><strong>PHP 36,900.00</strong></div>
+        </div>
+    </section>
+</section>

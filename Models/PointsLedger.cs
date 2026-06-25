@@ -10,9 +10,11 @@ namespace gpos.Models
         public decimal NewPoints { get; set; }
         public string? ReferenceType { get; set; }
         public int? ReferenceId { get; set; }
+        public int? SaleId { get; set; }
         public string? Remarks { get; set; }
         public DateTime? CreatedAt { get; set; }
 
         public Member? Member { get; set; }
+        public Sale? Sale { get; set; }
     }
 }

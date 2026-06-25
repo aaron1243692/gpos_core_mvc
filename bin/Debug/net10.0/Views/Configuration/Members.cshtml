@@ -11,7 +11,7 @@
             </ol>
         </nav>
         <h1>Members</h1>
-        <p class="page-subtitle">Manage discount members.</p>
+        <p class="page-subtitle">Manage member discounts and earning rules.</p>
     </div>
 </div>
 
@@ -37,6 +37,7 @@
                 <col class="col-normal" />
                 <col class="col-normal" />
                 <col class="col-normal" />
+                <col class="col-normal" />
                 <col class="col-action" />
             </colgroup>
             <thead>
@@ -47,6 +48,7 @@
                     <th class="col-code">Card No</th>
                     <th class="col-name">Full Name</th>
                     <th>Discount</th>
+                    <th>Earning Rule</th>
                     <th class="col-money">Points</th>
                     <th class="col-status">Status</th>
                     <th class="col-action">Action</th>
@@ -55,7 +57,7 @@
             <tbody>
                 @if (Model.Members.Count == 0)
                 {
-                    <tr><td class="text-center text-muted fw-bold" colspan="9">No members yet.</td></tr>
+                    <tr><td class="text-center text-muted fw-bold" colspan="10">No members yet.</td></tr>
                 }
                 @for (var i = 0; i < Model.Members.Count; i++)
                 {
@@ -66,6 +68,7 @@
                         <td>@(Model.Members[i].CardNo ?? "-")</td>
                         <td>@Model.Members[i].FullName</td>
                         <td>@(Model.Members[i].Discount == null ? "No discount" : Model.Members[i].Discount!.Name)</td>
+                        <td>@(Model.Members[i].EarningRule == null ? "No earning rule" : $"{Model.Members[i].EarningRule!.Name} ({Model.Members[i].EarningRule!.EarnRate:N2}%)")</td>
                         <td>@Model.Members[i].Points.ToString("N2")</td>
                         <td class="col-status">
                             @if (Model.Members[i].Status == 1)
@@ -137,6 +140,11 @@
                             <label asp-for="MemberForm.DiscountId" class="form-label">Discount</label>
                             <select asp-for="MemberForm.DiscountId" asp-items="Model.DiscountOptions" class="form-select"></select>
                             <span asp-validation-for="MemberForm.DiscountId" class="text-danger"></span>
+                        </div>
+                        <div class="col-md-6">
+                            <label asp-for="MemberForm.EarningRuleId" class="form-label">Earning Rule</label>
+                            <select asp-for="MemberForm.EarningRuleId" asp-items="Model.EarningRuleOptions" class="form-select"></select>
+                            <span asp-validation-for="MemberForm.EarningRuleId" class="text-danger"></span>
                         </div>
                         <div class="col-md-6">
                             <label asp-for="MemberForm.Points" class="form-label">Points</label>

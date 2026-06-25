@@ -190,6 +190,11 @@ namespace gpos.Controllers
             return View(await BuildDiscountsPageAsync(search, editId: editId, activeModalId: editId.HasValue ? "discountModal" : ""));
         }
 
+        public async Task<IActionResult> EarningRules(string? search, int? editId)
+        {
+            return View(await BuildEarningRulesPageAsync(search, editId: editId, activeModalId: editId.HasValue ? "earningRuleModal" : ""));
+        }
+
         public async Task<IActionResult> Members(string? search, int? editId)
         {
             return View(await BuildMembersPageAsync(search, editId: editId, activeModalId: editId.HasValue ? "memberModal" : ""));
@@ -244,6 +249,64 @@ namespace gpos.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        public async Task<IActionResult> SaveEarningRule([Bind(Prefix = "EarningRuleForm")] EarningRuleForm form, string? search)
+        {
+            if (!ModelState.IsValid)
+            {
+                return View("EarningRules", await BuildEarningRulesPageAsync(search, form, activeModalId: "earningRuleModal"));
+            }
+
+            var name = form.Name.Trim();
+            var hasDuplicateName = await _db.EarningRules.AnyAsync(rule => rule.Id != form.Id && rule.Name == name);
+
+            if (hasDuplicateName)
+            {
+                ModelState.AddModelError("EarningRuleForm.Name", "Earning Rule already exists.");
+                return View("EarningRules", await BuildEarningRulesPageAsync(search, form, activeModalId: "earningRuleModal"));
+            }
+
+            var now = DateTime.UtcNow;
+            var earningRule = form.Id > 0 ? await _db.EarningRules.FindAsync(form.Id) : new EarningRule { CreatedAt = now };
+
+            if (earningRule is null)
+            {
+                return NotFound();
+            }
+
+            earningRule.Name = name;
+            earningRule.EarnRate = form.EarnRate!.Value;
+            earningRule.Description = string.IsNullOrWhiteSpace(form.Description) ? null : form.Description.Trim();
+            earningRule.IsActive = form.IsActive;
+            earningRule.UpdatedAt = now;
+
+            if (form.Id == 0)
+            {
+                _db.EarningRules.Add(earningRule);
+            }
+
+            await _db.SaveChangesAsync();
+            return RedirectToAction(nameof(EarningRules), new { search });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> DeleteEarningRule(int id, string? search)
+        {
+            var earningRule = await _db.EarningRules.FindAsync(id);
+
+            if (earningRule is not null)
+            {
+                earningRule.IsActive = false;
+                earningRule.UpdatedAt = DateTime.UtcNow;
+                TempData["DiscountSetupFeedback"] = "Earning rule disabled.";
+                await _db.SaveChangesAsync();
+            }
+
+            return RedirectToAction(nameof(EarningRules), new { search });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> SaveMember([Bind(Prefix = "MemberForm")] MemberForm form, string? search)
         {
             if (!ModelState.IsValid)
@@ -258,6 +321,17 @@ namespace gpos.Controllers
                 if (!discountExists)
                 {
                     ModelState.AddModelError("MemberForm.DiscountId", "Select an active discount.");
+                    return View("Members", await BuildMembersPageAsync(search, form, activeModalId: "memberModal"));
+                }
+            }
+
+            if (form.EarningRuleId.HasValue)
+            {
+                var earningRuleExists = await _db.EarningRules.AnyAsync(rule => rule.Id == form.EarningRuleId.Value && rule.IsActive);
+
+                if (!earningRuleExists)
+                {
+                    ModelState.AddModelError("MemberForm.EarningRuleId", "Select an active earning rule.");
                     return View("Members", await BuildMembersPageAsync(search, form, activeModalId: "memberModal"));
                 }
             }
@@ -298,6 +372,7 @@ namespace gpos.Controllers
             member.Email = string.IsNullOrWhiteSpace(form.Email) ? null : form.Email.Trim();
             member.Address = string.IsNullOrWhiteSpace(form.Address) ? null : form.Address.Trim();
             member.DiscountId = form.DiscountId;
+            member.EarningRuleId = form.EarningRuleId;
             member.Points = form.Points;
             member.Status = form.Status;
             member.UpdatedAt = now;
@@ -1018,9 +1093,31 @@ namespace gpos.Controllers
             };
         }
 
+        private async Task<DiscountSetupPageViewModel> BuildEarningRulesPageAsync(string? search, EarningRuleForm? form = null, int? editId = null, string activeModalId = "")
+        {
+            IQueryable<EarningRule> query = _db.EarningRules.AsNoTracking();
+            var searchText = (search ?? string.Empty).Trim();
+
+            if (!string.IsNullOrWhiteSpace(searchText))
+            {
+                query = query.Where(rule => rule.Name.Contains(searchText)
+                    || (rule.Description != null && rule.Description.Contains(searchText)));
+            }
+
+            return new DiscountSetupPageViewModel
+            {
+                Search = searchText,
+                ActiveModalId = activeModalId,
+                EarningRuleForm = form ?? await BuildEarningRuleFormAsync(editId),
+                EarningRules = await query.OrderBy(rule => rule.Id).ToListAsync()
+            };
+        }
+
         private async Task<DiscountSetupPageViewModel> BuildMembersPageAsync(string? search, MemberForm? form = null, int? editId = null, string activeModalId = "")
         {
-            IQueryable<Member> query = _db.Members.AsNoTracking().Include(member => member.Discount);
+            IQueryable<Member> query = _db.Members.AsNoTracking()
+                .Include(member => member.Discount)
+                .Include(member => member.EarningRule);
             var searchText = (search ?? string.Empty).Trim();
 
             if (!string.IsNullOrWhiteSpace(searchText))
@@ -1028,7 +1125,8 @@ namespace gpos.Controllers
                 query = query.Where(member => member.MemberNo.Contains(searchText)
                     || member.FullName.Contains(searchText)
                     || (member.CardNo != null && member.CardNo.Contains(searchText))
-                    || (member.Discount != null && member.Discount.Name.Contains(searchText)));
+                    || (member.Discount != null && member.Discount.Name.Contains(searchText))
+                    || (member.EarningRule != null && member.EarningRule.Name.Contains(searchText)));
             }
 
             return new DiscountSetupPageViewModel
@@ -1037,6 +1135,7 @@ namespace gpos.Controllers
                 ActiveModalId = activeModalId,
                 MemberForm = form ?? await BuildMemberFormAsync(editId),
                 DiscountOptions = await BuildDiscountOptionsAsync(),
+                EarningRuleOptions = await BuildEarningRuleOptionsAsync(),
                 Members = await query.OrderBy(member => member.Id).ToListAsync()
             };
         }
@@ -1050,6 +1149,20 @@ namespace gpos.Controllers
                 Id = discount.Id,
                 Name = discount.Name,
                 Status = discount.Status
+            };
+        }
+
+        private async Task<EarningRuleForm> BuildEarningRuleFormAsync(int? editId)
+        {
+            var earningRule = editId.HasValue ? await _db.EarningRules.AsNoTracking().FirstOrDefaultAsync(item => item.Id == editId.Value) : null;
+
+            return earningRule is null ? new EarningRuleForm() : new EarningRuleForm
+            {
+                Id = earningRule.Id,
+                Name = earningRule.Name,
+                EarnRate = earningRule.EarnRate,
+                Description = earningRule.Description,
+                IsActive = earningRule.IsActive
             };
         }
 
@@ -1067,6 +1180,7 @@ namespace gpos.Controllers
                 Email = member.Email,
                 Address = member.Address,
                 DiscountId = member.DiscountId,
+                EarningRuleId = member.EarningRuleId,
                 Points = member.Points,
                 Status = member.Status
             };
@@ -1084,6 +1198,21 @@ namespace gpos.Controllers
                 .ToList();
 
             options.Insert(0, new SelectListItem { Value = "", Text = "No discount" });
+            return options;
+        }
+
+        private async Task<List<SelectListItem>> BuildEarningRuleOptionsAsync()
+        {
+            var earningRules = await _db.EarningRules.AsNoTracking()
+                .Where(rule => rule.IsActive)
+                .OrderBy(rule => rule.Name)
+                .ToListAsync();
+
+            var options = earningRules
+                .Select(rule => new SelectListItem { Value = rule.Id.ToString(), Text = $"{rule.Name} ({rule.EarnRate:N2}%)" })
+                .ToList();
+
+            options.Insert(0, new SelectListItem { Value = "", Text = "No earning rule" });
             return options;
         }
 

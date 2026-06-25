@@ -12,7 +12,6 @@ namespace gpos.Controllers
     [BlockSalesmanSession]
     public class TransactionController : Controller
     {
-        private const string PointsEarnRateSettingKey = "POINTS_EARN_RATE";
         private static readonly string[] SaleStatuses = ["Completed", "Voided", "Returned", "Cancelled"];
         private readonly ApplicationDbContext _db;
 
@@ -84,8 +83,7 @@ namespace gpos.Controllers
                 var rebateAmount = ValidateAndCalculateRebate(member, rebate, grossTotal, productItems.Count > 0, fuelItems.Count > 0);
                 var netTotal = Math.Max(0m, grossTotal - discountAmount - rebateAmount);
                 var cashAmount = Math.Max(0m, request.CashAmount);
-                var pointsEarnRate = await GetPointsEarnRate();
-                var pointsEarned = CalculateEarnedPoints(member, netTotal, pointsEarnRate);
+                var pointsEarned = CalculateEarnedPoints(member, netTotal);
 
                 if (cashAmount < netTotal)
                 {
@@ -137,7 +135,7 @@ namespace gpos.Controllers
                     UpdatedAt = now
                 });
 
-                ApplyPointsChanges(member, rebate, rebateAmount, pointsEarned, sale.Id, now);
+                await ApplyPointsChanges(member, rebate, rebateAmount, pointsEarned, sale.Id, now);
 
                 await _db.SaveChangesAsync();
                 await dbTransaction.CommitAsync();
@@ -585,7 +583,9 @@ namespace gpos.Controllers
                 return null;
             }
 
-            return await _db.Members.FirstOrDefaultAsync(item => item.Status == 1 && (item.CardNo == cardNo || item.MemberNo == cardNo));
+            return await _db.Members
+                .Include(item => item.EarningRule)
+                .FirstOrDefaultAsync(item => item.Status == 1 && (item.CardNo == cardNo || item.MemberNo == cardNo));
         }
 
         private async Task<RebateRule?> FindRebate(int? rebateRuleId)
@@ -599,17 +599,10 @@ namespace gpos.Controllers
             return rebate ?? throw new InvalidOperationException("Selected rebate was not found or is inactive.");
         }
 
-        private async Task<decimal> GetPointsEarnRate()
+        private static decimal CalculateEarnedPoints(Member? member, decimal netTotal)
         {
-            var setting = await _db.LoyaltySettings
-                .AsNoTracking()
-                .FirstOrDefaultAsync(item => item.SettingKey == PointsEarnRateSettingKey);
+            var earnRate = member?.EarningRule?.IsActive == true ? member.EarningRule.EarnRate : 0m;
 
-            return Math.Max(0m, setting?.DecimalValue ?? 0m);
-        }
-
-        private static decimal CalculateEarnedPoints(Member? member, decimal netTotal, decimal earnRate)
-        {
             if (member is null || netTotal <= 0m || earnRate <= 0m)
             {
                 return 0m;
@@ -618,7 +611,7 @@ namespace gpos.Controllers
             return Math.Round(netTotal * (earnRate / 100m), 2, MidpointRounding.AwayFromZero);
         }
 
-        private void ApplyPointsChanges(Member? member, RebateRule? rebate, decimal rebateAmount, decimal pointsEarned, int saleId, DateTime now)
+        private async Task ApplyPointsChanges(Member? member, RebateRule? rebate, decimal rebateAmount, decimal pointsEarned, int saleId, DateTime now)
         {
             if (member is null)
             {
@@ -640,6 +633,7 @@ namespace gpos.Controllers
                     NewPoints = member.Points,
                     ReferenceType = "POS",
                     ReferenceId = saleId,
+                    SaleId = saleId,
                     Remarks = "Used as rebate in POS",
                     CreatedAt = now
                 });
@@ -647,6 +641,16 @@ namespace gpos.Controllers
 
             if (pointsEarned > 0m)
             {
+                var alreadyAwarded = await _db.PointsLedger.AnyAsync(ledger =>
+                    ledger.MemberId == member.Id
+                    && ledger.SaleId == saleId
+                    && ledger.TransactionType == "Earned");
+
+                if (alreadyAwarded)
+                {
+                    return;
+                }
+
                 var oldPoints = member.Points;
                 member.Points += pointsEarned;
                 member.UpdatedAt = now;
@@ -660,6 +664,7 @@ namespace gpos.Controllers
                     NewPoints = member.Points,
                     ReferenceType = "POS",
                     ReferenceId = saleId,
+                    SaleId = saleId,
                     Remarks = "Earned from POS sale",
                     CreatedAt = now
                 });

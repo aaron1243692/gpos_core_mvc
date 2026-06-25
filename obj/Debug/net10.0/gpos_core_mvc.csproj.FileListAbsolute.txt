@@ -8585,3 +8585,5 @@ C:\project\gpos_core_mvc\artifacts\verify-loyalty-build\ru\Microsoft.CodeAnalysi
 C:\project\gpos_core_mvc\artifacts\verify-loyalty-build\tr\Microsoft.CodeAnalysis.Workspaces.MSBuild.BuildHost.resources.dll
 C:\project\gpos_core_mvc\artifacts\verify-loyalty-build\zh-Hans\Microsoft.CodeAnalysis.Workspaces.MSBuild.BuildHost.resources.dll
 C:\project\gpos_core_mvc\artifacts\verify-loyalty-build\zh-Hant\Microsoft.CodeAnalysis.Workspaces.MSBuild.BuildHost.resources.dll
+C:\project\gpos_core_mvc\bin\Debug\net10.0\Views\Configuration\EarningRules.cshtml
+C:\project\gpos_core_mvc\artifacts\verify-build\Views\Configuration\EarningRules.cshtml

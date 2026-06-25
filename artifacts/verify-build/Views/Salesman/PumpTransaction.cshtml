@@ -1,0 +1,218 @@
+@{
+    ViewData["Title"] = "Pump Transaction";
+    ViewData["Section"] = "Transactions";
+}
+
+<div class="salesman-sell-page">
+    <section class="pos-card pos-products-panel">
+        <div class="pos-section-header">
+            <div><span class="pos-eyebrow">Pump</span><h2>Select Pump</h2></div>
+            <span class="status-badge">Shift Open</span>
+        </div>
+        <div class="salesman-warning-card mb-3" id="pumpShiftWarning">
+            <strong>Frontend state</strong>
+            <span>Shift and beginning cash are marked ready for UI testing.</span>
+        </div>
+        <div class="salesman-pump-grid" id="pumpList"></div>
+    </section>
+
+    <section class="pos-card pos-cart-panel">
+        <div class="pos-section-header">
+            <div><span class="pos-eyebrow">Fuel</span><h2>Fuel Details</h2></div>
+        </div>
+        <div class="row g-3">
+            <div class="col-12 col-md-6"><label class="form-label">Pump unit</label><input class="form-control" id="pumpUnit" readonly /></div>
+            <div class="col-12 col-md-6"><label class="form-label">Pump number</label><input class="form-control" id="pumpNumber" readonly /></div>
+            <div class="col-12 col-md-6"><label class="form-label">Fuel type</label><input class="form-control" id="fuelType" readonly /></div>
+            <div class="col-12 col-md-6"><label class="form-label">Fuel tank</label><input class="form-control" id="fuelTank" readonly /></div>
+            <div class="col-12 col-md-4"><label class="form-label">Price per liter</label><input class="form-control" id="pricePerLiter" readonly /></div>
+            <div class="col-12 col-md-4"><label class="form-label" for="liters">Liters</label><input class="form-control" id="liters" type="number" min="0" step="0.001" /></div>
+            <div class="col-12 col-md-4"><label class="form-label" for="fuelAmount">Amount</label><input class="form-control" id="fuelAmount" type="number" min="0" step="0.01" /></div>
+        </div>
+        <div class="pos-summary-card">
+            <div class="pos-summary-row"><span>Gross amount</span><strong id="grossAmount">PHP 0.00</strong></div>
+            <div class="pos-summary-row"><span>Discount</span><strong id="discountAmount">PHP 0.00</strong></div>
+            <div class="pos-summary-row"><span>Points redeemed</span><strong id="pointsAmount">PHP 0.00</strong></div>
+            <div class="pos-summary-row pos-summary-total"><span>Net amount</span><strong id="netAmount">PHP 0.00</strong></div>
+            <div class="pos-summary-row"><span>Payment</span><strong id="paymentTotal">PHP 0.00</strong></div>
+            <div class="pos-summary-row"><span>Change</span><strong id="changeAmount">PHP 0.00</strong></div>
+            <div class="pos-summary-row"><span>Points earned</span><strong id="pointsEarned">0 pts</strong></div>
+        </div>
+        <div class="pos-validation" id="pumpValidation"></div>
+        <div class="pos-action-row">
+            <button class="btn btn-outline-secondary" id="receiptBtn" type="button">Print Receipt</button>
+            <button class="btn btn-primary" id="completePumpBtn" type="button" disabled>Complete Pump Transaction</button>
+        </div>
+    </section>
+
+    <section class="pos-card pos-payment-panel">
+        <div class="pos-section-header">
+            <div><span class="pos-eyebrow">Payment</span><h2>Customer, Discount, Points</h2></div>
+        </div>
+        <div class="pos-panel-stack">
+            <div class="pos-subpanel">
+                <div class="pos-subpanel-title"><h3>Customer</h3><label class="form-check"><input class="form-check-input" id="walkInCustomer" type="checkbox" checked /> <span class="form-check-label">Walk-in</span></label></div>
+                <input class="form-control" id="customerSearch" placeholder="Search customer" disabled />
+                <div class="pos-customer-results" id="customerResults"></div>
+                <div class="pos-customer-card" id="customerDetails"><strong>Walk-in customer</strong><span>No points earning or redemption.</span></div>
+            </div>
+            <div class="pos-subpanel">
+                <label class="form-label" for="discountSelect">Discount</label>
+                <select class="form-select" id="discountSelect"></select>
+            </div>
+            <div class="pos-subpanel">
+                <label class="form-label" for="pointsInput">Points to redeem</label>
+                <input class="form-control" id="pointsInput" type="number" min="0" value="0" disabled />
+                <div class="pos-validation" id="pointsValidation"></div>
+            </div>
+            <div class="pos-subpanel">
+                <div class="row g-3">
+                    <div class="col-12 col-md-6"><label class="form-label" for="paymentMethod">Payment method</label><select class="form-select" id="paymentMethod"><option>Cash</option><option>GCash</option><option>Card</option><option>Bank Transfer</option><option>Check</option></select></div>
+                    <div class="col-12 col-md-6"><label class="form-label" for="paymentAmount">Payment amount</label><input class="form-control" id="paymentAmount" type="number" min="0" step="0.01" /></div>
+                    <div class="col-12"><label class="form-label" for="referenceNumber">Reference number</label><input class="form-control" id="referenceNumber" placeholder="Required for non-cash" /></div>
+                </div>
+                <div class="pos-validation" id="paymentValidation"></div>
+            </div>
+        </div>
+    </section>
+</div>
+
+<div class="modal fade" id="receiptPreviewModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-md modal-dialog-centered"><div class="modal-content pos-modal"><div class="modal-header"><h5 class="modal-title">Receipt Preview</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div><div class="modal-body" id="receiptPreviewBody"></div><div class="modal-footer"><button class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button><button class="btn btn-primary" disabled>Print Receipt</button></div></div></div>
+</div>
+
+@section Scripts {
+    <script>
+        const peso = new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP" });
+        const pumps = [
+            { unit: "Pump Unit 1", number: "Pump 1", fuel: "Diesel", tank: "Tank 1", price: 65 },
+            { unit: "Pump Unit 1", number: "Pump 2", fuel: "Gasoline", tank: "Tank 2", price: 68 },
+            { unit: "Pump Unit 2", number: "Pump 3", fuel: "Premium", tank: "Tank 3", price: 72 }
+        ];
+        const customers = [
+            { code: "CUST-001", name: "Juan Dela Cruz", phone: "09171234567", plate: "ABC-1234", points: 120 },
+            { code: "CUST-002", name: "Maria Santos", phone: "09981234567", plate: "XYZ-5678", points: 80 },
+            { code: "CUST-003", name: "Pedro Reyes", phone: "09221234567", plate: "GAS-2026", points: 30 }
+        ];
+        const discounts = [
+            { name: "No Discount", type: "None", value: 0 },
+            { name: "Senior Citizen", type: "Percentage", value: 20 },
+            { name: "Promo Discount", type: "Fixed", value: 50 },
+            { name: "Loyalty Discount", type: "Percentage", value: 5 }
+        ];
+        const state = { pump: null, customer: null, gross: 0, discount: 0, points: 0, net: 0, payment: 0, change: 0, earned: 0 };
+        const byId = id => document.getElementById(id);
+
+        function renderPumps() {
+            byId("pumpList").innerHTML = pumps.map((pump, index) => `<button class="salesman-pump-card" type="button" onclick="selectPump(${index})"><strong>${pump.number}</strong><span>${pump.unit}</span><span>${pump.fuel} | ${pump.tank}</span><span>${peso.format(pump.price)} / L</span></button>`).join("");
+            byId("discountSelect").innerHTML = discounts.map((discount, index) => `<option value="${index}">${discount.name}</option>`).join("");
+        }
+
+        function selectPump(index) {
+            state.pump = pumps[index];
+            byId("pumpUnit").value = state.pump.unit;
+            byId("pumpNumber").value = state.pump.number;
+            byId("fuelType").value = state.pump.fuel;
+            byId("fuelTank").value = state.pump.tank;
+            byId("pricePerLiter").value = peso.format(state.pump.price);
+            calculatePumpTotals();
+        }
+
+        function calculateFuelByLiters() {
+            if (!state.pump) return;
+            const liters = Number(byId("liters").value) || 0;
+            byId("fuelAmount").value = (liters * state.pump.price).toFixed(2);
+            calculatePumpTotals();
+        }
+
+        function calculateFuelByAmount() {
+            if (!state.pump) return;
+            const amount = Number(byId("fuelAmount").value) || 0;
+            byId("liters").value = (amount / state.pump.price).toFixed(3);
+            calculatePumpTotals();
+        }
+
+        function calculatePumpTotals() {
+            state.gross = Number(byId("fuelAmount").value) || 0;
+            const discount = discounts[Number(byId("discountSelect").value) || 0];
+            state.discount = Math.min(state.gross, discount.type === "Percentage" ? state.gross * discount.value / 100 : discount.value);
+            const afterDiscount = Math.max(0, state.gross - state.discount);
+            const requestedPoints = Number(byId("pointsInput").value) || 0;
+            const availablePoints = state.customer ? state.customer.points : 0;
+            state.points = Math.max(0, Math.min(requestedPoints, availablePoints, Math.floor(afterDiscount)));
+            byId("pointsInput").value = state.points;
+            state.net = Math.max(0, afterDiscount - state.points);
+            state.earned = state.customer ? Math.floor(state.net / 100) : 0;
+            byId("grossAmount").textContent = peso.format(state.gross);
+            byId("discountAmount").textContent = peso.format(state.discount);
+            byId("pointsAmount").textContent = peso.format(state.points);
+            byId("netAmount").textContent = peso.format(state.net);
+            byId("pointsEarned").textContent = `${state.earned} pts`;
+            calculatePayments();
+        }
+
+        function applyCustomer(code) {
+            state.customer = customers.find(customer => customer.code === code) || null;
+            byId("walkInCustomer").checked = !state.customer;
+            byId("customerSearch").disabled = false;
+            byId("customerResults").innerHTML = "";
+            byId("pointsInput").disabled = !state.customer;
+            if (state.customer) {
+                byId("customerSearch").value = state.customer.name;
+                byId("customerDetails").innerHTML = `<strong>${state.customer.name}</strong><span>${state.customer.phone} | ${state.customer.plate}</span><span>${state.customer.points} points available</span>`;
+            } else {
+                byId("customerSearch").value = "";
+                byId("pointsInput").value = 0;
+                byId("customerDetails").innerHTML = `<strong>Walk-in customer</strong><span>No points earning or redemption.</span>`;
+            }
+            calculatePumpTotals();
+        }
+
+        function applyDiscount() { calculatePumpTotals(); }
+
+        function calculatePayments() {
+            state.payment = Number(byId("paymentAmount").value) || 0;
+            const method = byId("paymentMethod").value;
+            state.change = method === "Cash" && state.payment > state.net ? state.payment - state.net : 0;
+            byId("paymentTotal").textContent = peso.format(state.payment);
+            byId("changeAmount").textContent = peso.format(state.change);
+            validatePumpTransaction();
+        }
+
+        function validatePumpTransaction() {
+            const errors = [];
+            const method = byId("paymentMethod").value;
+            if (!state.pump) errors.push("Select a pump.");
+            if ((Number(byId("liters").value) || 0) <= 0 || state.gross <= 0) errors.push("Enter valid liters or amount.");
+            if (state.payment < state.net) errors.push("Payment must be equal to or greater than net amount.");
+            if (method !== "Cash" && !byId("referenceNumber").value.trim()) errors.push(`Reference number is required for ${method}.`);
+            if (!state.customer && Number(byId("pointsInput").value) > 0) errors.push("Walk-in customers cannot redeem points.");
+            byId("pumpValidation").innerHTML = errors.map(error => `<div>${error}</div>`).join("");
+            byId("paymentValidation").innerHTML = errors.filter(error => error.includes("Payment") || error.includes("Reference")).map(error => `<div>${error}</div>`).join("");
+            byId("completePumpBtn").disabled = errors.length > 0;
+        }
+
+        function showReceiptPreview() {
+            const currentPoints = state.customer ? state.customer.points - state.points + state.earned : 0;
+            byId("receiptPreviewBody").innerHTML = `<div class="pos-receipt"><h3>GPOS Main Station</h3><p>Transaction No: FUEL-2026-0001</p><p>${new Date().toLocaleString()}</p><p>Cashier: Salesman User</p><p>Shift: Morning Shift</p><p>Customer: ${state.customer ? state.customer.name : "Walk-in"}</p><hr /><div class="pos-receipt-line"><span>${state.pump ? state.pump.fuel : "Fuel"}<small>${byId("liters").value || 0} L x ${state.pump ? peso.format(state.pump.price) : peso.format(0)}</small></span><strong>${peso.format(state.gross)}</strong></div><hr /><div class="pos-receipt-line"><span>Gross</span><strong>${peso.format(state.gross)}</strong></div><div class="pos-receipt-line"><span>Discount</span><strong>${peso.format(state.discount)}</strong></div><div class="pos-receipt-line"><span>Points redeemed</span><strong>${peso.format(state.points)}</strong></div><div class="pos-receipt-line pos-receipt-total"><span>Net</span><strong>${peso.format(state.net)}</strong></div><div class="pos-receipt-line"><span>${byId("paymentMethod").value}</span><strong>${peso.format(state.payment)}</strong></div><div class="pos-receipt-line"><span>Change</span><strong>${peso.format(state.change)}</strong></div><div class="pos-receipt-line"><span>Points earned</span><strong>${state.earned} pts</strong></div><div class="pos-receipt-line"><span>Current points</span><strong>${currentPoints} pts</strong></div></div>`;
+            bootstrap.Modal.getOrCreateInstance(byId("receiptPreviewModal")).show();
+        }
+
+        byId("liters").addEventListener("input", calculateFuelByLiters);
+        byId("fuelAmount").addEventListener("input", calculateFuelByAmount);
+        byId("discountSelect").addEventListener("change", applyDiscount);
+        byId("pointsInput").addEventListener("input", calculatePumpTotals);
+        byId("paymentMethod").addEventListener("change", calculatePayments);
+        byId("paymentAmount").addEventListener("input", calculatePayments);
+        byId("referenceNumber").addEventListener("input", validatePumpTransaction);
+        byId("walkInCustomer").addEventListener("change", () => { if (byId("walkInCustomer").checked) applyCustomer(null); byId("customerSearch").disabled = byId("walkInCustomer").checked; });
+        byId("customerSearch").addEventListener("input", () => {
+            const search = byId("customerSearch").value.toLowerCase();
+            byId("customerResults").innerHTML = customers.filter(customer => customer.name.toLowerCase().includes(search) || customer.code.toLowerCase().includes(search) || customer.phone.includes(search) || customer.plate.toLowerCase().includes(search)).map(customer => `<button type="button" onclick="applyCustomer('${customer.code}')"><strong>${customer.name}</strong><span>${customer.code} | ${customer.plate} | ${customer.points} pts</span></button>`).join("");
+        });
+        byId("receiptBtn").addEventListener("click", showReceiptPreview);
+        byId("completePumpBtn").addEventListener("click", showReceiptPreview);
+        renderPumps();
+        validatePumpTransaction();
+    </script>
+}

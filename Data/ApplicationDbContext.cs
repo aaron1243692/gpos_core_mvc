@@ -34,6 +34,7 @@ namespace gpos.Data
         public DbSet<FuelPriceHistory> FuelPriceHistory { get; set; }
         public DbSet<PumpMeterReading> PumpMeterReadings { get; set; }
         public DbSet<Discount> Discounts { get; set; }
+        public DbSet<EarningRule> EarningRules { get; set; }
         public DbSet<LoyaltySetting> LoyaltySettings { get; set; }
         public DbSet<Member> Members { get; set; }
         public DbSet<RebateRule> RebateRules { get; set; }
@@ -643,6 +644,23 @@ namespace gpos.Data
                 entity.HasIndex(setting => setting.SettingKey).IsUnique();
             });
 
+            modelBuilder.Entity<EarningRule>(entity =>
+            {
+                entity.ToTable("earning_rules");
+                entity.HasKey(rule => rule.Id);
+
+                entity.Property(rule => rule.Id).HasColumnName("id");
+                entity.Property(rule => rule.Name).HasColumnName("name").HasMaxLength(100).IsRequired();
+                entity.Property(rule => rule.EarnRate).HasColumnName("earn_rate").HasPrecision(18, 2);
+                entity.Property(rule => rule.Description).HasColumnName("description").HasMaxLength(255);
+                entity.Property(rule => rule.IsActive).HasColumnName("is_active").HasDefaultValue(true);
+                entity.Property(rule => rule.CreatedAt).HasColumnName("created_at");
+                entity.Property(rule => rule.UpdatedAt).HasColumnName("updated_at");
+
+                entity.HasIndex(rule => rule.Name).IsUnique();
+                entity.HasIndex(rule => rule.IsActive);
+            });
+
             modelBuilder.Entity<Member>(entity =>
             {
                 entity.ToTable("members");
@@ -656,6 +674,7 @@ namespace gpos.Data
                 entity.Property(member => member.Email).HasColumnName("email").HasMaxLength(150);
                 entity.Property(member => member.Address).HasColumnName("address").HasMaxLength(255);
                 entity.Property(member => member.DiscountId).HasColumnName("discount_id");
+                entity.Property(member => member.EarningRuleId).HasColumnName("earning_rule_id");
                 entity.Property(member => member.Points).HasColumnName("points").HasPrecision(18, 2).HasDefaultValue(0m);
                 entity.Property(member => member.Status).HasColumnName("status").HasDefaultValue(1);
                 entity.Property(member => member.CreatedAt).HasColumnName("created_at");
@@ -664,9 +683,14 @@ namespace gpos.Data
                 entity.HasIndex(member => member.MemberNo).IsUnique();
                 entity.HasIndex(member => member.CardNo).IsUnique();
                 entity.HasIndex(member => member.DiscountId);
+                entity.HasIndex(member => member.EarningRuleId);
                 entity.HasOne(member => member.Discount)
                     .WithMany(discount => discount.Members)
                     .HasForeignKey(member => member.DiscountId)
+                    .OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne(member => member.EarningRule)
+                    .WithMany(rule => rule.Members)
+                    .HasForeignKey(member => member.EarningRuleId)
                     .OnDelete(DeleteBehavior.Restrict);
             });
 
@@ -699,13 +723,20 @@ namespace gpos.Data
                 entity.Property(ledger => ledger.NewPoints).HasColumnName("new_points").HasPrecision(18, 2);
                 entity.Property(ledger => ledger.ReferenceType).HasColumnName("reference_type").HasMaxLength(100);
                 entity.Property(ledger => ledger.ReferenceId).HasColumnName("reference_id");
+                entity.Property(ledger => ledger.SaleId).HasColumnName("sale_id");
                 entity.Property(ledger => ledger.Remarks).HasColumnName("remarks").HasMaxLength(255);
                 entity.Property(ledger => ledger.CreatedAt).HasColumnName("created_at");
 
                 entity.HasIndex(ledger => ledger.MemberId);
+                entity.HasIndex(ledger => ledger.SaleId);
+                entity.HasIndex(ledger => new { ledger.MemberId, ledger.SaleId, ledger.TransactionType });
                 entity.HasOne(ledger => ledger.Member)
                     .WithMany(member => member.PointsLedger)
                     .HasForeignKey(ledger => ledger.MemberId)
+                    .OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne(ledger => ledger.Sale)
+                    .WithMany(sale => sale.PointsLedger)
+                    .HasForeignKey(ledger => ledger.SaleId)
                     .OnDelete(DeleteBehavior.Restrict);
             });
 

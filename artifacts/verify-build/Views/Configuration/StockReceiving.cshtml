@@ -1,0 +1,383 @@
+@model gpos.Models.ViewModels.SetupModulesPageViewModel
+
+<div class="page-header">
+    <div class="page-heading">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item">GPOS</li>
+                <li class="breadcrumb-item">Setup</li>
+                <li class="breadcrumb-item">Products</li>
+                <li class="breadcrumb-item active" aria-current="page">Stock Receiving</li>
+            </ol>
+        </nav>
+        <h1>Stock Receiving</h1>
+        <p class="page-subtitle">Record received product stock and purchase amounts.</p>
+    </div>
+</div>
+
+<section class="content-card setup-crud-card setup-table-card">
+    <div class="table-actions fuel-toolbar">
+        <form asp-action="StockReceiving" method="get" class="setup-search-form fuel-toolbar-search">
+            <input class="form-control" name="search" value="@Model.Search" placeholder="Search receiving" />
+        </form>
+        <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#stockReceivingModal">Add Receiving</button>
+    </div>
+    <div class="setup-table-scroll">
+        <table class="table app-table table-sm align-middle admin-table mb-0">
+            <colgroup>
+                <col class="col-no" />
+                <col class="col-id" />
+                <col class="col-name" />
+                <col class="col-name" />
+                <col class="col-normal" />
+                <col class="col-normal" />
+                <col class="col-normal" />
+                <col class="col-action" />
+            </colgroup>
+            <thead>
+                <tr>
+                    <th>No</th>
+                    <th>ID</th>
+                    <th>Receiving No</th>
+                    <th>Supplier</th>
+                    <th>Received Date</th>
+                    <th>Total Amount</th>
+                    <th>Status</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model.StockReceivings.Count == 0)
+                {
+                    <tr><td class="text-center text-muted fw-bold" colspan="8">No stock receiving records yet.</td></tr>
+                }
+                @for (var i = 0; i < Model.StockReceivings.Count; i++)
+                {
+                    <tr>
+                        <td>@(i + 1)</td>
+                        <td>@Model.StockReceivings[i].Id</td>
+                        <td>@Model.StockReceivings[i].ReceivingNo</td>
+                        <td>@Model.StockReceivings[i].Supplier?.Name</td>
+                        <td>@Model.StockReceivings[i].ReceivedDate.ToString("yyyy-MM-dd")</td>
+                        <td>@Model.StockReceivings[i].TotalAmount.ToString("N2")</td>
+                        <td><span class="badge @(Model.StockReceivings[i].Status == 1 ? "text-bg-success" : "text-bg-secondary")">@(Model.StockReceivings[i].Status == 1 ? "Active" : "Disabled")</span></td>
+                        <td class="col-action">
+                            <div class="setup-row-actions">
+                                <a class="btn btn-sm btn-outline-primary" asp-action="StockReceiving" asp-route-editId="@Model.StockReceivings[i].Id" asp-route-search="@Model.Search">Edit</a>
+                                <form asp-action="DeleteStockReceiving" method="post" onsubmit="return confirm('Disable this receiving?');">
+                                    @Html.AntiForgeryToken()
+                                    <input name="id" type="hidden" value="@Model.StockReceivings[i].Id" />
+                                    <input name="search" type="hidden" value="@Model.Search" />
+                                    <button class="btn btn-sm btn-outline-danger" type="submit">Delete</button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<div class="modal fade" id="stockReceivingModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <form asp-action="SaveStockReceiving" method="post" data-stock-receiving-form>
+                @Html.AntiForgeryToken()
+                <input asp-for="StockReceivingForm.Id" type="hidden" />
+                <input name="search" type="hidden" value="@Model.Search" />
+                <div class="modal-header">
+                    <h2 class="modal-title fs-5">Stock Receiving</h2>
+                    <button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label asp-for="StockReceivingForm.SupplierId" class="form-label">Supplier</label>
+                        <select asp-for="StockReceivingForm.SupplierId" asp-items="Model.SupplierOptions" class="form-select"></select>
+                    </div>
+                    <div class="mb-3">
+                        <label asp-for="StockReceivingForm.ReceivedDate" class="form-label">Received Date</label>
+                        <input asp-for="StockReceivingForm.ReceivedDate" class="form-control" type="date" />
+                        <span asp-validation-for="StockReceivingForm.ReceivedDate" class="text-danger"></span>
+                    </div>
+                    <div class="mb-3">
+                        <label asp-for="StockReceivingForm.Remarks" class="form-label">Remarks</label>
+                        <input asp-for="StockReceivingForm.Remarks" class="form-control" />
+                    </div>
+                    <div class="mb-3">
+                        <label asp-for="StockReceivingForm.ProductId" class="form-label">Product receiving items</label>
+                        <div class="searchable-select" data-searchable-product>
+                            <input type="text" class="form-control searchable-product-input" placeholder="Search product" autocomplete="off" />
+                            <input asp-for="StockReceivingForm.ProductId" type="hidden" class="searchable-product-id" />
+                            <div class="searchable-select-menu">
+                                @if (Model.ProductSearchOptions.Count == 0)
+                                {
+                                    <div class="searchable-select-empty">No products available.</div>
+                                }
+                                @for (var optionIndex = 0; optionIndex < Model.ProductSearchOptions.Count; optionIndex++)
+                                {
+                                    <button type="button" class="searchable-select-option" data-product-option data-product-id="@Model.ProductSearchOptions[optionIndex].Id" data-product-name="@Model.ProductSearchOptions[optionIndex].Name" data-search-text="@Model.ProductSearchOptions[optionIndex].SearchText">
+                                        <span class="searchable-product-title">@Model.ProductSearchOptions[optionIndex].DisplayText</span>
+                                        <span class="searchable-product-meta">Cost: @Model.ProductSearchOptions[optionIndex].CostPrice?.ToString("N2") | Selling: @Model.ProductSearchOptions[optionIndex].SellingPrice?.ToString("N2")</span>
+                                    </button>
+                                }
+                                <div class="searchable-select-empty searchable-select-no-results">No matching products.</div>
+                            </div>
+                            <span asp-validation-for="StockReceivingForm.ProductId" class="text-danger product-validation"></span>
+                        </div>
+                    </div>
+                    <div class="row g-2">
+                        <div class="col-md-4 mb-3">
+                            <label asp-for="StockReceivingForm.Quantity" class="form-label">Quantity</label>
+                            <input asp-for="StockReceivingForm.Quantity" class="form-control" type="number" step="0.01" min="0.01" />
+                            <span asp-validation-for="StockReceivingForm.Quantity" class="text-danger"></span>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label asp-for="StockReceivingForm.CostPrice" class="form-label">Cost Price</label>
+                            <input asp-for="StockReceivingForm.CostPrice" class="form-control" type="number" step="0.01" min="0" />
+                            <span asp-validation-for="StockReceivingForm.CostPrice" class="text-danger"></span>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label asp-for="StockReceivingForm.SellingPrice" class="form-label">Selling Price</label>
+                            <input asp-for="StockReceivingForm.SellingPrice" class="form-control" type="number" step="0.01" min="0" />
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label asp-for="StockReceivingForm.ExpiryDate" class="form-label">Expiry Date</label>
+                        <input asp-for="StockReceivingForm.ExpiryDate" class="form-control" type="date" />
+                    </div>
+                    <div class="mb-3">
+                        <label asp-for="StockReceivingForm.Status" class="form-label">Status</label>
+                        <select asp-for="StockReceivingForm.Status" class="form-select">
+                            <option value="1">Active</option>
+                            <option value="0">Disabled</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button>
+                    <button class="btn btn-primary" type="submit">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <style>
+        .searchable-select {
+            position: relative;
+        }
+
+        .searchable-select-menu {
+            position: absolute;
+            top: calc(100% + 4px);
+            left: 0;
+            right: 0;
+            z-index: 1056;
+            display: none;
+            max-height: 220px;
+            overflow-y: auto;
+            background: #ffffff;
+            border: 1px solid #8ee0aa;
+            border-radius: 10px;
+            box-shadow: 0 12px 24px rgba(16, 88, 48, 0.14);
+        }
+
+        .searchable-select.open .searchable-select-menu {
+            display: block;
+        }
+
+        .searchable-select-option {
+            display: block;
+            width: 100%;
+            padding: 10px 12px;
+            cursor: pointer;
+            font-weight: 700;
+            color: #064e3b;
+            text-align: left;
+            background: transparent;
+            border: 0;
+        }
+
+        .searchable-select-option:hover,
+        .searchable-select-option.active {
+            background: #dcfce7;
+        }
+
+        .searchable-product-title,
+        .searchable-product-meta {
+            display: block;
+        }
+
+        .searchable-product-meta {
+            margin-top: 2px;
+            color: #64748b;
+            font-size: 0.78rem;
+            font-weight: 600;
+        }
+
+        .searchable-select-empty {
+            padding: 10px 12px;
+            color: #64748b;
+            font-weight: 600;
+        }
+
+        .searchable-select-no-results {
+            display: none;
+        }
+    </style>
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            const modalId = "@Model.ActiveModalId";
+            const modalElement = modalId ? document.getElementById(modalId) : null;
+
+            if (modalElement && window.bootstrap) {
+                bootstrap.Modal.getOrCreateInstance(modalElement).show();
+            }
+
+            const productRequiredMessage = "Product is required.";
+
+            const productContainers = () => Array.from(document.querySelectorAll("[data-searchable-product]"));
+
+            const openProductMenu = container => {
+                productContainers().forEach(item => {
+                    if (item !== container) {
+                        item.classList.remove("open");
+                    }
+                });
+                container.classList.add("open");
+            };
+
+            const closeProductMenus = () => {
+                productContainers().forEach(container => container.classList.remove("open"));
+            };
+
+            const setProductError = (container, message) => {
+                const validation = container.querySelector(".product-validation");
+                if (validation) {
+                    validation.textContent = message;
+                }
+            };
+
+            const filterProductOptions = container => {
+                const input = container.querySelector(".searchable-product-input");
+                const options = Array.from(container.querySelectorAll("[data-product-option]"));
+                const empty = container.querySelector(".searchable-select-no-results");
+                const searchText = (input?.value || "").trim().toLowerCase();
+                let visibleCount = 0;
+
+                options.forEach(option => {
+                    const optionText = (option.dataset.searchText || option.textContent || "").toLowerCase();
+                    const isMatch = searchText.length === 0 || optionText.includes(searchText);
+                    option.hidden = !isMatch;
+                    if (isMatch) {
+                        visibleCount += 1;
+                    }
+                });
+
+                if (empty) {
+                    empty.style.display = visibleCount === 0 && options.length > 0 ? "block" : "none";
+                }
+            };
+
+            const initializeProductSelect = container => {
+                const input = container.querySelector(".searchable-product-input");
+                const hidden = container.querySelector(".searchable-product-id");
+                const selectedOption = hidden?.value && hidden.value !== "0"
+                    ? container.querySelector(`[data-product-id="${hidden.value}"]`)
+                    : null;
+
+                if (input && selectedOption) {
+                    input.value = selectedOption.dataset.productName || "";
+                    input.dataset.selectedProductName = input.value;
+                }
+
+                filterProductOptions(container);
+            };
+
+            productContainers().forEach(initializeProductSelect);
+
+            document.addEventListener("focusin", event => {
+                const input = event.target.closest(".searchable-product-input");
+                if (!input) {
+                    return;
+                }
+
+                const container = input.closest("[data-searchable-product]");
+                if (container) {
+                    openProductMenu(container);
+                    filterProductOptions(container);
+                }
+            });
+
+            document.addEventListener("input", event => {
+                const input = event.target.closest(".searchable-product-input");
+                if (!input) {
+                    return;
+                }
+
+                const container = input.closest("[data-searchable-product]");
+                const hidden = container?.querySelector(".searchable-product-id");
+                if (hidden && input.value !== input.dataset.selectedProductName) {
+                    hidden.value = "";
+                }
+
+                if (container) {
+                    setProductError(container, "");
+                    openProductMenu(container);
+                    filterProductOptions(container);
+                }
+            });
+
+            document.addEventListener("click", event => {
+                const option = event.target.closest("[data-product-option]");
+
+                if (option) {
+                    const container = option.closest("[data-searchable-product]");
+                    const input = container?.querySelector(".searchable-product-input");
+                    const hidden = container?.querySelector(".searchable-product-id");
+
+                    if (input && hidden) {
+                        input.value = option.dataset.productName || "";
+                        input.dataset.selectedProductName = input.value;
+                        hidden.value = option.dataset.productId || "";
+                        setProductError(container, "");
+                        container.classList.remove("open");
+                    }
+                    return;
+                }
+
+                if (!event.target.closest("[data-searchable-product]")) {
+                    closeProductMenus();
+                }
+            });
+
+            document.addEventListener("submit", event => {
+                const form = event.target.closest("[data-stock-receiving-form]");
+                if (!form) {
+                    return;
+                }
+
+                const containers = Array.from(form.querySelectorAll("[data-searchable-product]"));
+                let isValid = true;
+
+                containers.forEach(container => {
+                    const hidden = container.querySelector(".searchable-product-id");
+                    if (!hidden || hidden.value === "" || hidden.value === "0") {
+                        setProductError(container, productRequiredMessage);
+                        container.classList.add("open");
+                        filterProductOptions(container);
+                        isValid = false;
+                    }
+                });
+
+                if (!isValid) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                }
+            });
+        });
+    </script>
+}

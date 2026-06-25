@@ -1,0 +1,96 @@
+@{
+    ViewData["Title"] = "Close Shift";
+    ViewData["Section"] = "Salesman";
+}
+
+<section class="salesman-page">
+    <div class="salesman-dashboard-grid">
+        @foreach (var metric in new[] {
+            ("Beginning cash", "PHP 5,000.00"),
+            ("Total fuel sales", "PHP 42,850.00"),
+            ("Total POS sales", "PHP 8,420.00"),
+            ("Gross sales", "PHP 51,270.00"),
+            ("Total discount", "PHP 1,050.00"),
+            ("Points redeemed", "PHP 320.00"),
+            ("Net sales", "PHP 49,900.00"),
+            ("Cash payments", "PHP 31,900.00"),
+            ("Non-cash payments", "PHP 18,000.00"),
+            ("Expected cash", "PHP 36,900.00")
+        })
+        {
+            <article class="metric-card salesman-metric">
+                <span class="metric-label">@metric.Item1</span>
+                <strong>@metric.Item2</strong>
+            </article>
+        }
+    </div>
+
+    <section class="content-card salesman-narrow">
+        <div class="card-title-row">
+            <div>
+                <h2>Closing Balance</h2>
+                <p>Expected cash = Beginning cash + Total cash payments.</p>
+            </div>
+            <span class="status-badge" id="differenceStatus">Balanced</span>
+        </div>
+        <div class="row g-3">
+            <div class="col-12 col-md-6">
+                <label class="form-label" for="actualCash">Actual cash</label>
+                <input class="form-control" id="actualCash" type="number" value="36900" min="0" step="0.01" />
+            </div>
+            <div class="col-12 col-md-6">
+                <label class="form-label" for="cashDifference">Cash difference</label>
+                <input class="form-control" id="cashDifference" value="PHP 0.00" readonly />
+            </div>
+            <div class="col-12">
+                <label class="form-label" for="closingRemarks">Remarks</label>
+                <textarea class="form-control" id="closingRemarks" rows="3"></textarea>
+            </div>
+        </div>
+        <div class="formula-card mt-3">
+            <strong>Formula</strong>
+            <span>Expected Cash = Beginning Cash + Total Cash Payments</span>
+            <span>Cash Difference = Actual Cash - Expected Cash</span>
+        </div>
+        <div class="salesman-form-actions">
+            <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#closeShiftModal">Close Shift</button>
+        </div>
+    </section>
+</section>
+
+<div class="modal fade" id="closeShiftModal" tabindex="-1" aria-labelledby="closeShiftModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content pos-modal">
+            <div class="modal-header">
+                <h5 class="modal-title" id="closeShiftModalLabel">Confirm Close Shift</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">Close this shift with the current cash difference?</div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Confirm</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        const peso = new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP" });
+        const expectedCash = 36900;
+        const actualCash = document.getElementById("actualCash");
+        const difference = document.getElementById("cashDifference");
+        const status = document.getElementById("differenceStatus");
+
+        function calculateDifference() {
+            const value = Number(actualCash.value) || 0;
+            const diff = value - expectedCash;
+            difference.value = peso.format(diff);
+            status.textContent = diff > 0 ? "Over" : diff < 0 ? "Short" : "Balanced";
+            status.className = diff === 0 ? "status-badge" : "status-badge status-badge-muted";
+        }
+
+        actualCash.addEventListener("input", calculateDifference);
+        calculateDifference();
+    </script>
+}
