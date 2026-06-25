@@ -12,6 +12,7 @@ namespace gpos.Controllers
     [BlockSalesmanSession]
     public class TransactionController : Controller
     {
+        private const string PointsEarnRateSettingKey = "POINTS_EARN_RATE";
         private static readonly string[] SaleStatuses = ["Completed", "Voided", "Returned", "Cancelled"];
         private readonly ApplicationDbContext _db;
 
@@ -21,6 +22,21 @@ namespace gpos.Controllers
         }
 
         public IActionResult POS() => View();
+
+        [HttpGet]
+        public async Task<IActionResult> MemberDiscount(string? membershipCardNo, decimal productTotal = 0m, decimal fuelTotal = 0m)
+        {
+            var member = await FindActiveMemberByCard(membershipCardNo);
+            if (member is null)
+            {
+                return Ok(new { success = true, memberFound = false, discountAmount = 0m });
+            }
+
+            var now = DateTime.Now;
+            var discountAmount = await CalculateMemberDiscount(member, Math.Max(0m, productTotal), Math.Max(0m, fuelTotal), now);
+
+            return Ok(new { success = true, memberFound = true, discountAmount });
+        }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -53,7 +69,9 @@ namespace gpos.Controllers
                 var now = DateTime.Now;
                 var productItems = await BuildValidatedProductItems(request.Products);
                 var fuelItems = await BuildValidatedFuelItems(request.Fuels);
-                var grossTotal = productItems.Sum(item => item.Subtotal) + fuelItems.Sum(item => item.Subtotal);
+                var productTotal = productItems.Sum(item => item.Subtotal);
+                var fuelTotal = fuelItems.Sum(item => item.Subtotal);
+                var grossTotal = productTotal + fuelTotal;
 
                 if (grossTotal <= 0)
                 {
@@ -61,10 +79,13 @@ namespace gpos.Controllers
                 }
 
                 var member = await FindMember(request.MembershipCardNo);
+                var discountAmount = await CalculateMemberDiscount(member, productTotal, fuelTotal, now);
                 var rebate = await FindRebate(request.RebateRuleId);
                 var rebateAmount = ValidateAndCalculateRebate(member, rebate, grossTotal, productItems.Count > 0, fuelItems.Count > 0);
-                var netTotal = Math.Max(0m, grossTotal - rebateAmount);
+                var netTotal = Math.Max(0m, grossTotal - discountAmount - rebateAmount);
                 var cashAmount = Math.Max(0m, request.CashAmount);
+                var pointsEarnRate = await GetPointsEarnRate();
+                var pointsEarned = CalculateEarnedPoints(member, netTotal, pointsEarnRate);
 
                 if (cashAmount < netTotal)
                 {
@@ -80,7 +101,7 @@ namespace gpos.Controllers
                     UserId = userId.Value,
                     MemberId = member?.Id,
                     GrossTotal = grossTotal,
-                    DiscountAmount = 0m,
+                    DiscountAmount = discountAmount,
                     RebateAmount = rebateAmount,
                     NetTotal = netTotal,
                     CashAmount = cashAmount,
@@ -116,25 +137,7 @@ namespace gpos.Controllers
                     UpdatedAt = now
                 });
 
-                if (member is not null && rebate is not null && rebateAmount > 0)
-                {
-                    var oldPoints = member.Points;
-                    member.Points -= rebate.PointsRequired;
-                    member.UpdatedAt = now;
-
-                    _db.PointsLedger.Add(new PointsLedger
-                    {
-                        MemberId = member.Id,
-                        TransactionType = "Used",
-                        Points = rebate.PointsRequired,
-                        OldPoints = oldPoints,
-                        NewPoints = member.Points,
-                        ReferenceType = "POS",
-                        ReferenceId = sale.Id,
-                        Remarks = "Used as rebate in POS",
-                        CreatedAt = now
-                    });
-                }
+                ApplyPointsChanges(member, rebate, rebateAmount, pointsEarned, sale.Id, now);
 
                 await _db.SaveChangesAsync();
                 await dbTransaction.CommitAsync();
@@ -145,8 +148,12 @@ namespace gpos.Controllers
                     message = "Sale saved successfully.",
                     receiptNo = sale.ReceiptNo,
                     grossTotal,
+                    discountAmount,
                     rebateAmount,
-                    netTotal
+                    netTotal,
+                    pointsEarned,
+                    amountTendered = cashAmount,
+                    change = Math.Max(0m, cashAmount - netTotal)
                 });
             }
             catch (InvalidOperationException ex)
@@ -561,14 +568,24 @@ namespace gpos.Controllers
 
         private async Task<Member?> FindMember(string? membershipCardNo)
         {
+            if (string.IsNullOrWhiteSpace(membershipCardNo))
+            {
+                return null;
+            }
+
+            var member = await FindActiveMemberByCard(membershipCardNo);
+            return member ?? throw new InvalidOperationException("Member card was not found or is inactive.");
+        }
+
+        private async Task<Member?> FindActiveMemberByCard(string? membershipCardNo)
+        {
             var cardNo = (membershipCardNo ?? string.Empty).Trim();
             if (string.IsNullOrWhiteSpace(cardNo))
             {
                 return null;
             }
 
-            var member = await _db.Members.FirstOrDefaultAsync(item => item.Status == 1 && (item.CardNo == cardNo || item.MemberNo == cardNo));
-            return member ?? throw new InvalidOperationException("Member card was not found or is inactive.");
+            return await _db.Members.FirstOrDefaultAsync(item => item.Status == 1 && (item.CardNo == cardNo || item.MemberNo == cardNo));
         }
 
         private async Task<RebateRule?> FindRebate(int? rebateRuleId)
@@ -580,6 +597,172 @@ namespace gpos.Controllers
 
             var rebate = await _db.RebateRules.FirstOrDefaultAsync(item => item.Id == rebateRuleId.Value && item.Status == 1);
             return rebate ?? throw new InvalidOperationException("Selected rebate was not found or is inactive.");
+        }
+
+        private async Task<decimal> GetPointsEarnRate()
+        {
+            var setting = await _db.LoyaltySettings
+                .AsNoTracking()
+                .FirstOrDefaultAsync(item => item.SettingKey == PointsEarnRateSettingKey);
+
+            return Math.Max(0m, setting?.DecimalValue ?? 0m);
+        }
+
+        private static decimal CalculateEarnedPoints(Member? member, decimal netTotal, decimal earnRate)
+        {
+            if (member is null || netTotal <= 0m || earnRate <= 0m)
+            {
+                return 0m;
+            }
+
+            return Math.Round(netTotal * (earnRate / 100m), 2, MidpointRounding.AwayFromZero);
+        }
+
+        private void ApplyPointsChanges(Member? member, RebateRule? rebate, decimal rebateAmount, decimal pointsEarned, int saleId, DateTime now)
+        {
+            if (member is null)
+            {
+                return;
+            }
+
+            if (rebate is not null && rebateAmount > 0m)
+            {
+                var oldPoints = member.Points;
+                member.Points -= rebate.PointsRequired;
+                member.UpdatedAt = now;
+
+                _db.PointsLedger.Add(new PointsLedger
+                {
+                    MemberId = member.Id,
+                    TransactionType = "Used",
+                    Points = rebate.PointsRequired,
+                    OldPoints = oldPoints,
+                    NewPoints = member.Points,
+                    ReferenceType = "POS",
+                    ReferenceId = saleId,
+                    Remarks = "Used as rebate in POS",
+                    CreatedAt = now
+                });
+            }
+
+            if (pointsEarned > 0m)
+            {
+                var oldPoints = member.Points;
+                member.Points += pointsEarned;
+                member.UpdatedAt = now;
+
+                _db.PointsLedger.Add(new PointsLedger
+                {
+                    MemberId = member.Id,
+                    TransactionType = "Earned",
+                    Points = pointsEarned,
+                    OldPoints = oldPoints,
+                    NewPoints = member.Points,
+                    ReferenceType = "POS",
+                    ReferenceId = saleId,
+                    Remarks = "Earned from POS sale",
+                    CreatedAt = now
+                });
+            }
+        }
+
+        private async Task<decimal> CalculateMemberDiscount(Member? member, decimal productTotal, decimal fuelTotal, DateTime now)
+        {
+            if (member is null || !member.DiscountId.HasValue)
+            {
+                return 0m;
+            }
+
+            var rules = await _db.DiscountRules
+                .Where(item => item.DiscountId == member.DiscountId.Value && item.Status == 1)
+                .Where(item => !item.StartDate.HasValue || now.Date >= item.StartDate.Value.Date)
+                .Where(item => !item.EndDate.HasValue || now.Date <= item.EndDate.Value.Date)
+                .OrderBy(item => item.Id)
+                .ToListAsync();
+
+            return rules
+                .Select(rule => ValidateAndCalculateDiscount(member, rule, productTotal, fuelTotal, now))
+                .DefaultIfEmpty(0m)
+                .Max();
+        }
+
+        private static decimal ValidateAndCalculateDiscount(Member? member, DiscountRule? discountRule, decimal productTotal, decimal fuelTotal, DateTime now)
+        {
+            if (discountRule is null)
+            {
+                return 0m;
+            }
+
+            if (discountRule.MemberRequired == 1)
+            {
+                if (member is null)
+                {
+                    throw new InvalidOperationException("Select a valid member before using this discount.");
+                }
+
+                if (member.DiscountId != discountRule.DiscountId)
+                {
+                    throw new InvalidOperationException("Selected member is not eligible for this discount.");
+                }
+            }
+
+            if (discountRule.StartDate.HasValue && now.Date < discountRule.StartDate.Value.Date)
+            {
+                throw new InvalidOperationException("Selected discount is not active yet.");
+            }
+
+            if (discountRule.EndDate.HasValue && now.Date > discountRule.EndDate.Value.Date)
+            {
+                throw new InvalidOperationException("Selected discount has expired.");
+            }
+
+            var appliesTo = discountRule.AppliesTo.Trim();
+            var discountBase = productTotal + fuelTotal;
+
+            if (AppliesToProductOnly(appliesTo))
+            {
+                discountBase = productTotal;
+            }
+            else if (AppliesToFuelOnly(appliesTo))
+            {
+                discountBase = fuelTotal;
+            }
+
+            if (discountBase <= 0)
+            {
+                return 0m;
+            }
+
+            if (discountBase < discountRule.MinimumAmount)
+            {
+                return 0m;
+            }
+
+            var discountType = discountRule.DiscountType.Trim();
+            var discountValue = Math.Max(0m, discountRule.DiscountValue);
+            var discountAmount = IsPercentageDiscount(discountType)
+                ? discountBase * (discountValue / 100m)
+                : discountValue;
+
+            return Math.Min(discountBase, discountAmount);
+        }
+
+        private static bool AppliesToProductOnly(string appliesTo)
+        {
+            var value = appliesTo.Trim().ToLowerInvariant();
+            return value is "product" or "products";
+        }
+
+        private static bool AppliesToFuelOnly(string appliesTo)
+        {
+            var value = appliesTo.Trim().ToLowerInvariant();
+            return value is "fuel" or "fuels" or "gas" or "gasoline";
+        }
+
+        private static bool IsPercentageDiscount(string discountType)
+        {
+            var value = discountType.Trim().ToLowerInvariant();
+            return value is "percentage" or "percent" or "%";
         }
 
         private static decimal ValidateAndCalculateRebate(Member? member, RebateRule? rebate, decimal grossTotal, bool hasProducts, bool hasFuel)

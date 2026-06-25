@@ -11,7 +11,7 @@
             </ol>
         </nav>
         <h1>Discounts</h1>
-        <p class="page-subtitle">Manage discount earning rates.</p>
+        <p class="page-subtitle">Manage price reduction groups.</p>
     </div>
 </div>
 
@@ -33,7 +33,6 @@
                 <col class="col-id" />
                 <col class="col-name" />
                 <col class="col-normal" />
-                <col class="col-normal" />
                 <col class="col-action" />
             </colgroup>
             <thead>
@@ -41,7 +40,6 @@
                     <th class="col-no">No</th>
                     <th class="col-id">ID</th>
                     <th class="col-name">Name</th>
-                    <th class="col-money">Earn Rate</th>
                     <th class="col-status">Status</th>
                     <th class="col-action">Action</th>
                 </tr>
@@ -49,7 +47,7 @@
             <tbody>
                 @if (Model.Discounts.Count == 0)
                 {
-                    <tr><td class="text-center text-muted fw-bold" colspan="6">No discounts yet.</td></tr>
+                    <tr><td class="text-center text-muted fw-bold" colspan="5">No discounts yet.</td></tr>
                 }
                 @for (var i = 0; i < Model.Discounts.Count; i++)
                 {
@@ -57,7 +55,6 @@
                         <td class="col-no">@(i + 1)</td>
                         <td class="col-id">@Model.Discounts[i].Id</td>
                         <td>@Model.Discounts[i].Name</td>
-                        <td>@((Model.Discounts[i].EarnRate % 1 == 0 ? Model.Discounts[i].EarnRate.ToString("N0") : Model.Discounts[i].EarnRate.ToString("0.##")) + "%")</td>
                         <td class="col-status">
                             @if (Model.Discounts[i].Status == 1)
                             {
@@ -102,11 +99,6 @@
                         <label asp-for="DiscountForm.Name" class="form-label">Name</label>
                         <input asp-for="DiscountForm.Name" class="form-control" autocomplete="off" />
                         <span asp-validation-for="DiscountForm.Name" class="text-danger"></span>
-                    </div>
-                    <div class="mb-3">
-                        <label asp-for="DiscountForm.EarnRate" class="form-label">Earn Rate (%)</label>
-                        <input asp-for="DiscountForm.EarnRate" class="form-control" min="0" max="100" step="0.01" type="number" value="@(Model.DiscountForm.EarnRate.HasValue ? (Model.DiscountForm.EarnRate.Value % 1 == 0 ? Model.DiscountForm.EarnRate.Value.ToString("0") : Model.DiscountForm.EarnRate.Value.ToString("0.##")) : "")" />
-                        <span asp-validation-for="DiscountForm.EarnRate" class="text-danger"></span>
                     </div>
                     <div class="mb-3">
                         <label asp-for="DiscountForm.Status" class="form-label">Status</label>

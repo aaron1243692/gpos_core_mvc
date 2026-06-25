@@ -10,10 +10,6 @@ namespace gpos.Models.ViewModels
         [Required(ErrorMessage = "Name is required.")]
         public string Name { get; set; } = string.Empty;
 
-        [Required(ErrorMessage = "Earn Rate is required.")]
-        [Range(0, 100, ErrorMessage = "Earn Rate must be between 0 and 100.")]
-        public decimal? EarnRate { get; set; }
-
         [Range(0, 1, ErrorMessage = "Status is required.")]
         public int Status { get; set; } = 1;
     }

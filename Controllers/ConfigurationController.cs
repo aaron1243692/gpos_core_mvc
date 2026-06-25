@@ -213,7 +213,6 @@ namespace gpos.Controllers
             }
 
             discount.Name = form.Name.Trim();
-            discount.EarnRate = form.EarnRate!.Value;
             discount.Status = form.Status;
             discount.UpdatedAt = now;
 
@@ -1050,7 +1049,6 @@ namespace gpos.Controllers
             {
                 Id = discount.Id,
                 Name = discount.Name,
-                EarnRate = discount.EarnRate,
                 Status = discount.Status
             };
         }
@@ -1082,16 +1080,11 @@ namespace gpos.Controllers
                 .ToListAsync();
 
             var options = discounts
-                .Select(discount => new SelectListItem { Value = discount.Id.ToString(), Text = $"{discount.Name} - {FormatEarnRatePercent(discount.EarnRate)}" })
+                .Select(discount => new SelectListItem { Value = discount.Id.ToString(), Text = discount.Name })
                 .ToList();
 
             options.Insert(0, new SelectListItem { Value = "", Text = "No discount" });
             return options;
-        }
-
-        private static string FormatEarnRatePercent(decimal earnRate)
-        {
-            return (earnRate % 1 == 0 ? earnRate.ToString("N0") : earnRate.ToString("0.##")) + "%";
         }
 
         private async Task<EmployeeSetupPageViewModel> BuildBranchesPageAsync(string? search, BranchForm? form = null, int? editId = null, string activeModalId = "")

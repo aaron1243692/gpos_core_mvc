@@ -90,10 +90,10 @@
                 </section>
             </section>
 
-            <aside class="pos-order-summary" aria-label="Order summary">
+            <aside class="pos-order-summary" aria-label="Cart panel">
                 <div class="pos-summary-top">
                     <h2>Cart</h2>
-                    <span aria-hidden="true">Edit</span>
+                    <span id="modalCartCount">0 items</span>
                 </div>
 
                 <div class="pos-cart-list" id="orderCartItems">
@@ -103,6 +103,8 @@
                 <div class="pos-summary-totals">
                     <div><span>Products</span><strong id="cartSubTotal">PHP 0.00</strong></div>
                     <div><span>Fuel</span><strong id="cartFuelLine">PHP 0.00</strong></div>
+                    <div><span>Discount</span><strong id="cartDiscountLine">PHP 0.00</strong></div>
+                    <div><span>Tax</span><strong id="cartTaxLine">PHP 0.00</strong></div>
                     <div><span>Total</span><strong id="posGrandTotal">PHP 0.00</strong></div>
                 </div>
 
@@ -115,8 +117,8 @@
                         </div>
                     </div>
                     <div id="memberCardField">
-                        <label class="form-label" for="membershipCardNo">Member Card No</label>
-                        <input class="form-control" id="membershipCardNo" name="MembershipCardNo" placeholder="Enter member card no" autocomplete="off" />
+                        <label class="form-label" for="membershipCardNo">Member Card No <span class="text-muted">(Optional)</span></label>
+                        <input class="form-control" id="membershipCardNo" name="MembershipCardNo" placeholder="Optional member no or card no" autocomplete="off" />
                     </div>
                     <div id="rebateField">
                         <label class="form-label" for="rebateRuleId">Rebate</label>
@@ -130,8 +132,102 @@
                     </div>
                 </div>
 
-                <button class="btn btn-primary btn-lg pos-charge-button" id="checkoutButton" type="button">Checkout</button>
+                <button class="btn btn-primary btn-lg pos-charge-button" id="submitSaleButton" type="submit">Checkout</button>
+                <button class="btn btn-outline-secondary" id="newSaleButton" type="button">New Sale</button>
             </aside>
+        </div>
+
+        <div class="modal fade pos-receipt-modal" id="receiptModal" tabindex="-1" aria-labelledby="receiptModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <div>
+                            <h2 class="modal-title fs-5" id="receiptModalLabel">Checkout Receipt</h2>
+                            <p class="mb-0 text-muted">Receipt details for the completed transaction.</p>
+                        </div>
+                        <button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="pos-receipt-modal-grid">
+                            <section class="salesman-receipt-preview" id="receiptPreview" aria-live="polite">
+                                <div class="salesman-receipt-print" id="receiptPrintArea">
+                                    <div class="receipt-title">
+                                        <h2>GPOS Main Station</h2>
+                                        <p>Sales Receipt</p>
+                                    </div>
+
+                                    <div class="receipt-meta">
+                                        <div><span>Transaction No</span><strong id="receiptTransactionNo">Pending</strong></div>
+                                        <div><span>Date / Time</span><strong id="receiptDateTime"></strong></div>
+                                        <div><span>Cashier</span><strong id="receiptCashier">@(Context.Session.GetString("Username") ?? Context.Session.GetString("Name") ?? User.Identity?.Name ?? "User")</strong></div>
+                                        <div><span>Payment Method</span><strong>Cash</strong></div>
+                                        <div><span>Member Card No</span><strong id="receiptMemberCardNo"></strong></div>
+                                    </div>
+
+                                    <div class="receipt-block">
+                                        <h3>Gas / Fuel</h3>
+                                        <table class="receipt-product-table">
+                                            <thead>
+                                                <tr>
+                                                    <th>Fuel type</th>
+                                                    <th>Liters</th>
+                                                    <th>Cash amount</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="receiptFuelRows">
+                                                <tr><td colspan="3">No selected fuel.</td></tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+
+                                    <div class="receipt-block">
+                                        <h3>Products</h3>
+                                        <table class="receipt-product-table">
+                                            <thead>
+                                                <tr>
+                                                    <th>No</th>
+                                                    <th>Name</th>
+                                                    <th>Quantity</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="receiptProductRows">
+                                                <tr><td colspan="3">No selected products.</td></tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+
+                                    <div class="receipt-total-line">
+                                        <span>Subtotal</span>
+                                        <strong id="receiptSubtotalAmount">PHP 0.00</strong>
+                                    </div>
+                                    <div class="receipt-total-line">
+                                        <span>Discount</span>
+                                        <strong id="receiptDiscountAmount">PHP 0.00</strong>
+                                    </div>
+                                    <div class="receipt-total-line">
+                                        <span>Total</span>
+                                        <strong id="receiptTotalAmount">PHP 0.00</strong>
+                                    </div>
+                                    <div class="receipt-total-line">
+                                        <span>Amount Tendered</span>
+                                        <strong id="receiptPaymentDetail">PHP 0.00</strong>
+                                    </div>
+                                    <div class="receipt-total-line">
+                                        <span>Change</span>
+                                        <strong id="receiptChangeAmount">PHP 0.00</strong>
+                                    </div>
+                                </div>
+                            </section>
+                        </div>
+                    </div>
+                    <div class="modal-footer pos-receipt-modal-footer">
+                        <div class="salesman-receipt-actions">
+                            <button class="btn btn-outline-secondary" id="modalPrintReceiptButton" type="button">Print Receipt</button>
+                            <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Close</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <div class="modal fade" id="insufficientCashModal" tabindex="-1" aria-labelledby="insufficientCashModalLabel" aria-hidden="true">
@@ -159,65 +255,6 @@
             </div>
         </div>
 
-        <section class="salesman-receipt-preview" id="receiptPreview" hidden aria-live="polite">
-            <div class="salesman-receipt-print" id="receiptPrintArea">
-                <div class="receipt-title">
-                    <h2>GPOS Main Station</h2>
-                    <p>Sales Receipt Preview</p>
-                </div>
-
-                <div class="receipt-meta">
-                    <div><span>Date / Time</span><strong id="receiptDateTime"></strong></div>
-                    <div><span>Cashier</span><strong id="receiptCashier">@(Context.Session.GetString("Username") ?? Context.Session.GetString("Name") ?? User.Identity?.Name ?? "User")</strong></div>
-                    <div><span>Payment Method</span><strong>Cash</strong></div>
-                    <div><span>Cash Amount</span><strong id="receiptPaymentDetail"></strong></div>
-                    <div><span>Member Card No</span><strong id="receiptMemberCardNo"></strong></div>
-                </div>
-
-                <div class="receipt-block">
-                    <h3>Gas / Fuel</h3>
-                    <table class="receipt-product-table">
-                        <thead>
-                            <tr>
-                                <th>Fuel type</th>
-                                <th>Liters</th>
-                                <th>Cash amount</th>
-                            </tr>
-                        </thead>
-                        <tbody id="receiptFuelRows">
-                            <tr><td colspan="3">No selected fuel.</td></tr>
-                        </tbody>
-                    </table>
-                </div>
-
-                <div class="receipt-block">
-                    <h3>Products</h3>
-                    <table class="receipt-product-table">
-                        <thead>
-                            <tr>
-                                <th>No</th>
-                                <th>Name</th>
-                                <th>Quantity</th>
-                            </tr>
-                        </thead>
-                        <tbody id="receiptProductRows">
-                            <tr><td colspan="3">No selected products.</td></tr>
-                        </tbody>
-                    </table>
-                </div>
-
-                <div class="receipt-total-line">
-                    <span>Total</span>
-                    <strong id="receiptTotalAmount">PHP 0.00</strong>
-                </div>
-            </div>
-
-            <div class="salesman-receipt-actions">
-                <button class="btn btn-outline-secondary" id="printReceiptButton" type="button">Print</button>
-                <button class="btn btn-primary" id="submitSaleButton" type="submit">Submit</button>
-                <button class="btn btn-outline-secondary" id="newSaleButton" type="button">New Sale</button>
-            </div>
-        </section>
     </form>
 </section>
 
@@ -247,8 +284,14 @@
             const grandTotal = document.getElementById("posGrandTotal");
             const cartSubTotal = document.getElementById("cartSubTotal");
             const cartFuelLine = document.getElementById("cartFuelLine");
+            const cartDiscountLine = document.getElementById("cartDiscountLine");
+            const cartTaxLine = document.getElementById("cartTaxLine");
             const orderCartItems = document.getElementById("orderCartItems");
-            const checkoutButton = document.getElementById("checkoutButton");
+            const cartItemCount = document.getElementById("cartItemCount");
+            const modalCartCount = document.getElementById("modalCartCount");
+            const cartButtonTotal = document.getElementById("cartButtonTotal");
+            const receiptModalElement = document.getElementById("receiptModal");
+            const receiptPrintArea = document.getElementById("receiptPrintArea");
             const insufficientCashModalElement = document.getElementById("insufficientCashModal");
             const insufficientCashModalLabel = document.getElementById("insufficientCashModalLabel");
             const insufficientCashMessage = document.getElementById("insufficientCashMessage");
@@ -256,19 +299,29 @@
             const insufficientCashAmount = document.getElementById("insufficientCashAmount");
             const insufficientMissingAmount = document.getElementById("insufficientMissingAmount");
             const receiptPreview = document.getElementById("receiptPreview");
+            const receiptTransactionNo = document.getElementById("receiptTransactionNo");
             const receiptDateTime = document.getElementById("receiptDateTime");
             const receiptPaymentDetail = document.getElementById("receiptPaymentDetail");
             const receiptMemberCardNo = document.getElementById("receiptMemberCardNo");
             const receiptFuelRows = document.getElementById("receiptFuelRows");
             const receiptProductRows = document.getElementById("receiptProductRows");
+            const receiptSubtotalAmount = document.getElementById("receiptSubtotalAmount");
+            const receiptDiscountAmount = document.getElementById("receiptDiscountAmount");
             const receiptTotalAmount = document.getElementById("receiptTotalAmount");
-            const printReceiptButton = document.getElementById("printReceiptButton");
+            const receiptChangeAmount = document.getElementById("receiptChangeAmount");
+            const modalPrintReceiptButton = document.getElementById("modalPrintReceiptButton");
             const submitSaleButton = document.getElementById("submitSaleButton");
             const newSaleButton = document.getElementById("newSaleButton");
             const fuelCart = [];
             let activeMode = "hot";
             let activeCategoryId = "";
             let activeFuelInput = "amount";
+            let completedReceiptNo = "";
+            let completedReceiptTotals = null;
+            let memberDiscountAmount = 0;
+            let memberDiscountLookupTimer = 0;
+            let memberDiscountLookupToken = 0;
+            let saleCompleted = false;
 
             function numericValue(input) {
                 return Number.parseFloat(input.value) || 0;
@@ -370,7 +423,7 @@
             }
 
             function discountAmount() {
-                return 0;
+                return completedReceiptTotals?.discountAmount ?? memberDiscountAmount;
             }
 
             function selectedRebateAmount() {
@@ -389,6 +442,10 @@
 
             function cartHasItems() {
                 return selectedProducts().length > 0 || fuelCart.length > 0;
+            }
+
+            function cartItemTotal() {
+                return selectedProducts().reduce((total, product) => total + product.quantity, 0) + fuelCart.length;
             }
 
             function canCheckout() {
@@ -494,11 +551,13 @@
                     input.value = availableQuantity;
                     showDisplayStockWarning();
                     updateTotal();
+                    queueMemberDiscountLookup();
                     return;
                 }
 
                 input.value = nextQuantity;
                 updateTotal();
+                queueMemberDiscountLookup();
             }
 
             function addFuelToCart() {
@@ -526,6 +585,7 @@
                 fuelAmountInput.value = "";
                 fuelLitersInput.value = "";
                 updateTotal();
+                queueMemberDiscountLookup();
             }
 
             function removeFuelFromCart(id) {
@@ -534,6 +594,7 @@
                 if (index >= 0) {
                     fuelCart.splice(index, 1);
                     updateTotal();
+                    queueMemberDiscountLookup();
                 }
             }
 
@@ -556,44 +617,149 @@
             }
 
             function updateSummaryAmounts() {
+                const itemCount = cartItemTotal();
                 cartSubTotal.textContent = peso.format(productTotalAmount());
                 cartFuelLine.textContent = peso.format(fuelTotalAmount());
-                grandTotal.textContent = peso.format(totalAmount());
+                cartDiscountLine.textContent = peso.format(discountAmount() + selectedRebateAmount());
+                cartTaxLine.textContent = peso.format(0);
+                grandTotal.textContent = peso.format(amountToPay());
+                if (cartButtonTotal) {
+                    cartButtonTotal.textContent = peso.format(amountToPay());
+                }
+                if (cartItemCount) {
+                    cartItemCount.textContent = itemCount.toString();
+                }
+                modalCartCount.textContent = `${itemCount} ${itemCount === 1 ? "item" : "items"}`;
             }
 
             function updateTotal() {
                 updateSummaryAmounts();
                 renderCart();
+                renderReceipt();
+            }
 
-                if (!receiptPreview.hidden) {
-                    renderReceipt();
+            async function loadMemberDiscount() {
+                const membershipCardNo = membershipCardNoInput.value.trim();
+                const lookupToken = memberDiscountLookupToken + 1;
+                memberDiscountLookupToken = lookupToken;
+
+                if (!membershipCardNo) {
+                    memberDiscountAmount = 0;
+                    updateTotal();
+                    return;
                 }
+
+                const query = new URLSearchParams({
+                    membershipCardNo,
+                    productTotal: productTotalAmount().toString(),
+                    fuelTotal: fuelTotalAmount().toString()
+                });
+
+                try {
+                    const response = await fetch(`/Transaction/MemberDiscount?${query.toString()}`, {
+                        headers: { "Accept": "application/json" }
+                    });
+                    const result = await response.json();
+
+                    if (lookupToken !== memberDiscountLookupToken) {
+                        return;
+                    }
+
+                    memberDiscountAmount = response.ok && result.success
+                        ? Math.max(0, Number.parseFloat(result.discountAmount) || 0)
+                        : 0;
+                } catch {
+                    if (lookupToken === memberDiscountLookupToken) {
+                        memberDiscountAmount = 0;
+                    }
+                }
+
+                updateTotal();
+            }
+
+            function queueMemberDiscountLookup() {
+                window.clearTimeout(memberDiscountLookupTimer);
+                memberDiscountLookupTimer = window.setTimeout(loadMemberDiscount, 250);
             }
 
             function renderReceipt() {
                 const products = selectedProducts();
+                const subtotal = completedReceiptTotals?.grossTotal ?? totalAmount();
+                const totalDiscount = completedReceiptTotals?.totalDiscount ?? discountAmount() + selectedRebateAmount();
+                const due = completedReceiptTotals?.netTotal ?? amountToPay();
+                const amountTendered = completedReceiptTotals?.amountTendered ?? cashAmount();
+                const change = completedReceiptTotals?.change ?? Math.max(0, amountTendered - due);
 
+                receiptTransactionNo.textContent = completedReceiptNo || "Pending";
                 receiptDateTime.textContent = new Date().toLocaleString();
-                receiptPaymentDetail.textContent = peso.format(Math.max(0, numericValue(paymentAmountInput)));
+                receiptPaymentDetail.textContent = peso.format(amountTendered);
                 receiptMemberCardNo.textContent = membershipCardNoInput.value.trim() || "None";
-                receiptTotalAmount.textContent = peso.format(totalAmount());
+                receiptSubtotalAmount.textContent = peso.format(subtotal);
+                receiptDiscountAmount.textContent = peso.format(totalDiscount);
+                receiptTotalAmount.textContent = peso.format(due);
+                receiptChangeAmount.textContent = peso.format(change);
                 receiptFuelRows.innerHTML = fuelCart.length
                     ? fuelCart.map(fuel => `<tr><td>${fuel.type}<br><small>${peso.format(fuel.price)}/L</small></td><td>${fuel.liters.toFixed(2)} L</td><td>${peso.format(fuel.amount)}</td></tr>`).join("")
                     : `<tr><td colspan="3">No selected fuel.</td></tr>`;
                 receiptProductRows.innerHTML = products.length
-                    ? products.map(product => `<tr><td>${product.no}</td><td>${product.name}</td><td>${product.quantity}</td></tr>`).join("")
+                    ? products.map(product => `<tr><td>${product.no}</td><td>${product.name}<br><small>${peso.format(product.price)}</small></td><td>${product.quantity}</td></tr>`).join("")
                     : `<tr><td colspan="3">No selected products.</td></tr>`;
             }
 
             function showReceipt() {
-                if (!validateCheckout()) {
+                updateTotal();
+                renderReceipt();
+                if (window.bootstrap) {
+                    bootstrap.Modal.getOrCreateInstance(receiptModalElement).show();
+                }
+            }
+
+            function printModalReceipt() {
+                renderReceipt();
+
+                if (!receiptPrintArea) {
                     return;
                 }
 
-                updateTotal();
-                renderReceipt();
-                receiptPreview.hidden = false;
-                receiptPreview.scrollIntoView({ behavior: "smooth", block: "start" });
+                const printFrame = document.createElement("iframe");
+                printFrame.title = "Receipt Print";
+                printFrame.style.position = "fixed";
+                printFrame.style.right = "0";
+                printFrame.style.bottom = "0";
+                printFrame.style.width = "0";
+                printFrame.style.height = "0";
+                printFrame.style.border = "0";
+
+                const linkedStyles = Array.from(document.querySelectorAll("link[rel='stylesheet']"))
+                    .map(link => `<link rel="stylesheet" href="${link.href}">`)
+                    .join("");
+
+                document.body.appendChild(printFrame);
+                const printDocument = printFrame.contentWindow.document;
+                printDocument.open();
+                printDocument.write(`<!doctype html>
+<html>
+<head>
+    <title>Receipt</title>
+    ${linkedStyles}
+    <style>
+        @@page { margin: 12mm; }
+        body { margin: 0; background: #fff; color: #111827; }
+        .salesman-receipt-print { width: 100%; max-width: 520px; margin: 0 auto; padding: 0; border: 0; box-shadow: none; }
+    </style>
+</head>
+<body>
+    ${receiptPrintArea.outerHTML}
+</body>
+</html>`);
+                printDocument.close();
+
+                const printReceiptFrame = () => {
+                    printFrame.contentWindow.focus();
+                    printFrame.contentWindow.print();
+                    setTimeout(() => printFrame.remove(), 500);
+                };
+                setTimeout(printReceiptFrame, 100);
             }
 
             function showSubmitMessage(message, isSuccess) {
@@ -635,12 +801,15 @@
 
             async function submitSale(event) {
                 event.preventDefault();
-                const payload = buildSalePayload();
+                let payload = buildSalePayload();
 
                 if (!payload.products.length && !payload.fuels.length) {
                     showSubmitMessage("Cart is empty. Add at least one product or fuel item.", false);
                     return;
                 }
+
+                await loadMemberDiscount();
+                payload = buildSalePayload();
 
                 if (!validateCheckout()) {
                     return;
@@ -665,13 +834,23 @@
                         return;
                     }
 
-                    showSubmitMessage(`${result.message} Receipt No: ${result.receiptNo}`, true);
-                    resetSale();
+                    completedReceiptNo = result.receiptNo || "";
+                    completedReceiptTotals = {
+                        grossTotal: Math.max(0, Number.parseFloat(result.grossTotal) || 0),
+                        discountAmount: Math.max(0, Number.parseFloat(result.discountAmount) || 0),
+                        totalDiscount: Math.max(0, (Number.parseFloat(result.discountAmount) || 0) + (Number.parseFloat(result.rebateAmount) || 0)),
+                        netTotal: Math.max(0, Number.parseFloat(result.netTotal) || 0),
+                        amountTendered: Math.max(0, Number.parseFloat(result.amountTendered) || payload.cashAmount || 0),
+                        change: Math.max(0, Number.parseFloat(result.change) || 0)
+                    };
+                    saleCompleted = true;
+                    renderReceipt();
+                    showReceipt();
                     showSubmitMessage(`${result.message} Receipt No: ${result.receiptNo}`, true);
                 } catch {
                     showSubmitMessage("Unable to save sale. Please try again.", false);
                 } finally {
-                    submitSaleButton.disabled = false;
+                    submitSaleButton.disabled = saleCompleted;
                 }
             }
 
@@ -698,6 +877,10 @@
                 form.reset();
                 restoreProductSubmitFields();
                 fuelCart.length = 0;
+                completedReceiptNo = "";
+                completedReceiptTotals = null;
+                saleCompleted = false;
+                submitSaleButton.disabled = false;
                 productSearch.value = "";
                 productQuantityInputs.forEach(input => {
                     input.value = 0;
@@ -706,8 +889,12 @@
                     fuelChoices[0].checked = true;
                 }
                 fuelLitersInput.value = "";
+                memberDiscountAmount = 0;
+                memberDiscountLookupToken += 1;
                 rebateRuleIdInput.value = "";
-                receiptPreview.hidden = true;
+                if (window.bootstrap) {
+                    bootstrap.Modal.getInstance(receiptModalElement)?.hide();
+                }
                 showHotMode();
                 updateTotal();
             }
@@ -732,7 +919,10 @@
                     addProductFromCard(row);
                 });
             });
-            productQuantityInputs.forEach(input => input.addEventListener("input", updateTotal));
+            productQuantityInputs.forEach(input => input.addEventListener("input", () => {
+                updateTotal();
+                queueMemberDiscountLookup();
+            }));
             fuelAmountInput.addEventListener("input", () => {
                 activeFuelInput = "amount";
                 updateLiters();
@@ -746,23 +936,16 @@
             }));
             addFuelButton.addEventListener("click", addFuelToCart);
             paymentAmountInput.addEventListener("input", () => {
-                if (!receiptPreview.hidden) {
-                    renderReceipt();
-                }
+                renderReceipt();
             });
             membershipCardNoInput.addEventListener("input", () => {
-                if (!receiptPreview.hidden) {
-                    renderReceipt();
-                }
+                queueMemberDiscountLookup();
             });
             rebateRuleIdInput.addEventListener("change", () => {
-                if (!receiptPreview.hidden) {
-                    renderReceipt();
-                }
+                updateTotal();
             });
             productSearch.addEventListener("input", filterProducts);
-            checkoutButton.addEventListener("click", showReceipt);
-            printReceiptButton.addEventListener("click", () => window.print());
+            modalPrintReceiptButton.addEventListener("click", printModalReceipt);
             newSaleButton.addEventListener("click", resetSale);
             form.addEventListener("submit", submitSale);
             window.addEventListener("pageshow", restoreProductSubmitFields);

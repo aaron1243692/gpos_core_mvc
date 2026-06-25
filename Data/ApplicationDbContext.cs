@@ -34,6 +34,7 @@ namespace gpos.Data
         public DbSet<FuelPriceHistory> FuelPriceHistory { get; set; }
         public DbSet<PumpMeterReading> PumpMeterReadings { get; set; }
         public DbSet<Discount> Discounts { get; set; }
+        public DbSet<LoyaltySetting> LoyaltySettings { get; set; }
         public DbSet<Member> Members { get; set; }
         public DbSet<RebateRule> RebateRules { get; set; }
         public DbSet<PointsLedger> PointsLedger { get; set; }
@@ -623,10 +624,23 @@ namespace gpos.Data
 
                 entity.Property(discount => discount.Id).HasColumnName("id");
                 entity.Property(discount => discount.Name).HasColumnName("name").HasMaxLength(100).IsRequired();
-                entity.Property(discount => discount.EarnRate).HasColumnName("earn_rate").HasPrecision(5, 2).HasDefaultValue(0m);
                 entity.Property(discount => discount.Status).HasColumnName("status").HasDefaultValue(1);
                 entity.Property(discount => discount.CreatedAt).HasColumnName("created_at");
                 entity.Property(discount => discount.UpdatedAt).HasColumnName("updated_at");
+            });
+
+            modelBuilder.Entity<LoyaltySetting>(entity =>
+            {
+                entity.ToTable("loyalty_settings");
+                entity.HasKey(setting => setting.Id);
+
+                entity.Property(setting => setting.Id).HasColumnName("id");
+                entity.Property(setting => setting.SettingKey).HasColumnName("setting_key").HasMaxLength(100).IsRequired();
+                entity.Property(setting => setting.DecimalValue).HasColumnName("decimal_value").HasPrecision(18, 2).HasDefaultValue(0m);
+                entity.Property(setting => setting.CreatedAt).HasColumnName("created_at");
+                entity.Property(setting => setting.UpdatedAt).HasColumnName("updated_at");
+
+                entity.HasIndex(setting => setting.SettingKey).IsUnique();
             });
 
             modelBuilder.Entity<Member>(entity =>
