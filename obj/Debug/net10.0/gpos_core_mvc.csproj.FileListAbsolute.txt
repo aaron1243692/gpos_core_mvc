@@ -2955,7 +2955,6 @@ C:\project\gpos_core_mvc\bin\Debug\net10.0\Views\Transaction\VoidProduct.cshtml
 C:\project\gpos_core_mvc\bin\Debug\net10.0\Views\Transaction\VoidSale.cshtml
 C:\project\gpos_core_mvc\bin\Debug\net10.0\Views\Transaction\WarehouseStockAdjustment.cshtml
 C:\project\gpos_core_mvc\bin\Debug\net10.0\Views\Transaction\WarehouseToDisplay.cshtml
-C:\project\gpos_core_mvc\obj\Debug\net10.0\compressed\ios0330fcj-{0}-8i2fedxz7a-8i2fedxz7a.gz
 C:\project\gpos_core_mvc\obj\Debug\net10.0\compressed\j7yrgpa9p4-{0}-v3hp0r6hd2-v3hp0r6hd2.gz
 C:\project\gpos_core_mvc\artifacts\verify-transaction-ui-build\wwwroot\lib\jquery\LICENSE.txt
 C:\project\gpos_core_mvc\artifacts\verify-transaction-ui-build\wwwroot\lib\jquery\dist\jquery.slim.min.map
@@ -8177,3 +8176,4 @@ C:\project\gpos_core_mvc\artifacts\verify-build\Views\Transaction\WarehouseVoid.
 C:\project\gpos_core_mvc\artifacts\verify-build\Views\Users\Index.cshtml
 C:\project\gpos_core_mvc\artifacts\verify-build\Views\_ViewImports.cshtml
 C:\project\gpos_core_mvc\artifacts\verify-build\Views\_ViewStart.cshtml
+C:\project\gpos_core_mvc\obj\Debug\net10.0\compressed\ios0330fcj-{0}-tquhzqu6mn-tquhzqu6mn.gz

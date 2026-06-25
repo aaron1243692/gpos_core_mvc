@@ -2320,6 +2320,66 @@ textarea.form-control {
   font-weight: 800;
 }
 
+#productMenu .pos-product-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.65rem;
+}
+
+#productMenu .pos-menu-product-card {
+  aspect-ratio: 1 / 1;
+  align-content: start;
+  grid-template-rows: auto minmax(2.3rem, auto) auto auto 1fr auto;
+  gap: 0.22rem;
+  min-height: 0;
+  padding: 0.62rem;
+  border-radius: 12px;
+}
+
+#productMenu .pos-product-visual {
+  width: 44px;
+  height: 44px;
+  font-size: 0.78rem;
+}
+
+#productMenu .pos-menu-product-card h3 {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  font-size: 0.82rem;
+  line-height: 1.14;
+}
+
+#productMenu .pos-menu-product-card p {
+  font-size: 0.8rem;
+  line-height: 1.1;
+}
+
+#productMenu .pos-menu-product-card small {
+  color: #3f5f52;
+  font-size: 0.72rem;
+  font-weight: 800;
+  line-height: 1.1;
+  text-align: center;
+}
+
+#productMenu .pos-quantity-control {
+  align-self: end;
+  gap: 0.35rem;
+  margin-top: 0;
+}
+
+#productMenu .pos-quantity-control span {
+  font-size: 0.68rem;
+}
+
+#productMenu .pos-quantity-control .form-control {
+  width: 3.6rem;
+  min-height: 1.75rem;
+  padding: 0.12rem 0.25rem;
+  font-size: 0.82rem;
+}
+
 .pos-quantity-control {
   display: flex;
   width: 100%;
@@ -3371,6 +3431,10 @@ textarea.form-control {
     grid-template-columns: repeat(3, minmax(132px, 1fr));
   }
 
+  #productMenu .pos-product-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
   .pos-payment-panel,
   .salesman-sell-page .pos-payment-panel {
     grid-column: 1 / -1;
@@ -3439,6 +3503,10 @@ textarea.form-control {
 
   .pos-product-grid {
     grid-template-columns: repeat(2, minmax(132px, 1fr));
+  }
+
+  #productMenu .pos-product-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   .pos-fuel-fields {
@@ -3643,6 +3711,10 @@ textarea.form-control {
   .pos-fuel-menu .fuel-type-grid,
   .pos-product-grid {
     grid-template-columns: 1fr;
+  }
+
+  #productMenu .pos-product-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .pos-order-layout {
