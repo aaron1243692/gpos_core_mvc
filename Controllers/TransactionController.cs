@@ -34,7 +34,7 @@ namespace gpos.Controllers
             var now = DateTime.Now;
             var discountAmount = await CalculateMemberDiscount(member, Math.Max(0m, productTotal), Math.Max(0m, fuelTotal), now);
 
-            return Ok(new { success = true, memberFound = true, discountAmount });
+            return Ok(new { success = true, memberFound = true, discountAmount, points = member.Points });
         }
 
         [HttpPost]
@@ -77,15 +77,35 @@ namespace gpos.Controllers
                     return BadRequest(new { success = false, message = "Sale total must be greater than zero." });
                 }
 
-                var member = await FindMember(request.MembershipCardNo);
-                var discountAmount = await CalculateMemberDiscount(member, productTotal, fuelTotal, now);
-                var rebate = await FindRebate(request.RebateRuleId);
-                var rebateAmount = ValidateAndCalculateRebate(member, rebate, grossTotal, productItems.Count > 0, fuelItems.Count > 0);
-                var netTotal = Math.Max(0m, grossTotal - discountAmount - rebateAmount);
-                var cashAmount = Math.Max(0m, request.CashAmount);
-                var pointsEarned = await CalculateMemberEarnings(member, productTotal, fuelTotal, netTotal, now);
+                var paymentMethod = NormalizePaymentMethod(request.PaymentMethod);
+                var isPointsPayment = paymentMethod == "Points";
+                Member? member;
+                decimal discountAmount;
+                decimal pointsRequired;
+                decimal rebateAmount;
 
-                if (cashAmount < netTotal)
+                if (isPointsPayment)
+                {
+                    var pointsMember = await FindRequiredMember(request.MembershipCardNo);
+                    var rebate = await FindLatestActiveRebate();
+                    member = pointsMember;
+                    discountAmount = 0m;
+                    pointsRequired = ValidateAndCalculatePointsPayment(pointsMember, rebate, grossTotal, productItems.Count > 0, fuelItems.Count > 0);
+                    rebateAmount = grossTotal;
+                }
+                else
+                {
+                    member = await FindMember(request.MembershipCardNo);
+                    discountAmount = await CalculateMemberDiscount(member, productTotal, fuelTotal, now);
+                    pointsRequired = 0m;
+                    rebateAmount = 0m;
+                }
+
+                var netTotal = Math.Max(0m, grossTotal - discountAmount - rebateAmount);
+                var cashAmount = isPointsPayment ? 0m : Math.Max(0m, request.CashAmount);
+                var pointsEarned = isPointsPayment ? 0m : await CalculateMemberEarnings(member, productTotal, fuelTotal, netTotal, now);
+
+                if (!isPointsPayment && cashAmount < netTotal)
                 {
                     return BadRequest(new { success = false, message = "Cash amount is not enough to checkout." });
                 }
@@ -125,9 +145,9 @@ namespace gpos.Controllers
                     _db.FuelSales.Add(fuelItems[i].FuelSale);
                 }
 
-                AddPaymentRecords(sale.Id, cashAmount, rebateAmount, now);
+                AddPaymentRecords(sale.Id, paymentMethod, cashAmount, rebateAmount, now);
 
-                await ApplyPointsChanges(member, rebate, rebateAmount, pointsEarned, sale.Id, now);
+                await ApplyPointsChanges(member, pointsRequired, pointsEarned, sale.Id, now);
 
                 await _db.SaveChangesAsync();
                 await dbTransaction.CommitAsync();
@@ -142,6 +162,8 @@ namespace gpos.Controllers
                     rebateAmount,
                     netTotal,
                     pointsEarned,
+                    pointsRequired,
+                    paymentMethod,
                     amountTendered = cashAmount,
                     change = Math.Max(0m, cashAmount - netTotal)
                 });
@@ -576,6 +598,12 @@ namespace gpos.Controllers
             return member ?? throw new InvalidOperationException("Member card was not found or is inactive.");
         }
 
+        private async Task<Member> FindRequiredMember(string? membershipCardNo)
+        {
+            var member = await FindMember(membershipCardNo);
+            return member ?? throw new InvalidOperationException("Select a valid member before using points payment.");
+        }
+
         private async Task<Member?> FindActiveMemberByCard(string? membershipCardNo)
         {
             var cardNo = (membershipCardNo ?? string.Empty).Trim();
@@ -588,45 +616,41 @@ namespace gpos.Controllers
                 .FirstOrDefaultAsync(item => item.Status == 1 && (item.CardNo == cardNo || item.MemberNo == cardNo));
         }
 
-        private async Task<RebateRule?> FindRebate(int? rebateRuleId)
+        private async Task<RebateRule> FindLatestActiveRebate()
         {
-            if (!rebateRuleId.HasValue || rebateRuleId.Value <= 0)
-            {
-                return null;
-            }
-
             var rebate = await _db.RebateRules
+                .Where(item => item.Status == 1)
                 .OrderByDescending(item => item.CreatedAt)
                 .ThenByDescending(item => item.Id)
                 .FirstOrDefaultAsync();
 
-            return rebate ?? throw new InvalidOperationException("Current rebate was not found.");
+            return rebate ?? throw new InvalidOperationException("No active rebate configuration is available for points payment.");
         }
 
-        private async Task ApplyPointsChanges(Member? member, RebateRule? rebate, decimal rebateAmount, decimal pointsEarned, int saleId, DateTime now)
+        private async Task ApplyPointsChanges(Member? member, decimal pointsRedeemed, decimal pointsEarned, int saleId, DateTime now)
         {
             if (member is null)
             {
                 return;
             }
 
-            if (rebate is not null && rebateAmount > 0m)
+            if (pointsRedeemed > 0m)
             {
                 var oldPoints = member.Points;
-                member.Points -= rebate.PointsRequired;
+                member.Points -= pointsRedeemed;
                 member.UpdatedAt = now;
 
                 _db.PointsLedger.Add(new PointsLedger
                 {
                     MemberId = member.Id,
                     TransactionType = "Used",
-                    Points = rebate.PointsRequired,
+                    Points = pointsRedeemed,
                     OldPoints = oldPoints,
                     NewPoints = member.Points,
                     ReferenceType = "POS",
                     ReferenceId = saleId,
                     SaleId = saleId,
-                    Remarks = "Used as rebate in POS",
+                    Remarks = "Used as points payment in POS",
                     CreatedAt = now
                 });
             }
@@ -853,38 +877,39 @@ namespace gpos.Controllers
             return value is "percentage" or "percent" or "%";
         }
 
-        private static decimal ValidateAndCalculateRebate(Member? member, RebateRule? rebate, decimal grossTotal, bool hasProducts, bool hasFuel)
+        private static decimal ValidateAndCalculatePointsPayment(Member member, RebateRule rebate, decimal grossTotal, bool hasProducts, bool hasFuel)
         {
-            if (rebate is null)
+            ValidateRebateEligibility(rebate, grossTotal, hasProducts, hasFuel);
+
+            if (rebate.PointsRequired <= 0m || rebate.RebateValue <= 0m)
             {
-                return 0m;
+                throw new InvalidOperationException("Active rebate configuration is invalid for points payment.");
             }
 
-            if (member is null)
+            var requiredPoints = Math.Ceiling((grossTotal / rebate.RebateValue) * rebate.PointsRequired);
+            if (member.Points < requiredPoints)
             {
-                throw new InvalidOperationException("Select a valid member before using a rebate.");
+                throw new InvalidOperationException("Member does not have enough points for this purchase.");
             }
 
-            if (member.Points < rebate.PointsRequired)
-            {
-                throw new InvalidOperationException("Member does not have enough points for the selected rebate.");
-            }
+            return requiredPoints;
+        }
 
+        private static void ValidateRebateEligibility(RebateRule rebate, decimal grossTotal, bool hasProducts, bool hasFuel)
+        {
             var appliesTo = rebate.AppliesTo.Trim();
             var appliesToProduct = string.Equals(appliesTo, "Product", StringComparison.OrdinalIgnoreCase) || string.Equals(appliesTo, "Both", StringComparison.OrdinalIgnoreCase);
             var appliesToFuel = string.Equals(appliesTo, "Fuel", StringComparison.OrdinalIgnoreCase) || string.Equals(appliesTo, "Both", StringComparison.OrdinalIgnoreCase);
 
             if ((hasProducts && !appliesToProduct) || (hasFuel && !appliesToFuel))
             {
-                throw new InvalidOperationException("Selected rebate does not apply to every item in this sale.");
+                throw new InvalidOperationException("Active rebate does not apply to every item in this sale.");
             }
 
             if (grossTotal < rebate.MinimumPurchase)
             {
-                throw new InvalidOperationException("Sale total does not meet the rebate minimum purchase.");
+                throw new InvalidOperationException("Sale total does not meet the active rebate minimum purchase.");
             }
-
-            return Math.Min(grossTotal, rebate.RebateValue);
         }
 
         private async Task<string> GenerateReceiptNo(DateTime now)
@@ -896,9 +921,16 @@ namespace gpos.Controllers
             return $"{prefix}{count + 1:000000}";
         }
 
-        private void AddPaymentRecords(int saleId, decimal cashAmount, decimal rebateAmount, DateTime now)
+        private static string NormalizePaymentMethod(string? paymentMethod)
         {
-            if (cashAmount > 0m || rebateAmount <= 0m)
+            return string.Equals((paymentMethod ?? string.Empty).Trim(), "Points", StringComparison.OrdinalIgnoreCase)
+                ? "Points"
+                : "Cash";
+        }
+
+        private void AddPaymentRecords(int saleId, string paymentMethod, decimal cashAmount, decimal rebateAmount, DateTime now)
+        {
+            if (paymentMethod == "Cash")
             {
                 _db.Payments.Add(new Payment
                 {
@@ -911,7 +943,7 @@ namespace gpos.Controllers
                 });
             }
 
-            if (rebateAmount > 0)
+            if (paymentMethod == "Points")
             {
                 _db.Payments.Add(new Payment
                 {

@@ -3,7 +3,7 @@
 @inject gpos.Data.ApplicationDbContext Db
 
 @{
-    var currentRebate = Db.RebateRules.AsNoTracking().OrderByDescending(rebate => rebate.CreatedAt).ThenByDescending(rebate => rebate.Id).FirstOrDefault();
+    var currentRebate = Db.RebateRules.AsNoTracking().Where(rebate => rebate.Status == 1).OrderByDescending(rebate => rebate.CreatedAt).ThenByDescending(rebate => rebate.Id).FirstOrDefault();
 }
 
 <section class="salesman-pos-page">
@@ -113,6 +113,19 @@
                 </div>
 
                 <div class="pos-summary-fields">
+                    <div>
+                        <label class="form-label">Payment Method</label>
+                        <div class="d-flex gap-2 flex-wrap">
+                            <label class="fuel-option flex-fill mb-0">
+                                <input class="form-check-input payment-method-choice" type="radio" name="PaymentMethod" value="Cash" checked />
+                                <span>Cash</span>
+                            </label>
+                            <label class="fuel-option flex-fill mb-0">
+                                <input class="form-check-input payment-method-choice" type="radio" name="PaymentMethod" value="Points" />
+                                <span>Points</span>
+                            </label>
+                        </div>
+                    </div>
                     <div id="cashPaymentField">
                         <label class="form-label" for="paymentAmount">Cash Amount</label>
                         <div class="input-group">
@@ -124,15 +137,12 @@
                         <label class="form-label" for="membershipCardNo">Member Card No <span class="text-muted">(Optional)</span></label>
                         <input class="form-control" id="membershipCardNo" name="MembershipCardNo" placeholder="Optional member no or card no" autocomplete="off" />
                     </div>
-                    <div id="rebateField">
-                        <label class="form-label" for="rebateRuleId">Rebate</label>
-                        <select class="form-select" id="rebateRuleId" name="RebateRuleId">
-                            <option value="">No rebate</option>
-                            @if (currentRebate is not null)
-                            {
-                                <option value="@currentRebate.Id" data-rebate-value="@currentRebate.RebateValue">@currentRebate.Name - @currentRebate.PointsRequired.ToString("N2") pts</option>
-                            }
-                        </select>
+                    <div id="pointsPaymentField" hidden>
+                        <div class="pos-summary-totals mb-0">
+                            <div><span>Available Points</span><strong id="memberAvailablePoints">0.00 pts</strong></div>
+                            <div><span>Point Conversion</span><strong id="pointConversion">No active rebate</strong></div>
+                            <div><span>Required Points</span><strong id="requiredPoints">0.00 pts</strong></div>
+                        </div>
                     </div>
                 </div>
 
@@ -270,6 +280,7 @@
     <script>
         (() => {
             const peso = new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP", currencyDisplay: "narrowSymbol" });
+            const activeRebate = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(currentRebate is null ? null : new { name = currentRebate.Name, pointsRequired = currentRebate.PointsRequired, rebateValue = currentRebate.RebateValue }));
             const form = document.getElementById("posSaleForm");
             const submitMessage = document.getElementById("posSubmitMessage");
             const antiForgeryToken = form.querySelector("input[name='__RequestVerificationToken']")?.value || "";
@@ -286,9 +297,14 @@
             const fuelAmountInput = document.getElementById("fuelCashAmount");
             const fuelLitersInput = document.getElementById("fuelLiters");
             const addFuelButton = document.getElementById("addFuelButton");
+            const paymentMethodChoices = Array.from(document.querySelectorAll(".payment-method-choice"));
             const paymentAmountInput = document.getElementById("paymentAmount");
             const membershipCardNoInput = document.getElementById("membershipCardNo");
-            const rebateRuleIdInput = document.getElementById("rebateRuleId");
+            const cashPaymentField = document.getElementById("cashPaymentField");
+            const pointsPaymentField = document.getElementById("pointsPaymentField");
+            const memberAvailablePoints = document.getElementById("memberAvailablePoints");
+            const pointConversion = document.getElementById("pointConversion");
+            const requiredPointsLabel = document.getElementById("requiredPoints");
             const grandTotal = document.getElementById("posGrandTotal");
             const cartSubTotal = document.getElementById("cartSubTotal");
             const cartFuelLine = document.getElementById("cartFuelLine");
@@ -329,6 +345,8 @@
             let completedReceiptNo = "";
             let completedReceiptTotals = null;
             let memberDiscountAmount = 0;
+            let memberPoints = 0;
+            let memberFound = false;
             let memberDiscountLookupTimer = 0;
             let memberDiscountLookupToken = 0;
             let saleCompleted = false;
@@ -379,6 +397,10 @@
             }
 
             function availableDisplayQuantity(input) {
+                if (!input) {
+                    return 0;
+                }
+
                 const card = input.closest(".pos-menu-product-card");
                 return card ? Math.max(0, Number.parseFloat(card.dataset.availableQuantity) || 0) : 0;
             }
@@ -432,18 +454,28 @@
                 return productTotalAmount() + fuelTotalAmount();
             }
 
-            function discountAmount() {
-                return completedReceiptTotals?.discountAmount ?? memberDiscountAmount;
+            function selectedPaymentMethod() {
+                return paymentMethodChoices.find(choice => choice.checked)?.value || "Cash";
             }
 
-            function selectedRebateAmount() {
-                const selected = rebateRuleIdInput.options[rebateRuleIdInput.selectedIndex];
-                const value = selected ? Number.parseFloat(selected.dataset.rebateValue) || 0 : 0;
-                return Math.min(totalAmount(), Math.max(0, value));
+            function isPointsPayment() {
+                return selectedPaymentMethod() === "Points";
+            }
+
+            function discountAmount() {
+                return isPointsPayment() ? 0 : completedReceiptTotals?.discountAmount ?? memberDiscountAmount;
+            }
+
+            function requiredPointsForPurchase() {
+                if (!activeRebate || activeRebate.pointsRequired <= 0 || activeRebate.rebateValue <= 0 || totalAmount() <= 0) {
+                    return 0;
+                }
+
+                return Math.ceil((totalAmount() / activeRebate.rebateValue) * activeRebate.pointsRequired);
             }
 
             function amountToPay() {
-                return Math.max(0, totalAmount() - discountAmount() - selectedRebateAmount());
+                return isPointsPayment() ? 0 : Math.max(0, totalAmount() - discountAmount());
             }
 
             function cashAmount() {
@@ -459,7 +491,15 @@
             }
 
             function canCheckout() {
-                return cartHasItems() && (amountToPay() <= 0 || paymentAmountInput.value.trim().length > 0) && cashAmount() >= amountToPay();
+                if (!cartHasItems()) {
+                    return false;
+                }
+
+                if (isPointsPayment()) {
+                    return memberFound && activeRebate && memberPoints >= requiredPointsForPurchase();
+                }
+
+                return (amountToPay() <= 0 || paymentAmountInput.value.trim().length > 0) && cashAmount() >= amountToPay();
             }
 
             function showCheckoutWarningModal(title, message) {
@@ -482,6 +522,25 @@
                 if (!cartHasItems()) {
                     showCheckoutWarningModal("Checkout Warning", "Cart is empty. Please add product or fuel first.");
                     return false;
+                }
+
+                if (isPointsPayment()) {
+                    if (!membershipCardNoInput.value.trim() || !memberFound) {
+                        showCheckoutWarningModal("Checkout Warning", "Select a valid member before using points payment.");
+                        return false;
+                    }
+
+                    if (!activeRebate) {
+                        showCheckoutWarningModal("Checkout Warning", "No active rebate configuration is available for points payment.");
+                        return false;
+                    }
+
+                    if (memberPoints < requiredPointsForPurchase()) {
+                        showCheckoutWarningModal("Insufficient Points", "Member does not have enough points for this purchase.");
+                        return false;
+                    }
+
+                    return true;
                 }
 
                 if (amountToPay() > 0 && paymentAmountInput.value.trim().length === 0) {
@@ -570,6 +629,120 @@
                 queueMemberDiscountLookup();
             }
 
+            function productInputByDisplayStockId(displayStockId) {
+                return productQuantityInputs.find(input => {
+                    const card = input.closest(".pos-menu-product-card");
+                    return card && card.dataset.displayStockId === displayStockId;
+                }) || null;
+            }
+
+            function setProductQuantityFromCart(displayStockId, quantity) {
+                const input = productInputByDisplayStockId(displayStockId);
+
+                if (!input) {
+                    return;
+                }
+
+                const availableQuantity = availableDisplayQuantity(input);
+                const nextQuantity = Math.min(availableQuantity, Math.max(0, quantity));
+
+                if (quantity > availableQuantity) {
+                    showDisplayStockWarning();
+                }
+
+                input.value = nextQuantity;
+                updateTotal();
+                queueMemberDiscountLookup();
+            }
+
+            function setFuelLitersFromCart(fuelId, liters) {
+                const fuel = fuelCart.find(item => item.id === fuelId);
+
+                if (!fuel) {
+                    return;
+                }
+
+                const nextLiters = Math.max(0, liters);
+
+                if (nextLiters <= 0) {
+                    removeFuelFromCart(fuelId);
+                    return;
+                }
+
+                fuel.liters = nextLiters;
+                fuel.amount = nextLiters * fuel.price;
+                fuel.subtotal = fuel.amount;
+                updateTotal();
+                queueMemberDiscountLookup();
+            }
+
+            function refreshCartTotalsWithoutRender() {
+                updateSummaryAmounts();
+                renderReceipt();
+                queueMemberDiscountLookup();
+            }
+
+            function updateCartRowSubtotal(row, amount) {
+                const subtotal = row?.querySelector("b");
+
+                if (subtotal) {
+                    subtotal.textContent = peso.format(amount);
+                }
+            }
+
+            function updateProductQuantityFromCartInput(input) {
+                const displayStockId = input.dataset.cartProductQuantity;
+                const productInput = productInputByDisplayStockId(displayStockId);
+
+                if (!productInput) {
+                    return;
+                }
+
+                const availableQuantity = availableDisplayQuantity(productInput);
+                const requestedQuantity = Math.max(0, numericValue(input));
+                const nextQuantity = Math.min(availableQuantity, requestedQuantity);
+
+                if (requestedQuantity > availableQuantity) {
+                    showDisplayStockWarning();
+                }
+
+                productInput.value = nextQuantity;
+                input.value = nextQuantity;
+
+                const price = Number.parseFloat(productInput.dataset.price) || 0;
+                updateCartRowSubtotal(input.closest(".pos-cart-edit-row"), nextQuantity * price);
+
+                if (nextQuantity <= 0) {
+                    updateTotal();
+                    queueMemberDiscountLookup();
+                    return;
+                }
+
+                refreshCartTotalsWithoutRender();
+            }
+
+            function updateFuelLitersFromCartInput(input) {
+                const fuel = fuelCart.find(item => item.id === input.dataset.cartFuelLiters);
+
+                if (!fuel) {
+                    return;
+                }
+
+                const nextLiters = Math.max(0, numericValue(input));
+
+                if (nextLiters <= 0) {
+                    removeFuelFromCart(fuel.id);
+                    return;
+                }
+
+                fuel.liters = nextLiters;
+                fuel.amount = nextLiters * fuel.price;
+                fuel.subtotal = fuel.amount;
+                input.value = nextLiters.toFixed(2);
+                updateCartRowSubtotal(input.closest(".pos-cart-edit-row"), fuel.amount);
+                refreshCartTotalsWithoutRender();
+            }
+
             function addFuelToCart() {
                 const selected = selectedFuel();
                 const price = selectedFuelPrice();
@@ -611,28 +784,57 @@
             function renderCart() {
                 const products = selectedProducts();
                 const productMarkup = products.map(product => {
-                    return `<div class="pos-cart-item"><div class="pos-cart-thumb">${product.no.substring(0, 2)}</div><div><strong>${product.name}</strong><span>${peso.format(product.price)}</span></div><span>x${product.quantity}</span><b>${peso.format(product.quantity * product.price)}</b></div>`;
+                    return `<div class="pos-cart-edit-row" data-cart-product="${product.displayStockId}">
+                        <div>
+                            <strong>${product.name}</strong>
+                            <span>${product.no} - ${peso.format(product.price)} each</span>
+                        </div>
+                        <div class="input-group input-group-sm">
+                            <button class="btn btn-outline-secondary" type="button" data-cart-product-step="${product.displayStockId}" data-step="-1" aria-label="Decrease ${product.name} quantity">-</button>
+                            <input class="form-control text-center" type="number" min="0" max="${availableDisplayQuantity(productInputByDisplayStockId(product.displayStockId.toString()))}" step="1" value="${product.quantity}" data-cart-product-quantity="${product.displayStockId}" aria-label="${product.name} quantity" />
+                            <button class="btn btn-outline-secondary" type="button" data-cart-product-step="${product.displayStockId}" data-step="1" aria-label="Increase ${product.name} quantity">+</button>
+                        </div>
+                        <div class="text-end">
+                            <b>${peso.format(product.quantity * product.price)}</b>
+                            <button class="pos-cart-remove mt-1" type="button" data-remove-product="${product.displayStockId}" aria-label="Remove ${product.name}">x</button>
+                        </div>
+                    </div>`;
                 }).join("");
                 const fuelMarkup = fuelCart.map(fuel => {
-                    return `<div class="pos-cart-item"><div class="pos-cart-thumb">FU</div><div><strong>${fuel.type}</strong><span>${peso.format(fuel.price)}/L - ${fuel.liters.toFixed(2)} L - Cash ${peso.format(fuel.amount)}</span></div><span>${fuel.liters.toFixed(2)} L</span><b>${peso.format(fuel.amount)}</b><button class="pos-cart-remove" type="button" data-remove-fuel="${fuel.id}" aria-label="Remove ${fuel.type} fuel">x</button></div>`;
+                    return `<div class="pos-cart-edit-row pos-cart-edit-row--fuel" data-cart-fuel="${fuel.id}">
+                        <div>
+                            <strong>${fuel.type}</strong>
+                            <span>${peso.format(fuel.price)}/L</span>
+                        </div>
+                        <div class="input-group input-group-sm">
+                            <button class="btn btn-outline-secondary" type="button" data-cart-fuel-step="${fuel.id}" data-step="-1" aria-label="Decrease ${fuel.type} liters">-</button>
+                            <input class="form-control text-center" type="number" min="0" step="0.01" value="${fuel.liters.toFixed(2)}" data-cart-fuel-liters="${fuel.id}" aria-label="${fuel.type} liters" />
+                            <button class="btn btn-outline-secondary" type="button" data-cart-fuel-step="${fuel.id}" data-step="1" aria-label="Increase ${fuel.type} liters">+</button>
+                        </div>
+                        <div class="text-end">
+                            <b>${peso.format(fuel.amount)}</b>
+                            <button class="pos-cart-remove mt-1" type="button" data-remove-fuel="${fuel.id}" aria-label="Remove ${fuel.type} fuel">x</button>
+                        </div>
+                    </div>`;
                 }).join("");
 
                 orderCartItems.innerHTML = productMarkup || fuelMarkup
-                    ? `${productMarkup}${fuelMarkup}`
+                    ? `<div class="pos-cart-edit-list">${productMarkup}${fuelMarkup}</div>`
                     : `<div class="pos-empty-cart">No selected items yet.</div>`;
-
-                Array.from(orderCartItems.querySelectorAll("[data-remove-fuel]")).forEach(button => {
-                    button.addEventListener("click", () => removeFuelFromCart(button.dataset.removeFuel));
-                });
             }
 
             function updateSummaryAmounts() {
                 const itemCount = cartItemTotal();
                 cartSubTotal.textContent = peso.format(productTotalAmount());
                 cartFuelLine.textContent = peso.format(fuelTotalAmount());
-                cartDiscountLine.textContent = peso.format(discountAmount() + selectedRebateAmount());
+                cartDiscountLine.textContent = peso.format(discountAmount());
                 cartTaxLine.textContent = peso.format(0);
                 grandTotal.textContent = peso.format(amountToPay());
+                memberAvailablePoints.textContent = `${memberPoints.toFixed(2)} pts`;
+                pointConversion.textContent = activeRebate
+                    ? `${activeRebate.pointsRequired.toFixed(2)} pts = ${peso.format(activeRebate.rebateValue)}`
+                    : "No active rebate";
+                requiredPointsLabel.textContent = `${requiredPointsForPurchase().toFixed(2)} pts`;
                 if (cartButtonTotal) {
                     cartButtonTotal.textContent = peso.format(amountToPay());
                 }
@@ -655,6 +857,8 @@
 
                 if (!membershipCardNo) {
                     memberDiscountAmount = 0;
+                    memberPoints = 0;
+                    memberFound = false;
                     updateTotal();
                     return;
                 }
@@ -675,12 +879,16 @@
                         return;
                     }
 
-                    memberDiscountAmount = response.ok && result.success
+                    memberFound = response.ok && result.success && result.memberFound;
+                    memberPoints = memberFound ? Math.max(0, Number.parseFloat(result.points) || 0) : 0;
+                    memberDiscountAmount = memberFound && !isPointsPayment()
                         ? Math.max(0, Number.parseFloat(result.discountAmount) || 0)
                         : 0;
                 } catch {
                     if (lookupToken === memberDiscountLookupToken) {
                         memberDiscountAmount = 0;
+                        memberPoints = 0;
+                        memberFound = false;
                     }
                 }
 
@@ -692,25 +900,36 @@
                 memberDiscountLookupTimer = window.setTimeout(loadMemberDiscount, 250);
             }
 
+            function updatePaymentFields() {
+                const pointsPayment = isPointsPayment();
+                cashPaymentField.hidden = pointsPayment;
+                pointsPaymentField.hidden = !pointsPayment;
+                membershipCardNoInput.closest("#memberCardField").querySelector(".text-muted").textContent = pointsPayment ? "(Required)" : "(Optional)";
+
+                if (pointsPayment) {
+                    paymentAmountInput.value = "";
+                    memberDiscountAmount = 0;
+                }
+
+                updateTotal();
+                queueMemberDiscountLookup();
+            }
+
             function renderReceipt() {
                 const products = selectedProducts();
                 const subtotal = completedReceiptTotals?.grossTotal ?? totalAmount();
-                const totalDiscount = completedReceiptTotals?.totalDiscount ?? discountAmount() + selectedRebateAmount();
+                const totalDiscount = completedReceiptTotals?.totalDiscount ?? discountAmount();
                 const due = completedReceiptTotals?.netTotal ?? amountToPay();
                 const amountTendered = completedReceiptTotals?.amountTendered ?? cashAmount();
                 const change = completedReceiptTotals?.change ?? Math.max(0, amountTendered - due);
                 const pointsEarned = completedReceiptTotals?.pointsEarned ?? 0;
-                const hasPointsPayment = totalDiscount > discountAmount();
-                const paymentMethod = hasPointsPayment && amountTendered <= 0
-                    ? "Points"
-                    : hasPointsPayment
-                        ? "Cash + Points"
-                        : "Cash";
+                const pointsRequired = completedReceiptTotals?.pointsRequired ?? requiredPointsForPurchase();
+                const paymentMethod = completedReceiptTotals?.paymentMethod ?? selectedPaymentMethod();
 
                 receiptTransactionNo.textContent = completedReceiptNo || "Pending";
                 receiptDateTime.textContent = new Date().toLocaleString();
                 receiptPaymentMethod.textContent = paymentMethod;
-                receiptPaymentDetail.textContent = peso.format(amountTendered);
+                receiptPaymentDetail.textContent = paymentMethod === "Points" ? `${pointsRequired.toFixed(2)} pts` : peso.format(amountTendered);
                 receiptMemberCardNo.textContent = membershipCardNoInput.value.trim() || "None";
                 receiptSubtotalAmount.textContent = peso.format(subtotal);
                 receiptDiscountAmount.textContent = peso.format(totalDiscount);
@@ -812,9 +1031,9 @@
                 return {
                     products,
                     fuels,
-                    cashAmount: Math.max(0, numericValue(paymentAmountInput)),
-                    membershipCardNo: membershipCardNoInput.value.trim(),
-                    rebateRuleId: Number.parseInt(rebateRuleIdInput.value, 10) || null
+                    paymentMethod: selectedPaymentMethod(),
+                    cashAmount: isPointsPayment() ? 0 : Math.max(0, numericValue(paymentAmountInput)),
+                    membershipCardNo: membershipCardNoInput.value.trim()
                 };
             }
 
@@ -861,7 +1080,9 @@
                         netTotal: Math.max(0, Number.parseFloat(result.netTotal) || 0),
                         amountTendered: Math.max(0, Number.parseFloat(result.amountTendered) || payload.cashAmount || 0),
                         change: Math.max(0, Number.parseFloat(result.change) || 0),
-                        pointsEarned: Math.max(0, Number.parseFloat(result.pointsEarned) || 0)
+                        pointsEarned: Math.max(0, Number.parseFloat(result.pointsEarned) || 0),
+                        pointsRequired: Math.max(0, Number.parseFloat(result.pointsRequired) || 0),
+                        paymentMethod: result.paymentMethod || payload.paymentMethod
                     };
                     saleCompleted = true;
                     renderReceipt();
@@ -910,12 +1131,17 @@
                 }
                 fuelLitersInput.value = "";
                 memberDiscountAmount = 0;
+                memberPoints = 0;
+                memberFound = false;
                 memberDiscountLookupToken += 1;
-                rebateRuleIdInput.value = "";
+                if (paymentMethodChoices[0]) {
+                    paymentMethodChoices[0].checked = true;
+                }
                 if (window.bootstrap) {
                     bootstrap.Modal.getInstance(receiptModalElement)?.hide();
                 }
                 showHotMode();
+                updatePaymentFields();
                 updateTotal();
             }
 
@@ -955,21 +1181,64 @@
                 updateFuelFieldsForPrice();
             }));
             addFuelButton.addEventListener("click", addFuelToCart);
+            orderCartItems.addEventListener("click", event => {
+                const productStepButton = event.target.closest("[data-cart-product-step]");
+                if (productStepButton) {
+                    const input = productInputByDisplayStockId(productStepButton.dataset.cartProductStep);
+                    if (!input) {
+                        return;
+                    }
+
+                    const step = Number.parseFloat(productStepButton.dataset.step) || 0;
+                    setProductQuantityFromCart(productStepButton.dataset.cartProductStep, Math.max(0, numericValue(input) + step));
+                    return;
+                }
+
+                const fuelStepButton = event.target.closest("[data-cart-fuel-step]");
+                if (fuelStepButton) {
+                    const fuel = fuelCart.find(item => item.id === fuelStepButton.dataset.cartFuelStep);
+                    const step = Number.parseFloat(fuelStepButton.dataset.step) || 0;
+                    setFuelLitersFromCart(fuelStepButton.dataset.cartFuelStep, Math.max(0, (fuel?.liters || 0) + step));
+                    return;
+                }
+
+                const removeProductButton = event.target.closest("[data-remove-product]");
+                if (removeProductButton) {
+                    setProductQuantityFromCart(removeProductButton.dataset.removeProduct, 0);
+                    return;
+                }
+
+                const removeFuelButton = event.target.closest("[data-remove-fuel]");
+                if (removeFuelButton) {
+                    removeFuelFromCart(removeFuelButton.dataset.removeFuel);
+                }
+            });
+            orderCartItems.addEventListener("input", event => {
+                const productQuantityInput = event.target.closest("[data-cart-product-quantity]");
+                if (productQuantityInput) {
+                    updateProductQuantityFromCartInput(productQuantityInput);
+                    return;
+                }
+
+                const fuelLitersInput = event.target.closest("[data-cart-fuel-liters]");
+                if (fuelLitersInput) {
+                    updateFuelLitersFromCartInput(fuelLitersInput);
+                }
+            });
             paymentAmountInput.addEventListener("input", () => {
                 renderReceipt();
             });
             membershipCardNoInput.addEventListener("input", () => {
                 queueMemberDiscountLookup();
             });
-            rebateRuleIdInput.addEventListener("change", () => {
-                updateTotal();
-            });
+            paymentMethodChoices.forEach(choice => choice.addEventListener("change", updatePaymentFields));
             productSearch.addEventListener("input", filterProducts);
             modalPrintReceiptButton.addEventListener("click", printModalReceipt);
             newSaleButton.addEventListener("click", resetSale);
             form.addEventListener("submit", submitSale);
             window.addEventListener("pageshow", restoreProductSubmitFields);
             showHotMode();
+            updatePaymentFields();
             updateTotal();
         })();
     </script>

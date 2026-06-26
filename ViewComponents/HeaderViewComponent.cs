@@ -46,11 +46,6 @@ namespace gpos.ViewComponents
                 return "Dashboard";
             }
 
-            if (Is(controller, "Configuration") && Is(action, "PointsLedger"))
-            {
-                return "Reports";
-            }
-
             if ((Is(controller, "Configuration") && IsInventoryConfiguration(action)) || IsLegacyInventoryConfiguration(action))
             {
                 return "Inventory";
