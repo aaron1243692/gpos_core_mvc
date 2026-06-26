@@ -53,9 +53,9 @@ namespace gpos.Controllers
             return View(await BuildPumpMeterReadingsPageAsync(search, editId: editId, activeModalId: editId.HasValue ? "pumpMeterReadingModal" : ""));
         }
 
-        public async Task<IActionResult> Rebate(string? search, int? editId)
+        public async Task<IActionResult> Rebate(string? search)
         {
-            return View(await BuildRebatePageAsync(search, editId: editId, activeModalId: editId.HasValue ? "rebateRuleModal" : ""));
+            return View(await BuildRebatePageAsync(search));
         }
 
         public async Task<IActionResult> PointsLedger(string? search)
@@ -538,32 +538,19 @@ namespace gpos.Controllers
                 return View("Rebate", await BuildRebatePageAsync(search, form, activeModalId: "rebateRuleModal"));
             }
 
-            var now = DateTime.UtcNow;
-            var rule = form.Id > 0 ? await _db.RebateRules.FindAsync(form.Id) : new RebateRule { CreatedAt = now };
-            if (rule is null) return NotFound();
-            rule.Name = form.Name.Trim();
-            rule.AppliesTo = appliesTo!;
-            rule.PointsRequired = form.PointsRequired!.Value;
-            rule.RebateValue = form.RebateValue!.Value;
-            rule.MinimumPurchase = form.MinimumPurchase!.Value;
-            rule.Status = form.Status;
-            rule.UpdatedAt = now;
-            if (form.Id == 0) _db.RebateRules.Add(rule);
-            await _db.SaveChangesAsync();
-            return RedirectToAction(nameof(Rebate), new { search });
-        }
-
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> DeleteRebateRule(int id, string? search)
-        {
-            var rule = await _db.RebateRules.FindAsync(id);
-            if (rule is not null)
+            var now = DateTime.Now;
+            _db.RebateRules.Add(new RebateRule
             {
-                rule.Status = 0;
-                rule.UpdatedAt = DateTime.UtcNow;
-                await _db.SaveChangesAsync();
-            }
+                Name = form.Name.Trim(),
+                AppliesTo = appliesTo!,
+                PointsRequired = form.PointsRequired!.Value,
+                RebateValue = form.RebateValue!.Value,
+                MinimumPurchase = form.MinimumPurchase!.Value,
+                Status = 1,
+                CreatedAt = now,
+                UpdatedAt = now
+            });
+            await _db.SaveChangesAsync();
             return RedirectToAction(nameof(Rebate), new { search });
         }
 
@@ -1140,7 +1127,7 @@ namespace gpos.Controllers
             return new SetupModulesPageViewModel { Search = searchText, ActiveModalId = activeModalId, PumpMeterReadingForm = form ?? await BuildPumpMeterReadingFormAsync(editId), Nozzles = await BuildActiveNozzlesAsync(), PumpMeterReadings = await query.OrderByDescending(item => item.ReadingDate).ToListAsync() };
         }
 
-        private async Task<SetupModulesPageViewModel> BuildRebatePageAsync(string? search, RebateRuleForm? form = null, int? editId = null, string activeModalId = "")
+        private async Task<SetupModulesPageViewModel> BuildRebatePageAsync(string? search, RebateRuleForm? form = null, string activeModalId = "")
         {
             var query = _db.RebateRules.AsNoTracking();
             var searchText = (search ?? string.Empty).Trim();
@@ -1152,7 +1139,7 @@ namespace gpos.Controllers
                     || (searchText == "Disabled" && rule.Status == 0));
             }
 
-            return new SetupModulesPageViewModel { Search = searchText, ActiveModalId = activeModalId, RebateRuleForm = form ?? await BuildRebateRuleFormAsync(editId), RebateRules = await query.OrderBy(rule => rule.Id).ToListAsync() };
+            return new SetupModulesPageViewModel { Search = searchText, ActiveModalId = activeModalId, RebateRuleForm = form ?? new RebateRuleForm(), RebateRules = await query.OrderByDescending(rule => rule.CreatedAt).ThenByDescending(rule => rule.Id).ToListAsync() };
         }
 
         private static string? NormalizeRebateAppliesTo(string? appliesTo)
@@ -1476,12 +1463,6 @@ namespace gpos.Controllers
         {
             var item = editId.HasValue ? await _db.PumpMeterReadings.AsNoTracking().FirstOrDefaultAsync(reading => reading.Id == editId.Value) : null;
             return item is null ? new PumpMeterReadingForm() : new PumpMeterReadingForm { Id = item.Id, NozzleId = item.NozzleId ?? 0, OpeningMeter = item.OpeningMeter, ClosingMeter = item.ClosingMeter, ReadingDate = item.ReadingDate, Status = item.Status };
-        }
-
-        private async Task<RebateRuleForm> BuildRebateRuleFormAsync(int? editId)
-        {
-            var item = editId.HasValue ? await _db.RebateRules.AsNoTracking().FirstOrDefaultAsync(rule => rule.Id == editId.Value) : null;
-            return item is null ? new RebateRuleForm() : new RebateRuleForm { Id = item.Id, Name = item.Name, AppliesTo = item.AppliesTo, PointsRequired = item.PointsRequired, RebateValue = item.RebateValue, MinimumPurchase = item.MinimumPurchase, Status = item.Status };
         }
 
         private async Task<DiscountRuleForm> BuildDiscountRuleFormAsync(int? editId)

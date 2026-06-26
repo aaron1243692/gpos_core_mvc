@@ -1,4 +1,4 @@
-@{
+﻿@{
     ViewData["Title"] = "POS";
     ViewData["Section"] = "Transactions";
 
@@ -268,7 +268,7 @@
                     <article class="pos-menu-product-card" data-product-name="premium lubricant">
                         <div class="pos-product-visual">PL</div>
                         <h3>Premium Lubricant</h3>
-                        <p>PHP 530.00</p>
+                        <p>₱530.00</p>
                         <label class="pos-quantity-control" for="productQuantity_LUB001">
                             <span>Qty</span>
                             <input class="form-control product-quantity-input" id="productQuantity_LUB001" name="Products[0].Quantity" type="number" min="0" value="0" data-price="530" data-no="LUB-001" data-name="Premium Lubricant" aria-label="Premium Lubricant quantity" />
@@ -280,7 +280,7 @@
                     <article class="pos-menu-product-card" data-product-name="engine coolant">
                         <div class="pos-product-visual">EC</div>
                         <h3>Engine Coolant</h3>
-                        <p>PHP 280.00</p>
+                        <p>₱280.00</p>
                         <label class="pos-quantity-control" for="productQuantity_CLT001">
                             <span>Qty</span>
                             <input class="form-control product-quantity-input" id="productQuantity_CLT001" name="Products[1].Quantity" type="number" min="0" value="0" data-price="280" data-no="CLT-001" data-name="Engine Coolant" aria-label="Engine Coolant quantity" />
@@ -293,7 +293,7 @@
                         <span class="pos-product-badge">New</span>
                         <div class="pos-product-visual">BF</div>
                         <h3>Brake Fluid</h3>
-                        <p>PHP 190.00</p>
+                        <p>₱190.00</p>
                         <label class="pos-quantity-control" for="productQuantity_BRK001">
                             <span>Qty</span>
                             <input class="form-control product-quantity-input" id="productQuantity_BRK001" name="Products[2].Quantity" type="number" min="0" value="0" data-price="190" data-no="BRK-001" data-name="Brake Fluid" aria-label="Brake Fluid quantity" />
@@ -305,7 +305,7 @@
                     <article class="pos-menu-product-card" data-product-name="wiper fluid">
                         <div class="pos-product-visual">WF</div>
                         <h3>Wiper Fluid</h3>
-                        <p>PHP 160.00</p>
+                        <p>₱160.00</p>
                         <label class="pos-quantity-control" for="productQuantity_WPR001">
                             <span>Qty</span>
                             <input class="form-control product-quantity-input" id="productQuantity_WPR001" name="Products[3].Quantity" type="number" min="0" value="0" data-price="160" data-no="WPR-001" data-name="Wiper Fluid" aria-label="Wiper Fluid quantity" />
@@ -329,15 +329,15 @@
                 <div class="fuel-type-grid salesman-fuel-grid">
                     <label class="fuel-option">
                         <input class="form-check-input fuel-choice" type="radio" name="FuelType" value="Diesel" data-price="65" checked />
-                        <span>Diesel <small>PHP 65.00/L</small></span>
+                        <span>Diesel <small>₱65.00/L</small></span>
                     </label>
                     <label class="fuel-option">
                         <input class="form-check-input fuel-choice" type="radio" name="FuelType" value="Gasoline" data-price="68" />
-                        <span>Gasoline <small>PHP 68.00/L</small></span>
+                        <span>Gasoline <small>₱68.00/L</small></span>
                     </label>
                     <label class="fuel-option">
                         <input class="form-check-input fuel-choice" type="radio" name="FuelType" value="Premium" data-price="72" />
-                        <span>Premium <small>PHP 72.00/L</small></span>
+                        <span>Premium <small>₱72.00/L</small></span>
                     </label>
                 </div>
 
@@ -349,7 +349,7 @@
                     <div>
                         <label class="form-label" for="fuelCashAmount">Cash Amount</label>
                         <div class="input-group">
-                            <span class="input-group-text">PHP</span>
+                            <span class="input-group-text">₱</span>
                             <input class="form-control pos-total-input" id="fuelCashAmount" name="FuelCashAmount" type="number" min="0" step="0.01" placeholder="0.00" />
                         </div>
                     </div>
@@ -357,7 +357,7 @@
 
                 <div class="salesman-fuel-note">
                     <span>Choose fuel type, then enter either cash amount or liters.</span>
-                    <strong id="selectedFuelPrice">PHP 65.00/L</strong>
+                    <strong id="selectedFuelPrice">₱65.00/L</strong>
                 </div>
             </section>
         </div>
@@ -370,7 +370,7 @@
         <div class="salesman-pos-bottom-bar" aria-label="Checkout summary">
             <div class="salesman-total-block">
                 <span>Total</span>
-                <strong id="posGrandTotal">PHP 0.00</strong>
+                <strong id="posGrandTotal">₱0.00</strong>
             </div>
             <button class="btn btn-primary btn-lg pos-charge-button" id="checkoutButton" type="button">Checkout</button>
         </div>
@@ -415,7 +415,7 @@
 
                 <div class="receipt-total-line">
                     <span>Total</span>
-                    <strong id="receiptTotalAmount">PHP 0.00</strong>
+                    <strong id="receiptTotalAmount">₱0.00</strong>
                 </div>
             </div>
 
@@ -431,7 +431,7 @@
 @section Scripts {
     <script>
         (() => {
-            const peso = new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP" });
+            const peso = new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP", currencyDisplay: "narrowSymbol" });
             const salesmanName = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(salesmanName));
             const form = document.getElementById("posSaleForm");
             const productQuantityInputs = Array.from(document.querySelectorAll(".product-quantity-input"));

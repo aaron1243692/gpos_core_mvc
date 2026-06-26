@@ -1,4 +1,4 @@
-@{
+﻿@{
     var title = ViewData["Title"]?.ToString() ?? "Page";
     var appSection = ViewData["Section"]?.ToString() ?? "GPOS";
     var pageKind = ViewData["PageKind"]?.ToString() ?? "table";
@@ -142,7 +142,7 @@ else if (title == "POS Sales")
                     </div>
                 </div>
                 <div class="product-grid">
-                    @foreach (var product in new[] { "Engine Oil 1L|PHP 320", "Coolant 1L|PHP 180", "Brake Fluid|PHP 210", "Lubricant Bottle|PHP 145" })
+                    @foreach (var product in new[] { "Engine Oil 1L|₱320", "Coolant 1L|₱180", "Brake Fluid|₱210", "Lubricant Bottle|₱145" })
                     {
                         var parts = product.Split("|");
                         <button class="product-card" type="button">
@@ -262,25 +262,25 @@ else
     {
         return new(
             new[] {
-                new Metric("Total Sales Today", "PHP 186K", "All transactions"),
-                new Metric("Sales This Month", "PHP 4.8M", "Month-to-date"),
-                new Metric("Fuel Sales Today", "PHP 151K", "Diesel, gasoline, premium"),
-                new Metric("Product Sales Today", "PHP 35K", "Store products"),
+                new Metric("Total Sales Today", "₱186K", "All transactions"),
+                new Metric("Sales This Month", "₱4.8M", "Month-to-date"),
+                new Metric("Fuel Sales Today", "₱151K", "Diesel, gasoline, premium"),
+                new Metric("Product Sales Today", "₱35K", "Store products"),
                 new Metric("Total Transactions", "128", "Pump and POS"),
-                new Metric("Inventory Value", "PHP 1.2M", "Warehouse and display"),
+                new Metric("Inventory Value", "₱1.2M", "Warehouse and display"),
                 new Metric("Fuel Tank Levels", "68%", "Average capacity"),
                 new Metric("Current Shift", "Open", "Morning shift"),
                 new Metric("Points Redeemed", "3,420", "Rewards activity"),
                 new Metric("Low Stock Items", "12", "Needs replenishment"),
                 new Metric("Fuel Low Level", "2", "Tank alerts"),
-                new Metric("Cash Difference", "PHP 350", "Short/over")
+                new Metric("Cash Difference", "₱350", "Short/over")
             },
             "Today Sales Chart",
             "Station Snapshot",
             new[] {
                 new SideItem("Diesel Tank 1", "Low", "Minimum threshold", true),
                 new SideItem("Ana Reyes", "Open", "Morning shift"),
-                new SideItem("Premium", "PHP 69.50", "Current price"),
+                new SideItem("Premium", "₱69.50", "Current price"),
                 new SideItem("Engine Oil 1L", "84 sold", "Top product"),
                 new SideItem("Daily Closing Balance", "Ready", "End shift")
             },
@@ -404,12 +404,12 @@ else
         "Product Code" => $"PRD-10{i + 1}",
         "Batch No" or "Fuel Batch" or "Item Batch" => i == 0 ? "IB-024" : i == 1 ? "FB-018" : "IB-021",
         "Location" or "From Location" or "To Location" => i == 0 ? "Warehouse" : "Display",
-        "Cost Price" or "Cost Per Liter" or "Old Price" => $"PHP {120 + i * 10}.00",
-        "Selling Price" or "New Price" or "Price" => $"PHP {180 + i * 25}.00",
-        "Current Price Per Liter" => $"PHP {58 + i * 5}.50",
+        "Cost Price" or "Cost Per Liter" or "Old Price" => $"₱{120 + i * 10}.00",
+        "Selling Price" or "New Price" or "Price" => $"₱{180 + i * 25}.00",
+        "Current Price Per Liter" => $"₱{58 + i * 5}.50",
         "Received Liters" or "Remaining Liters" or "Liters" or "Liters In" => (1200 - i * 150).ToString("N0"),
         "Liters Out" => (240 + i * 50).ToString("N0"),
-        "Subtotal" or "Amount" or "Net Amount" or "Sales" or "Expected Cash" or "Actual Cash" or "Difference" or "Cash Difference" or "Gross Sales" or "Product Sales" or "Fuel Sales" => $"PHP {(1250 + i * 620):N2}",
+        "Subtotal" or "Amount" or "Net Amount" or "Sales" or "Expected Cash" or "Actual Cash" or "Difference" or "Cash Difference" or "Gross Sales" or "Product Sales" or "Fuel Sales" => $"₱{(1250 + i * 620):N2}",
         "Date" or "Created At" or "Effective At" or "Expiration Date" or "Received At" or "Voided At" => DateTime.Today.AddDays(-i).ToString("MMM dd, yyyy"),
         "Status" => i == 2 ? "Low" : "Active",
         "Actions" or "Action" or "Remove" => "View",

@@ -1,4 +1,4 @@
-@{
+﻿@{
     ViewData["Title"] = "Pump Transaction";
     ViewData["Section"] = "Transactions";
 }
@@ -30,12 +30,12 @@
             <div class="col-12 col-md-4"><label class="form-label" for="fuelAmount">Amount</label><input class="form-control" id="fuelAmount" type="number" min="0" step="0.01" /></div>
         </div>
         <div class="pos-summary-card">
-            <div class="pos-summary-row"><span>Gross amount</span><strong id="grossAmount">PHP 0.00</strong></div>
-            <div class="pos-summary-row"><span>Discount</span><strong id="discountAmount">PHP 0.00</strong></div>
-            <div class="pos-summary-row"><span>Points redeemed</span><strong id="pointsAmount">PHP 0.00</strong></div>
-            <div class="pos-summary-row pos-summary-total"><span>Net amount</span><strong id="netAmount">PHP 0.00</strong></div>
-            <div class="pos-summary-row"><span>Payment</span><strong id="paymentTotal">PHP 0.00</strong></div>
-            <div class="pos-summary-row"><span>Change</span><strong id="changeAmount">PHP 0.00</strong></div>
+            <div class="pos-summary-row"><span>Gross amount</span><strong id="grossAmount">₱0.00</strong></div>
+            <div class="pos-summary-row"><span>Discount</span><strong id="discountAmount">₱0.00</strong></div>
+            <div class="pos-summary-row"><span>Points redeemed</span><strong id="pointsAmount">₱0.00</strong></div>
+            <div class="pos-summary-row pos-summary-total"><span>Net amount</span><strong id="netAmount">₱0.00</strong></div>
+            <div class="pos-summary-row"><span>Payment</span><strong id="paymentTotal">₱0.00</strong></div>
+            <div class="pos-summary-row"><span>Change</span><strong id="changeAmount">₱0.00</strong></div>
             <div class="pos-summary-row"><span>Points earned</span><strong id="pointsEarned">0 pts</strong></div>
         </div>
         <div class="pos-validation" id="pumpValidation"></div>
@@ -81,7 +81,7 @@
 
 @section Scripts {
     <script>
-        const peso = new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP" });
+        const peso = new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP", currencyDisplay: "narrowSymbol" });
         const pumps = [
             { unit: "Pump Unit 1", number: "Pump 1", fuel: "Diesel", tank: "Tank 1", price: 65 },
             { unit: "Pump Unit 1", number: "Pump 2", fuel: "Gasoline", tank: "Tank 2", price: 68 },

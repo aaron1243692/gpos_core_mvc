@@ -595,8 +595,12 @@ namespace gpos.Controllers
                 return null;
             }
 
-            var rebate = await _db.RebateRules.FirstOrDefaultAsync(item => item.Id == rebateRuleId.Value && item.Status == 1);
-            return rebate ?? throw new InvalidOperationException("Selected rebate was not found or is inactive.");
+            var rebate = await _db.RebateRules
+                .OrderByDescending(item => item.CreatedAt)
+                .ThenByDescending(item => item.Id)
+                .FirstOrDefaultAsync();
+
+            return rebate ?? throw new InvalidOperationException("Current rebate was not found.");
         }
 
         private async Task ApplyPointsChanges(Member? member, RebateRule? rebate, decimal rebateAmount, decimal pointsEarned, int saleId, DateTime now)

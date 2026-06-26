@@ -1,4 +1,4 @@
-@model gpos.Models.ViewModels.ProductSalesPageViewModel
+﻿@model gpos.Models.ViewModels.ProductSalesPageViewModel
 
 <section class="transaction-ui-page">
     <div class="content-card transaction-ui-card">
@@ -71,8 +71,8 @@
                             <td>@Model.Sales[i].ProductName</td>
                             <td>@Model.Sales[i].BatchNo</td>
                             <td>@Model.Sales[i].Quantity.ToString("N2")</td>
-                            <td>PHP @Model.Sales[i].Price.ToString("N2")</td>
-                            <td>PHP @Model.Sales[i].Subtotal.ToString("N2")</td>
+                            <td>₱@Model.Sales[i].Price.ToString("N2")</td>
+                            <td>₱@Model.Sales[i].Subtotal.ToString("N2")</td>
                             <td>@Model.Sales[i].CashierName</td>
                             <td>@Model.Sales[i].MemberName</td>
                             <td>@Model.Sales[i].SaleDate?.ToString("yyyy-MM-dd HH:mm")</td>
@@ -101,15 +101,15 @@
                         <dt class="col-sm-4">Product</dt><dd class="col-sm-8">@Model.Sales[i].ProductName</dd>
                         <dt class="col-sm-4">Batch</dt><dd class="col-sm-8">@Model.Sales[i].BatchNo</dd>
                         <dt class="col-sm-4">Quantity</dt><dd class="col-sm-8">@Model.Sales[i].Quantity.ToString("N2")</dd>
-                        <dt class="col-sm-4">Price</dt><dd class="col-sm-8">PHP @Model.Sales[i].Price.ToString("N2")</dd>
-                        <dt class="col-sm-4">Subtotal</dt><dd class="col-sm-8">PHP @Model.Sales[i].Subtotal.ToString("N2")</dd>
+                        <dt class="col-sm-4">Price</dt><dd class="col-sm-8">₱@Model.Sales[i].Price.ToString("N2")</dd>
+                        <dt class="col-sm-4">Subtotal</dt><dd class="col-sm-8">₱@Model.Sales[i].Subtotal.ToString("N2")</dd>
                         <dt class="col-sm-4">Cashier/User</dt><dd class="col-sm-8">@Model.Sales[i].CashierName</dd>
                         <dt class="col-sm-4">Member</dt><dd class="col-sm-8">@Model.Sales[i].MemberName</dd>
                         <dt class="col-sm-4">Sale Date</dt><dd class="col-sm-8">@Model.Sales[i].SaleDate?.ToString("yyyy-MM-dd HH:mm")</dd>
                         <dt class="col-sm-4">Payment Type</dt><dd class="col-sm-8">@Model.Sales[i].PaymentType</dd>
-                        <dt class="col-sm-4">Gross Total</dt><dd class="col-sm-8">PHP @Model.Sales[i].GrossTotal.ToString("N2")</dd>
-                        <dt class="col-sm-4">Rebate Amount</dt><dd class="col-sm-8">PHP @Model.Sales[i].RebateAmount.ToString("N2")</dd>
-                        <dt class="col-sm-4">Net Total</dt><dd class="col-sm-8">PHP @Model.Sales[i].NetTotal.ToString("N2")</dd>
+                        <dt class="col-sm-4">Gross Total</dt><dd class="col-sm-8">₱@Model.Sales[i].GrossTotal.ToString("N2")</dd>
+                        <dt class="col-sm-4">Rebate Amount</dt><dd class="col-sm-8">₱@Model.Sales[i].RebateAmount.ToString("N2")</dd>
+                        <dt class="col-sm-4">Net Total</dt><dd class="col-sm-8">₱@Model.Sales[i].NetTotal.ToString("N2")</dd>
                         <dt class="col-sm-4">Status</dt><dd class="col-sm-8">@Model.Sales[i].Status</dd>
                     </dl>
                 </div>

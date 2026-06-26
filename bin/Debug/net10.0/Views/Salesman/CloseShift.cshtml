@@ -1,4 +1,4 @@
-@{
+﻿@{
     ViewData["Title"] = "Close Shift";
     ViewData["Section"] = "Salesman";
 }
@@ -6,16 +6,16 @@
 <section class="salesman-page">
     <div class="salesman-dashboard-grid">
         @foreach (var metric in new[] {
-            ("Beginning cash", "PHP 5,000.00"),
-            ("Total fuel sales", "PHP 42,850.00"),
-            ("Total POS sales", "PHP 8,420.00"),
-            ("Gross sales", "PHP 51,270.00"),
-            ("Total discount", "PHP 1,050.00"),
-            ("Points redeemed", "PHP 320.00"),
-            ("Net sales", "PHP 49,900.00"),
-            ("Cash payments", "PHP 31,900.00"),
-            ("Non-cash payments", "PHP 18,000.00"),
-            ("Expected cash", "PHP 36,900.00")
+            ("Beginning cash", "₱5,000.00"),
+            ("Total fuel sales", "₱42,850.00"),
+            ("Total POS sales", "₱8,420.00"),
+            ("Gross sales", "₱51,270.00"),
+            ("Total discount", "₱1,050.00"),
+            ("Points redeemed", "₱320.00"),
+            ("Net sales", "₱49,900.00"),
+            ("Cash payments", "₱31,900.00"),
+            ("Non-cash payments", "₱18,000.00"),
+            ("Expected cash", "₱36,900.00")
         })
         {
             <article class="metric-card salesman-metric">
@@ -40,7 +40,7 @@
             </div>
             <div class="col-12 col-md-6">
                 <label class="form-label" for="cashDifference">Cash difference</label>
-                <input class="form-control" id="cashDifference" value="PHP 0.00" readonly />
+                <input class="form-control" id="cashDifference" value="₱0.00" readonly />
             </div>
             <div class="col-12">
                 <label class="form-label" for="closingRemarks">Remarks</label>
@@ -76,7 +76,7 @@
 
 @section Scripts {
     <script>
-        const peso = new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP" });
+        const peso = new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP", currencyDisplay: "narrowSymbol" });
         const expectedCash = 36900;
         const actualCash = document.getElementById("actualCash");
         const difference = document.getElementById("cashDifference");

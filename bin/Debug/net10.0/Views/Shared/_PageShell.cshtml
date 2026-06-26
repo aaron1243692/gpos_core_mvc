@@ -1,4 +1,4 @@
-@{
+﻿@{
     var title = ViewData["Title"]?.ToString() ?? "Page";
     var appSection = ViewData["Section"]?.ToString() ?? "GPOS";
     var pageKind = ViewData["PageKind"]?.ToString() ?? "table";
@@ -142,7 +142,7 @@ else if (title == "POS Sales")
                     </div>
                 </div>
                 <div class="product-grid">
-                    @foreach (var product in new[] { "Engine Oil 1L|PHP 320", "Coolant 1L|PHP 180", "Brake Fluid|PHP 210", "Lubricant Bottle|PHP 145" })
+                    @foreach (var product in new[] { "Engine Oil 1L|₱320", "Coolant 1L|₱180", "Brake Fluid|₱210", "Lubricant Bottle|₱145" })
                     {
                         var parts = product.Split("|");
                         <button class="product-card" type="button">
@@ -163,7 +163,7 @@ else if (title == "POS Sales")
                         <p>Readonly controls for the future checkout flow.</p>
                     </div>
                 </div>
-                <partial name="_MockForm" model='@(new[] { "Customer Search", "Discount", "Points To Redeem", "Payment Method", "Reference No" })' />
+                <partial name="_MockForm" model='@(new[] { "Customer Search", "Discount", "Points To Redeem", "Cash Amount" })' />
             </section>
             <partial name="_ReceiptPreviewCard" model="@("POS Receipt Preview")" />
         </div>
@@ -262,25 +262,25 @@ else
     {
         return new(
             new[] {
-                new Metric("Total Sales Today", "PHP 186K", "All transactions"),
-                new Metric("Sales This Month", "PHP 4.8M", "Month-to-date"),
-                new Metric("Fuel Sales Today", "PHP 151K", "Diesel, gasoline, premium"),
-                new Metric("Product Sales Today", "PHP 35K", "Store products"),
+                new Metric("Total Sales Today", "₱186K", "All transactions"),
+                new Metric("Sales This Month", "₱4.8M", "Month-to-date"),
+                new Metric("Fuel Sales Today", "₱151K", "Diesel, gasoline, premium"),
+                new Metric("Product Sales Today", "₱35K", "Store products"),
                 new Metric("Total Transactions", "128", "Pump and POS"),
-                new Metric("Inventory Value", "PHP 1.2M", "Warehouse and display"),
+                new Metric("Inventory Value", "₱1.2M", "Warehouse and display"),
                 new Metric("Fuel Tank Levels", "68%", "Average capacity"),
                 new Metric("Current Shift", "Open", "Morning shift"),
                 new Metric("Points Redeemed", "3,420", "Rewards activity"),
                 new Metric("Low Stock Items", "12", "Needs replenishment"),
                 new Metric("Fuel Low Level", "2", "Tank alerts"),
-                new Metric("Cash Difference", "PHP 350", "Short/over")
+                new Metric("Cash Difference", "₱350", "Short/over")
             },
             "Today Sales Chart",
             "Station Snapshot",
             new[] {
                 new SideItem("Diesel Tank 1", "Low", "Minimum threshold", true),
                 new SideItem("Ana Reyes", "Open", "Morning shift"),
-                new SideItem("Premium", "PHP 69.50", "Current price"),
+                new SideItem("Premium", "₱69.50", "Current price"),
                 new SideItem("Engine Oil 1L", "84 sold", "Top product"),
                 new SideItem("Daily Closing Balance", "Ready", "End shift")
             },
@@ -317,9 +317,9 @@ else
         "Open Shift" => new[] { "Cashier", "Shift", "Opening Cash", "Started At", "Status" },
         "Daily Beginning Balance" => new[] { "Balance Date", "Cashier", "Shift", "Beginning Cash", "Remarks" },
         "Cash Drawer Movement" => new[] { "Cashier Shift", "Movement Type", "Amount", "Reason", "Approved By", "Remarks" },
-        "Pump Transaction" => new[] { "Pump Unit", "Pump Number", "Fuel Type", "Fuel Tank", "Liters", "Price Per Liter", "Gross Amount", "Customer Account", "Discount", "Points To Redeem", "Net Amount", "Payment Method" },
-        "Transaction Payments" => new[] { "Transaction Type", "Transaction No", "Payment Method", "Amount", "Reference No" },
-        "Daily Closing Balance" => new[] { "Balance Date", "Cashier", "Shift", "Beginning Cash", "Total Fuel Sales", "Total Product Sales", "Gross Sales", "Total Discount", "Total Points Redeemed", "Net Sales", "Total Cash Payments", "Total Non-Cash Payments", "Total Cash In", "Total Cash Out", "Expected Cash", "Actual Cash", "Cash Difference", "Remarks" },
+        "Pump Transaction" => new[] { "Pump Unit", "Pump Number", "Fuel Type", "Fuel Tank", "Liters", "Price Per Liter", "Gross Amount", "Customer Account", "Discount", "Points To Redeem", "Net Amount", "Cash Amount" },
+        "Transaction Payments" => new[] { "Transaction Type", "Transaction No", "Payment Type", "Amount", "Created At" },
+        "Daily Closing Balance" => new[] { "Balance Date", "Cashier", "Shift", "Beginning Cash", "Total Fuel Sales", "Total Product Sales", "Gross Sales", "Total Discount", "Total Points Redeemed", "Net Sales", "Total Cash Payments", "Total Points Payments", "Total Cash In", "Total Cash Out", "Expected Cash", "Actual Cash", "Cash Difference", "Remarks" },
         "Cash Turnover" => new[] { "Cashier", "Shift", "Daily Closing Balance", "Expected Cash", "Actual Cash", "Cash Difference", "Received By", "Turnover Status", "Remarks", "Received At" },
         "Void Transactions" => new[] { "Void Reason" },
         "Discounts" => new[] { "Name", "Discount Type", "Value", "Status" },
@@ -356,7 +356,7 @@ else
             "Item Inventory Movement" => new[] { "Date", "Product", "Item Batch", "Location", "Movement Type", "Quantity In", "Quantity Out", "Balance After", "Remarks" },
             "Low Stock" or "Low Stock Items" => new[] { "Product", "Category", "Location", "Quantity", "Minimum Stock", "Status" },
             "Cash Drawer Movement" => new[] { "Date", "Shift", "Cashier", "Movement Type", "Amount", "Reason", "Approved By", "Remarks" },
-            "Transaction Payments" => new[] { "Transaction Type", "Transaction No", "Payment Method", "Amount", "Reference No", "Created At" },
+            "Transaction Payments" => new[] { "Transaction Type", "Transaction No", "Payment Type", "Amount", "Created At" },
             "Cash Turnover" => new[] { "Date", "Cashier", "Shift", "Expected Cash", "Actual Cash", "Difference", "Received By", "Status", "Received At", "Actions" },
             "Void Transactions" => new[] { "Transaction No", "Type", "Cashier", "Customer", "Net Amount", "Status", "Void Reason", "Voided By", "Voided At" },
             "Points Report" => new[] { "Customer", "Transaction Type", "Source Type", "Points", "Amount Value", "Remarks", "Date" },
@@ -404,19 +404,19 @@ else
         "Product Code" => $"PRD-10{i + 1}",
         "Batch No" or "Fuel Batch" or "Item Batch" => i == 0 ? "IB-024" : i == 1 ? "FB-018" : "IB-021",
         "Location" or "From Location" or "To Location" => i == 0 ? "Warehouse" : "Display",
-        "Cost Price" or "Cost Per Liter" or "Old Price" => $"PHP {120 + i * 10}.00",
-        "Selling Price" or "New Price" or "Price" => $"PHP {180 + i * 25}.00",
-        "Current Price Per Liter" => $"PHP {58 + i * 5}.50",
+        "Cost Price" or "Cost Per Liter" or "Old Price" => $"₱{120 + i * 10}.00",
+        "Selling Price" or "New Price" or "Price" => $"₱{180 + i * 25}.00",
+        "Current Price Per Liter" => $"₱{58 + i * 5}.50",
         "Received Liters" or "Remaining Liters" or "Liters" or "Liters In" => (1200 - i * 150).ToString("N0"),
         "Liters Out" => (240 + i * 50).ToString("N0"),
-        "Subtotal" or "Amount" or "Net Amount" or "Sales" or "Expected Cash" or "Actual Cash" or "Difference" or "Cash Difference" or "Gross Sales" or "Product Sales" or "Fuel Sales" => $"PHP {(1250 + i * 620):N2}",
+        "Subtotal" or "Amount" or "Net Amount" or "Sales" or "Expected Cash" or "Actual Cash" or "Difference" or "Cash Difference" or "Gross Sales" or "Product Sales" or "Fuel Sales" => $"₱{(1250 + i * 620):N2}",
         "Date" or "Created At" or "Effective At" or "Expiration Date" or "Received At" or "Voided At" => DateTime.Today.AddDays(-i).ToString("MMM dd, yyyy"),
         "Status" => i == 2 ? "Low" : "Active",
         "Actions" or "Action" or "Remove" => "View",
         "Movement Type" => i == 0 ? "cash_in" : i == 1 ? "cash_out" : "correction",
         "Transaction Type" or "Type" or "Source Type" => i == 0 ? "fuel" : i == 1 ? "pos" : "rewards",
         "Transaction No" or "Reference" or "Reference No" => $"TXN-2026-00{i + 1}",
-        "Payment Method" => i == 0 ? "Cash" : i == 1 ? "Card" : "GCash",
+        "Payment Method" or "Payment Type" => i == 0 ? "Cash" : i == 1 ? "Points" : "Cash + Points",
         "Shift" => i == 0 ? "Morning" : i == 1 ? "Afternoon" : "Night",
         "Reason" or "Void Reason" or "Remarks" or "Description" => i == 0 ? "Sample note" : "Frontend placeholder",
         _ => i == 0 ? "Sample" : i == 1 ? "Preview" : "Mock"
@@ -444,7 +444,7 @@ else
         if (field.Contains("Movement Type")) return new[] { "cash_in", "cash_out", "correction" };
         if (field.Contains("Discount Type")) return new[] { "percentage", "fixed", "points_rebate" };
         if (field.Contains("Supplier Type")) return new[] { "fuel", "item", "both" };
-        if (field.Contains("Payment")) return new[] { "Cash", "Card", "GCash", "Bank Transfer" };
+        if (field.Contains("Payment")) return new[] { "Cash", "Points" };
         if (field.Contains("Fuel")) return new[] { "Diesel", "Gasoline", "Premium" };
         if (field.Contains("Pump")) return new[] { "Pump Unit 1", "Pump Unit 2", "Pump 1", "Pump 2" };
         if (field.Contains("Unit")) return new[] { "Liter / L", "Gallon / gal", "Piece / pc", "Bottle / bottle", "Can / can" };

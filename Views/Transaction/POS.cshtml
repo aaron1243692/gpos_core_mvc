@@ -1,6 +1,10 @@
-@using Microsoft.EntityFrameworkCore
+﻿@using Microsoft.EntityFrameworkCore
 @using System.Security.Claims
 @inject gpos.Data.ApplicationDbContext Db
+
+@{
+    var currentRebate = Db.RebateRules.AsNoTracking().OrderByDescending(rebate => rebate.CreatedAt).ThenByDescending(rebate => rebate.Id).FirstOrDefault();
+}
 
 <section class="salesman-pos-page">
     <form id="posSaleForm" method="post" class="salesman-pos-card">
@@ -40,7 +44,7 @@
                             <article class="pos-menu-product-card" data-category-id="@Db.DisplayStocks.AsNoTracking().Include(stock => stock.Product).Include(stock => stock.Batch).Where(stock => stock.Quantity > 0 && stock.Product != null && stock.Product.Status == 1 && stock.Product.IsActive && stock.Product.CategoryId.HasValue && stock.Batch != null && stock.Batch.Status == 1 && stock.Batch.IsActive && Db.ProductCategories.Any(category => category.Id == stock.Product.CategoryId.Value && category.Status == 1 && category.IsActive)).OrderByDescending(stock => stock.UpdatedAt ?? stock.CreatedAt ?? DateTime.MinValue).ThenBy(stock => stock.Product!.Name).ThenBy(stock => stock.Id).ToList()[index].Product!.CategoryId" data-product-name="@Db.DisplayStocks.AsNoTracking().Include(stock => stock.Product).Include(stock => stock.Batch).Where(stock => stock.Quantity > 0 && stock.Product != null && stock.Product.Status == 1 && stock.Product.IsActive && stock.Product.CategoryId.HasValue && stock.Batch != null && stock.Batch.Status == 1 && stock.Batch.IsActive && Db.ProductCategories.Any(category => category.Id == stock.Product.CategoryId.Value && category.Status == 1 && category.IsActive)).OrderByDescending(stock => stock.UpdatedAt ?? stock.CreatedAt ?? DateTime.MinValue).ThenBy(stock => stock.Product!.Name).ThenBy(stock => stock.Id).ToList()[index].Product!.Name.ToLowerInvariant()" data-display-stock-id="@Db.DisplayStocks.AsNoTracking().Include(stock => stock.Product).Include(stock => stock.Batch).Where(stock => stock.Quantity > 0 && stock.Product != null && stock.Product.Status == 1 && stock.Product.IsActive && stock.Product.CategoryId.HasValue && stock.Batch != null && stock.Batch.Status == 1 && stock.Batch.IsActive && Db.ProductCategories.Any(category => category.Id == stock.Product.CategoryId.Value && category.Status == 1 && category.IsActive)).OrderByDescending(stock => stock.UpdatedAt ?? stock.CreatedAt ?? DateTime.MinValue).ThenBy(stock => stock.Product!.Name).ThenBy(stock => stock.Id).ToList()[index].Id" data-product-id="@Db.DisplayStocks.AsNoTracking().Include(stock => stock.Product).Include(stock => stock.Batch).Where(stock => stock.Quantity > 0 && stock.Product != null && stock.Product.Status == 1 && stock.Product.IsActive && stock.Product.CategoryId.HasValue && stock.Batch != null && stock.Batch.Status == 1 && stock.Batch.IsActive && Db.ProductCategories.Any(category => category.Id == stock.Product.CategoryId.Value && category.Status == 1 && category.IsActive)).OrderByDescending(stock => stock.UpdatedAt ?? stock.CreatedAt ?? DateTime.MinValue).ThenBy(stock => stock.Product!.Name).ThenBy(stock => stock.Id).ToList()[index].ProductId" data-batch-id="@Db.DisplayStocks.AsNoTracking().Include(stock => stock.Product).Include(stock => stock.Batch).Where(stock => stock.Quantity > 0 && stock.Product != null && stock.Product.Status == 1 && stock.Product.IsActive && stock.Product.CategoryId.HasValue && stock.Batch != null && stock.Batch.Status == 1 && stock.Batch.IsActive && Db.ProductCategories.Any(category => category.Id == stock.Product.CategoryId.Value && category.Status == 1 && category.IsActive)).OrderByDescending(stock => stock.UpdatedAt ?? stock.CreatedAt ?? DateTime.MinValue).ThenBy(stock => stock.Product!.Name).ThenBy(stock => stock.Id).ToList()[index].BatchId" data-available-quantity="@Db.DisplayStocks.AsNoTracking().Include(stock => stock.Product).Include(stock => stock.Batch).Where(stock => stock.Quantity > 0 && stock.Product != null && stock.Product.Status == 1 && stock.Product.IsActive && stock.Product.CategoryId.HasValue && stock.Batch != null && stock.Batch.Status == 1 && stock.Batch.IsActive && Db.ProductCategories.Any(category => category.Id == stock.Product.CategoryId.Value && category.Status == 1 && category.IsActive)).OrderByDescending(stock => stock.UpdatedAt ?? stock.CreatedAt ?? DateTime.MinValue).ThenBy(stock => stock.Product!.Name).ThenBy(stock => stock.Id).ToList()[index].Quantity">
                                 <div class="pos-product-visual">@(Db.DisplayStocks.AsNoTracking().Include(stock => stock.Product).Include(stock => stock.Batch).Where(stock => stock.Quantity > 0 && stock.Product != null && stock.Product.Status == 1 && stock.Product.IsActive && stock.Product.CategoryId.HasValue && stock.Batch != null && stock.Batch.Status == 1 && stock.Batch.IsActive && Db.ProductCategories.Any(category => category.Id == stock.Product.CategoryId.Value && category.Status == 1 && category.IsActive)).OrderByDescending(stock => stock.UpdatedAt ?? stock.CreatedAt ?? DateTime.MinValue).ThenBy(stock => stock.Product!.Name).ThenBy(stock => stock.Id).ToList()[index].Product!.Name.Length >= 2 ? Db.DisplayStocks.AsNoTracking().Include(stock => stock.Product).Include(stock => stock.Batch).Where(stock => stock.Quantity > 0 && stock.Product != null && stock.Product.Status == 1 && stock.Product.IsActive && stock.Product.CategoryId.HasValue && stock.Batch != null && stock.Batch.Status == 1 && stock.Batch.IsActive && Db.ProductCategories.Any(category => category.Id == stock.Product.CategoryId.Value && category.Status == 1 && category.IsActive)).OrderByDescending(stock => stock.UpdatedAt ?? stock.CreatedAt ?? DateTime.MinValue).ThenBy(stock => stock.Product!.Name).ThenBy(stock => stock.Id).ToList()[index].Product!.Name.Substring(0, 2).ToUpper() : Db.DisplayStocks.AsNoTracking().Include(stock => stock.Product).Include(stock => stock.Batch).Where(stock => stock.Quantity > 0 && stock.Product != null && stock.Product.Status == 1 && stock.Product.IsActive && stock.Product.CategoryId.HasValue && stock.Batch != null && stock.Batch.Status == 1 && stock.Batch.IsActive && Db.ProductCategories.Any(category => category.Id == stock.Product.CategoryId.Value && category.Status == 1 && category.IsActive)).OrderByDescending(stock => stock.UpdatedAt ?? stock.CreatedAt ?? DateTime.MinValue).ThenBy(stock => stock.Product!.Name).ThenBy(stock => stock.Id).ToList()[index].Product!.Name.ToUpper())</div>
                                 <h3>@Db.DisplayStocks.AsNoTracking().Include(stock => stock.Product).Include(stock => stock.Batch).Where(stock => stock.Quantity > 0 && stock.Product != null && stock.Product.Status == 1 && stock.Product.IsActive && stock.Product.CategoryId.HasValue && stock.Batch != null && stock.Batch.Status == 1 && stock.Batch.IsActive && Db.ProductCategories.Any(category => category.Id == stock.Product.CategoryId.Value && category.Status == 1 && category.IsActive)).OrderByDescending(stock => stock.UpdatedAt ?? stock.CreatedAt ?? DateTime.MinValue).ThenBy(stock => stock.Product!.Name).ThenBy(stock => stock.Id).ToList()[index].Product!.Name</h3>
-                                <p>PHP @Db.DisplayStocks.AsNoTracking().Include(stock => stock.Product).Include(stock => stock.Batch).Where(stock => stock.Quantity > 0 && stock.Product != null && stock.Product.Status == 1 && stock.Product.IsActive && stock.Product.CategoryId.HasValue && stock.Batch != null && stock.Batch.Status == 1 && stock.Batch.IsActive && Db.ProductCategories.Any(category => category.Id == stock.Product.CategoryId.Value && category.Status == 1 && category.IsActive)).OrderByDescending(stock => stock.UpdatedAt ?? stock.CreatedAt ?? DateTime.MinValue).ThenBy(stock => stock.Product!.Name).ThenBy(stock => stock.Id).ToList()[index].Batch!.SellingPrice.ToString("N2")</p>
+                                <p>₱@Db.DisplayStocks.AsNoTracking().Include(stock => stock.Product).Include(stock => stock.Batch).Where(stock => stock.Quantity > 0 && stock.Product != null && stock.Product.Status == 1 && stock.Product.IsActive && stock.Product.CategoryId.HasValue && stock.Batch != null && stock.Batch.Status == 1 && stock.Batch.IsActive && Db.ProductCategories.Any(category => category.Id == stock.Product.CategoryId.Value && category.Status == 1 && category.IsActive)).OrderByDescending(stock => stock.UpdatedAt ?? stock.CreatedAt ?? DateTime.MinValue).ThenBy(stock => stock.Product!.Name).ThenBy(stock => stock.Id).ToList()[index].Batch!.SellingPrice.ToString("N2")</p>
                                 <small>Available: @Db.DisplayStocks.AsNoTracking().Include(stock => stock.Product).Include(stock => stock.Batch).Where(stock => stock.Quantity > 0 && stock.Product != null && stock.Product.Status == 1 && stock.Product.IsActive && stock.Product.CategoryId.HasValue && stock.Batch != null && stock.Batch.Status == 1 && stock.Batch.IsActive && Db.ProductCategories.Any(category => category.Id == stock.Product.CategoryId.Value && category.Status == 1 && category.IsActive)).OrderByDescending(stock => stock.UpdatedAt ?? stock.CreatedAt ?? DateTime.MinValue).ThenBy(stock => stock.Product!.Name).ThenBy(stock => stock.Id).ToList()[index].Quantity.ToString("N0")</small>
                                 <label class="pos-quantity-control" for="productQuantity_@Db.DisplayStocks.AsNoTracking().Include(stock => stock.Product).Include(stock => stock.Batch).Where(stock => stock.Quantity > 0 && stock.Product != null && stock.Product.Status == 1 && stock.Product.IsActive && stock.Product.CategoryId.HasValue && stock.Batch != null && stock.Batch.Status == 1 && stock.Batch.IsActive && Db.ProductCategories.Any(category => category.Id == stock.Product.CategoryId.Value && category.Status == 1 && category.IsActive)).OrderByDescending(stock => stock.UpdatedAt ?? stock.CreatedAt ?? DateTime.MinValue).ThenBy(stock => stock.Product!.Name).ThenBy(stock => stock.Id).ToList()[index].Id">
                                     <span>Qty</span>
@@ -67,7 +71,7 @@
                         {
                             <label class="fuel-option">
                                 <input class="form-check-input fuel-choice" type="radio" name="FuelType" value="@Db.Fuels.AsNoTracking().Where(fuel => fuel.Status == 1 && fuel.IsActive).OrderBy(fuel => fuel.Name).ToList()[index].Name" data-fuel-id="@Db.Fuels.AsNoTracking().Where(fuel => fuel.Status == 1 && fuel.IsActive).OrderBy(fuel => fuel.Name).Skip(index).Select(fuel => fuel.Id).FirstOrDefault()" data-tank-id="@Db.Tanks.AsNoTracking().Where(tank => tank.Status == 1 && tank.IsActive && tank.FuelId == Db.Fuels.AsNoTracking().Where(fuel => fuel.Status == 1 && fuel.IsActive).OrderBy(fuel => fuel.Name).Skip(index).Select(fuel => fuel.Id).FirstOrDefault()).OrderBy(tank => tank.Id).Select(tank => tank.Id).FirstOrDefault()" data-nozzle-id="@Db.Nozzles.AsNoTracking().Include(nozzle => nozzle.Pump).Where(nozzle => nozzle.Status == 1 && nozzle.Pump != null && Db.Tanks.Any(tank => tank.Id == nozzle.Pump.TankId && tank.Status == 1 && tank.IsActive && tank.FuelId == Db.Fuels.AsNoTracking().Where(fuel => fuel.Status == 1 && fuel.IsActive).OrderBy(fuel => fuel.Name).Skip(index).Select(fuel => fuel.Id).FirstOrDefault())).OrderBy(nozzle => nozzle.Id).Select(nozzle => nozzle.Id).FirstOrDefault()" data-price="@Db.Fuels.AsNoTracking().Where(fuel => fuel.Status == 1 && fuel.IsActive).OrderBy(fuel => fuel.Name).ToList()[index].CurrentPricePerLiter" @(index == 0 ? "checked" : "") />
-                                <span>@Db.Fuels.AsNoTracking().Where(fuel => fuel.Status == 1 && fuel.IsActive).OrderBy(fuel => fuel.Name).ToList()[index].Name <small>PHP @Db.Fuels.AsNoTracking().Where(fuel => fuel.Status == 1 && fuel.IsActive).OrderBy(fuel => fuel.Name).ToList()[index].CurrentPricePerLiter.ToString("N2")/L</small></span>
+                                <span>@Db.Fuels.AsNoTracking().Where(fuel => fuel.Status == 1 && fuel.IsActive).OrderBy(fuel => fuel.Name).ToList()[index].Name <small>₱@Db.Fuels.AsNoTracking().Where(fuel => fuel.Status == 1 && fuel.IsActive).OrderBy(fuel => fuel.Name).ToList()[index].CurrentPricePerLiter.ToString("N2")/L</small></span>
                             </label>
                         }
                     </div>
@@ -80,7 +84,7 @@
                         <div>
                             <label class="form-label" for="fuelCashAmount">Fuel cash amount</label>
                             <div class="input-group">
-                                <span class="input-group-text">PHP</span>
+                                <span class="input-group-text">₱</span>
                                 <input class="form-control pos-total-input" id="fuelCashAmount" name="FuelCashAmount" type="number" min="0" step="0.01" placeholder="0.00" />
                             </div>
                         </div>
@@ -101,18 +105,18 @@
                 </div>
 
                 <div class="pos-summary-totals">
-                    <div><span>Products</span><strong id="cartSubTotal">PHP 0.00</strong></div>
-                    <div><span>Fuel</span><strong id="cartFuelLine">PHP 0.00</strong></div>
-                    <div><span>Discount</span><strong id="cartDiscountLine">PHP 0.00</strong></div>
-                    <div><span>Tax</span><strong id="cartTaxLine">PHP 0.00</strong></div>
-                    <div><span>Total</span><strong id="posGrandTotal">PHP 0.00</strong></div>
+                    <div><span>Products</span><strong id="cartSubTotal">₱0.00</strong></div>
+                    <div><span>Fuel</span><strong id="cartFuelLine">₱0.00</strong></div>
+                    <div><span>Discount</span><strong id="cartDiscountLine">₱0.00</strong></div>
+                    <div><span>Tax</span><strong id="cartTaxLine">₱0.00</strong></div>
+                    <div><span>Total</span><strong id="posGrandTotal">₱0.00</strong></div>
                 </div>
 
                 <div class="pos-summary-fields">
                     <div id="cashPaymentField">
                         <label class="form-label" for="paymentAmount">Cash Amount</label>
                         <div class="input-group">
-                            <span class="input-group-text">PHP</span>
+                            <span class="input-group-text">₱</span>
                             <input class="form-control" id="paymentAmount" name="PaymentAmount" type="number" min="0" step="0.01" placeholder="0.00" />
                         </div>
                     </div>
@@ -124,9 +128,9 @@
                         <label class="form-label" for="rebateRuleId">Rebate</label>
                         <select class="form-select" id="rebateRuleId" name="RebateRuleId">
                             <option value="">No rebate</option>
-                            @for (var index = 0; index < Db.RebateRules.AsNoTracking().Where(rebate => rebate.Status == 1).OrderBy(rebate => rebate.Name).ToList().Count; index++)
+                            @if (currentRebate is not null)
                             {
-                                <option value="@Db.RebateRules.AsNoTracking().Where(rebate => rebate.Status == 1).OrderBy(rebate => rebate.Name).ToList()[index].Id" data-rebate-value="@Db.RebateRules.AsNoTracking().Where(rebate => rebate.Status == 1).OrderBy(rebate => rebate.Name).ToList()[index].RebateValue">@Db.RebateRules.AsNoTracking().Where(rebate => rebate.Status == 1).OrderBy(rebate => rebate.Name).ToList()[index].Name - @Db.RebateRules.AsNoTracking().Where(rebate => rebate.Status == 1).OrderBy(rebate => rebate.Name).ToList()[index].PointsRequired.ToString("N2") pts</option>
+                                <option value="@currentRebate.Id" data-rebate-value="@currentRebate.RebateValue">@currentRebate.Name - @currentRebate.PointsRequired.ToString("N2") pts</option>
                             }
                         </select>
                     </div>
@@ -198,23 +202,23 @@
 
                                     <div class="receipt-total-line">
                                         <span>Subtotal</span>
-                                        <strong id="receiptSubtotalAmount">PHP 0.00</strong>
+                                        <strong id="receiptSubtotalAmount">₱0.00</strong>
                                     </div>
                                     <div class="receipt-total-line">
                                         <span>Discount</span>
-                                        <strong id="receiptDiscountAmount">PHP 0.00</strong>
+                                        <strong id="receiptDiscountAmount">₱0.00</strong>
                                     </div>
                                     <div class="receipt-total-line">
                                         <span>Total</span>
-                                        <strong id="receiptTotalAmount">PHP 0.00</strong>
+                                        <strong id="receiptTotalAmount">₱0.00</strong>
                                     </div>
                                     <div class="receipt-total-line">
                                         <span>Cash Amount</span>
-                                        <strong id="receiptPaymentDetail">PHP 0.00</strong>
+                                        <strong id="receiptPaymentDetail">₱0.00</strong>
                                     </div>
                                     <div class="receipt-total-line">
                                         <span>Change</span>
-                                        <strong id="receiptChangeAmount">PHP 0.00</strong>
+                                        <strong id="receiptChangeAmount">₱0.00</strong>
                                     </div>
                                     <div class="receipt-total-line">
                                         <span>Points Earned</span>
@@ -245,11 +249,11 @@
                         <p id="insufficientCashMessage">Cash amount is lower than the total amount to pay.</p>
                         <dl class="row mb-0">
                             <dt class="col-6">Amount To Pay</dt>
-                            <dd class="col-6 text-end" id="insufficientAmountToPay">PHP 0.00</dd>
+                            <dd class="col-6 text-end" id="insufficientAmountToPay">₱0.00</dd>
                             <dt class="col-6">Cash Amount</dt>
-                            <dd class="col-6 text-end" id="insufficientCashAmount">PHP 0.00</dd>
+                            <dd class="col-6 text-end" id="insufficientCashAmount">₱0.00</dd>
                             <dt class="col-6">Missing Amount</dt>
-                            <dd class="col-6 text-end" id="insufficientMissingAmount">PHP 0.00</dd>
+                            <dd class="col-6 text-end" id="insufficientMissingAmount">₱0.00</dd>
                         </dl>
                     </div>
                     <div class="modal-footer">
@@ -265,7 +269,7 @@
 @section Scripts {
     <script>
         (() => {
-            const peso = new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP" });
+            const peso = new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP", currencyDisplay: "narrowSymbol" });
             const form = document.getElementById("posSaleForm");
             const submitMessage = document.getElementById("posSubmitMessage");
             const antiForgeryToken = form.querySelector("input[name='__RequestVerificationToken']")?.value || "";
