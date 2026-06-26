@@ -125,15 +125,7 @@ namespace gpos.Controllers
                     _db.FuelSales.Add(fuelItems[i].FuelSale);
                 }
 
-                _db.Payments.Add(new Payment
-                {
-                    SaleId = sale.Id,
-                    PaymentType = PaymentType(cashAmount, rebateAmount, netTotal),
-                    Amount = cashAmount,
-                    Status = "Completed",
-                    CreatedAt = now,
-                    UpdatedAt = now
-                });
+                AddPaymentRecords(sale.Id, cashAmount, rebateAmount, now);
 
                 await ApplyPointsChanges(member, rebate, rebateAmount, pointsEarned, sale.Id, now);
 
@@ -389,7 +381,16 @@ namespace gpos.Controllers
 
         private static string PaymentTypeFor(Sale? sale)
         {
-            return sale?.Payments.OrderBy(payment => payment.Id).Select(payment => payment.PaymentType).FirstOrDefault() ?? "-";
+            if (sale is null || sale.Payments.Count == 0)
+            {
+                return "-";
+            }
+
+            return string.Join(" + ", sale.Payments
+                .OrderBy(payment => payment.Id)
+                .Select(payment => payment.PaymentType)
+                .Where(paymentType => !string.IsNullOrWhiteSpace(paymentType))
+                .Distinct());
         }
 
         private int? CurrentUserId()
@@ -891,19 +892,33 @@ namespace gpos.Controllers
             return $"{prefix}{count + 1:000000}";
         }
 
-        private static string PaymentType(decimal cashAmount, decimal rebateAmount, decimal netTotal)
+        private void AddPaymentRecords(int saleId, decimal cashAmount, decimal rebateAmount, DateTime now)
         {
-            if (rebateAmount > 0 && cashAmount <= 0 && netTotal <= 0)
+            if (cashAmount > 0m || rebateAmount <= 0m)
             {
-                return "Points";
+                _db.Payments.Add(new Payment
+                {
+                    SaleId = saleId,
+                    PaymentType = "Cash",
+                    Amount = cashAmount,
+                    Status = "Completed",
+                    CreatedAt = now,
+                    UpdatedAt = now
+                });
             }
 
             if (rebateAmount > 0)
             {
-                return "Mixed";
+                _db.Payments.Add(new Payment
+                {
+                    SaleId = saleId,
+                    PaymentType = "Points",
+                    Amount = rebateAmount,
+                    Status = "Completed",
+                    CreatedAt = now,
+                    UpdatedAt = now
+                });
             }
-
-            return "Cash";
         }
 
         private sealed class ValidatedProductSaleItem

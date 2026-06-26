@@ -206,16 +206,6 @@ namespace gpos.Models.ViewModels
         public int Status { get; set; } = 1;
     }
 
-    public class PaymentMethodForm
-    {
-        public int Id { get; set; }
-        [Required(ErrorMessage = "Name is required.")]
-        public string Name { get; set; } = string.Empty;
-        [Required(ErrorMessage = "Code is required.")]
-        public string Code { get; set; } = string.Empty;
-        public int Status { get; set; } = 1;
-    }
-
     public class ShiftSettingForm
     {
         public int Id { get; set; }
@@ -320,7 +310,6 @@ namespace gpos.Models.ViewModels
         public PointsLedgerForm PointsLedgerForm { get; set; } = new();
         public DiscountRuleForm DiscountRuleForm { get; set; } = new();
         public EarningRuleForm EarningRuleForm { get; set; } = new();
-        public PaymentMethodForm PaymentMethodForm { get; set; } = new();
         public ShiftSettingForm ShiftSettingForm { get; set; } = new();
         public ScheduleForm ScheduleForm { get; set; } = new();
         public ScheduleDetailsForm ScheduleDetailsForm { get; set; } = new();
@@ -356,7 +345,6 @@ namespace gpos.Models.ViewModels
         public List<PointsLedger> PointsLedger { get; set; } = new();
         public List<DiscountRule> DiscountRules { get; set; } = new();
         public List<EarningRule> EarningRules { get; set; } = new();
-        public List<PaymentMethod> PaymentMethods { get; set; } = new();
         public List<ShiftSetting> ShiftSettings { get; set; } = new();
         public List<Schedule> Schedules { get; set; } = new();
         public List<ScheduleDetail> ScheduleDetails { get; set; } = new();

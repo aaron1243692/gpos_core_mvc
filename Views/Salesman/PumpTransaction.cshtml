@@ -67,9 +67,7 @@
             </div>
             <div class="pos-subpanel">
                 <div class="row g-3">
-                    <div class="col-12 col-md-6"><label class="form-label" for="paymentMethod">Payment method</label><select class="form-select" id="paymentMethod"><option>Cash</option><option>GCash</option><option>Card</option><option>Bank Transfer</option><option>Check</option></select></div>
-                    <div class="col-12 col-md-6"><label class="form-label" for="paymentAmount">Payment amount</label><input class="form-control" id="paymentAmount" type="number" min="0" step="0.01" /></div>
-                    <div class="col-12"><label class="form-label" for="referenceNumber">Reference number</label><input class="form-control" id="referenceNumber" placeholder="Required for non-cash" /></div>
+                    <div class="col-12"><label class="form-label" for="paymentAmount">Cash amount</label><input class="form-control" id="paymentAmount" type="number" min="0" step="0.01" /></div>
                 </div>
                 <div class="pos-validation" id="paymentValidation"></div>
             </div>
@@ -172,8 +170,7 @@
 
         function calculatePayments() {
             state.payment = Number(byId("paymentAmount").value) || 0;
-            const method = byId("paymentMethod").value;
-            state.change = method === "Cash" && state.payment > state.net ? state.payment - state.net : 0;
+            state.change = state.payment > state.net ? state.payment - state.net : 0;
             byId("paymentTotal").textContent = peso.format(state.payment);
             byId("changeAmount").textContent = peso.format(state.change);
             validatePumpTransaction();
@@ -181,20 +178,19 @@
 
         function validatePumpTransaction() {
             const errors = [];
-            const method = byId("paymentMethod").value;
             if (!state.pump) errors.push("Select a pump.");
             if ((Number(byId("liters").value) || 0) <= 0 || state.gross <= 0) errors.push("Enter valid liters or amount.");
             if (state.payment < state.net) errors.push("Payment must be equal to or greater than net amount.");
-            if (method !== "Cash" && !byId("referenceNumber").value.trim()) errors.push(`Reference number is required for ${method}.`);
             if (!state.customer && Number(byId("pointsInput").value) > 0) errors.push("Walk-in customers cannot redeem points.");
             byId("pumpValidation").innerHTML = errors.map(error => `<div>${error}</div>`).join("");
-            byId("paymentValidation").innerHTML = errors.filter(error => error.includes("Payment") || error.includes("Reference")).map(error => `<div>${error}</div>`).join("");
+            byId("paymentValidation").innerHTML = errors.filter(error => error.includes("Payment")).map(error => `<div>${error}</div>`).join("");
             byId("completePumpBtn").disabled = errors.length > 0;
         }
 
         function showReceiptPreview() {
             const currentPoints = state.customer ? state.customer.points - state.points + state.earned : 0;
-            byId("receiptPreviewBody").innerHTML = `<div class="pos-receipt"><h3>GPOS Main Station</h3><p>Transaction No: FUEL-2026-0001</p><p>${new Date().toLocaleString()}</p><p>Cashier: Salesman User</p><p>Shift: Morning Shift</p><p>Customer: ${state.customer ? state.customer.name : "Walk-in"}</p><hr /><div class="pos-receipt-line"><span>${state.pump ? state.pump.fuel : "Fuel"}<small>${byId("liters").value || 0} L x ${state.pump ? peso.format(state.pump.price) : peso.format(0)}</small></span><strong>${peso.format(state.gross)}</strong></div><hr /><div class="pos-receipt-line"><span>Gross</span><strong>${peso.format(state.gross)}</strong></div><div class="pos-receipt-line"><span>Discount</span><strong>${peso.format(state.discount)}</strong></div><div class="pos-receipt-line"><span>Points redeemed</span><strong>${peso.format(state.points)}</strong></div><div class="pos-receipt-line pos-receipt-total"><span>Net</span><strong>${peso.format(state.net)}</strong></div><div class="pos-receipt-line"><span>${byId("paymentMethod").value}</span><strong>${peso.format(state.payment)}</strong></div><div class="pos-receipt-line"><span>Change</span><strong>${peso.format(state.change)}</strong></div><div class="pos-receipt-line"><span>Points earned</span><strong>${state.earned} pts</strong></div><div class="pos-receipt-line"><span>Current points</span><strong>${currentPoints} pts</strong></div></div>`;
+            const method = state.points > 0 && state.payment <= 0 ? "Points" : state.points > 0 ? "Cash + Points" : "Cash";
+            byId("receiptPreviewBody").innerHTML = `<div class="pos-receipt"><h3>GPOS Main Station</h3><p>Transaction No: FUEL-2026-0001</p><p>${new Date().toLocaleString()}</p><p>Cashier: Salesman User</p><p>Shift: Morning Shift</p><p>Customer: ${state.customer ? state.customer.name : "Walk-in"}</p><hr /><div class="pos-receipt-line"><span>${state.pump ? state.pump.fuel : "Fuel"}<small>${byId("liters").value || 0} L x ${state.pump ? peso.format(state.pump.price) : peso.format(0)}</small></span><strong>${peso.format(state.gross)}</strong></div><hr /><div class="pos-receipt-line"><span>Gross</span><strong>${peso.format(state.gross)}</strong></div><div class="pos-receipt-line"><span>Discount</span><strong>${peso.format(state.discount)}</strong></div><div class="pos-receipt-line"><span>Points redeemed</span><strong>${peso.format(state.points)}</strong></div><div class="pos-receipt-line pos-receipt-total"><span>Net</span><strong>${peso.format(state.net)}</strong></div><div class="pos-receipt-line"><span>${method}</span><strong>${peso.format(state.payment)}</strong></div><div class="pos-receipt-line"><span>Change</span><strong>${peso.format(state.change)}</strong></div><div class="pos-receipt-line"><span>Points earned</span><strong>${state.earned} pts</strong></div><div class="pos-receipt-line"><span>Current points</span><strong>${currentPoints} pts</strong></div></div>`;
             bootstrap.Modal.getOrCreateInstance(byId("receiptPreviewModal")).show();
         }
 
@@ -202,9 +198,7 @@
         byId("fuelAmount").addEventListener("input", calculateFuelByAmount);
         byId("discountSelect").addEventListener("change", applyDiscount);
         byId("pointsInput").addEventListener("input", calculatePumpTotals);
-        byId("paymentMethod").addEventListener("change", calculatePayments);
         byId("paymentAmount").addEventListener("input", calculatePayments);
-        byId("referenceNumber").addEventListener("input", validatePumpTransaction);
         byId("walkInCustomer").addEventListener("change", () => { if (byId("walkInCustomer").checked) applyCustomer(null); byId("customerSearch").disabled = byId("walkInCustomer").checked; });
         byId("customerSearch").addEventListener("input", () => {
             const search = byId("customerSearch").value.toLowerCase();

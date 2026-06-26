@@ -160,7 +160,7 @@
                                         <div><span>Transaction No</span><strong id="receiptTransactionNo">Pending</strong></div>
                                         <div><span>Date / Time</span><strong id="receiptDateTime"></strong></div>
                                         <div><span>Cashier</span><strong id="receiptCashier">@(Context.Session.GetString("Username") ?? Context.Session.GetString("Name") ?? User.Identity?.Name ?? "User")</strong></div>
-                                        <div><span>Payment Method</span><strong>Cash</strong></div>
+                                        <div><span>Payment Method</span><strong id="receiptPaymentMethod">Cash</strong></div>
                                         <div><span>Member Card No</span><strong id="receiptMemberCardNo"></strong></div>
                                     </div>
 
@@ -306,6 +306,7 @@
             const receiptTransactionNo = document.getElementById("receiptTransactionNo");
             const receiptDateTime = document.getElementById("receiptDateTime");
             const receiptPaymentDetail = document.getElementById("receiptPaymentDetail");
+            const receiptPaymentMethod = document.getElementById("receiptPaymentMethod");
             const receiptMemberCardNo = document.getElementById("receiptMemberCardNo");
             const receiptFuelRows = document.getElementById("receiptFuelRows");
             const receiptProductRows = document.getElementById("receiptProductRows");
@@ -454,7 +455,7 @@
             }
 
             function canCheckout() {
-                return cartHasItems() && paymentAmountInput.value.trim().length > 0 && cashAmount() >= amountToPay();
+                return cartHasItems() && (amountToPay() <= 0 || paymentAmountInput.value.trim().length > 0) && cashAmount() >= amountToPay();
             }
 
             function showCheckoutWarningModal(title, message) {
@@ -479,7 +480,7 @@
                     return false;
                 }
 
-                if (paymentAmountInput.value.trim().length === 0) {
+                if (amountToPay() > 0 && paymentAmountInput.value.trim().length === 0) {
                     showCheckoutWarningModal("Checkout Warning", "Please enter cash amount.");
                     return false;
                 }
@@ -695,9 +696,16 @@
                 const amountTendered = completedReceiptTotals?.amountTendered ?? cashAmount();
                 const change = completedReceiptTotals?.change ?? Math.max(0, amountTendered - due);
                 const pointsEarned = completedReceiptTotals?.pointsEarned ?? 0;
+                const hasPointsPayment = totalDiscount > discountAmount();
+                const paymentMethod = hasPointsPayment && amountTendered <= 0
+                    ? "Points"
+                    : hasPointsPayment
+                        ? "Cash + Points"
+                        : "Cash";
 
                 receiptTransactionNo.textContent = completedReceiptNo || "Pending";
                 receiptDateTime.textContent = new Date().toLocaleString();
+                receiptPaymentMethod.textContent = paymentMethod;
                 receiptPaymentDetail.textContent = peso.format(amountTendered);
                 receiptMemberCardNo.textContent = membershipCardNoInput.value.trim() || "None";
                 receiptSubtotalAmount.textContent = peso.format(subtotal);

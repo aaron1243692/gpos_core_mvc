@@ -19,6 +19,7 @@
                             <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Configuration.Branch" ? "active" : "")" asp-controller="Configuration" asp-action="Branch">Branch</a>
                             <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Configuration.Department" ? "active" : "")" asp-controller="Configuration" asp-action="Department">Department</a>
                             <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Configuration.PaymentMethods" ? "active" : "")" asp-controller="Configuration" asp-action="PaymentMethods">Payment Methods</a>
+                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Configuration.Members" ? "active" : "")" asp-controller="Configuration" asp-action="Members">Members</a>
                         </div>
                     </div>
                     <div class="dropend eg-rb-dropdown-group">
@@ -33,14 +34,16 @@
                         </div>
                     </div>
                     <div class="dropend eg-rb-dropdown-group">
-                        <button class="dropdown-item eg-rb-dropdown-group-toggle" type="button">Discounts</button>
+                        <button class="dropdown-item eg-rb-dropdown-group-toggle" type="button">Discount Management</button>
                         <div class="dropdown-menu eg-rb-submenu">
                             <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Configuration.Discounts" ? "active" : "")" asp-controller="Configuration" asp-action="Discounts">Discounts</a>
-                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Configuration.Earnings" ? "active" : "")" asp-controller="Configuration" asp-action="Earnings">Earnings</a>
-                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Configuration.Members" ? "active" : "")" asp-controller="Configuration" asp-action="Members">Members</a>
-                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Configuration.Rebate" ? "active" : "")" asp-controller="Configuration" asp-action="Rebate">Rebate</a>
-                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Configuration.PointsLedger" ? "active" : "")" asp-controller="Configuration" asp-action="PointsLedger">Points Ledger</a>
                             <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Configuration.DiscountRules" ? "active" : "")" asp-controller="Configuration" asp-action="DiscountRules">Discount Rules</a>
+                        </div>
+                    </div>
+                    <div class="dropend eg-rb-dropdown-group">
+                        <button class="dropdown-item eg-rb-dropdown-group-toggle" type="button">Earnings Management</button>
+                        <div class="dropdown-menu eg-rb-submenu">
+                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Configuration.Earnings" ? "active" : "")" asp-controller="Configuration" asp-action="Earnings">Earnings</a>
                             <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Configuration.EarningRules" ? "active" : "")" asp-controller="Configuration" asp-action="EarningRules">Earning Rules</a>
                         </div>
                     </div>
@@ -166,6 +169,7 @@
                             <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Reports.TankDailyStock" ? "active" : "")" asp-controller="Reports" asp-action="TankDailyStock">Tank</a>
                         </div>
                     </div>
+                    <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Configuration.PointsLedger" ? "active" : "")" asp-controller="Configuration" asp-action="PointsLedger">Points Ledger</a>
                 </div>
             </div>
         </nav>

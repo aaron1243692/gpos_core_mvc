@@ -163,7 +163,7 @@ else if (title == "POS Sales")
                         <p>Readonly controls for the future checkout flow.</p>
                     </div>
                 </div>
-                <partial name="_MockForm" model='@(new[] { "Customer Search", "Discount", "Points To Redeem", "Payment Method", "Reference No" })' />
+                <partial name="_MockForm" model='@(new[] { "Customer Search", "Discount", "Points To Redeem", "Cash Amount" })' />
             </section>
             <partial name="_ReceiptPreviewCard" model="@("POS Receipt Preview")" />
         </div>
@@ -317,9 +317,9 @@ else
         "Open Shift" => new[] { "Cashier", "Shift", "Opening Cash", "Started At", "Status" },
         "Daily Beginning Balance" => new[] { "Balance Date", "Cashier", "Shift", "Beginning Cash", "Remarks" },
         "Cash Drawer Movement" => new[] { "Cashier Shift", "Movement Type", "Amount", "Reason", "Approved By", "Remarks" },
-        "Pump Transaction" => new[] { "Pump Unit", "Pump Number", "Fuel Type", "Fuel Tank", "Liters", "Price Per Liter", "Gross Amount", "Customer Account", "Discount", "Points To Redeem", "Net Amount", "Payment Method" },
-        "Transaction Payments" => new[] { "Transaction Type", "Transaction No", "Payment Method", "Amount", "Reference No" },
-        "Daily Closing Balance" => new[] { "Balance Date", "Cashier", "Shift", "Beginning Cash", "Total Fuel Sales", "Total Product Sales", "Gross Sales", "Total Discount", "Total Points Redeemed", "Net Sales", "Total Cash Payments", "Total Non-Cash Payments", "Total Cash In", "Total Cash Out", "Expected Cash", "Actual Cash", "Cash Difference", "Remarks" },
+        "Pump Transaction" => new[] { "Pump Unit", "Pump Number", "Fuel Type", "Fuel Tank", "Liters", "Price Per Liter", "Gross Amount", "Customer Account", "Discount", "Points To Redeem", "Net Amount", "Cash Amount" },
+        "Transaction Payments" => new[] { "Transaction Type", "Transaction No", "Payment Type", "Amount", "Created At" },
+        "Daily Closing Balance" => new[] { "Balance Date", "Cashier", "Shift", "Beginning Cash", "Total Fuel Sales", "Total Product Sales", "Gross Sales", "Total Discount", "Total Points Redeemed", "Net Sales", "Total Cash Payments", "Total Points Payments", "Total Cash In", "Total Cash Out", "Expected Cash", "Actual Cash", "Cash Difference", "Remarks" },
         "Cash Turnover" => new[] { "Cashier", "Shift", "Daily Closing Balance", "Expected Cash", "Actual Cash", "Cash Difference", "Received By", "Turnover Status", "Remarks", "Received At" },
         "Void Transactions" => new[] { "Void Reason" },
         "Discounts" => new[] { "Name", "Discount Type", "Value", "Status" },
@@ -356,7 +356,7 @@ else
             "Item Inventory Movement" => new[] { "Date", "Product", "Item Batch", "Location", "Movement Type", "Quantity In", "Quantity Out", "Balance After", "Remarks" },
             "Low Stock" or "Low Stock Items" => new[] { "Product", "Category", "Location", "Quantity", "Minimum Stock", "Status" },
             "Cash Drawer Movement" => new[] { "Date", "Shift", "Cashier", "Movement Type", "Amount", "Reason", "Approved By", "Remarks" },
-            "Transaction Payments" => new[] { "Transaction Type", "Transaction No", "Payment Method", "Amount", "Reference No", "Created At" },
+            "Transaction Payments" => new[] { "Transaction Type", "Transaction No", "Payment Type", "Amount", "Created At" },
             "Cash Turnover" => new[] { "Date", "Cashier", "Shift", "Expected Cash", "Actual Cash", "Difference", "Received By", "Status", "Received At", "Actions" },
             "Void Transactions" => new[] { "Transaction No", "Type", "Cashier", "Customer", "Net Amount", "Status", "Void Reason", "Voided By", "Voided At" },
             "Points Report" => new[] { "Customer", "Transaction Type", "Source Type", "Points", "Amount Value", "Remarks", "Date" },
@@ -416,7 +416,7 @@ else
         "Movement Type" => i == 0 ? "cash_in" : i == 1 ? "cash_out" : "correction",
         "Transaction Type" or "Type" or "Source Type" => i == 0 ? "fuel" : i == 1 ? "pos" : "rewards",
         "Transaction No" or "Reference" or "Reference No" => $"TXN-2026-00{i + 1}",
-        "Payment Method" => i == 0 ? "Cash" : i == 1 ? "Card" : "GCash",
+        "Payment Method" or "Payment Type" => i == 0 ? "Cash" : i == 1 ? "Points" : "Cash + Points",
         "Shift" => i == 0 ? "Morning" : i == 1 ? "Afternoon" : "Night",
         "Reason" or "Void Reason" or "Remarks" or "Description" => i == 0 ? "Sample note" : "Frontend placeholder",
         _ => i == 0 ? "Sample" : i == 1 ? "Preview" : "Mock"
@@ -444,7 +444,7 @@ else
         if (field.Contains("Movement Type")) return new[] { "cash_in", "cash_out", "correction" };
         if (field.Contains("Discount Type")) return new[] { "percentage", "fixed", "points_rebate" };
         if (field.Contains("Supplier Type")) return new[] { "fuel", "item", "both" };
-        if (field.Contains("Payment")) return new[] { "Cash", "Card", "GCash", "Bank Transfer" };
+        if (field.Contains("Payment")) return new[] { "Cash", "Points" };
         if (field.Contains("Fuel")) return new[] { "Diesel", "Gasoline", "Premium" };
         if (field.Contains("Pump")) return new[] { "Pump Unit 1", "Pump Unit 2", "Pump 1", "Pump 2" };
         if (field.Contains("Unit")) return new[] { "Liter / L", "Gallon / gal", "Piece / pc", "Bottle / bottle", "Can / can" };

@@ -104,11 +104,6 @@ namespace gpos.Controllers
             return View(await BuildEarningRulesPageAsync(search, editId: editId, activeModalId: editId.HasValue ? "earningRuleModal" : ""));
         }
 
-        public async Task<IActionResult> PaymentMethods(string? search, int? editId)
-        {
-            return View(await BuildPaymentMethodsPageAsync(search, editId: editId, activeModalId: editId.HasValue ? "paymentMethodModal" : ""));
-        }
-
         [NonAction]
         public async Task<IActionResult> ShiftSettings(string? search, int? editId)
         {
@@ -798,41 +793,6 @@ namespace gpos.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> SavePaymentMethod([Bind(Prefix = "PaymentMethodForm")] PaymentMethodForm form, string? search)
-        {
-            if (!ModelState.IsValid)
-            {
-                return View("PaymentMethods", await BuildPaymentMethodsPageAsync(search, form, activeModalId: "paymentMethodModal"));
-            }
-
-            var now = DateTime.UtcNow;
-            var method = form.Id > 0 ? await _db.PaymentMethods.FindAsync(form.Id) : new PaymentMethod { CreatedAt = now };
-            if (method is null) return NotFound();
-            method.Name = form.Name.Trim();
-            method.Code = form.Code.Trim();
-            method.Status = form.Status;
-            method.UpdatedAt = now;
-            if (form.Id == 0) _db.PaymentMethods.Add(method);
-            await _db.SaveChangesAsync();
-            return RedirectToAction(nameof(PaymentMethods), new { search });
-        }
-
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> DeletePaymentMethod(int id, string? search)
-        {
-            var method = await _db.PaymentMethods.FindAsync(id);
-            if (method is not null)
-            {
-                method.Status = 0;
-                method.UpdatedAt = DateTime.UtcNow;
-                await _db.SaveChangesAsync();
-            }
-            return RedirectToAction(nameof(PaymentMethods), new { search });
-        }
-
-        [HttpPost]
-        [ValidateAntiForgeryToken]
         [NonAction]
         public async Task<IActionResult> SaveSchedule([Bind(Prefix = "ScheduleForm")] ScheduleForm form, string? search)
         {
@@ -1375,14 +1335,6 @@ namespace gpos.Controllers
             return options;
         }
 
-        private async Task<SetupModulesPageViewModel> BuildPaymentMethodsPageAsync(string? search, PaymentMethodForm? form = null, int? editId = null, string activeModalId = "")
-        {
-            var query = _db.PaymentMethods.AsNoTracking();
-            var searchText = (search ?? string.Empty).Trim();
-            if (!string.IsNullOrWhiteSpace(searchText)) query = query.Where(method => method.Name.Contains(searchText) || method.Code.Contains(searchText));
-            return new SetupModulesPageViewModel { Search = searchText, ActiveModalId = activeModalId, PaymentMethodForm = form ?? await BuildPaymentMethodFormAsync(editId), PaymentMethods = await query.OrderBy(method => method.Id).ToListAsync() };
-        }
-
         private async Task<SetupModulesPageViewModel> BuildShiftSettingsPageAsync(string? search, ShiftSettingForm? form = null, int? editId = null, string activeModalId = "")
         {
             var query = _db.ShiftSettings.AsNoTracking();
@@ -1542,12 +1494,6 @@ namespace gpos.Controllers
         {
             var item = editId.HasValue ? await _db.EarningRules.AsNoTracking().FirstOrDefaultAsync(rule => rule.Id == editId.Value) : null;
             return item is null ? new EarningRuleForm() : new EarningRuleForm { Id = item.Id, EarningsId = item.EarningsId, Name = item.Name, AppliesTo = item.AppliesTo, EarnType = item.EarnType, EarnValue = item.EarnValue, MinimumAmount = item.MinimumAmount, MemberRequired = item.MemberRequired == 1, StartDate = item.StartDate, EndDate = item.EndDate, Status = item.Status };
-        }
-
-        private async Task<PaymentMethodForm> BuildPaymentMethodFormAsync(int? editId)
-        {
-            var item = editId.HasValue ? await _db.PaymentMethods.AsNoTracking().FirstOrDefaultAsync(method => method.Id == editId.Value) : null;
-            return item is null ? new PaymentMethodForm() : new PaymentMethodForm { Id = item.Id, Name = item.Name, Code = item.Code, Status = item.Status };
         }
 
         private async Task<ShiftSettingForm> BuildShiftSettingFormAsync(int? editId)
