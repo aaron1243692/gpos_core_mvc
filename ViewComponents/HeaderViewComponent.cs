@@ -51,7 +51,7 @@ namespace gpos.ViewComponents
                 return "Inventory";
             }
 
-            if (Is(controller, "Configuration") || IsLegacySetupConfiguration(action))
+            if (Is(controller, "Configuration") || Is(controller, "Vouchers") || IsLegacySetupConfiguration(action))
             {
                 return "Configuration";
             }
@@ -94,6 +94,11 @@ namespace gpos.ViewComponents
             if (Is(controller, "Configuration"))
             {
                 return $"Configuration.{action}";
+            }
+
+            if (Is(controller, "Vouchers"))
+            {
+                return $"Vouchers.{action}";
             }
 
             if (Is(controller, "Transactions"))

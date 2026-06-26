@@ -57,6 +57,9 @@ namespace gpos.Data
         public DbSet<ProductSale> ProductSales { get; set; }
         public DbSet<FuelSale> FuelSales { get; set; }
         public DbSet<Payment> Payments { get; set; }
+        public DbSet<Voucher> Vouchers { get; set; }
+        public DbSet<VoucherRule> VoucherRules { get; set; }
+        public DbSet<VoucherRedemption> VoucherRedemptions { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -1205,6 +1208,84 @@ namespace gpos.Data
                 entity.HasOne(payment => payment.PaymentMethod)
                     .WithMany()
                     .HasForeignKey(payment => payment.PaymentMethodId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            modelBuilder.Entity<Voucher>(entity =>
+            {
+                entity.ToTable("vouchers");
+                entity.HasKey(voucher => voucher.Id);
+
+                entity.Property(voucher => voucher.Id).HasColumnName("id");
+                entity.Property(voucher => voucher.Code).HasColumnName("code").HasMaxLength(8).IsRequired();
+                entity.Property(voucher => voucher.MemberId).HasColumnName("member_id");
+                entity.Property(voucher => voucher.Status).HasColumnName("status").HasMaxLength(50).HasDefaultValue("Active");
+                entity.Property(voucher => voucher.CreatedAt).HasColumnName("created_at");
+                entity.Property(voucher => voucher.UpdatedAt).HasColumnName("updated_at");
+
+                entity.HasIndex(voucher => voucher.Code).IsUnique();
+                entity.HasIndex(voucher => voucher.MemberId);
+                entity.HasOne(voucher => voucher.Member)
+                    .WithMany(member => member.Vouchers)
+                    .HasForeignKey(voucher => voucher.MemberId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            modelBuilder.Entity<VoucherRule>(entity =>
+            {
+                entity.ToTable("voucher_rules");
+                entity.HasKey(rule => rule.Id);
+
+                entity.Property(rule => rule.Id).HasColumnName("id");
+                entity.Property(rule => rule.Name).HasColumnName("name").HasMaxLength(100).IsRequired();
+                entity.Property(rule => rule.RewardType).HasColumnName("reward_type").HasMaxLength(50).IsRequired();
+                entity.Property(rule => rule.RewardValue).HasColumnName("reward_value").HasPrecision(18, 2);
+                entity.Property(rule => rule.MaxDiscountAmount).HasColumnName("max_discount_amount").HasPrecision(18, 2);
+                entity.Property(rule => rule.MinimumPurchaseAmount).HasColumnName("minimum_purchase_amount").HasPrecision(18, 2);
+                entity.Property(rule => rule.ApplicableProductIds).HasColumnName("applicable_product_ids").HasMaxLength(1000);
+                entity.Property(rule => rule.ApplicableCategoryIds).HasColumnName("applicable_category_ids").HasMaxLength(1000);
+                entity.Property(rule => rule.AppliesTo).HasColumnName("applies_to").HasMaxLength(50).IsRequired();
+                entity.Property(rule => rule.EffectiveDate).HasColumnName("effective_date");
+                entity.Property(rule => rule.ExpirationDate).HasColumnName("expiration_date");
+                entity.Property(rule => rule.NoExpiration).HasColumnName("no_expiration").HasDefaultValue(false);
+                entity.Property(rule => rule.MaxRedemptions).HasColumnName("max_redemptions");
+                entity.Property(rule => rule.UsageLimitType).HasColumnName("usage_limit_type").HasMaxLength(50).IsRequired();
+                entity.Property(rule => rule.LimitedUseCount).HasColumnName("limited_use_count");
+                entity.Property(rule => rule.Priority).HasColumnName("priority").HasDefaultValue(0);
+                entity.Property(rule => rule.Status).HasColumnName("status").HasDefaultValue(1);
+                entity.Property(rule => rule.CreatedAt).HasColumnName("created_at");
+                entity.Property(rule => rule.UpdatedAt).HasColumnName("updated_at");
+
+                entity.HasIndex(rule => rule.Status);
+                entity.HasIndex(rule => rule.Priority);
+            });
+
+            modelBuilder.Entity<VoucherRedemption>(entity =>
+            {
+                entity.ToTable("voucher_redemptions");
+                entity.HasKey(redemption => redemption.Id);
+
+                entity.Property(redemption => redemption.Id).HasColumnName("id");
+                entity.Property(redemption => redemption.VoucherId).HasColumnName("voucher_id");
+                entity.Property(redemption => redemption.VoucherRuleId).HasColumnName("voucher_rule_id");
+                entity.Property(redemption => redemption.SaleId).HasColumnName("sale_id");
+                entity.Property(redemption => redemption.DiscountAmount).HasColumnName("discount_amount").HasPrecision(18, 2);
+                entity.Property(redemption => redemption.CreatedAt).HasColumnName("created_at");
+
+                entity.HasIndex(redemption => redemption.VoucherId);
+                entity.HasIndex(redemption => redemption.VoucherRuleId);
+                entity.HasIndex(redemption => redemption.SaleId);
+                entity.HasOne(redemption => redemption.Voucher)
+                    .WithMany(voucher => voucher.Redemptions)
+                    .HasForeignKey(redemption => redemption.VoucherId)
+                    .OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne(redemption => redemption.VoucherRule)
+                    .WithMany(rule => rule.Redemptions)
+                    .HasForeignKey(redemption => redemption.VoucherRuleId)
+                    .OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne(redemption => redemption.Sale)
+                    .WithMany(sale => sale.VoucherRedemptions)
+                    .HasForeignKey(redemption => redemption.SaleId)
                     .OnDelete(DeleteBehavior.Restrict);
             });
         }

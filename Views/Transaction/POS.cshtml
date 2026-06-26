@@ -134,6 +134,10 @@
                         <label class="form-label" for="membershipCardNo">Member Card No <span class="text-muted">(Optional)</span></label>
                         <input class="form-control" id="membershipCardNo" name="MembershipCardNo" placeholder="Optional member no or card no" autocomplete="off" />
                     </div>
+                    <div id="voucherCodeField">
+                        <label class="form-label" for="voucherCode">Voucher Code <span class="text-muted">(Optional)</span></label>
+                        <input class="form-control text-uppercase" id="voucherCode" name="VoucherCode" maxlength="8" placeholder="Optional voucher code" autocomplete="off" />
+                    </div>
                     <div id="pointsPaymentField" hidden>
                         <div class="pos-summary-totals mb-0">
                             <div><span>Available Points</span><strong id="memberAvailablePoints">0.00 pts</strong></div>
@@ -333,7 +337,9 @@
             const paymentMethodSelect = document.getElementById("paymentMethod");
             const paymentAmountInput = document.getElementById("paymentAmount");
             const membershipCardNoInput = document.getElementById("membershipCardNo");
+            const voucherCodeInput = document.getElementById("voucherCode");
             const cashPaymentField = document.getElementById("cashPaymentField");
+            const voucherCodeField = document.getElementById("voucherCodeField");
             const pointsPaymentField = document.getElementById("pointsPaymentField");
             const memberAvailablePoints = document.getElementById("memberAvailablePoints");
             const pointConversion = document.getElementById("pointConversion");
@@ -514,8 +520,20 @@
                 return selectedPaymentMethod() === "Points";
             }
 
+            function voucherCode() {
+                return voucherCodeInput.value.trim().toUpperCase();
+            }
+
             function discountAmount() {
-                return isPointsPayment() ? 0 : completedReceiptTotals?.discountAmount ?? memberDiscountAmount;
+                if (isPointsPayment()) {
+                    return 0;
+                }
+
+                if (voucherCode()) {
+                    return completedReceiptTotals?.discountAmount ?? 0;
+                }
+
+                return completedReceiptTotals?.discountAmount ?? memberDiscountAmount;
             }
 
             function requiredPointsForPurchase() {
@@ -593,6 +611,11 @@
                     }
 
                     return true;
+                }
+
+                if (voucherCode() && (!membershipCardNoInput.value.trim() || !memberFound)) {
+                    showCheckoutWarningModal("Checkout Warning", "Select a valid member before redeeming a voucher.");
+                    return false;
                 }
 
                 if (amountToPay() > 0 && paymentAmountInput.value.trim().length === 0) {
@@ -939,7 +962,7 @@
 
                     memberFound = response.ok && result.success && result.memberFound;
                     memberPoints = memberFound ? Math.max(0, Number.parseFloat(result.points) || 0) : 0;
-                    memberDiscountAmount = memberFound && !isPointsPayment()
+                    memberDiscountAmount = memberFound && !isPointsPayment() && !voucherCode()
                         ? Math.max(0, Number.parseFloat(result.discountAmount) || 0)
                         : 0;
                 } catch {
@@ -961,11 +984,13 @@
             function updatePaymentFields() {
                 const pointsPayment = isPointsPayment();
                 cashPaymentField.hidden = pointsPayment;
+                voucherCodeField.hidden = pointsPayment;
                 pointsPaymentField.hidden = !pointsPayment;
                 membershipCardNoInput.closest("#memberCardField").querySelector(".text-muted").textContent = pointsPayment ? "(Required)" : "(Optional)";
 
                 if (pointsPayment) {
                     paymentAmountInput.value = "";
+                    voucherCodeInput.value = "";
                     memberDiscountAmount = 0;
                 }
 
@@ -1091,7 +1116,8 @@
                     fuels,
                     paymentMethod: selectedPaymentMethod(),
                     cashAmount: isPointsPayment() ? 0 : Math.max(0, numericValue(paymentAmountInput)),
-                    membershipCardNo: membershipCardNoInput.value.trim()
+                    membershipCardNo: membershipCardNoInput.value.trim(),
+                    voucherCode: voucherCode()
                 };
             }
 
@@ -1281,6 +1307,11 @@
             });
             membershipCardNoInput.addEventListener("input", () => {
                 queueMemberDiscountLookup();
+            });
+            voucherCodeInput.addEventListener("input", () => {
+                voucherCodeInput.value = voucherCodeInput.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8);
+                queueMemberDiscountLookup();
+                updateTotal();
             });
             paymentMethodSelect.addEventListener("change", updatePaymentFields);
             productSearch.addEventListener("input", filterProducts);

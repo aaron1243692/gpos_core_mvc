@@ -19,5 +19,6 @@ namespace gpos.Models
         public Discount? Discount { get; set; }
         public Earnings? Earnings { get; set; }
         public ICollection<PointsLedger> PointsLedger { get; set; } = new List<PointsLedger>();
+        public ICollection<Voucher> Vouchers { get; set; } = new List<Voucher>();
     }
 }

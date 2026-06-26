@@ -79,6 +79,8 @@ namespace gpos.Controllers
 
                 var paymentMethod = NormalizePaymentMethod(request.PaymentMethod);
                 var isPointsPayment = paymentMethod == "Points";
+                var voucherCode = NormalizeVoucherCode(request.VoucherCode);
+                VoucherRedemptionResult? voucherRedemption = null;
                 Member? member;
                 decimal discountAmount;
                 decimal pointsRequired;
@@ -86,6 +88,11 @@ namespace gpos.Controllers
 
                 if (isPointsPayment)
                 {
+                    if (!string.IsNullOrWhiteSpace(voucherCode))
+                    {
+                        throw new InvalidOperationException("Voucher redemption is not available with points payment.");
+                    }
+
                     var pointsMember = await FindRequiredMember(request.MembershipCardNo);
                     var rebate = await FindLatestActiveRebate();
                     member = pointsMember;
@@ -96,7 +103,16 @@ namespace gpos.Controllers
                 else
                 {
                     member = await FindMember(request.MembershipCardNo);
-                    discountAmount = await CalculateMemberDiscount(member, productTotal, fuelTotal, now);
+                    if (!string.IsNullOrWhiteSpace(voucherCode))
+                    {
+                        voucherRedemption = await ValidateAndCalculateVoucherRedemption(voucherCode, member, productItems, fuelItems, productTotal, fuelTotal, now);
+                        discountAmount = voucherRedemption.DiscountAmount;
+                    }
+                    else
+                    {
+                        discountAmount = await CalculateMemberDiscount(member, productTotal, fuelTotal, now);
+                    }
+
                     pointsRequired = 0m;
                     rebateAmount = 0m;
                 }
@@ -148,6 +164,7 @@ namespace gpos.Controllers
                 AddPaymentRecords(sale.Id, paymentMethod, cashAmount, rebateAmount, now);
 
                 await ApplyPointsChanges(member, pointsRequired, pointsEarned, sale.Id, now);
+                ApplyVoucherRedemption(voucherRedemption, sale.Id, now);
 
                 await _db.SaveChangesAsync();
                 await dbTransaction.CommitAsync();
@@ -164,6 +181,8 @@ namespace gpos.Controllers
                     pointsEarned,
                     pointsRequired,
                     paymentMethod,
+                    voucherCode = voucherRedemption?.Voucher.Code,
+                    voucherDiscountAmount = voucherRedemption?.DiscountAmount ?? 0m,
                     amountTendered = cashAmount,
                     change = Math.Max(0m, cashAmount - netTotal)
                 });
@@ -462,6 +481,8 @@ namespace gpos.Controllers
                 items.Add(new ValidatedProductSaleItem
                 {
                     DisplayStockId = displayStock.Id,
+                    ProductId = displayStock.ProductId,
+                    CategoryId = displayStock.Product.CategoryId,
                     ProductName = displayStock.Product.Name,
                     Quantity = request.Quantity,
                     Subtotal = subtotal,
@@ -792,6 +813,194 @@ namespace gpos.Controllers
                 .Max();
         }
 
+        private async Task<VoucherRedemptionResult> ValidateAndCalculateVoucherRedemption(
+            string voucherCode,
+            Member? member,
+            List<ValidatedProductSaleItem> productItems,
+            List<ValidatedFuelSaleItem> fuelItems,
+            decimal productTotal,
+            decimal fuelTotal,
+            DateTime now)
+        {
+            if (member is null)
+            {
+                throw new InvalidOperationException("Select a valid member before redeeming a voucher.");
+            }
+
+            var voucher = await _db.Vouchers
+                .Include(item => item.Redemptions)
+                .FirstOrDefaultAsync(item => item.Code == voucherCode);
+
+            if (voucher is null)
+            {
+                throw new InvalidOperationException("Voucher code was not found.");
+            }
+
+            if (!string.Equals(voucher.Status, "Active", StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidOperationException("Voucher is not active.");
+            }
+
+            if (voucher.MemberId != member.Id)
+            {
+                throw new InvalidOperationException("Voucher does not belong to the selected member.");
+            }
+
+            var rules = await _db.VoucherRules
+                .Include(rule => rule.Redemptions)
+                .Where(rule => rule.Status == 1)
+                .OrderByDescending(rule => rule.Priority)
+                .ThenBy(rule => rule.Id)
+                .ToListAsync();
+
+            foreach (var rule in rules)
+            {
+                var discountAmount = CalculateVoucherDiscount(rule, voucher, productItems, fuelItems, productTotal, fuelTotal, now);
+                if (discountAmount > 0m)
+                {
+                    return new VoucherRedemptionResult(voucher, rule, discountAmount);
+                }
+            }
+
+            throw new InvalidOperationException("No active voucher rule applies to this sale.");
+        }
+
+        private static decimal CalculateVoucherDiscount(
+            VoucherRule rule,
+            Voucher voucher,
+            List<ValidatedProductSaleItem> productItems,
+            List<ValidatedFuelSaleItem> fuelItems,
+            decimal productTotal,
+            decimal fuelTotal,
+            DateTime now)
+        {
+            if (rule.EffectiveDate.HasValue && now.Date < rule.EffectiveDate.Value.Date)
+            {
+                return 0m;
+            }
+
+            if (!rule.NoExpiration && rule.ExpirationDate.HasValue && now.Date > rule.ExpirationDate.Value.Date)
+            {
+                return 0m;
+            }
+
+            if (rule.MaxRedemptions.HasValue && rule.Redemptions.Count >= rule.MaxRedemptions.Value)
+            {
+                return 0m;
+            }
+
+            var voucherUseCount = voucher.Redemptions.Count;
+            var usageLimitType = (rule.UsageLimitType ?? string.Empty).Trim();
+            if (usageLimitType.Equals("Once Per Voucher", StringComparison.OrdinalIgnoreCase) && voucherUseCount >= 1)
+            {
+                return 0m;
+            }
+
+            if (usageLimitType.Equals("Limited Uses", StringComparison.OrdinalIgnoreCase)
+                && rule.LimitedUseCount.HasValue
+                && voucherUseCount >= rule.LimitedUseCount.Value)
+            {
+                return 0m;
+            }
+
+            var grossTotal = productTotal + fuelTotal;
+            if (grossTotal < rule.MinimumPurchaseAmount)
+            {
+                return 0m;
+            }
+
+            var eligibleBase = EligibleVoucherBase(rule, productItems, fuelItems, productTotal, fuelTotal);
+            if (eligibleBase <= 0m)
+            {
+                return 0m;
+            }
+
+            var rewardValue = Math.Max(0m, rule.RewardValue);
+            var discountAmount = IsPercentageDiscount(rule.RewardType)
+                ? eligibleBase * (rewardValue / 100m)
+                : rewardValue;
+
+            if (IsPercentageDiscount(rule.RewardType) && rule.MaxDiscountAmount.HasValue)
+            {
+                discountAmount = Math.Min(discountAmount, Math.Max(0m, rule.MaxDiscountAmount.Value));
+            }
+
+            return Math.Round(Math.Min(eligibleBase, Math.Max(0m, discountAmount)), 2, MidpointRounding.AwayFromZero);
+        }
+
+        private static decimal EligibleVoucherBase(
+            VoucherRule rule,
+            List<ValidatedProductSaleItem> productItems,
+            List<ValidatedFuelSaleItem> fuelItems,
+            decimal productTotal,
+            decimal fuelTotal)
+        {
+            var appliesTo = (rule.AppliesTo ?? string.Empty).Trim();
+            var productBase = AppliesToFuelOnly(appliesTo) ? 0m : productTotal;
+            var fuelBase = AppliesToProductOnly(appliesTo) ? 0m : fuelTotal;
+            var productIds = ParseIdSet(rule.ApplicableProductIds);
+            var categoryIds = ParseIdSet(rule.ApplicableCategoryIds);
+
+            if (productBase > 0m && (productIds.Count > 0 || categoryIds.Count > 0))
+            {
+                productBase = productItems
+                    .Where(item => productIds.Count == 0 || productIds.Contains(item.ProductId))
+                    .Where(item => categoryIds.Count == 0 || item.CategoryId.HasValue && categoryIds.Contains(item.CategoryId.Value))
+                    .Sum(item => item.Subtotal);
+            }
+
+            return productBase + fuelBase;
+        }
+
+        private static HashSet<int> ParseIdSet(string? ids)
+        {
+            return (ids ?? string.Empty)
+                .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Select(value => int.TryParse(value, out var id) ? id : 0)
+                .Where(id => id > 0)
+                .ToHashSet();
+        }
+
+        private void ApplyVoucherRedemption(VoucherRedemptionResult? redemption, int saleId, DateTime now)
+        {
+            if (redemption is null)
+            {
+                return;
+            }
+
+            _db.VoucherRedemptions.Add(new VoucherRedemption
+            {
+                VoucherId = redemption.Voucher.Id,
+                VoucherRuleId = redemption.Rule.Id,
+                SaleId = saleId,
+                DiscountAmount = redemption.DiscountAmount,
+                CreatedAt = now
+            });
+
+            redemption.Voucher.Status = VoucherStatusAfterRedemption(redemption.Voucher, redemption.Rule);
+            redemption.Voucher.UpdatedAt = now;
+        }
+
+        private static string VoucherStatusAfterRedemption(Voucher voucher, VoucherRule rule)
+        {
+            var usageLimitType = (rule.UsageLimitType ?? string.Empty).Trim();
+            var useCountAfterRedemption = voucher.Redemptions.Count + 1;
+
+            if (usageLimitType.Equals("Unlimited", StringComparison.OrdinalIgnoreCase))
+            {
+                return "Active";
+            }
+
+            if (usageLimitType.Equals("Limited Uses", StringComparison.OrdinalIgnoreCase))
+            {
+                return rule.LimitedUseCount.HasValue && useCountAfterRedemption >= rule.LimitedUseCount.Value
+                    ? "Redeemed"
+                    : "Active";
+            }
+
+            return "Redeemed";
+        }
+
         private static decimal ValidateAndCalculateDiscount(Member? member, DiscountRule? discountRule, decimal productTotal, decimal fuelTotal, DateTime now)
         {
             if (discountRule is null)
@@ -877,6 +1086,11 @@ namespace gpos.Controllers
             return value is "percentage" or "percent" or "%";
         }
 
+        private static string NormalizeVoucherCode(string? voucherCode)
+        {
+            return (voucherCode ?? string.Empty).Trim().ToUpperInvariant();
+        }
+
         private static decimal ValidateAndCalculatePointsPayment(Member member, RebateRule rebate, decimal grossTotal, bool hasProducts, bool hasFuel)
         {
             ValidateRebateEligibility(rebate, grossTotal, hasProducts, hasFuel);
@@ -960,6 +1174,8 @@ namespace gpos.Controllers
         private sealed class ValidatedProductSaleItem
         {
             public int DisplayStockId { get; init; }
+            public int ProductId { get; init; }
+            public int? CategoryId { get; init; }
             public string ProductName { get; init; } = string.Empty;
             public decimal Quantity { get; init; }
             public decimal Subtotal { get; init; }
@@ -979,5 +1195,7 @@ namespace gpos.Controllers
             public decimal Subtotal { get; init; }
             public FuelSale FuelSale { get; init; } = new();
         }
+
+        private sealed record VoucherRedemptionResult(Voucher Voucher, VoucherRule Rule, decimal DiscountAmount);
     }
 }

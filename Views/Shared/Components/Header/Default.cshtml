@@ -42,6 +42,13 @@
                         </div>
                     </div>
                     <div class="dropend eg-rb-dropdown-group">
+                        <button class="dropdown-item eg-rb-dropdown-group-toggle" type="button">Voucher Management</button>
+                        <div class="dropdown-menu eg-rb-submenu">
+                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Vouchers.Index" ? "active" : "")" asp-controller="Vouchers" asp-action="Index">Vouchers</a>
+                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Vouchers.Rules" ? "active" : "")" asp-controller="Vouchers" asp-action="Rules">Voucher Rules</a>
+                        </div>
+                    </div>
+                    <div class="dropend eg-rb-dropdown-group">
                         <button class="dropdown-item eg-rb-dropdown-group-toggle" type="button">Earnings Management</button>
                         <div class="dropdown-menu eg-rb-submenu">
                             <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Configuration.Earnings" ? "active" : "")" asp-controller="Configuration" asp-action="Earnings">Earnings</a>

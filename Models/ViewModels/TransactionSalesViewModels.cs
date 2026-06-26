@@ -67,6 +67,7 @@ namespace gpos.Models.ViewModels
         public List<PosFuelSaleRequestItem> Fuels { get; set; } = new();
         public decimal CashAmount { get; set; }
         public string? MembershipCardNo { get; set; }
+        public string? VoucherCode { get; set; }
         public string? PaymentMethod { get; set; }
     }
 

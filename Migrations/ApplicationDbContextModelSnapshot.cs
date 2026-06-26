@@ -2662,6 +2662,201 @@ namespace gpos.Migrations
                     b.ToTable("user_roles", (string)null);
                 });
 
+            modelBuilder.Entity("gpos.Models.Voucher", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("id");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(8)
+                        .HasColumnType("varchar(8)")
+                        .HasColumnName("code");
+
+                    b.Property<DateTime?>("CreatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("created_at");
+
+                    b.Property<int>("MemberId")
+                        .HasColumnType("int")
+                        .HasColumnName("member_id");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(50)
+                        .HasColumnType("varchar(50)")
+                        .HasDefaultValue("Active")
+                        .HasColumnName("status");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Code")
+                        .IsUnique();
+
+                    b.HasIndex("MemberId");
+
+                    b.ToTable("vouchers", (string)null);
+                });
+
+            modelBuilder.Entity("gpos.Models.VoucherRedemption", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("id");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime?>("CreatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("created_at");
+
+                    b.Property<decimal>("DiscountAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("discount_amount");
+
+                    b.Property<int>("SaleId")
+                        .HasColumnType("int")
+                        .HasColumnName("sale_id");
+
+                    b.Property<int>("VoucherId")
+                        .HasColumnType("int")
+                        .HasColumnName("voucher_id");
+
+                    b.Property<int>("VoucherRuleId")
+                        .HasColumnType("int")
+                        .HasColumnName("voucher_rule_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SaleId");
+
+                    b.HasIndex("VoucherId");
+
+                    b.HasIndex("VoucherRuleId");
+
+                    b.ToTable("voucher_redemptions", (string)null);
+                });
+
+            modelBuilder.Entity("gpos.Models.VoucherRule", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("id");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("ApplicableCategoryIds")
+                        .HasMaxLength(1000)
+                        .HasColumnType("varchar(1000)")
+                        .HasColumnName("applicable_category_ids");
+
+                    b.Property<string>("ApplicableProductIds")
+                        .HasMaxLength(1000)
+                        .HasColumnType("varchar(1000)")
+                        .HasColumnName("applicable_product_ids");
+
+                    b.Property<string>("AppliesTo")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("varchar(50)")
+                        .HasColumnName("applies_to");
+
+                    b.Property<DateTime?>("CreatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("created_at");
+
+                    b.Property<DateTime?>("EffectiveDate")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("effective_date");
+
+                    b.Property<DateTime?>("ExpirationDate")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("expiration_date");
+
+                    b.Property<int?>("LimitedUseCount")
+                        .HasColumnType("int")
+                        .HasColumnName("limited_use_count");
+
+                    b.Property<decimal?>("MaxDiscountAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("max_discount_amount");
+
+                    b.Property<int?>("MaxRedemptions")
+                        .HasColumnType("int")
+                        .HasColumnName("max_redemptions");
+
+                    b.Property<decimal>("MinimumPurchaseAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("minimum_purchase_amount");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("varchar(100)")
+                        .HasColumnName("name");
+
+                    b.Property<bool>("NoExpiration")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("tinyint(1)")
+                        .HasDefaultValue(false)
+                        .HasColumnName("no_expiration");
+
+                    b.Property<int>("Priority")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(0)
+                        .HasColumnName("priority");
+
+                    b.Property<string>("RewardType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("varchar(50)")
+                        .HasColumnName("reward_type");
+
+                    b.Property<decimal>("RewardValue")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("reward_value");
+
+                    b.Property<int>("Status")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(1)
+                        .HasColumnName("status");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("updated_at");
+
+                    b.Property<string>("UsageLimitType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("varchar(50)")
+                        .HasColumnName("usage_limit_type");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Priority");
+
+                    b.HasIndex("Status");
+
+                    b.ToTable("voucher_rules", (string)null);
+                });
+
             modelBuilder.Entity("gpos.Models.WarehouseStock", b =>
                 {
                     b.Property<int>("Id")
@@ -3278,6 +3473,44 @@ namespace gpos.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("gpos.Models.Voucher", b =>
+                {
+                    b.HasOne("gpos.Models.Member", "Member")
+                        .WithMany("Vouchers")
+                        .HasForeignKey("MemberId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Member");
+                });
+
+            modelBuilder.Entity("gpos.Models.VoucherRedemption", b =>
+                {
+                    b.HasOne("gpos.Models.Sale", "Sale")
+                        .WithMany("VoucherRedemptions")
+                        .HasForeignKey("SaleId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("gpos.Models.Voucher", "Voucher")
+                        .WithMany("Redemptions")
+                        .HasForeignKey("VoucherId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("gpos.Models.VoucherRule", "VoucherRule")
+                        .WithMany("Redemptions")
+                        .HasForeignKey("VoucherRuleId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Sale");
+
+                    b.Navigation("Voucher");
+
+                    b.Navigation("VoucherRule");
+                });
+
             modelBuilder.Entity("gpos.Models.WarehouseStock", b =>
                 {
                     b.HasOne("gpos.Models.ProductBatch", "Batch")
@@ -3338,6 +3571,8 @@ namespace gpos.Migrations
             modelBuilder.Entity("gpos.Models.Member", b =>
                 {
                     b.Navigation("PointsLedger");
+
+                    b.Navigation("Vouchers");
                 });
 
             modelBuilder.Entity("gpos.Models.Nozzle", b =>
@@ -3420,6 +3655,8 @@ namespace gpos.Migrations
                     b.Navigation("PointsLedger");
 
                     b.Navigation("ProductSales");
+
+                    b.Navigation("VoucherRedemptions");
                 });
 
             modelBuilder.Entity("gpos.Models.Schedule", b =>
@@ -3460,6 +3697,16 @@ namespace gpos.Migrations
             modelBuilder.Entity("gpos.Models.User", b =>
                 {
                     b.Navigation("UserRoles");
+                });
+
+            modelBuilder.Entity("gpos.Models.Voucher", b =>
+                {
+                    b.Navigation("Redemptions");
+                });
+
+            modelBuilder.Entity("gpos.Models.VoucherRule", b =>
+                {
+                    b.Navigation("Redemptions");
                 });
 #pragma warning restore 612, 618
         }
