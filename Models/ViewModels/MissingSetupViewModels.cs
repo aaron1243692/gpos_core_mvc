@@ -182,6 +182,30 @@ namespace gpos.Models.ViewModels
         public int Status { get; set; } = 1;
     }
 
+    public class EarningRuleForm
+    {
+        public int Id { get; set; }
+        [Range(1, int.MaxValue, ErrorMessage = "Earnings is required.")]
+        public int EarningsId { get; set; }
+        [Required(ErrorMessage = "Name is required.")]
+        public string Name { get; set; } = string.Empty;
+        [Required(ErrorMessage = "Earn Type is required.")]
+        public string EarnType { get; set; } = "Percentage";
+        [Required(ErrorMessage = "Earn Value is required.")]
+        public decimal? EarnValue { get; set; }
+        [Required(ErrorMessage = "Applies To is required.")]
+        public string AppliesTo { get; set; } = "Fuel";
+        [Required(ErrorMessage = "Minimum Amount is required.")]
+        [Range(0, double.MaxValue, ErrorMessage = "Minimum Amount cannot be negative.")]
+        public decimal? MinimumAmount { get; set; }
+        public bool MemberRequired { get; set; }
+        [DataType(DataType.Date)]
+        public DateTime? StartDate { get; set; }
+        [DataType(DataType.Date)]
+        public DateTime? EndDate { get; set; }
+        public int Status { get; set; } = 1;
+    }
+
     public class PaymentMethodForm
     {
         public int Id { get; set; }
@@ -295,6 +319,7 @@ namespace gpos.Models.ViewModels
         public RebateRuleForm RebateRuleForm { get; set; } = new();
         public PointsLedgerForm PointsLedgerForm { get; set; } = new();
         public DiscountRuleForm DiscountRuleForm { get; set; } = new();
+        public EarningRuleForm EarningRuleForm { get; set; } = new();
         public PaymentMethodForm PaymentMethodForm { get; set; } = new();
         public ShiftSettingForm ShiftSettingForm { get; set; } = new();
         public ScheduleForm ScheduleForm { get; set; } = new();
@@ -311,6 +336,7 @@ namespace gpos.Models.ViewModels
         public List<SelectListItem> PumpOptions { get; set; } = new();
         public List<SelectListItem> NozzleOptions { get; set; } = new();
         public List<SelectListItem> DiscountOptions { get; set; } = new();
+        public List<SelectListItem> EarningsOptions { get; set; } = new();
         public List<SelectListItem> MemberOptions { get; set; } = new();
         public List<SelectListItem> BranchOptions { get; set; } = new();
         public List<SelectListItem> RoleOptions { get; set; } = new();
@@ -329,6 +355,7 @@ namespace gpos.Models.ViewModels
         public List<RebateRule> RebateRules { get; set; } = new();
         public List<PointsLedger> PointsLedger { get; set; } = new();
         public List<DiscountRule> DiscountRules { get; set; } = new();
+        public List<EarningRule> EarningRules { get; set; } = new();
         public List<PaymentMethod> PaymentMethods { get; set; } = new();
         public List<ShiftSetting> ShiftSettings { get; set; } = new();
         public List<Schedule> Schedules { get; set; } = new();

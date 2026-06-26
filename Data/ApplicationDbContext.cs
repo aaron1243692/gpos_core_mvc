@@ -34,6 +34,7 @@ namespace gpos.Data
         public DbSet<FuelPriceHistory> FuelPriceHistory { get; set; }
         public DbSet<PumpMeterReading> PumpMeterReadings { get; set; }
         public DbSet<Discount> Discounts { get; set; }
+        public DbSet<Earnings> Earnings { get; set; }
         public DbSet<EarningRule> EarningRules { get; set; }
         public DbSet<LoyaltySetting> LoyaltySettings { get; set; }
         public DbSet<Member> Members { get; set; }
@@ -644,6 +645,22 @@ namespace gpos.Data
                 entity.HasIndex(setting => setting.SettingKey).IsUnique();
             });
 
+            modelBuilder.Entity<Earnings>(entity =>
+            {
+                entity.ToTable("earnings");
+                entity.HasKey(earnings => earnings.Id);
+
+                entity.Property(earnings => earnings.Id).HasColumnName("id");
+                entity.Property(earnings => earnings.Name).HasColumnName("name").HasMaxLength(100).IsRequired();
+                entity.Property(earnings => earnings.Description).HasColumnName("description").HasMaxLength(255);
+                entity.Property(earnings => earnings.Status).HasColumnName("status").HasDefaultValue(1);
+                entity.Property(earnings => earnings.CreatedAt).HasColumnName("created_at");
+                entity.Property(earnings => earnings.UpdatedAt).HasColumnName("updated_at");
+
+                entity.HasIndex(earnings => earnings.Name).IsUnique();
+                entity.HasIndex(earnings => earnings.Status);
+            });
+
             modelBuilder.Entity<EarningRule>(entity =>
             {
                 entity.ToTable("earning_rules");
@@ -651,14 +668,23 @@ namespace gpos.Data
 
                 entity.Property(rule => rule.Id).HasColumnName("id");
                 entity.Property(rule => rule.Name).HasColumnName("name").HasMaxLength(100).IsRequired();
-                entity.Property(rule => rule.EarnRate).HasColumnName("earn_rate").HasPrecision(18, 2);
-                entity.Property(rule => rule.Description).HasColumnName("description").HasMaxLength(255);
-                entity.Property(rule => rule.IsActive).HasColumnName("is_active").HasDefaultValue(true);
+                entity.Property(rule => rule.EarningsId).HasColumnName("earnings_id");
+                entity.Property(rule => rule.EarnType).HasColumnName("earn_type").HasMaxLength(50).IsRequired();
+                entity.Property(rule => rule.EarnValue).HasColumnName("earn_value").HasPrecision(18, 2);
+                entity.Property(rule => rule.AppliesTo).HasColumnName("applies_to").HasMaxLength(50).IsRequired();
+                entity.Property(rule => rule.MinimumAmount).HasColumnName("minimum_amount").HasPrecision(18, 2);
+                entity.Property(rule => rule.MemberRequired).HasColumnName("member_required").HasDefaultValue(0);
+                entity.Property(rule => rule.StartDate).HasColumnName("start_date");
+                entity.Property(rule => rule.EndDate).HasColumnName("end_date");
+                entity.Property(rule => rule.Status).HasColumnName("status").HasDefaultValue(1);
                 entity.Property(rule => rule.CreatedAt).HasColumnName("created_at");
                 entity.Property(rule => rule.UpdatedAt).HasColumnName("updated_at");
 
-                entity.HasIndex(rule => rule.Name).IsUnique();
-                entity.HasIndex(rule => rule.IsActive);
+                entity.HasIndex(rule => rule.EarningsId);
+                entity.HasOne(rule => rule.Earnings)
+                    .WithMany(earnings => earnings.EarningRules)
+                    .HasForeignKey(rule => rule.EarningsId)
+                    .OnDelete(DeleteBehavior.Restrict);
             });
 
             modelBuilder.Entity<Member>(entity =>
@@ -674,7 +700,7 @@ namespace gpos.Data
                 entity.Property(member => member.Email).HasColumnName("email").HasMaxLength(150);
                 entity.Property(member => member.Address).HasColumnName("address").HasMaxLength(255);
                 entity.Property(member => member.DiscountId).HasColumnName("discount_id");
-                entity.Property(member => member.EarningRuleId).HasColumnName("earning_rule_id");
+                entity.Property(member => member.EarningsId).HasColumnName("earnings_id");
                 entity.Property(member => member.Points).HasColumnName("points").HasPrecision(18, 2).HasDefaultValue(0m);
                 entity.Property(member => member.Status).HasColumnName("status").HasDefaultValue(1);
                 entity.Property(member => member.CreatedAt).HasColumnName("created_at");
@@ -683,14 +709,14 @@ namespace gpos.Data
                 entity.HasIndex(member => member.MemberNo).IsUnique();
                 entity.HasIndex(member => member.CardNo).IsUnique();
                 entity.HasIndex(member => member.DiscountId);
-                entity.HasIndex(member => member.EarningRuleId);
+                entity.HasIndex(member => member.EarningsId);
                 entity.HasOne(member => member.Discount)
                     .WithMany(discount => discount.Members)
                     .HasForeignKey(member => member.DiscountId)
                     .OnDelete(DeleteBehavior.Restrict);
-                entity.HasOne(member => member.EarningRule)
-                    .WithMany(rule => rule.Members)
-                    .HasForeignKey(member => member.EarningRuleId)
+                entity.HasOne(member => member.Earnings)
+                    .WithMany(earnings => earnings.Members)
+                    .HasForeignKey(member => member.EarningsId)
                     .OnDelete(DeleteBehavior.Restrict);
             });
 

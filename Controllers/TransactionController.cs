@@ -83,7 +83,7 @@ namespace gpos.Controllers
                 var rebateAmount = ValidateAndCalculateRebate(member, rebate, grossTotal, productItems.Count > 0, fuelItems.Count > 0);
                 var netTotal = Math.Max(0m, grossTotal - discountAmount - rebateAmount);
                 var cashAmount = Math.Max(0m, request.CashAmount);
-                var pointsEarned = CalculateEarnedPoints(member, netTotal);
+                var pointsEarned = await CalculateMemberEarnings(member, productTotal, fuelTotal, netTotal, now);
 
                 if (cashAmount < netTotal)
                 {
@@ -584,7 +584,6 @@ namespace gpos.Controllers
             }
 
             return await _db.Members
-                .Include(item => item.EarningRule)
                 .FirstOrDefaultAsync(item => item.Status == 1 && (item.CardNo == cardNo || item.MemberNo == cardNo));
         }
 
@@ -597,18 +596,6 @@ namespace gpos.Controllers
 
             var rebate = await _db.RebateRules.FirstOrDefaultAsync(item => item.Id == rebateRuleId.Value && item.Status == 1);
             return rebate ?? throw new InvalidOperationException("Selected rebate was not found or is inactive.");
-        }
-
-        private static decimal CalculateEarnedPoints(Member? member, decimal netTotal)
-        {
-            var earnRate = member?.EarningRule?.IsActive == true ? member.EarningRule.EarnRate : 0m;
-
-            if (member is null || netTotal <= 0m || earnRate <= 0m)
-            {
-                return 0m;
-            }
-
-            return Math.Round(netTotal * (earnRate / 100m), 2, MidpointRounding.AwayFromZero);
         }
 
         private async Task ApplyPointsChanges(Member? member, RebateRule? rebate, decimal rebateAmount, decimal pointsEarned, int saleId, DateTime now)
@@ -643,7 +630,7 @@ namespace gpos.Controllers
             {
                 var alreadyAwarded = await _db.PointsLedger.AnyAsync(ledger =>
                     ledger.MemberId == member.Id
-                    && ledger.SaleId == saleId
+                    && (ledger.SaleId == saleId || ledger.ReferenceId == saleId)
                     && ledger.TransactionType == "Earned");
 
                 if (alreadyAwarded)
@@ -669,6 +656,91 @@ namespace gpos.Controllers
                     CreatedAt = now
                 });
             }
+        }
+
+        private async Task<decimal> CalculateMemberEarnings(Member? member, decimal productTotal, decimal fuelTotal, decimal netTotal, DateTime now)
+        {
+            if (member is null || !member.EarningsId.HasValue || netTotal <= 0m)
+            {
+                return 0m;
+            }
+
+            var rules = await _db.EarningRules
+                .Where(item => item.EarningsId == member.EarningsId.Value && item.Status == 1)
+                .Where(item => item.Earnings != null && item.Earnings.Status == 1)
+                .Where(item => !item.StartDate.HasValue || now.Date >= item.StartDate.Value.Date)
+                .Where(item => !item.EndDate.HasValue || now.Date <= item.EndDate.Value.Date)
+                .OrderBy(item => item.Id)
+                .ToListAsync();
+
+            return rules
+                .Select(rule => ValidateAndCalculateEarning(member, rule, productTotal, fuelTotal, netTotal, now))
+                .DefaultIfEmpty(0m)
+                .Max();
+        }
+
+        private static decimal ValidateAndCalculateEarning(Member? member, EarningRule? earningRule, decimal productTotal, decimal fuelTotal, decimal netTotal, DateTime now)
+        {
+            if (earningRule is null)
+            {
+                return 0m;
+            }
+
+            if (earningRule.MemberRequired == 1)
+            {
+                if (member is null)
+                {
+                    throw new InvalidOperationException("Select a valid member before using this earning rule.");
+                }
+
+                if (member.EarningsId != earningRule.EarningsId)
+                {
+                    throw new InvalidOperationException("Selected member is not eligible for this earning rule.");
+                }
+            }
+
+            if (earningRule.StartDate.HasValue && now.Date < earningRule.StartDate.Value.Date)
+            {
+                throw new InvalidOperationException("Selected earning rule is not active yet.");
+            }
+
+            if (earningRule.EndDate.HasValue && now.Date > earningRule.EndDate.Value.Date)
+            {
+                throw new InvalidOperationException("Selected earning rule has expired.");
+            }
+
+            var appliesTo = earningRule.AppliesTo.Trim();
+            var grossTotal = productTotal + fuelTotal;
+            var eligibleGross = grossTotal;
+
+            if (AppliesToProductOnly(appliesTo))
+            {
+                eligibleGross = productTotal;
+            }
+            else if (AppliesToFuelOnly(appliesTo))
+            {
+                eligibleGross = fuelTotal;
+            }
+
+            if (grossTotal <= 0m || eligibleGross <= 0m || netTotal <= 0m)
+            {
+                return 0m;
+            }
+
+            var earningBase = netTotal * (eligibleGross / grossTotal);
+
+            if (earningBase < earningRule.MinimumAmount)
+            {
+                return 0m;
+            }
+
+            var earnType = earningRule.EarnType.Trim();
+            var earnValue = Math.Max(0m, earningRule.EarnValue);
+            var earnedPoints = IsPercentageEarning(earnType)
+                ? earningBase * (earnValue / 100m)
+                : earnValue;
+
+            return Math.Round(Math.Max(0m, earnedPoints), 2, MidpointRounding.AwayFromZero);
         }
 
         private async Task<decimal> CalculateMemberDiscount(Member? member, decimal productTotal, decimal fuelTotal, DateTime now)
@@ -767,6 +839,12 @@ namespace gpos.Controllers
         private static bool IsPercentageDiscount(string discountType)
         {
             var value = discountType.Trim().ToLowerInvariant();
+            return value is "percentage" or "percent" or "%";
+        }
+
+        private static bool IsPercentageEarning(string earnType)
+        {
+            var value = earnType.Trim().ToLowerInvariant();
             return value is "percentage" or "percent" or "%";
         }
 

@@ -216,6 +216,10 @@
                                         <span>Change</span>
                                         <strong id="receiptChangeAmount">PHP 0.00</strong>
                                     </div>
+                                    <div class="receipt-total-line">
+                                        <span>Points Earned</span>
+                                        <strong id="receiptPointsEarned">0.00 pts</strong>
+                                    </div>
                                 </div>
                             </section>
                         </div>
@@ -309,6 +313,7 @@
             const receiptDiscountAmount = document.getElementById("receiptDiscountAmount");
             const receiptTotalAmount = document.getElementById("receiptTotalAmount");
             const receiptChangeAmount = document.getElementById("receiptChangeAmount");
+            const receiptPointsEarned = document.getElementById("receiptPointsEarned");
             const modalPrintReceiptButton = document.getElementById("modalPrintReceiptButton");
             const submitSaleButton = document.getElementById("submitSaleButton");
             const newSaleButton = document.getElementById("newSaleButton");
@@ -689,6 +694,7 @@
                 const due = completedReceiptTotals?.netTotal ?? amountToPay();
                 const amountTendered = completedReceiptTotals?.amountTendered ?? cashAmount();
                 const change = completedReceiptTotals?.change ?? Math.max(0, amountTendered - due);
+                const pointsEarned = completedReceiptTotals?.pointsEarned ?? 0;
 
                 receiptTransactionNo.textContent = completedReceiptNo || "Pending";
                 receiptDateTime.textContent = new Date().toLocaleString();
@@ -698,6 +704,7 @@
                 receiptDiscountAmount.textContent = peso.format(totalDiscount);
                 receiptTotalAmount.textContent = peso.format(due);
                 receiptChangeAmount.textContent = peso.format(change);
+                receiptPointsEarned.textContent = `${pointsEarned.toFixed(2)} pts`;
                 receiptFuelRows.innerHTML = fuelCart.length
                     ? fuelCart.map(fuel => `<tr><td>${fuel.type}<br><small>${peso.format(fuel.price)}/L</small></td><td>${fuel.liters.toFixed(2)} L</td><td>${peso.format(fuel.amount)}</td></tr>`).join("")
                     : `<tr><td colspan="3">No selected fuel.</td></tr>`;
@@ -841,7 +848,8 @@
                         totalDiscount: Math.max(0, (Number.parseFloat(result.discountAmount) || 0) + (Number.parseFloat(result.rebateAmount) || 0)),
                         netTotal: Math.max(0, Number.parseFloat(result.netTotal) || 0),
                         amountTendered: Math.max(0, Number.parseFloat(result.amountTendered) || payload.cashAmount || 0),
-                        change: Math.max(0, Number.parseFloat(result.change) || 0)
+                        change: Math.max(0, Number.parseFloat(result.change) || 0),
+                        pointsEarned: Math.max(0, Number.parseFloat(result.pointsEarned) || 0)
                     };
                     saleCompleted = true;
                     renderReceipt();

@@ -99,6 +99,11 @@ namespace gpos.Controllers
             return View(await BuildDiscountRulesPageAsync(search, editId: editId, activeModalId: editId.HasValue ? "discountRuleModal" : ""));
         }
 
+        public async Task<IActionResult> EarningRules(string? search, int? editId)
+        {
+            return View(await BuildEarningRulesPageAsync(search, editId: editId, activeModalId: editId.HasValue ? "earningRuleModal" : ""));
+        }
+
         public async Task<IActionResult> PaymentMethods(string? search, int? editId)
         {
             return View(await BuildPaymentMethodsPageAsync(search, editId: editId, activeModalId: editId.HasValue ? "paymentMethodModal" : ""));
@@ -712,6 +717,87 @@ namespace gpos.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        public async Task<IActionResult> SaveEarningRule([Bind(Prefix = "EarningRuleForm")] EarningRuleForm form, string? search)
+        {
+            var earnType = NormalizeEarningRuleType(form.EarnType);
+            var appliesTo = NormalizeEarningRuleAppliesTo(form.AppliesTo);
+
+            if (earnType is null)
+            {
+                ModelState.AddModelError("EarningRuleForm.EarnType", "Earn Type is required.");
+            }
+
+            if (appliesTo is null)
+            {
+                ModelState.AddModelError("EarningRuleForm.AppliesTo", "Applies To is required.");
+            }
+
+            if (form.EarnValue.HasValue && earnType == "Percentage" && (form.EarnValue.Value <= 0 || form.EarnValue.Value > 100))
+            {
+                ModelState.AddModelError("EarningRuleForm.EarnValue", "Percentage value must be greater than 0 and not greater than 100.");
+            }
+
+            if (form.EarnValue.HasValue && earnType == "Fixed Points" && form.EarnValue.Value <= 0)
+            {
+                ModelState.AddModelError("EarningRuleForm.EarnValue", "Fixed Points value must be greater than 0.");
+            }
+
+            if (form.StartDate.HasValue && form.EndDate.HasValue && form.EndDate.Value.Date < form.StartDate.Value.Date)
+            {
+                ModelState.AddModelError("EarningRuleForm.EndDate", "End Date must not be earlier than Start Date.");
+            }
+
+            var earnings = form.EarningsId > 0
+                ? await _db.Earnings.AsNoTracking().FirstOrDefaultAsync(item => item.Id == form.EarningsId)
+                : null;
+
+            if (earnings is null)
+            {
+                ModelState.AddModelError("EarningRuleForm.EarningsId", "Earnings is required.");
+            }
+
+            if (!ModelState.IsValid)
+            {
+                return View("EarningRules", await BuildEarningRulesPageAsync(search, form, activeModalId: "earningRuleModal"));
+            }
+
+            var now = DateTime.UtcNow;
+            var rule = form.Id > 0 ? await _db.EarningRules.FindAsync(form.Id) : new EarningRule { CreatedAt = now };
+            if (rule is null) return NotFound();
+
+            rule.EarningsId = form.EarningsId;
+            rule.Name = form.Name.Trim();
+            rule.EarnType = earnType!;
+            rule.EarnValue = form.EarnValue!.Value;
+            rule.AppliesTo = appliesTo!;
+            rule.MinimumAmount = form.MinimumAmount!.Value;
+            rule.MemberRequired = form.MemberRequired ? 1 : 0;
+            rule.StartDate = form.StartDate?.Date;
+            rule.EndDate = form.EndDate?.Date;
+            rule.Status = form.Status;
+            rule.UpdatedAt = now;
+
+            if (form.Id == 0) _db.EarningRules.Add(rule);
+            await _db.SaveChangesAsync();
+            return RedirectToAction(nameof(EarningRules), new { search });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> DeleteEarningRule(int id, string? search)
+        {
+            var rule = await _db.EarningRules.FindAsync(id);
+            if (rule is not null)
+            {
+                rule.Status = 0;
+                rule.UpdatedAt = DateTime.UtcNow;
+                await _db.SaveChangesAsync();
+            }
+            return RedirectToAction(nameof(EarningRules), new { search });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> SavePaymentMethod([Bind(Prefix = "PaymentMethodForm")] PaymentMethodForm form, string? search)
         {
             if (!ModelState.IsValid)
@@ -1198,6 +1284,30 @@ namespace gpos.Controllers
             };
         }
 
+        private async Task<SetupModulesPageViewModel> BuildEarningRulesPageAsync(string? search, EarningRuleForm? form = null, int? editId = null, string activeModalId = "")
+        {
+            IQueryable<EarningRule> query = _db.EarningRules.AsNoTracking().Include(rule => rule.Earnings);
+            var searchText = (search ?? string.Empty).Trim();
+            if (!string.IsNullOrWhiteSpace(searchText))
+            {
+                query = query.Where(rule => (rule.Earnings != null && rule.Earnings.Name.Contains(searchText))
+                    || rule.Name.Contains(searchText)
+                    || rule.AppliesTo.Contains(searchText)
+                    || rule.EarnType.Contains(searchText)
+                    || (searchText == "Active" && rule.Status == 1)
+                    || (searchText == "Disabled" && rule.Status == 0));
+            }
+
+            return new SetupModulesPageViewModel
+            {
+                Search = searchText,
+                ActiveModalId = activeModalId,
+                EarningRuleForm = form ?? await BuildEarningRuleFormAsync(editId),
+                EarningsOptions = await BuildRequiredEarningsOptionsAsync(),
+                EarningRules = await query.OrderBy(rule => rule.Id).ToListAsync()
+            };
+        }
+
         private static string? NormalizeDiscountRuleAppliesTo(string? appliesTo)
         {
             return appliesTo?.Trim() switch
@@ -1219,6 +1329,28 @@ namespace gpos.Controllers
             };
         }
 
+        private static string? NormalizeEarningRuleAppliesTo(string? appliesTo)
+        {
+            return appliesTo?.Trim() switch
+            {
+                "Fuel" => "Fuel",
+                "Product" => "Products",
+                "Products" => "Products",
+                "Both" => "Both",
+                _ => null
+            };
+        }
+
+        private static string? NormalizeEarningRuleType(string? earnType)
+        {
+            return earnType?.Trim() switch
+            {
+                "Percentage" => "Percentage",
+                "Fixed Points" => "Fixed Points",
+                _ => null
+            };
+        }
+
         private async Task<List<SelectListItem>> BuildRequiredDiscountOptionsAsync()
         {
             var options = await _db.Discounts.AsNoTracking()
@@ -1228,6 +1360,18 @@ namespace gpos.Controllers
                 .ToListAsync();
 
             options.Insert(0, new SelectListItem { Value = "0", Text = "Select discount" });
+            return options;
+        }
+
+        private async Task<List<SelectListItem>> BuildRequiredEarningsOptionsAsync()
+        {
+            var options = await _db.Earnings.AsNoTracking()
+                .Where(earnings => earnings.Status == 1)
+                .OrderBy(earnings => earnings.Name)
+                .Select(earnings => new SelectListItem { Value = earnings.Id.ToString(), Text = earnings.Name })
+                .ToListAsync();
+
+            options.Insert(0, new SelectListItem { Value = "0", Text = "Select earnings" });
             return options;
         }
 
@@ -1392,6 +1536,12 @@ namespace gpos.Controllers
         {
             var item = editId.HasValue ? await _db.DiscountRules.AsNoTracking().FirstOrDefaultAsync(rule => rule.Id == editId.Value) : null;
             return item is null ? new DiscountRuleForm() : new DiscountRuleForm { Id = item.Id, DiscountId = item.DiscountId, AppliesTo = item.AppliesTo, DiscountType = item.DiscountType, DiscountValue = item.DiscountValue, MinimumAmount = item.MinimumAmount, MemberRequired = item.MemberRequired == 1, StartDate = item.StartDate, EndDate = item.EndDate, Status = item.Status };
+        }
+
+        private async Task<EarningRuleForm> BuildEarningRuleFormAsync(int? editId)
+        {
+            var item = editId.HasValue ? await _db.EarningRules.AsNoTracking().FirstOrDefaultAsync(rule => rule.Id == editId.Value) : null;
+            return item is null ? new EarningRuleForm() : new EarningRuleForm { Id = item.Id, EarningsId = item.EarningsId, Name = item.Name, AppliesTo = item.AppliesTo, EarnType = item.EarnType, EarnValue = item.EarnValue, MinimumAmount = item.MinimumAmount, MemberRequired = item.MemberRequired == 1, StartDate = item.StartDate, EndDate = item.EndDate, Status = item.Status };
         }
 
         private async Task<PaymentMethodForm> BuildPaymentMethodFormAsync(int? editId)

@@ -310,6 +310,126 @@ namespace gpos.Migrations
                         });
                 });
 
+            modelBuilder.Entity("gpos.Models.EarningRule", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("id");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("AppliesTo")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("varchar(50)")
+                        .HasColumnName("applies_to");
+
+                    b.Property<DateTime?>("CreatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("EarnType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("varchar(50)")
+                        .HasColumnName("earn_type");
+
+                    b.Property<decimal>("EarnValue")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("earn_value");
+
+                    b.Property<int>("EarningsId")
+                        .HasColumnType("int")
+                        .HasColumnName("earnings_id");
+
+                    b.Property<DateTime?>("EndDate")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("end_date");
+
+                    b.Property<int>("MemberRequired")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(0)
+                        .HasColumnName("member_required");
+
+                    b.Property<decimal>("MinimumAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("minimum_amount");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("varchar(100)")
+                        .HasColumnName("name");
+
+                    b.Property<DateTime?>("StartDate")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("start_date");
+
+                    b.Property<int>("Status")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(1)
+                        .HasColumnName("status");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EarningsId");
+
+                    b.ToTable("earning_rules", (string)null);
+                });
+
+            modelBuilder.Entity("gpos.Models.Earnings", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("id");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime?>("CreatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(255)
+                        .HasColumnType("varchar(255)")
+                        .HasColumnName("description");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("varchar(100)")
+                        .HasColumnName("name");
+
+                    b.Property<int>("Status")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(1)
+                        .HasColumnName("status");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.HasIndex("Status");
+
+                    b.ToTable("earnings", (string)null);
+                });
+
             modelBuilder.Entity("gpos.Models.EmployeeAccount", b =>
                 {
                     b.Property<int>("Id")
@@ -842,6 +962,10 @@ namespace gpos.Migrations
                         .HasColumnType("int")
                         .HasColumnName("discount_id");
 
+                    b.Property<int?>("EarningsId")
+                        .HasColumnType("int")
+                        .HasColumnName("earnings_id");
+
                     b.Property<string>("Email")
                         .HasMaxLength(150)
                         .HasColumnType("varchar(150)")
@@ -882,6 +1006,8 @@ namespace gpos.Migrations
                         .IsUnique();
 
                     b.HasIndex("DiscountId");
+
+                    b.HasIndex("EarningsId");
 
                     b.HasIndex("MemberNo")
                         .IsUnique();
@@ -1123,6 +1249,10 @@ namespace gpos.Migrations
                         .HasColumnType("varchar(255)")
                         .HasColumnName("remarks");
 
+                    b.Property<int?>("SaleId")
+                        .HasColumnType("int")
+                        .HasColumnName("sale_id");
+
                     b.Property<string>("TransactionType")
                         .IsRequired()
                         .HasMaxLength(50)
@@ -1132,6 +1262,10 @@ namespace gpos.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("MemberId");
+
+                    b.HasIndex("SaleId");
+
+                    b.HasIndex("MemberId", "SaleId", "TransactionType");
 
                     b.ToTable("points_ledger", (string)null);
                 });
@@ -2623,6 +2757,17 @@ namespace gpos.Migrations
                     b.Navigation("Product");
                 });
 
+            modelBuilder.Entity("gpos.Models.EarningRule", b =>
+                {
+                    b.HasOne("gpos.Models.Earnings", "Earnings")
+                        .WithMany("EarningRules")
+                        .HasForeignKey("EarningsId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Earnings");
+                });
+
             modelBuilder.Entity("gpos.Models.EmployeeAccount", b =>
                 {
                     b.HasOne("gpos.Models.Department", "Department")
@@ -2772,7 +2917,14 @@ namespace gpos.Migrations
                         .HasForeignKey("DiscountId")
                         .OnDelete(DeleteBehavior.Restrict);
 
+                    b.HasOne("gpos.Models.Earnings", "Earnings")
+                        .WithMany("Members")
+                        .HasForeignKey("EarningsId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.Navigation("Discount");
+
+                    b.Navigation("Earnings");
                 });
 
             modelBuilder.Entity("gpos.Models.Nozzle", b =>
@@ -2822,7 +2974,14 @@ namespace gpos.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("gpos.Models.Sale", "Sale")
+                        .WithMany("PointsLedger")
+                        .HasForeignKey("SaleId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.Navigation("Member");
+
+                    b.Navigation("Sale");
                 });
 
             modelBuilder.Entity("gpos.Models.Product", b =>
@@ -3155,6 +3314,13 @@ namespace gpos.Migrations
                     b.Navigation("Members");
                 });
 
+            modelBuilder.Entity("gpos.Models.Earnings", b =>
+                {
+                    b.Navigation("EarningRules");
+
+                    b.Navigation("Members");
+                });
+
             modelBuilder.Entity("gpos.Models.EmployeeAccount", b =>
                 {
                     b.Navigation("ShiftSchedules");
@@ -3250,6 +3416,8 @@ namespace gpos.Migrations
                     b.Navigation("Items");
 
                     b.Navigation("Payments");
+
+                    b.Navigation("PointsLedger");
 
                     b.Navigation("ProductSales");
                 });

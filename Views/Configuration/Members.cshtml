@@ -11,7 +11,7 @@
             </ol>
         </nav>
         <h1>Members</h1>
-        <p class="page-subtitle">Manage member discounts and earning rules.</p>
+        <p class="page-subtitle">Manage member discounts and earnings.</p>
     </div>
 </div>
 
@@ -48,7 +48,7 @@
                     <th class="col-code">Card No</th>
                     <th class="col-name">Full Name</th>
                     <th>Discount</th>
-                    <th>Earning Rule</th>
+                    <th>Earnings</th>
                     <th class="col-money">Points</th>
                     <th class="col-status">Status</th>
                     <th class="col-action">Action</th>
@@ -68,7 +68,7 @@
                         <td>@(Model.Members[i].CardNo ?? "-")</td>
                         <td>@Model.Members[i].FullName</td>
                         <td>@(Model.Members[i].Discount == null ? "No discount" : Model.Members[i].Discount!.Name)</td>
-                        <td>@(Model.Members[i].EarningRule == null ? "No earning rule" : $"{Model.Members[i].EarningRule!.Name} ({Model.Members[i].EarningRule!.EarnRate:N2}%)")</td>
+                        <td>@(Model.Members[i].Earnings == null ? "No earnings" : Model.Members[i].Earnings!.Name)</td>
                         <td>@Model.Members[i].Points.ToString("N2")</td>
                         <td class="col-status">
                             @if (Model.Members[i].Status == 1)
@@ -142,9 +142,9 @@
                             <span asp-validation-for="MemberForm.DiscountId" class="text-danger"></span>
                         </div>
                         <div class="col-md-6">
-                            <label asp-for="MemberForm.EarningRuleId" class="form-label">Earning Rule</label>
-                            <select asp-for="MemberForm.EarningRuleId" asp-items="Model.EarningRuleOptions" class="form-select"></select>
-                            <span asp-validation-for="MemberForm.EarningRuleId" class="text-danger"></span>
+                            <label asp-for="MemberForm.EarningsId" class="form-label">Earnings</label>
+                            <select asp-for="MemberForm.EarningsId" asp-items="Model.EarningsOptions" class="form-select"></select>
+                            <span asp-validation-for="MemberForm.EarningsId" class="text-danger"></span>
                         </div>
                         <div class="col-md-6">
                             <label asp-for="MemberForm.Points" class="form-label">Points</label>
