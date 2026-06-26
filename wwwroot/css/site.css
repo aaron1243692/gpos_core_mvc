@@ -4098,6 +4098,25 @@ textarea.form-control {
   opacity: 0.9;
 }
 
+#cartEditModal .modal-header > div {
+  display: grid;
+  gap: 0.28rem;
+}
+
+#cartEditModal .modal-title {
+  color: #ffffff;
+  font-size: 1.32rem;
+  font-weight: 900;
+  line-height: 1.15;
+}
+
+#cartEditModal .modal-header p {
+  color: rgba(255, 255, 255, 0.9) !important;
+  font-size: 0.94rem;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
 .modal-footer {
   border-top-color: var(--app-line);
   background: #f7fef9;
@@ -4210,7 +4229,7 @@ textarea.form-control {
 }
 
 #posSaleForm .pos-order-layout {
-  grid-template-columns: minmax(0, 1fr) minmax(300px, 360px);
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 420px);
   gap: 1.1rem;
   border: 1px solid rgba(187, 247, 208, 0.95);
   background:
@@ -4704,7 +4723,7 @@ textarea.form-control {
 
 @media (max-width: 1399.98px) {
   #posSaleForm .pos-order-layout {
-    grid-template-columns: minmax(0, 1fr) minmax(280px, 330px);
+    grid-template-columns: minmax(0, 1fr) minmax(280px, 380px);
   }
 
   #posSaleForm .pos-order-summary {

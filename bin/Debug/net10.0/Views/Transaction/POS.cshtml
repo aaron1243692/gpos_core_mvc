@@ -48,7 +48,7 @@
                                 <small>Available: @Db.DisplayStocks.AsNoTracking().Include(stock => stock.Product).Include(stock => stock.Batch).Where(stock => stock.Quantity > 0 && stock.Product != null && stock.Product.Status == 1 && stock.Product.IsActive && stock.Product.CategoryId.HasValue && stock.Batch != null && stock.Batch.Status == 1 && stock.Batch.IsActive && Db.ProductCategories.Any(category => category.Id == stock.Product.CategoryId.Value && category.Status == 1 && category.IsActive)).OrderByDescending(stock => stock.UpdatedAt ?? stock.CreatedAt ?? DateTime.MinValue).ThenBy(stock => stock.Product!.Name).ThenBy(stock => stock.Id).ToList()[index].Quantity.ToString("N0")</small>
                                 <label class="pos-quantity-control" for="productQuantity_@Db.DisplayStocks.AsNoTracking().Include(stock => stock.Product).Include(stock => stock.Batch).Where(stock => stock.Quantity > 0 && stock.Product != null && stock.Product.Status == 1 && stock.Product.IsActive && stock.Product.CategoryId.HasValue && stock.Batch != null && stock.Batch.Status == 1 && stock.Batch.IsActive && Db.ProductCategories.Any(category => category.Id == stock.Product.CategoryId.Value && category.Status == 1 && category.IsActive)).OrderByDescending(stock => stock.UpdatedAt ?? stock.CreatedAt ?? DateTime.MinValue).ThenBy(stock => stock.Product!.Name).ThenBy(stock => stock.Id).ToList()[index].Id">
                                     <span>Qty</span>
-                                    <input class="form-control product-quantity-input" id="productQuantity_@Db.DisplayStocks.AsNoTracking().Include(stock => stock.Product).Include(stock => stock.Batch).Where(stock => stock.Quantity > 0 && stock.Product != null && stock.Product.Status == 1 && stock.Product.IsActive && stock.Product.CategoryId.HasValue && stock.Batch != null && stock.Batch.Status == 1 && stock.Batch.IsActive && Db.ProductCategories.Any(category => category.Id == stock.Product.CategoryId.Value && category.Status == 1 && category.IsActive)).OrderByDescending(stock => stock.UpdatedAt ?? stock.CreatedAt ?? DateTime.MinValue).ThenBy(stock => stock.Product!.Name).ThenBy(stock => stock.Id).ToList()[index].Id" name="Products[@index].Quantity" type="number" min="0" max="@Db.DisplayStocks.AsNoTracking().Include(stock => stock.Product).Include(stock => stock.Batch).Where(stock => stock.Quantity > 0 && stock.Product != null && stock.Product.Status == 1 && stock.Product.IsActive && stock.Product.CategoryId.HasValue && stock.Batch != null && stock.Batch.Status == 1 && stock.Batch.IsActive && Db.ProductCategories.Any(category => category.Id == stock.Product.CategoryId.Value && category.Status == 1 && category.IsActive)).OrderByDescending(stock => stock.UpdatedAt ?? stock.CreatedAt ?? DateTime.MinValue).ThenBy(stock => stock.Product!.Name).ThenBy(stock => stock.Id).ToList()[index].Quantity" value="0" data-price="@Db.DisplayStocks.AsNoTracking().Include(stock => stock.Product).Include(stock => stock.Batch).Where(stock => stock.Quantity > 0 && stock.Product != null && stock.Product.Status == 1 && stock.Product.IsActive && stock.Product.CategoryId.HasValue && stock.Batch != null && stock.Batch.Status == 1 && stock.Batch.IsActive && Db.ProductCategories.Any(category => category.Id == stock.Product.CategoryId.Value && category.Status == 1 && category.IsActive)).OrderByDescending(stock => stock.UpdatedAt ?? stock.CreatedAt ?? DateTime.MinValue).ThenBy(stock => stock.Product!.Name).ThenBy(stock => stock.Id).ToList()[index].Batch!.SellingPrice" data-no="P-@Db.DisplayStocks.AsNoTracking().Include(stock => stock.Product).Include(stock => stock.Batch).Where(stock => stock.Quantity > 0 && stock.Product != null && stock.Product.Status == 1 && stock.Product.IsActive && stock.Product.CategoryId.HasValue && stock.Batch != null && stock.Batch.Status == 1 && stock.Batch.IsActive && Db.ProductCategories.Any(category => category.Id == stock.Product.CategoryId.Value && category.Status == 1 && category.IsActive)).OrderByDescending(stock => stock.UpdatedAt ?? stock.CreatedAt ?? DateTime.MinValue).ThenBy(stock => stock.Product!.Name).ThenBy(stock => stock.Id).ToList()[index].ProductId.ToString("000")" data-name="@Db.DisplayStocks.AsNoTracking().Include(stock => stock.Product).Include(stock => stock.Batch).Where(stock => stock.Quantity > 0 && stock.Product != null && stock.Product.Status == 1 && stock.Product.IsActive && stock.Product.CategoryId.HasValue && stock.Batch != null && stock.Batch.Status == 1 && stock.Batch.IsActive && Db.ProductCategories.Any(category => category.Id == stock.Product.CategoryId.Value && category.Status == 1 && category.IsActive)).OrderByDescending(stock => stock.UpdatedAt ?? stock.CreatedAt ?? DateTime.MinValue).ThenBy(stock => stock.Product!.Name).ThenBy(stock => stock.Id).ToList()[index].Product!.Name" aria-label="@Db.DisplayStocks.AsNoTracking().Include(stock => stock.Product).Include(stock => stock.Batch).Where(stock => stock.Quantity > 0 && stock.Product != null && stock.Product.Status == 1 && stock.Product.IsActive && stock.Product.CategoryId.HasValue && stock.Batch != null && stock.Batch.Status == 1 && stock.Batch.IsActive && Db.ProductCategories.Any(category => category.Id == stock.Product.CategoryId.Value && category.Status == 1 && category.IsActive)).OrderByDescending(stock => stock.UpdatedAt ?? stock.CreatedAt ?? DateTime.MinValue).ThenBy(stock => stock.Product!.Name).ThenBy(stock => stock.Id).ToList()[index].Product!.Name quantity" />
+                                    <input class="form-control product-quantity-input" id="productQuantity_@Db.DisplayStocks.AsNoTracking().Include(stock => stock.Product).Include(stock => stock.Batch).Where(stock => stock.Quantity > 0 && stock.Product != null && stock.Product.Status == 1 && stock.Product.IsActive && stock.Product.CategoryId.HasValue && stock.Batch != null && stock.Batch.Status == 1 && stock.Batch.IsActive && Db.ProductCategories.Any(category => category.Id == stock.Product.CategoryId.Value && category.Status == 1 && category.IsActive)).OrderByDescending(stock => stock.UpdatedAt ?? stock.CreatedAt ?? DateTime.MinValue).ThenBy(stock => stock.Product!.Name).ThenBy(stock => stock.Id).ToList()[index].Id" name="Products[@index].Quantity" type="number" min="0" step="1" inputmode="numeric" max="@Db.DisplayStocks.AsNoTracking().Include(stock => stock.Product).Include(stock => stock.Batch).Where(stock => stock.Quantity > 0 && stock.Product != null && stock.Product.Status == 1 && stock.Product.IsActive && stock.Product.CategoryId.HasValue && stock.Batch != null && stock.Batch.Status == 1 && stock.Batch.IsActive && Db.ProductCategories.Any(category => category.Id == stock.Product.CategoryId.Value && category.Status == 1 && category.IsActive)).OrderByDescending(stock => stock.UpdatedAt ?? stock.CreatedAt ?? DateTime.MinValue).ThenBy(stock => stock.Product!.Name).ThenBy(stock => stock.Id).ToList()[index].Quantity" value="0" data-price="@Db.DisplayStocks.AsNoTracking().Include(stock => stock.Product).Include(stock => stock.Batch).Where(stock => stock.Quantity > 0 && stock.Product != null && stock.Product.Status == 1 && stock.Product.IsActive && stock.Product.CategoryId.HasValue && stock.Batch != null && stock.Batch.Status == 1 && stock.Batch.IsActive && Db.ProductCategories.Any(category => category.Id == stock.Product.CategoryId.Value && category.Status == 1 && category.IsActive)).OrderByDescending(stock => stock.UpdatedAt ?? stock.CreatedAt ?? DateTime.MinValue).ThenBy(stock => stock.Product!.Name).ThenBy(stock => stock.Id).ToList()[index].Batch!.SellingPrice" data-no="P-@Db.DisplayStocks.AsNoTracking().Include(stock => stock.Product).Include(stock => stock.Batch).Where(stock => stock.Quantity > 0 && stock.Product != null && stock.Product.Status == 1 && stock.Product.IsActive && stock.Product.CategoryId.HasValue && stock.Batch != null && stock.Batch.Status == 1 && stock.Batch.IsActive && Db.ProductCategories.Any(category => category.Id == stock.Product.CategoryId.Value && category.Status == 1 && category.IsActive)).OrderByDescending(stock => stock.UpdatedAt ?? stock.CreatedAt ?? DateTime.MinValue).ThenBy(stock => stock.Product!.Name).ThenBy(stock => stock.Id).ToList()[index].ProductId.ToString("000")" data-name="@Db.DisplayStocks.AsNoTracking().Include(stock => stock.Product).Include(stock => stock.Batch).Where(stock => stock.Quantity > 0 && stock.Product != null && stock.Product.Status == 1 && stock.Product.IsActive && stock.Product.CategoryId.HasValue && stock.Batch != null && stock.Batch.Status == 1 && stock.Batch.IsActive && Db.ProductCategories.Any(category => category.Id == stock.Product.CategoryId.Value && category.Status == 1 && category.IsActive)).OrderByDescending(stock => stock.UpdatedAt ?? stock.CreatedAt ?? DateTime.MinValue).ThenBy(stock => stock.Product!.Name).ThenBy(stock => stock.Id).ToList()[index].Product!.Name" aria-label="@Db.DisplayStocks.AsNoTracking().Include(stock => stock.Product).Include(stock => stock.Batch).Where(stock => stock.Quantity > 0 && stock.Product != null && stock.Product.Status == 1 && stock.Product.IsActive && stock.Product.CategoryId.HasValue && stock.Batch != null && stock.Batch.Status == 1 && stock.Batch.IsActive && Db.ProductCategories.Any(category => category.Id == stock.Product.CategoryId.Value && category.Status == 1 && category.IsActive)).OrderByDescending(stock => stock.UpdatedAt ?? stock.CreatedAt ?? DateTime.MinValue).ThenBy(stock => stock.Product!.Name).ThenBy(stock => stock.Id).ToList()[index].Product!.Name quantity" />
                                 </label>
                                 <input type="hidden" name="Products.Index" value="@index" />
                                 <input type="hidden" name="Products[@index].Code" value="P-@Db.DisplayStocks.AsNoTracking().Include(stock => stock.Product).Include(stock => stock.Batch).Where(stock => stock.Quantity > 0 && stock.Product != null && stock.Product.Status == 1 && stock.Product.IsActive && stock.Product.CategoryId.HasValue && stock.Batch != null && stock.Batch.Status == 1 && stock.Batch.IsActive && Db.ProductCategories.Any(category => category.Id == stock.Product.CategoryId.Value && category.Status == 1 && category.IsActive)).OrderByDescending(stock => stock.UpdatedAt ?? stock.CreatedAt ?? DateTime.MinValue).ThenBy(stock => stock.Product!.Name).ThenBy(stock => stock.Id).ToList()[index].ProductId.ToString("000")" />
@@ -96,8 +96,11 @@
 
             <aside class="pos-order-summary" aria-label="Cart panel">
                 <div class="pos-summary-top">
-                    <h2>Cart</h2>
-                    <span id="modalCartCount">0 items</span>
+                    <h2>Items</h2>
+                    <button class="btn btn-sm btn-outline-primary" id="editCartButton" type="button">Edit</button>
+                </div>
+                <div class="d-flex justify-content-end mb-2">
+                    <span class="text-muted small fw-bold" id="modalCartCount">0 items</span>
                 </div>
 
                 <div class="pos-cart-list" id="orderCartItems">
@@ -114,17 +117,11 @@
 
                 <div class="pos-summary-fields">
                     <div>
-                        <label class="form-label">Payment Method</label>
-                        <div class="d-flex gap-2 flex-wrap">
-                            <label class="fuel-option flex-fill mb-0">
-                                <input class="form-check-input payment-method-choice" type="radio" name="PaymentMethod" value="Cash" checked />
-                                <span>Cash</span>
-                            </label>
-                            <label class="fuel-option flex-fill mb-0">
-                                <input class="form-check-input payment-method-choice" type="radio" name="PaymentMethod" value="Points" />
-                                <span>Points</span>
-                            </label>
-                        </div>
+                        <label class="form-label" for="paymentMethod">Payment Method</label>
+                        <select class="form-select" id="paymentMethod" name="PaymentMethod">
+                            <option value="Cash" selected>Cash</option>
+                            <option value="Points">Points</option>
+                        </select>
                     </div>
                     <div id="cashPaymentField">
                         <label class="form-label" for="paymentAmount">Cash Amount</label>
@@ -149,6 +146,42 @@
                 <button class="btn btn-primary btn-lg pos-charge-button" id="submitSaleButton" type="submit">Checkout</button>
                 <button class="btn btn-outline-secondary" id="newSaleButton" type="button">New Sale</button>
             </aside>
+        </div>
+
+        <div class="modal fade" id="cartEditModal" tabindex="-1" aria-labelledby="cartEditModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <div>
+                            <h2 class="modal-title fs-5" id="cartEditModalLabel">Edit Cart</h2>
+                            <p class="mb-0 text-muted">Update quantities or remove items before checkout.</p>
+                        </div>
+                        <button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="table-responsive">
+                            <table class="table app-table table-sm align-middle mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>Product Name</th>
+                                        <th class="text-end">Unit Price</th>
+                                        <th style="width: 180px;">Quantity</th>
+                                        <th class="text-end">Line Total</th>
+                                        <th class="text-end">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="cartEditRows">
+                                    <tr><td class="text-center text-muted fw-bold" colspan="5">No selected items yet.</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button>
+                        <button class="btn btn-primary" id="cartEditSaveButton" type="button">Save Changes</button>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <div class="modal fade pos-receipt-modal" id="receiptModal" tabindex="-1" aria-labelledby="receiptModalLabel" aria-hidden="true">
@@ -297,7 +330,7 @@
             const fuelAmountInput = document.getElementById("fuelCashAmount");
             const fuelLitersInput = document.getElementById("fuelLiters");
             const addFuelButton = document.getElementById("addFuelButton");
-            const paymentMethodChoices = Array.from(document.querySelectorAll(".payment-method-choice"));
+            const paymentMethodSelect = document.getElementById("paymentMethod");
             const paymentAmountInput = document.getElementById("paymentAmount");
             const membershipCardNoInput = document.getElementById("membershipCardNo");
             const cashPaymentField = document.getElementById("cashPaymentField");
@@ -314,6 +347,10 @@
             const cartItemCount = document.getElementById("cartItemCount");
             const modalCartCount = document.getElementById("modalCartCount");
             const cartButtonTotal = document.getElementById("cartButtonTotal");
+            const editCartButton = document.getElementById("editCartButton");
+            const cartEditModalElement = document.getElementById("cartEditModal");
+            const cartEditRows = document.getElementById("cartEditRows");
+            const cartEditSaveButton = document.getElementById("cartEditSaveButton");
             const receiptModalElement = document.getElementById("receiptModal");
             const receiptPrintArea = document.getElementById("receiptPrintArea");
             const insufficientCashModalElement = document.getElementById("insufficientCashModal");
@@ -350,6 +387,7 @@
             let memberDiscountLookupTimer = 0;
             let memberDiscountLookupToken = 0;
             let saleCompleted = false;
+            let cartEditDraft = [];
 
             function numericValue(input) {
                 return Number.parseFloat(input.value) || 0;
@@ -409,10 +447,20 @@
                 showSubmitMessage("Not enough display stock.", false);
             }
 
+            function wholeQuantity(value) {
+                return Math.max(0, Math.floor(Number.parseFloat(value) || 0));
+            }
+
+            function preventDecimalQuantityKey(event) {
+                if ([".", ",", "e", "E", "+", "-"].includes(event.key)) {
+                    event.preventDefault();
+                }
+            }
+
             function selectedProducts() {
                 return productQuantityInputs.reduce((products, input) => {
-                    const availableQuantity = availableDisplayQuantity(input);
-                    let quantity = Math.max(0, numericValue(input));
+                    const availableQuantity = wholeQuantity(availableDisplayQuantity(input));
+                    let quantity = wholeQuantity(input.value);
 
                     if (numericValue(input) < 0) {
                         input.value = 0;
@@ -422,6 +470,10 @@
                         quantity = availableQuantity;
                         input.value = availableQuantity;
                         showDisplayStockWarning();
+                    }
+
+                    if (numericValue(input) !== quantity) {
+                        input.value = quantity;
                     }
 
                     if (quantity > 0) {
@@ -455,7 +507,7 @@
             }
 
             function selectedPaymentMethod() {
-                return paymentMethodChoices.find(choice => choice.checked)?.value || "Cash";
+                return paymentMethodSelect.value || "Cash";
             }
 
             function isPointsPayment() {
@@ -636,113 +688,6 @@
                 }) || null;
             }
 
-            function setProductQuantityFromCart(displayStockId, quantity) {
-                const input = productInputByDisplayStockId(displayStockId);
-
-                if (!input) {
-                    return;
-                }
-
-                const availableQuantity = availableDisplayQuantity(input);
-                const nextQuantity = Math.min(availableQuantity, Math.max(0, quantity));
-
-                if (quantity > availableQuantity) {
-                    showDisplayStockWarning();
-                }
-
-                input.value = nextQuantity;
-                updateTotal();
-                queueMemberDiscountLookup();
-            }
-
-            function setFuelLitersFromCart(fuelId, liters) {
-                const fuel = fuelCart.find(item => item.id === fuelId);
-
-                if (!fuel) {
-                    return;
-                }
-
-                const nextLiters = Math.max(0, liters);
-
-                if (nextLiters <= 0) {
-                    removeFuelFromCart(fuelId);
-                    return;
-                }
-
-                fuel.liters = nextLiters;
-                fuel.amount = nextLiters * fuel.price;
-                fuel.subtotal = fuel.amount;
-                updateTotal();
-                queueMemberDiscountLookup();
-            }
-
-            function refreshCartTotalsWithoutRender() {
-                updateSummaryAmounts();
-                renderReceipt();
-                queueMemberDiscountLookup();
-            }
-
-            function updateCartRowSubtotal(row, amount) {
-                const subtotal = row?.querySelector("b");
-
-                if (subtotal) {
-                    subtotal.textContent = peso.format(amount);
-                }
-            }
-
-            function updateProductQuantityFromCartInput(input) {
-                const displayStockId = input.dataset.cartProductQuantity;
-                const productInput = productInputByDisplayStockId(displayStockId);
-
-                if (!productInput) {
-                    return;
-                }
-
-                const availableQuantity = availableDisplayQuantity(productInput);
-                const requestedQuantity = Math.max(0, numericValue(input));
-                const nextQuantity = Math.min(availableQuantity, requestedQuantity);
-
-                if (requestedQuantity > availableQuantity) {
-                    showDisplayStockWarning();
-                }
-
-                productInput.value = nextQuantity;
-                input.value = nextQuantity;
-
-                const price = Number.parseFloat(productInput.dataset.price) || 0;
-                updateCartRowSubtotal(input.closest(".pos-cart-edit-row"), nextQuantity * price);
-
-                if (nextQuantity <= 0) {
-                    updateTotal();
-                    queueMemberDiscountLookup();
-                    return;
-                }
-
-                refreshCartTotalsWithoutRender();
-            }
-
-            function updateFuelLitersFromCartInput(input) {
-                const fuel = fuelCart.find(item => item.id === input.dataset.cartFuelLiters);
-
-                if (!fuel) {
-                    return;
-                }
-
-                const nextLiters = Math.max(0, numericValue(input));
-
-                if (nextLiters <= 0) {
-                    removeFuelFromCart(fuel.id);
-                    return;
-                }
-
-                fuel.liters = nextLiters;
-                fuel.amount = nextLiters * fuel.price;
-                fuel.subtotal = fuel.amount;
-                input.value = nextLiters.toFixed(2);
-                updateCartRowSubtotal(input.closest(".pos-cart-edit-row"), fuel.amount);
-                refreshCartTotalsWithoutRender();
-            }
-
             function addFuelToCart() {
                 const selected = selectedFuel();
                 const price = selectedFuelPrice();
@@ -784,43 +729,156 @@
             function renderCart() {
                 const products = selectedProducts();
                 const productMarkup = products.map(product => {
-                    return `<div class="pos-cart-edit-row" data-cart-product="${product.displayStockId}">
+                    return `<div class="pos-cart-item" data-cart-product="${product.displayStockId}">
+                        <div class="pos-cart-thumb">${product.no.substring(0, 2)}</div>
                         <div>
                             <strong>${product.name}</strong>
-                            <span>${product.no} - ${peso.format(product.price)} each</span>
-                        </div>
-                        <div class="input-group input-group-sm">
-                            <button class="btn btn-outline-secondary" type="button" data-cart-product-step="${product.displayStockId}" data-step="-1" aria-label="Decrease ${product.name} quantity">-</button>
-                            <input class="form-control text-center" type="number" min="0" max="${availableDisplayQuantity(productInputByDisplayStockId(product.displayStockId.toString()))}" step="1" value="${product.quantity}" data-cart-product-quantity="${product.displayStockId}" aria-label="${product.name} quantity" />
-                            <button class="btn btn-outline-secondary" type="button" data-cart-product-step="${product.displayStockId}" data-step="1" aria-label="Increase ${product.name} quantity">+</button>
+                            <span>${product.no} - ${peso.format(product.price)} each - Qty ${wholeQuantity(product.quantity)}</span>
                         </div>
                         <div class="text-end">
-                            <b>${peso.format(product.quantity * product.price)}</b>
-                            <button class="pos-cart-remove mt-1" type="button" data-remove-product="${product.displayStockId}" aria-label="Remove ${product.name}">x</button>
+                            <b>${peso.format(wholeQuantity(product.quantity) * product.price)}</b>
                         </div>
                     </div>`;
                 }).join("");
                 const fuelMarkup = fuelCart.map(fuel => {
-                    return `<div class="pos-cart-edit-row pos-cart-edit-row--fuel" data-cart-fuel="${fuel.id}">
+                    return `<div class="pos-cart-item" data-cart-fuel="${fuel.id}">
+                        <div class="pos-cart-thumb">FU</div>
                         <div>
                             <strong>${fuel.type}</strong>
-                            <span>${peso.format(fuel.price)}/L</span>
-                        </div>
-                        <div class="input-group input-group-sm">
-                            <button class="btn btn-outline-secondary" type="button" data-cart-fuel-step="${fuel.id}" data-step="-1" aria-label="Decrease ${fuel.type} liters">-</button>
-                            <input class="form-control text-center" type="number" min="0" step="0.01" value="${fuel.liters.toFixed(2)}" data-cart-fuel-liters="${fuel.id}" aria-label="${fuel.type} liters" />
-                            <button class="btn btn-outline-secondary" type="button" data-cart-fuel-step="${fuel.id}" data-step="1" aria-label="Increase ${fuel.type} liters">+</button>
+                            <span>${peso.format(fuel.price)}/L - ${fuel.liters.toFixed(2)} L</span>
                         </div>
                         <div class="text-end">
                             <b>${peso.format(fuel.amount)}</b>
-                            <button class="pos-cart-remove mt-1" type="button" data-remove-fuel="${fuel.id}" aria-label="Remove ${fuel.type} fuel">x</button>
                         </div>
                     </div>`;
                 }).join("");
 
                 orderCartItems.innerHTML = productMarkup || fuelMarkup
-                    ? `<div class="pos-cart-edit-list">${productMarkup}${fuelMarkup}</div>`
+                    ? `${productMarkup}${fuelMarkup}`
                     : `<div class="pos-empty-cart">No selected items yet.</div>`;
+            }
+
+            function buildCartEditDraft() {
+                return [
+                    ...selectedProducts().map(product => {
+                        const productInput = productInputByDisplayStockId(product.displayStockId.toString());
+
+                        return {
+                            type: "product",
+                            id: product.displayStockId.toString(),
+                            name: product.name,
+                            unitPrice: product.price,
+                            quantity: wholeQuantity(product.quantity),
+                            step: 1,
+                            max: wholeQuantity(availableDisplayQuantity(productInput))
+                        };
+                    }),
+                    ...fuelCart.map(fuel => ({
+                        type: "fuel",
+                        id: fuel.id,
+                        name: fuel.type,
+                        unitPrice: fuel.price,
+                        quantity: wholeQuantity(fuel.liters),
+                        step: 1,
+                        max: null
+                    }))
+                ];
+            }
+
+            function renderCartEditRows() {
+                const activeItems = cartEditDraft.filter(item => item.quantity > 0);
+
+                if (!activeItems.length) {
+                    cartEditRows.innerHTML = `<tr><td class="text-center text-muted fw-bold" colspan="5">No selected items yet.</td></tr>`;
+                    return;
+                }
+
+                cartEditRows.innerHTML = activeItems.map(item => {
+                    const quantityValue = wholeQuantity(item.quantity).toString();
+                    const unitLabel = item.type === "fuel" ? `${peso.format(item.unitPrice)}/L` : peso.format(item.unitPrice);
+                    const maxAttribute = item.max === null ? "" : `max="${item.max}"`;
+
+                    return `<tr data-edit-cart-item="${item.type}:${item.id}">
+                        <td><strong>${item.name}</strong></td>
+                        <td class="text-end">${unitLabel}</td>
+                        <td>
+                            <div class="input-group input-group-sm">
+                                <button class="btn btn-outline-secondary" type="button" data-edit-cart-step="${item.type}:${item.id}" data-step="-${item.step}" aria-label="Decrease ${item.name} quantity">-</button>
+                                <input class="form-control text-center" type="number" min="0" ${maxAttribute} step="${item.step}" inputmode="numeric" value="${quantityValue}" data-edit-cart-quantity="${item.type}:${item.id}" aria-label="${item.name} quantity" />
+                                <button class="btn btn-outline-secondary" type="button" data-edit-cart-step="${item.type}:${item.id}" data-step="${item.step}" aria-label="Increase ${item.name} quantity">+</button>
+                            </div>
+                        </td>
+                        <td class="text-end fw-bold" data-edit-cart-total="${item.type}:${item.id}">${peso.format(item.quantity * item.unitPrice)}</td>
+                        <td class="text-end"><button class="btn btn-sm btn-outline-danger" type="button" data-edit-cart-remove="${item.type}:${item.id}">Remove</button></td>
+                    </tr>`;
+                }).join("");
+            }
+
+            function openCartEditModal() {
+                cartEditDraft = buildCartEditDraft();
+                renderCartEditRows();
+
+                if (window.bootstrap) {
+                    bootstrap.Modal.getOrCreateInstance(cartEditModalElement).show();
+                }
+            }
+
+            function findCartEditDraftItem(key) {
+                const [type, id] = key.split(":");
+                return cartEditDraft.find(item => item.type === type && item.id === id) || null;
+            }
+
+            function setCartEditDraftQuantity(key, quantity) {
+                const item = findCartEditDraftItem(key);
+
+                if (!item) {
+                    return;
+                }
+
+                const requestedQuantity = wholeQuantity(quantity);
+                const nextQuantity = item.max === null
+                    ? requestedQuantity
+                    : Math.min(item.max, requestedQuantity);
+
+                if (item.max !== null && quantity > item.max) {
+                    showDisplayStockWarning();
+                }
+
+                item.quantity = nextQuantity;
+                renderCartEditRows();
+            }
+
+            function saveCartEditDraft() {
+                const productDrafts = cartEditDraft.filter(item => item.type === "product");
+                const fuelDrafts = cartEditDraft.filter(item => item.type === "fuel");
+
+                productDrafts.forEach(item => {
+                    const input = productInputByDisplayStockId(item.id);
+
+                    if (input) {
+                        input.value = wholeQuantity(item.quantity);
+                    }
+                });
+
+                fuelCart.splice(0, fuelCart.length, ...fuelDrafts
+                    .filter(item => item.quantity > 0)
+                    .map(item => {
+                        const existingFuel = fuelCart.find(fuel => fuel.id === item.id);
+                        return {
+                            ...existingFuel,
+                            liters: wholeQuantity(item.quantity),
+                            amount: wholeQuantity(item.quantity) * item.unitPrice,
+                            subtotal: wholeQuantity(item.quantity) * item.unitPrice
+                        };
+                    })
+                    .filter(fuel => fuel.id));
+
+                updateTotal();
+                queueMemberDiscountLookup();
+
+                if (window.bootstrap) {
+                    bootstrap.Modal.getInstance(cartEditModalElement)?.hide();
+                }
             }
 
             function updateSummaryAmounts() {
@@ -940,7 +998,7 @@
                     ? fuelCart.map(fuel => `<tr><td>${fuel.type}<br><small>${peso.format(fuel.price)}/L</small></td><td>${fuel.liters.toFixed(2)} L</td><td>${peso.format(fuel.amount)}</td></tr>`).join("")
                     : `<tr><td colspan="3">No selected fuel.</td></tr>`;
                 receiptProductRows.innerHTML = products.length
-                    ? products.map(product => `<tr><td>${product.no}</td><td>${product.name}<br><small>${peso.format(product.price)}</small></td><td>${product.quantity}</td></tr>`).join("")
+                    ? products.map(product => `<tr><td>${product.no}</td><td>${product.name}<br><small>${peso.format(product.price)}</small></td><td>${wholeQuantity(product.quantity)}</td></tr>`).join("")
                     : `<tr><td colspan="3">No selected products.</td></tr>`;
             }
 
@@ -1134,9 +1192,7 @@
                 memberPoints = 0;
                 memberFound = false;
                 memberDiscountLookupToken += 1;
-                if (paymentMethodChoices[0]) {
-                    paymentMethodChoices[0].checked = true;
-                }
+                paymentMethodSelect.value = "Cash";
                 if (window.bootstrap) {
                     bootstrap.Modal.getInstance(receiptModalElement)?.hide();
                 }
@@ -1165,10 +1221,14 @@
                     addProductFromCard(row);
                 });
             });
-            productQuantityInputs.forEach(input => input.addEventListener("input", () => {
-                updateTotal();
-                queueMemberDiscountLookup();
-            }));
+            productQuantityInputs.forEach(input => {
+                input.addEventListener("keydown", preventDecimalQuantityKey);
+                input.addEventListener("input", () => {
+                    input.value = wholeQuantity(input.value);
+                    updateTotal();
+                    queueMemberDiscountLookup();
+                });
+            });
             fuelAmountInput.addEventListener("input", () => {
                 activeFuelInput = "amount";
                 updateLiters();
@@ -1181,57 +1241,48 @@
                 updateFuelFieldsForPrice();
             }));
             addFuelButton.addEventListener("click", addFuelToCart);
-            orderCartItems.addEventListener("click", event => {
-                const productStepButton = event.target.closest("[data-cart-product-step]");
-                if (productStepButton) {
-                    const input = productInputByDisplayStockId(productStepButton.dataset.cartProductStep);
-                    if (!input) {
-                        return;
+            editCartButton.addEventListener("click", openCartEditModal);
+            cartEditRows.addEventListener("click", event => {
+                const stepButton = event.target.closest("[data-edit-cart-step]");
+                if (stepButton) {
+                    const key = stepButton.dataset.editCartStep;
+                    const item = findCartEditDraftItem(key);
+                    const step = Number.parseFloat(stepButton.dataset.step) || 0;
+
+                    if (item) {
+                        setCartEditDraftQuantity(key, item.quantity + step);
                     }
 
-                    const step = Number.parseFloat(productStepButton.dataset.step) || 0;
-                    setProductQuantityFromCart(productStepButton.dataset.cartProductStep, Math.max(0, numericValue(input) + step));
                     return;
                 }
 
-                const fuelStepButton = event.target.closest("[data-cart-fuel-step]");
-                if (fuelStepButton) {
-                    const fuel = fuelCart.find(item => item.id === fuelStepButton.dataset.cartFuelStep);
-                    const step = Number.parseFloat(fuelStepButton.dataset.step) || 0;
-                    setFuelLitersFromCart(fuelStepButton.dataset.cartFuelStep, Math.max(0, (fuel?.liters || 0) + step));
-                    return;
-                }
-
-                const removeProductButton = event.target.closest("[data-remove-product]");
-                if (removeProductButton) {
-                    setProductQuantityFromCart(removeProductButton.dataset.removeProduct, 0);
-                    return;
-                }
-
-                const removeFuelButton = event.target.closest("[data-remove-fuel]");
-                if (removeFuelButton) {
-                    removeFuelFromCart(removeFuelButton.dataset.removeFuel);
+                const removeButton = event.target.closest("[data-edit-cart-remove]");
+                if (removeButton) {
+                    setCartEditDraftQuantity(removeButton.dataset.editCartRemove, 0);
                 }
             });
-            orderCartItems.addEventListener("input", event => {
-                const productQuantityInput = event.target.closest("[data-cart-product-quantity]");
-                if (productQuantityInput) {
-                    updateProductQuantityFromCartInput(productQuantityInput);
-                    return;
-                }
+            cartEditRows.addEventListener("input", event => {
+                const quantityInput = event.target.closest("[data-edit-cart-quantity]");
 
-                const fuelLitersInput = event.target.closest("[data-cart-fuel-liters]");
-                if (fuelLitersInput) {
-                    updateFuelLitersFromCartInput(fuelLitersInput);
+                if (quantityInput) {
+                    setCartEditDraftQuantity(quantityInput.dataset.editCartQuantity, numericValue(quantityInput));
                 }
             });
+            cartEditRows.addEventListener("keydown", event => {
+                const quantityInput = event.target.closest("[data-edit-cart-quantity]");
+
+                if (quantityInput) {
+                    preventDecimalQuantityKey(event);
+                }
+            });
+            cartEditSaveButton.addEventListener("click", saveCartEditDraft);
             paymentAmountInput.addEventListener("input", () => {
                 renderReceipt();
             });
             membershipCardNoInput.addEventListener("input", () => {
                 queueMemberDiscountLookup();
             });
-            paymentMethodChoices.forEach(choice => choice.addEventListener("change", updatePaymentFields));
+            paymentMethodSelect.addEventListener("change", updatePaymentFields);
             productSearch.addEventListener("input", filterProducts);
             modalPrintReceiptButton.addEventListener("click", printModalReceipt);
             newSaleButton.addEventListener("click", resetSale);

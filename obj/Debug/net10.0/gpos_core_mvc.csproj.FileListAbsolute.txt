@@ -8157,7 +8157,6 @@ C:\project\gpos_core_mvc\artifacts\verify-build\Views\Transaction\WarehouseVoid.
 C:\project\gpos_core_mvc\artifacts\verify-build\Views\Users\Index.cshtml
 C:\project\gpos_core_mvc\artifacts\verify-build\Views\_ViewImports.cshtml
 C:\project\gpos_core_mvc\artifacts\verify-build\Views\_ViewStart.cshtml
-C:\project\gpos_core_mvc\obj\Debug\net10.0\compressed\ios0330fcj-{0}-vylahi26l4-vylahi26l4.gz
 C:\project\gpos_core_mvc\artifacts\verify-loyalty-build\wwwroot\lib\jquery\LICENSE.txt
 C:\project\gpos_core_mvc\artifacts\verify-loyalty-build\wwwroot\lib\jquery\dist\jquery.slim.min.map
 C:\project\gpos_core_mvc\artifacts\verify-loyalty-build\wwwroot\lib\jquery\dist\jquery.slim.min.js
@@ -11006,3 +11005,4 @@ C:\project\gpos_core_mvc\artifacts\verify-peso-build\ru\Microsoft.CodeAnalysis.W
 C:\project\gpos_core_mvc\artifacts\verify-peso-build\tr\Microsoft.CodeAnalysis.Workspaces.MSBuild.BuildHost.resources.dll
 C:\project\gpos_core_mvc\artifacts\verify-peso-build\zh-Hans\Microsoft.CodeAnalysis.Workspaces.MSBuild.BuildHost.resources.dll
 C:\project\gpos_core_mvc\artifacts\verify-peso-build\zh-Hant\Microsoft.CodeAnalysis.Workspaces.MSBuild.BuildHost.resources.dll
+C:\project\gpos_core_mvc\obj\Debug\net10.0\compressed\ios0330fcj-{0}-g63jceoy0j-g63jceoy0j.gz
