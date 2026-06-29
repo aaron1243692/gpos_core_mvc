@@ -11,7 +11,7 @@
             </ol>
         </nav>
         <h1>Vouchers</h1>
-        <p class="page-subtitle">Issue redeemable voucher codes to customers.</p>
+        <p class="page-subtitle">Manage voucher codes used during checkout.</p>
     </div>
 </div>
 
@@ -22,28 +22,53 @@
     }
     <div class="table-actions fuel-toolbar">
         <form asp-action="Index" method="get" class="setup-search-form fuel-toolbar-search">
-            <input class="form-control" name="search" value="@Model.Search" placeholder="Search voucher code or customer" />
+            <input class="form-control" name="search" value="@Model.Search" placeholder="Search vouchers" />
         </form>
-        <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#voucherModal">Generate Voucher</button>
+        <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#voucherModal">Add Voucher</button>
     </div>
     <div class="setup-table-scroll">
         <table class="table app-table table-sm align-middle admin-table mb-0">
-            <colgroup><col class="col-no" /><col class="col-id" /><col class="col-name" /><col class="col-name" /><col class="col-normal" /><col class="col-action" /></colgroup>
-            <thead><tr><th>No</th><th>ID</th><th>Code</th><th>Customer</th><th>Status</th><th>Action</th></tr></thead>
+            <colgroup>
+                <col class="col-no" />
+                <col class="col-id" />
+                <col class="col-name" />
+                <col class="col-normal" />
+                <col class="col-action" />
+            </colgroup>
+            <thead>
+                <tr>
+                    <th class="col-no">No</th>
+                    <th class="col-id">ID</th>
+                    <th class="col-name">Name</th>
+                    <th class="col-status">Status</th>
+                    <th class="col-action">Action</th>
+                </tr>
+            </thead>
             <tbody>
-                @if (Model.Vouchers.Count == 0) { <tr><td class="text-center text-muted fw-bold" colspan="6">No vouchers yet.</td></tr> }
+                @if (Model.Vouchers.Count == 0)
+                {
+                    <tr><td class="text-center text-muted fw-bold" colspan="5">No vouchers yet.</td></tr>
+                }
                 @for (var i = 0; i < Model.Vouchers.Count; i++)
                 {
                     <tr>
-                        <td>@(i + 1)</td>
-                        <td>@Model.Vouchers[i].Id</td>
-                        <td class="fw-bold">@Model.Vouchers[i].Code</td>
-                        <td>@(Model.Vouchers[i].Member?.FullName ?? "-")</td>
-                        <td><span class="badge @(Model.Vouchers[i].Status == "Active" ? "text-bg-success" : "text-bg-secondary")">@Model.Vouchers[i].Status</span></td>
+                        <td class="col-no">@(i + 1)</td>
+                        <td class="col-id">@Model.Vouchers[i].Id</td>
+                        <td>@Model.Vouchers[i].Code</td>
+                        <td class="col-status">
+                            @if (Model.Vouchers[i].Status == "Active")
+                            {
+                                <span class="badge text-bg-success">Active</span>
+                            }
+                            @if (Model.Vouchers[i].Status != "Active")
+                            {
+                                <span class="badge text-bg-secondary">Inactive</span>
+                            }
+                        </td>
                         <td class="col-action">
                             <div class="setup-row-actions">
                                 <a class="btn btn-sm btn-outline-primary" asp-action="Index" asp-route-editId="@Model.Vouchers[i].Id" asp-route-search="@Model.Search">Edit</a>
-                                <form asp-action="DeleteVoucher" method="post" onsubmit="return confirm('Disable this voucher?');">
+                                <form asp-action="DeleteVoucher" method="post" onsubmit="return confirm('Deactivate this voucher?');">
                                     @Html.AntiForgeryToken()
                                     <input name="id" type="hidden" value="@Model.Vouchers[i].Id" />
                                     <input name="search" type="hidden" value="@Model.Search" />
@@ -65,16 +90,29 @@
                 @Html.AntiForgeryToken()
                 <input asp-for="VoucherForm.Id" type="hidden" />
                 <input name="search" type="hidden" value="@Model.Search" />
-                <div class="modal-header"><h2 class="modal-title fs-5" id="voucherModalLabel">Voucher</h2><button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button></div>
-                <div class="modal-body">
-                    @if (!string.IsNullOrWhiteSpace(Model.VoucherForm.Code))
-                    {
-                        <div class="mb-3"><label class="form-label">Code</label><input class="form-control" value="@Model.VoucherForm.Code" readonly /></div>
-                    }
-                    <div class="mb-3"><label asp-for="VoucherForm.MemberId" class="form-label">Customer</label><select asp-for="VoucherForm.MemberId" asp-items="Model.MemberOptions" class="form-select"><option value="0">Select customer</option></select><span asp-validation-for="VoucherForm.MemberId" class="text-danger"></span></div>
-                    <div class="mb-3"><label asp-for="VoucherForm.Status" class="form-label">Status</label><select asp-for="VoucherForm.Status" class="form-select"><option>Active</option><option>Redeemed</option><option>Expired</option><option>Disabled</option></select><span asp-validation-for="VoucherForm.Status" class="text-danger"></span></div>
+                <div class="modal-header">
+                    <h2 class="modal-title fs-5" id="voucherModalLabel">Voucher</h2>
+                    <button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <div class="modal-footer"><button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button><button class="btn btn-primary" type="submit">Save</button></div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label asp-for="VoucherForm.Name" class="form-label">Name</label>
+                        <input asp-for="VoucherForm.Name" class="form-control text-uppercase" maxlength="8" autocomplete="off" />
+                        <span asp-validation-for="VoucherForm.Name" class="text-danger"></span>
+                    </div>
+                    <div class="mb-3">
+                        <label asp-for="VoucherForm.Status" class="form-label">Status</label>
+                        <select asp-for="VoucherForm.Status" class="form-select">
+                            <option>Active</option>
+                            <option>Inactive</option>
+                        </select>
+                        <span asp-validation-for="VoucherForm.Status" class="text-danger"></span>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button>
+                    <button class="btn btn-primary" type="submit">Save</button>
+                </div>
             </form>
         </div>
     </div>
@@ -82,5 +120,21 @@
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
-    <script>document.addEventListener("DOMContentLoaded",()=>{const id="@Model.ActiveModalId";const el=id?document.getElementById(id):null;if(el&&window.bootstrap){bootstrap.Modal.getOrCreateInstance(el).show();}});</script>
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            const modalId = "@Model.ActiveModalId";
+            const modalElement = modalId ? document.getElementById(modalId) : null;
+            const voucherName = document.getElementById("VoucherForm_Name");
+
+            if (voucherName) {
+                voucherName.addEventListener("input", () => {
+                    voucherName.value = voucherName.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8);
+                });
+            }
+
+            if (modalElement && window.bootstrap) {
+                bootstrap.Modal.getOrCreateInstance(modalElement).show();
+            }
+        });
+    </script>
 }

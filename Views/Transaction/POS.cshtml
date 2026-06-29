@@ -110,7 +110,9 @@
                 <div class="pos-summary-totals">
                     <div><span>Products</span><strong id="cartSubTotal">₱0.00</strong></div>
                     <div><span>Fuel</span><strong id="cartFuelLine">₱0.00</strong></div>
-                    <div><span>Discount</span><strong id="cartDiscountLine">₱0.00</strong></div>
+                    <div><span>Member Discount</span><strong id="cartMemberDiscountLine">₱0.00</strong></div>
+                    <div><span>Voucher Discount</span><strong id="cartVoucherDiscountLine">₱0.00</strong></div>
+                    <div><span>Total Discount</span><strong id="cartDiscountLine">₱0.00</strong></div>
                     <div><span>Tax</span><strong id="cartTaxLine">₱0.00</strong></div>
                     <div><span>Total</span><strong id="posGrandTotal">₱0.00</strong></div>
                 </div>
@@ -252,7 +254,15 @@
                                         <strong id="receiptSubtotalAmount">₱0.00</strong>
                                     </div>
                                     <div class="receipt-total-line">
-                                        <span>Discount</span>
+                                        <span>Member Discount</span>
+                                        <strong id="receiptMemberDiscountAmount">₱0.00</strong>
+                                    </div>
+                                    <div class="receipt-total-line">
+                                        <span>Voucher Discount</span>
+                                        <strong id="receiptVoucherDiscountAmount">₱0.00</strong>
+                                    </div>
+                                    <div class="receipt-total-line">
+                                        <span>Total Discount</span>
                                         <strong id="receiptDiscountAmount">₱0.00</strong>
                                     </div>
                                     <div class="receipt-total-line">
@@ -347,6 +357,8 @@
             const grandTotal = document.getElementById("posGrandTotal");
             const cartSubTotal = document.getElementById("cartSubTotal");
             const cartFuelLine = document.getElementById("cartFuelLine");
+            const cartMemberDiscountLine = document.getElementById("cartMemberDiscountLine");
+            const cartVoucherDiscountLine = document.getElementById("cartVoucherDiscountLine");
             const cartDiscountLine = document.getElementById("cartDiscountLine");
             const cartTaxLine = document.getElementById("cartTaxLine");
             const orderCartItems = document.getElementById("orderCartItems");
@@ -374,6 +386,8 @@
             const receiptFuelRows = document.getElementById("receiptFuelRows");
             const receiptProductRows = document.getElementById("receiptProductRows");
             const receiptSubtotalAmount = document.getElementById("receiptSubtotalAmount");
+            const receiptMemberDiscountAmount = document.getElementById("receiptMemberDiscountAmount");
+            const receiptVoucherDiscountAmount = document.getElementById("receiptVoucherDiscountAmount");
             const receiptDiscountAmount = document.getElementById("receiptDiscountAmount");
             const receiptTotalAmount = document.getElementById("receiptTotalAmount");
             const receiptChangeAmount = document.getElementById("receiptChangeAmount");
@@ -388,6 +402,7 @@
             let completedReceiptNo = "";
             let completedReceiptTotals = null;
             let memberDiscountAmount = 0;
+            let voucherDiscountAmount = 0;
             let memberPoints = 0;
             let memberFound = false;
             let memberDiscountLookupTimer = 0;
@@ -529,11 +544,15 @@
                     return 0;
                 }
 
-                if (voucherCode()) {
-                    return completedReceiptTotals?.discountAmount ?? 0;
-                }
+                return completedReceiptTotals?.discountAmount ?? (memberDiscountAmount + voucherDiscountAmount);
+            }
 
-                return completedReceiptTotals?.discountAmount ?? memberDiscountAmount;
+            function currentMemberDiscountAmount() {
+                return completedReceiptTotals?.memberDiscountAmount ?? memberDiscountAmount;
+            }
+
+            function currentVoucherDiscountAmount() {
+                return completedReceiptTotals?.voucherDiscountAmount ?? voucherDiscountAmount;
             }
 
             function requiredPointsForPurchase() {
@@ -611,11 +630,6 @@
                     }
 
                     return true;
-                }
-
-                if (voucherCode() && (!membershipCardNoInput.value.trim() || !memberFound)) {
-                    showCheckoutWarningModal("Checkout Warning", "Select a valid member before redeeming a voucher.");
-                    return false;
                 }
 
                 if (amountToPay() > 0 && paymentAmountInput.value.trim().length === 0) {
@@ -908,6 +922,8 @@
                 const itemCount = cartItemTotal();
                 cartSubTotal.textContent = peso.format(productTotalAmount());
                 cartFuelLine.textContent = peso.format(fuelTotalAmount());
+                cartMemberDiscountLine.textContent = peso.format(currentMemberDiscountAmount());
+                cartVoucherDiscountLine.textContent = peso.format(currentVoucherDiscountAmount());
                 cartDiscountLine.textContent = peso.format(discountAmount());
                 cartTaxLine.textContent = peso.format(0);
                 grandTotal.textContent = peso.format(amountToPay());
@@ -962,12 +978,14 @@
 
                     memberFound = response.ok && result.success && result.memberFound;
                     memberPoints = memberFound ? Math.max(0, Number.parseFloat(result.points) || 0) : 0;
-                    memberDiscountAmount = memberFound && !isPointsPayment() && !voucherCode()
+                    memberDiscountAmount = memberFound && !isPointsPayment()
                         ? Math.max(0, Number.parseFloat(result.discountAmount) || 0)
                         : 0;
+                    voucherDiscountAmount = 0;
                 } catch {
                     if (lookupToken === memberDiscountLookupToken) {
                         memberDiscountAmount = 0;
+                        voucherDiscountAmount = 0;
                         memberPoints = 0;
                         memberFound = false;
                     }
@@ -992,6 +1010,7 @@
                     paymentAmountInput.value = "";
                     voucherCodeInput.value = "";
                     memberDiscountAmount = 0;
+                    voucherDiscountAmount = 0;
                 }
 
                 updateTotal();
@@ -1002,6 +1021,8 @@
                 const products = selectedProducts();
                 const subtotal = completedReceiptTotals?.grossTotal ?? totalAmount();
                 const totalDiscount = completedReceiptTotals?.totalDiscount ?? discountAmount();
+                const memberDiscount = currentMemberDiscountAmount();
+                const voucherDiscount = currentVoucherDiscountAmount();
                 const due = completedReceiptTotals?.netTotal ?? amountToPay();
                 const amountTendered = completedReceiptTotals?.amountTendered ?? cashAmount();
                 const change = completedReceiptTotals?.change ?? Math.max(0, amountTendered - due);
@@ -1015,6 +1036,8 @@
                 receiptPaymentDetail.textContent = paymentMethod === "Points" ? `${pointsRequired.toFixed(2)} pts` : peso.format(amountTendered);
                 receiptMemberCardNo.textContent = membershipCardNoInput.value.trim() || "None";
                 receiptSubtotalAmount.textContent = peso.format(subtotal);
+                receiptMemberDiscountAmount.textContent = peso.format(memberDiscount);
+                receiptVoucherDiscountAmount.textContent = peso.format(voucherDiscount);
                 receiptDiscountAmount.textContent = peso.format(totalDiscount);
                 receiptTotalAmount.textContent = peso.format(due);
                 receiptChangeAmount.textContent = peso.format(change);
@@ -1067,12 +1090,12 @@
         @@page { margin: 12mm; }
         body { margin: 0; background: #fff; color: #111827; }
         .salesman-receipt-print { width: 100%; max-width: 520px; margin: 0 auto; padding: 0; border: 0; box-shadow: none; }
-    </style>
-</head>
+    <\/style>
+<\/head>
 <body>
     ${receiptPrintArea.outerHTML}
-</body>
-</html>`);
+<\/body>
+<\/html>`);
                 printDocument.close();
 
                 const printReceiptFrame = () => {
@@ -1160,6 +1183,8 @@
                     completedReceiptTotals = {
                         grossTotal: Math.max(0, Number.parseFloat(result.grossTotal) || 0),
                         discountAmount: Math.max(0, Number.parseFloat(result.discountAmount) || 0),
+                        memberDiscountAmount: Math.max(0, Number.parseFloat(result.memberDiscountAmount) || 0),
+                        voucherDiscountAmount: Math.max(0, Number.parseFloat(result.voucherDiscountAmount) || 0),
                         totalDiscount: Math.max(0, (Number.parseFloat(result.discountAmount) || 0) + (Number.parseFloat(result.rebateAmount) || 0)),
                         netTotal: Math.max(0, Number.parseFloat(result.netTotal) || 0),
                         amountTendered: Math.max(0, Number.parseFloat(result.amountTendered) || payload.cashAmount || 0),
@@ -1215,6 +1240,7 @@
                 }
                 fuelLitersInput.value = "";
                 memberDiscountAmount = 0;
+                voucherDiscountAmount = 0;
                 memberPoints = 0;
                 memberFound = false;
                 memberDiscountLookupToken += 1;
@@ -1310,6 +1336,7 @@
             });
             voucherCodeInput.addEventListener("input", () => {
                 voucherCodeInput.value = voucherCodeInput.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8);
+                voucherDiscountAmount = 0;
                 queueMemberDiscountLookup();
                 updateTotal();
             });

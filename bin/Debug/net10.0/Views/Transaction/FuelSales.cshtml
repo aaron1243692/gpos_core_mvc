@@ -98,22 +98,59 @@
                     <button class="btn-close" type="button" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <dl class="row mb-0">
+                    <dl class="row mb-3">
                         <dt class="col-sm-4">Receipt No</dt><dd class="col-sm-8">@Model.Sales[i].ReceiptNo</dd>
-                        <dt class="col-sm-4">Fuel</dt><dd class="col-sm-8">@Model.Sales[i].FuelName</dd>
-                        <dt class="col-sm-4">Tank</dt><dd class="col-sm-8">@Model.Sales[i].TankNo</dd>
-                        <dt class="col-sm-4">Nozzle</dt><dd class="col-sm-8">@Model.Sales[i].NozzleNo</dd>
-                        <dt class="col-sm-4">Liters</dt><dd class="col-sm-8">@Model.Sales[i].Liters.ToString("N2")</dd>
-                        <dt class="col-sm-4">Price/Liter</dt><dd class="col-sm-8">₱@Model.Sales[i].Price.ToString("N2")</dd>
-                        <dt class="col-sm-4">Subtotal</dt><dd class="col-sm-8">₱@Model.Sales[i].Subtotal.ToString("N2")</dd>
                         <dt class="col-sm-4">Cashier/User</dt><dd class="col-sm-8">@Model.Sales[i].CashierName</dd>
                         <dt class="col-sm-4">Member</dt><dd class="col-sm-8">@Model.Sales[i].MemberName</dd>
                         <dt class="col-sm-4">Sale Date</dt><dd class="col-sm-8">@Model.Sales[i].SaleDate?.ToString("yyyy-MM-dd HH:mm")</dd>
-                        <dt class="col-sm-4">Payment Type</dt><dd class="col-sm-8">@Model.Sales[i].PaymentType</dd>
-                        <dt class="col-sm-4">Gross Total</dt><dd class="col-sm-8">₱@Model.Sales[i].GrossTotal.ToString("N2")</dd>
-                        <dt class="col-sm-4">Rebate Amount</dt><dd class="col-sm-8">₱@Model.Sales[i].RebateAmount.ToString("N2")</dd>
-                        <dt class="col-sm-4">Net Total</dt><dd class="col-sm-8">₱@Model.Sales[i].NetTotal.ToString("N2")</dd>
                         <dt class="col-sm-4">Status</dt><dd class="col-sm-8">@Model.Sales[i].Status</dd>
+                    </dl>
+                    <div class="table-responsive mb-3">
+                        <table class="table app-table table-sm align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Name (Quantity / Liters)</th>
+                                    <th class="text-end">Cost</th>
+                                    <th class="text-end">Discount</th>
+                                    <th class="text-end">Voucher Discount</th>
+                                    <th class="text-end">Total Price</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var line in Model.Sales[i].DetailLines)
+                                {
+                                    <tr>
+                                        <td>@line.Name</td>
+                                        <td class="text-end">₱@line.Cost.ToString("N2")</td>
+                                        <td class="text-end">₱@line.Discount.ToString("N2")</td>
+                                        <td class="text-end">₱@line.VoucherDiscount.ToString("N2")</td>
+                                        <td class="text-end fw-semibold">₱@line.TotalPrice.ToString("N2")</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                    <dl class="row mb-0">
+                        <dt class="col-sm-6">Subtotal</dt><dd class="col-sm-6 text-sm-end">₱@Model.Sales[i].GrossTotal.ToString("N2")</dd>
+                        <dt class="col-sm-6">Gross Total</dt><dd class="col-sm-6 text-sm-end">₱@Model.Sales[i].GrossTotal.ToString("N2")</dd>
+                        <dt class="col-sm-6">Member Discount</dt><dd class="col-sm-6 text-sm-end">₱@Model.Sales[i].MemberDiscount.ToString("N2")</dd>
+                        <dt class="col-sm-6">Voucher Discount</dt><dd class="col-sm-6 text-sm-end">₱@Model.Sales[i].VoucherDiscount.ToString("N2")</dd>
+                        <dt class="col-sm-6 border-top pt-2">Total Discount</dt><dd class="col-sm-6 text-sm-end border-top pt-2">₱@Model.Sales[i].TotalDiscount.ToString("N2")</dd>
+                        <dt class="col-sm-6">Net Total</dt><dd class="col-sm-6 text-sm-end">₱@Model.Sales[i].NetTotal.ToString("N2")</dd>
+                        <dt class="col-sm-6">Net Sales</dt><dd class="col-sm-6 text-sm-end">₱@Model.Sales[i].NetSales.ToString("N2")</dd>
+                        <dt class="col-sm-6">Loss</dt><dd class="col-sm-6 text-sm-end">₱@Model.Sales[i].Loss.ToString("N2")</dd>
+                        <dt class="col-sm-6">Payment Method</dt><dd class="col-sm-6 text-sm-end">@Model.Sales[i].PaymentType</dd>
+                        @if (string.Equals(Model.Sales[i].PaymentType, "Points", StringComparison.OrdinalIgnoreCase))
+                        {
+                            <dt class="col-sm-6">Points Paid</dt><dd class="col-sm-6 text-sm-end">@Model.Sales[i].PointsPaid.ToString("N2") pts</dd>
+                            <dt class="col-sm-6">Point Conversion Used</dt><dd class="col-sm-6 text-sm-end">₱@Model.Sales[i].PointConversionUsed.ToString("N4") / pt</dd>
+                            <dt class="col-sm-6">Monetary Value of Points Paid</dt><dd class="col-sm-6 text-sm-end">₱@Model.Sales[i].PointsMonetaryValue.ToString("N2")</dd>
+                        }
+                        else
+                        {
+                            <dt class="col-sm-6">Cash Amount</dt><dd class="col-sm-6 text-sm-end">₱@Model.Sales[i].CashAmount.ToString("N2")</dd>
+                            <dt class="col-sm-6">Change</dt><dd class="col-sm-6 text-sm-end">₱@Model.Sales[i].Change.ToString("N2")</dd>
+                        }
                     </dl>
                 </div>
                 <div class="modal-footer">

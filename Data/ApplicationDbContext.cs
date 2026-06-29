@@ -1238,10 +1238,12 @@ namespace gpos.Data
 
                 entity.Property(rule => rule.Id).HasColumnName("id");
                 entity.Property(rule => rule.Name).HasColumnName("name").HasMaxLength(100).IsRequired();
+                entity.Property(rule => rule.VoucherId).HasColumnName("voucher_id");
                 entity.Property(rule => rule.RewardType).HasColumnName("reward_type").HasMaxLength(50).IsRequired();
                 entity.Property(rule => rule.RewardValue).HasColumnName("reward_value").HasPrecision(18, 2);
                 entity.Property(rule => rule.MaxDiscountAmount).HasColumnName("max_discount_amount").HasPrecision(18, 2);
                 entity.Property(rule => rule.MinimumPurchaseAmount).HasColumnName("minimum_purchase_amount").HasPrecision(18, 2);
+                entity.Property(rule => rule.MemberRequired).HasColumnName("member_required").HasDefaultValue(0);
                 entity.Property(rule => rule.ApplicableProductIds).HasColumnName("applicable_product_ids").HasMaxLength(1000);
                 entity.Property(rule => rule.ApplicableCategoryIds).HasColumnName("applicable_category_ids").HasMaxLength(1000);
                 entity.Property(rule => rule.AppliesTo).HasColumnName("applies_to").HasMaxLength(50).IsRequired();
@@ -1256,8 +1258,19 @@ namespace gpos.Data
                 entity.Property(rule => rule.CreatedAt).HasColumnName("created_at");
                 entity.Property(rule => rule.UpdatedAt).HasColumnName("updated_at");
 
+                entity.Ignore(rule => rule.DiscountType);
+                entity.Ignore(rule => rule.DiscountValue);
+                entity.Ignore(rule => rule.MinimumAmount);
+                entity.Ignore(rule => rule.StartDate);
+                entity.Ignore(rule => rule.EndDate);
+
+                entity.HasIndex(rule => rule.VoucherId);
                 entity.HasIndex(rule => rule.Status);
                 entity.HasIndex(rule => rule.Priority);
+                entity.HasOne(rule => rule.Voucher)
+                    .WithMany(voucher => voucher.VoucherRules)
+                    .HasForeignKey(rule => rule.VoucherId)
+                    .OnDelete(DeleteBehavior.Restrict);
             });
 
             modelBuilder.Entity<VoucherRedemption>(entity =>

@@ -2681,7 +2681,7 @@ namespace gpos.Migrations
                         .HasColumnType("datetime(6)")
                         .HasColumnName("created_at");
 
-                    b.Property<int>("MemberId")
+                    b.Property<int?>("MemberId")
                         .HasColumnType("int")
                         .HasColumnName("member_id");
 
@@ -2798,6 +2798,12 @@ namespace gpos.Migrations
                         .HasColumnType("int")
                         .HasColumnName("max_redemptions");
 
+                    b.Property<int>("MemberRequired")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(0)
+                        .HasColumnName("member_required");
+
                     b.Property<decimal>("MinimumPurchaseAmount")
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)")
@@ -2848,11 +2854,17 @@ namespace gpos.Migrations
                         .HasColumnType("varchar(50)")
                         .HasColumnName("usage_limit_type");
 
+                    b.Property<int?>("VoucherId")
+                        .HasColumnType("int")
+                        .HasColumnName("voucher_id");
+
                     b.HasKey("Id");
 
                     b.HasIndex("Priority");
 
                     b.HasIndex("Status");
+
+                    b.HasIndex("VoucherId");
 
                     b.ToTable("voucher_rules", (string)null);
                 });
@@ -3478,8 +3490,7 @@ namespace gpos.Migrations
                     b.HasOne("gpos.Models.Member", "Member")
                         .WithMany("Vouchers")
                         .HasForeignKey("MemberId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("Member");
                 });
@@ -3509,6 +3520,16 @@ namespace gpos.Migrations
                     b.Navigation("Voucher");
 
                     b.Navigation("VoucherRule");
+                });
+
+            modelBuilder.Entity("gpos.Models.VoucherRule", b =>
+                {
+                    b.HasOne("gpos.Models.Voucher", "Voucher")
+                        .WithMany("VoucherRules")
+                        .HasForeignKey("VoucherId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Voucher");
                 });
 
             modelBuilder.Entity("gpos.Models.WarehouseStock", b =>
@@ -3702,6 +3723,8 @@ namespace gpos.Migrations
             modelBuilder.Entity("gpos.Models.Voucher", b =>
                 {
                     b.Navigation("Redemptions");
+
+                    b.Navigation("VoucherRules");
                 });
 
             modelBuilder.Entity("gpos.Models.VoucherRule", b =>

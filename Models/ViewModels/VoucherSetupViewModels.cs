@@ -7,10 +7,9 @@ namespace gpos.Models.ViewModels
     {
         public int Id { get; set; }
 
-        public string Code { get; set; } = string.Empty;
-
-        [Range(1, int.MaxValue, ErrorMessage = "Customer is required.")]
-        public int MemberId { get; set; }
+        [Required(ErrorMessage = "Name is required.")]
+        [StringLength(8, ErrorMessage = "Name must be 8 characters or fewer.")]
+        public string Name { get; set; } = string.Empty;
 
         [Required(ErrorMessage = "Status is required.")]
         public string Status { get; set; } = "Active";
@@ -20,35 +19,37 @@ namespace gpos.Models.ViewModels
     {
         public int Id { get; set; }
 
-        [Required(ErrorMessage = "Name is required.")]
-        public string Name { get; set; } = string.Empty;
-
-        [Required(ErrorMessage = "Reward Type is required.")]
-        public string RewardType { get; set; } = "Fixed Amount";
-
-        [Required(ErrorMessage = "Reward Value is required.")]
-        public decimal? RewardValue { get; set; }
-
-        [Range(0, double.MaxValue, ErrorMessage = "Maximum discount cannot be negative.")]
-        public decimal? MaxDiscountAmount { get; set; }
-
-        [Required(ErrorMessage = "Minimum Purchase is required.")]
-        [Range(0, double.MaxValue, ErrorMessage = "Minimum Purchase cannot be negative.")]
-        public decimal? MinimumPurchaseAmount { get; set; }
-
-        public List<int> ProductIds { get; set; } = new();
-        public List<int> CategoryIds { get; set; } = new();
+        [Range(1, int.MaxValue, ErrorMessage = "Voucher is required.")]
+        public int VoucherId { get; set; }
 
         [Required(ErrorMessage = "Applies To is required.")]
         public string AppliesTo { get; set; } = "Both";
 
-        [DataType(DataType.Date)]
-        public DateTime? EffectiveDate { get; set; } = DateTime.Today;
+        [Required(ErrorMessage = "Discount Type is required.")]
+        public string DiscountType { get; set; } = "Percentage";
+
+        [Required(ErrorMessage = "Discount Value is required.")]
+        public decimal? DiscountValue { get; set; }
+
+        [Required(ErrorMessage = "Minimum Amount is required.")]
+        [Range(0, double.MaxValue, ErrorMessage = "Minimum Amount cannot be negative.")]
+        public decimal? MinimumAmount { get; set; }
+
+        public bool MemberRequired { get; set; }
 
         [DataType(DataType.Date)]
-        public DateTime? ExpirationDate { get; set; }
+        public DateTime? StartDate { get; set; }
 
-        public bool NoExpiration { get; set; } = true;
+        [DataType(DataType.Date)]
+        public DateTime? EndDate { get; set; }
+
+        [Range(0, double.MaxValue, ErrorMessage = "Maximum discount cannot be negative.")]
+        public decimal? MaxDiscountAmount { get; set; }
+
+        public List<int> ProductIds { get; set; } = new();
+        public List<int> CategoryIds { get; set; } = new();
+
+        public bool NoExpiration { get; set; }
         public bool UnlimitedUses { get; set; }
 
         [Range(1, int.MaxValue, ErrorMessage = "Maximum redemptions must be at least 1.")]
@@ -74,7 +75,7 @@ namespace gpos.Models.ViewModels
         public VoucherRuleForm VoucherRuleForm { get; set; } = new();
         public List<Voucher> Vouchers { get; set; } = new();
         public List<VoucherRule> VoucherRules { get; set; } = new();
-        public List<SelectListItem> MemberOptions { get; set; } = new();
+        public List<SelectListItem> VoucherOptions { get; set; } = new();
         public List<SelectListItem> ProductOptions { get; set; } = new();
         public List<SelectListItem> CategoryOptions { get; set; } = new();
     }
