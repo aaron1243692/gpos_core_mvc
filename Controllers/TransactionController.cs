@@ -207,6 +207,7 @@ namespace gpos.Controllers
                 .ThenByDescending(item => item.Id)
                 .Take(100)
                 .ToListAsync();
+            var itemSummaries = await BuildItemSummaryLookup(items.Select(item => item.SaleId));
 
             return View(new ProductSalesPageViewModel
             {
@@ -215,7 +216,15 @@ namespace gpos.Controllers
                 DateTo = dateTo,
                 Status = normalizedStatus ?? string.Empty,
                 StatusOptions = BuildStatusOptions(normalizedStatus),
-                Sales = items.Select(ToProductSaleRow).ToList()
+                Sales = items
+                    .DistinctBy(item => item.SaleId)
+                    .Select(item =>
+                    {
+                        var row = ToProductSaleRow(item);
+                        ApplyItemSummary(row, itemSummaries);
+                        return row;
+                    })
+                    .ToList()
             });
         }
 
@@ -228,6 +237,7 @@ namespace gpos.Controllers
                 .ThenByDescending(item => item.Id)
                 .Take(100)
                 .ToListAsync();
+            var itemSummaries = await BuildItemSummaryLookup(items.Select(item => item.SaleId));
 
             return View(new FuelSalesPageViewModel
             {
@@ -236,7 +246,15 @@ namespace gpos.Controllers
                 DateTo = dateTo,
                 Status = normalizedStatus ?? string.Empty,
                 StatusOptions = BuildStatusOptions(normalizedStatus),
-                Sales = items.Select(ToFuelSaleRow).ToList()
+                Sales = items
+                    .DistinctBy(item => item.SaleId)
+                    .Select(item =>
+                    {
+                        var row = ToFuelSaleRow(item);
+                        ApplyItemSummary(row, itemSummaries);
+                        return row;
+                    })
+                    .ToList()
             });
         }
 
@@ -263,7 +281,7 @@ namespace gpos.Controllers
         private IQueryable<ProductSale> BuildProductSalesQuery(string? search, DateTime? dateFrom, DateTime? dateTo, string? status)
         {
             var query = _db.ProductSales
-                .AsTracking()
+                .AsNoTracking()
                 .Include(item => item.Sale)
                     .ThenInclude(sale => sale!.User)
                 .Include(item => item.Sale)
@@ -271,15 +289,9 @@ namespace gpos.Controllers
                 .Include(item => item.Sale)
                     .ThenInclude(sale => sale!.Payments)
                 .Include(item => item.Sale)
-                    .ThenInclude(sale => sale!.VoucherRedemptions)
-                .Include(item => item.Sale)
                     .ThenInclude(sale => sale!.PointsLedger)
                 .Include(item => item.Sale)
-                    .ThenInclude(sale => sale!.ProductSales)
-                        .ThenInclude(productSale => productSale.Product)
-                .Include(item => item.Sale)
-                    .ThenInclude(sale => sale!.FuelSales)
-                        .ThenInclude(fuelSale => fuelSale.Fuel)
+                    .ThenInclude(sale => sale!.VoucherRedemptions)
                 .Include(item => item.Product)
                 .Include(item => item.Batch)
                 .Where(item => item.Sale != null);
@@ -317,7 +329,7 @@ namespace gpos.Controllers
         private IQueryable<FuelSale> BuildFuelSalesQuery(string? search, DateTime? dateFrom, DateTime? dateTo, string? status)
         {
             var query = _db.FuelSales
-                .AsTracking()
+                .AsNoTracking()
                 .Include(item => item.Sale)
                     .ThenInclude(sale => sale!.User)
                 .Include(item => item.Sale)
@@ -325,15 +337,9 @@ namespace gpos.Controllers
                 .Include(item => item.Sale)
                     .ThenInclude(sale => sale!.Payments)
                 .Include(item => item.Sale)
-                    .ThenInclude(sale => sale!.VoucherRedemptions)
-                .Include(item => item.Sale)
                     .ThenInclude(sale => sale!.PointsLedger)
                 .Include(item => item.Sale)
-                    .ThenInclude(sale => sale!.ProductSales)
-                        .ThenInclude(productSale => productSale.Product)
-                .Include(item => item.Sale)
-                    .ThenInclude(sale => sale!.FuelSales)
-                        .ThenInclude(fuelSale => fuelSale.Fuel)
+                    .ThenInclude(sale => sale!.VoucherRedemptions)
                 .Include(item => item.Fuel)
                 .Include(item => item.Tank)
                 .Include(item => item.Nozzle)
@@ -376,8 +382,6 @@ namespace gpos.Controllers
             var voucherDiscount = VoucherDiscountFor(sale);
             var totalDiscount = sale?.DiscountAmount ?? 0m;
             var memberDiscount = Math.Max(0m, totalDiscount - voucherDiscount);
-            var pointsPaid = PointsPaidFor(sale);
-            var pointsMonetaryValue = PointsMonetaryValueFor(sale);
 
             return new ProductSaleRowViewModel
             {
@@ -393,6 +397,7 @@ namespace gpos.Controllers
                 MemberName = sale?.Member?.FullName ?? "-",
                 SaleDate = sale?.CreatedAt ?? item.CreatedAt,
                 PaymentType = PaymentTypeFor(sale),
+                Cost = item.Batch is null ? 0m : item.Batch.CostPrice * item.Quantity,
                 GrossTotal = sale?.GrossTotal ?? 0m,
                 RebateAmount = sale?.RebateAmount ?? 0m,
                 MemberDiscount = memberDiscount,
@@ -403,11 +408,8 @@ namespace gpos.Controllers
                 Loss = totalDiscount,
                 CashAmount = sale?.CashAmount ?? 0m,
                 Change = ChangeFor(sale),
-                PointsPaid = pointsPaid,
-                PointConversionUsed = pointsPaid > 0m ? Math.Round(pointsMonetaryValue / pointsPaid, 4, MidpointRounding.AwayFromZero) : 0m,
-                PointsMonetaryValue = pointsMonetaryValue,
-                DetailLines = BuildSaleDetailLines(sale),
-                Status = string.IsNullOrWhiteSpace(item.Status) ? sale?.Status ?? "-" : item.Status
+                PointsPaid = PointsPaidFor(sale),
+                Status = string.IsNullOrWhiteSpace(sale?.Status) ? item.Status : sale!.Status
             };
         }
 
@@ -417,8 +419,6 @@ namespace gpos.Controllers
             var voucherDiscount = VoucherDiscountFor(sale);
             var totalDiscount = sale?.DiscountAmount ?? 0m;
             var memberDiscount = Math.Max(0m, totalDiscount - voucherDiscount);
-            var pointsPaid = PointsPaidFor(sale);
-            var pointsMonetaryValue = PointsMonetaryValueFor(sale);
 
             return new FuelSaleRowViewModel
             {
@@ -435,6 +435,7 @@ namespace gpos.Controllers
                 MemberName = sale?.Member?.FullName ?? "-",
                 SaleDate = sale?.CreatedAt ?? item.CreatedAt,
                 PaymentType = PaymentTypeFor(sale),
+                Cost = sale?.GrossTotal ?? item.Subtotal,
                 GrossTotal = sale?.GrossTotal ?? 0m,
                 RebateAmount = sale?.RebateAmount ?? 0m,
                 MemberDiscount = memberDiscount,
@@ -445,79 +446,121 @@ namespace gpos.Controllers
                 Loss = totalDiscount,
                 CashAmount = sale?.CashAmount ?? 0m,
                 Change = ChangeFor(sale),
-                PointsPaid = pointsPaid,
-                PointConversionUsed = pointsPaid > 0m ? Math.Round(pointsMonetaryValue / pointsPaid, 4, MidpointRounding.AwayFromZero) : 0m,
-                PointsMonetaryValue = pointsMonetaryValue,
-                DetailLines = BuildSaleDetailLines(sale),
-                Status = string.IsNullOrWhiteSpace(item.Status) ? sale?.Status ?? "-" : item.Status
+                PointsPaid = PointsPaidFor(sale),
+                Status = string.IsNullOrWhiteSpace(sale?.Status) ? item.Status : sale!.Status
             };
-        }
-
-        private static List<SaleDetailLineViewModel> BuildSaleDetailLines(Sale? sale)
-        {
-            if (sale is null)
-            {
-                return new List<SaleDetailLineViewModel>();
-            }
-
-            var productLines = sale.ProductSales
-                .OrderBy(item => item.Id)
-                .Select(item => new SaleDetailLineViewModel
-                {
-                    Name = $"{item.Product?.Name ?? "Product"} ({item.Quantity:N2})",
-                    Cost = item.Subtotal
-                });
-
-            var fuelLines = sale.FuelSales
-                .OrderBy(item => item.Id)
-                .Select(item => new SaleDetailLineViewModel
-                {
-                    Name = $"{item.Fuel?.Name ?? "Fuel"} ({item.Liters:N2} L)",
-                    Cost = item.Subtotal
-                });
-
-            var lines = productLines.Concat(fuelLines).ToList();
-            ApplyStoredDiscountsToLines(lines, sale.DiscountAmount, VoucherDiscountFor(sale));
-            return lines;
-        }
-
-        private static void ApplyStoredDiscountsToLines(List<SaleDetailLineViewModel> lines, decimal totalDiscount, decimal voucherDiscount)
-        {
-            var totalCost = lines.Sum(line => line.Cost);
-            var memberDiscount = Math.Max(0m, totalDiscount - voucherDiscount);
-            AllocateDiscount(lines, totalCost, memberDiscount, (line, amount) => line.Discount = amount);
-            AllocateDiscount(lines, totalCost, voucherDiscount, (line, amount) => line.VoucherDiscount = amount);
-
-            foreach (var line in lines)
-            {
-                line.TotalPrice = Math.Max(0m, line.Cost - line.Discount - line.VoucherDiscount);
-            }
-        }
-
-        private static void AllocateDiscount(List<SaleDetailLineViewModel> lines, decimal totalCost, decimal discount, Action<SaleDetailLineViewModel, decimal> apply)
-        {
-            if (lines.Count == 0 || totalCost <= 0m || discount <= 0m)
-            {
-                return;
-            }
-
-            var remaining = Math.Round(discount, 2, MidpointRounding.AwayFromZero);
-            for (var i = 0; i < lines.Count; i += 1)
-            {
-                var amount = i == lines.Count - 1
-                    ? remaining
-                    : Math.Round(discount * (lines[i].Cost / totalCost), 2, MidpointRounding.AwayFromZero);
-
-                amount = Math.Max(0m, amount);
-                apply(lines[i], amount);
-                remaining = Math.Max(0m, remaining - amount);
-            }
         }
 
         private static decimal VoucherDiscountFor(Sale? sale)
         {
             return sale?.VoucherRedemptions.Sum(redemption => redemption.DiscountAmount) ?? 0m;
         }
+
+        private static decimal PointsPaidFor(Sale? sale)
+        {
+            return sale?.PointsLedger
+                .Where(ledger => string.Equals(ledger.TransactionType, "Used", StringComparison.OrdinalIgnoreCase))
+                .Sum(ledger => ledger.Points) ?? 0m;
+        }
+
+        private async Task<Dictionary<int, ItemSummary>> BuildItemSummaryLookup(IEnumerable<int> saleIds)
+        {
+            var ids = saleIds.Distinct().ToList();
+            if (ids.Count == 0)
+            {
+                return new Dictionary<int, ItemSummary>();
+            }
+
+            var productItems = await _db.ProductSales
+                .AsNoTracking()
+                .Where(item => ids.Contains(item.SaleId))
+                .OrderBy(item => item.Id)
+                .Select(item => new
+                {
+                    item.SaleId,
+                    item.Id,
+                    Name = item.Product != null ? item.Product.Name : null,
+                    item.Quantity,
+                    item.Subtotal,
+                    Cost = item.Batch == null ? 0m : item.Batch.CostPrice * item.Quantity
+                })
+                .ToListAsync();
+
+            var fuelItems = await _db.FuelSales
+                .AsNoTracking()
+                .Where(item => ids.Contains(item.SaleId))
+                .OrderBy(item => item.Id)
+                .Select(item => new
+                {
+                    item.SaleId,
+                    item.Id,
+                    Name = item.Fuel != null ? item.Fuel.Name : null,
+                    item.Liters,
+                    item.Subtotal
+                })
+                .ToListAsync();
+
+            return productItems
+                .Select(item => new ItemSummaryLine(item.SaleId, item.Id, $"{(string.IsNullOrWhiteSpace(item.Name) ? "Product" : item.Name)} ({FormatQuantity(item.Quantity)})", item.Subtotal, item.Cost))
+                .Concat(fuelItems.Select(item => new ItemSummaryLine(item.SaleId, item.Id, $"{(string.IsNullOrWhiteSpace(item.Name) ? "Fuel" : item.Name)} ({item.Liters:N2} L)", item.Subtotal, 0m)))
+                .GroupBy(item => item.SaleId)
+                .ToDictionary(group => group.Key, group => BuildItemSummary(group.OrderBy(item => item.Id).ToList()));
+        }
+
+        private static ItemSummary BuildItemSummary(List<ItemSummaryLine> lines)
+        {
+            var items = lines.Select(item => item.Text).ToList();
+            if (items.Count == 0)
+            {
+                return new ItemSummary("-", "-", 0m, 0m);
+            }
+
+            const int visibleItems = 1;
+            var summary = items.Take(visibleItems).ToList();
+            if (items.Count > visibleItems)
+            {
+                summary.Add($"+{items.Count - visibleItems} more...");
+            }
+
+            return new ItemSummary(string.Join(" ", summary), string.Join(Environment.NewLine, items), lines.Sum(item => item.Subtotal), lines.Sum(item => item.Cost));
+        }
+
+        private static void ApplyItemSummary(ProductSaleRowViewModel row, IReadOnlyDictionary<int, ItemSummary> itemSummaries)
+        {
+            if (!itemSummaries.TryGetValue(row.SaleId, out var itemSummary))
+            {
+                return;
+            }
+
+            row.ItemSummary = itemSummary.Summary;
+            row.ItemSummaryTitle = itemSummary.Title;
+            row.Subtotal = itemSummary.Subtotal;
+            row.Cost = itemSummary.Cost;
+        }
+
+        private static void ApplyItemSummary(FuelSaleRowViewModel row, IReadOnlyDictionary<int, ItemSummary> itemSummaries)
+        {
+            if (!itemSummaries.TryGetValue(row.SaleId, out var itemSummary))
+            {
+                return;
+            }
+
+            row.ItemSummary = itemSummary.Summary;
+            row.ItemSummaryTitle = itemSummary.Title;
+            row.Subtotal = itemSummary.Subtotal;
+            row.Cost = itemSummary.Subtotal;
+        }
+
+        private static string FormatQuantity(decimal value)
+        {
+            return value == decimal.Truncate(value)
+                ? value.ToString("N0")
+                : value.ToString("N2");
+        }
+
+        private sealed record ItemSummary(string Summary, string Title, decimal Subtotal, decimal Cost);
+
+        private sealed record ItemSummaryLine(int SaleId, int Id, string Text, decimal Subtotal, decimal Cost);
 
         private static decimal ChangeFor(Sale? sale)
         {
@@ -527,20 +570,6 @@ namespace gpos.Controllers
             }
 
             return Math.Max(0m, (sale?.CashAmount ?? 0m) - (sale?.NetTotal ?? 0m));
-        }
-
-        private static decimal PointsPaidFor(Sale? sale)
-        {
-            return sale?.PointsLedger
-                .Where(ledger => string.Equals(ledger.TransactionType, "Redeemed", StringComparison.OrdinalIgnoreCase))
-                .Sum(ledger => ledger.Points) ?? 0m;
-        }
-
-        private static decimal PointsMonetaryValueFor(Sale? sale)
-        {
-            return string.Equals(PaymentTypeFor(sale), "Points", StringComparison.OrdinalIgnoreCase)
-                ? sale?.RebateAmount ?? 0m
-                : 0m;
         }
 
         private static List<SelectListItem> BuildStatusOptions(string? selectedStatus)

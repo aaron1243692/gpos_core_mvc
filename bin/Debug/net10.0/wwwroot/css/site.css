@@ -1763,7 +1763,7 @@ textarea.form-control {
   padding-bottom: 1rem;
   border-color: #cfd9e6;
   color: #07111f;
-  font-weight: 800;
+  font-weight: 400;
 }
 
 .app-table tbody tr:last-child td {
@@ -2322,23 +2322,24 @@ textarea.form-control {
 
 #productMenu .pos-product-grid {
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 0.65rem;
+  gap: 0.55rem;
 }
 
 #productMenu .pos-menu-product-card {
-  aspect-ratio: 1 / 1;
-  align-content: start;
-  grid-template-rows: auto minmax(2.3rem, auto) auto auto 1fr auto;
-  gap: 0.22rem;
+  align-content: stretch;
+  grid-template-rows: auto minmax(2.9rem, auto) auto auto auto;
+  gap: 0.3rem;
   min-height: 0;
-  padding: 0.62rem;
+  height: 13.3rem;
+  padding: 0.75rem;
   border-radius: 12px;
 }
 
 #productMenu .pos-product-visual {
-  width: 44px;
-  height: 44px;
-  font-size: 0.78rem;
+  width: 78px;
+  height: 78px;
+  aspect-ratio: 1 / 1;
+  font-size: 0.92rem;
 }
 
 #productMenu .pos-menu-product-card h3 {
@@ -2346,18 +2347,19 @@ textarea.form-control {
   overflow: hidden;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
-  font-size: 0.82rem;
-  line-height: 1.14;
+  font-size: 1rem;
+  font-weight: 950;
+  line-height: 1.22;
 }
 
 #productMenu .pos-menu-product-card p {
-  font-size: 0.8rem;
+  font-size: 0.86rem;
   line-height: 1.1;
 }
 
 #productMenu .pos-menu-product-card small {
   color: #3f5f52;
-  font-size: 0.72rem;
+  font-size: 0.76rem;
   font-weight: 800;
   line-height: 1.1;
   text-align: center;
@@ -2365,19 +2367,19 @@ textarea.form-control {
 
 #productMenu .pos-quantity-control {
   align-self: end;
-  gap: 0.35rem;
-  margin-top: 0;
+  gap: 0.32rem;
+  margin-top: 0.24rem;
 }
 
 #productMenu .pos-quantity-control span {
-  font-size: 0.68rem;
+  font-size: 0.7rem;
 }
 
 #productMenu .pos-quantity-control .form-control {
-  width: 3.6rem;
-  min-height: 1.75rem;
+  width: 3.5rem;
+  min-height: 1.72rem;
   padding: 0.12rem 0.25rem;
-  font-size: 0.82rem;
+  font-size: 0.8rem;
 }
 
 .pos-quantity-control {
@@ -4053,6 +4055,11 @@ textarea.form-control {
 .salesman-product-table td,
 .receipt-product-table td {
   border-color: #d7f8e3;
+  font-weight: 400;
+}
+
+table tbody td {
+  font-weight: 400;
 }
 
 .app-table tbody tr:hover td,
@@ -4094,6 +4101,25 @@ textarea.form-control {
 .modal-header .btn-close {
   filter: invert(1) grayscale(100%) brightness(200%);
   opacity: 0.9;
+}
+
+#cartEditModal .modal-header > div {
+  display: grid;
+  gap: 0.28rem;
+}
+
+#cartEditModal .modal-title {
+  color: #ffffff;
+  font-size: 1.32rem;
+  font-weight: 900;
+  line-height: 1.15;
+}
+
+#cartEditModal .modal-header p {
+  color: rgba(255, 255, 255, 0.9) !important;
+  font-size: 0.94rem;
+  font-weight: 600;
+  line-height: 1.35;
 }
 
 .modal-footer {
@@ -4196,6 +4222,603 @@ textarea.form-control {
   border-top-color: var(--app-line);
 }
 
+#posSaleForm {
+  --pos-panel-bg: #ffffff;
+  --pos-surface: #f7fef9;
+  --pos-border: #bbf7d0;
+  --pos-border-strong: #86efac;
+  --pos-heading: #0f172a;
+  --pos-muted: #3f5f52;
+  --pos-green: #16a34a;
+  --pos-green-dark: #064e3b;
+}
+
+#posSaleForm .pos-order-layout {
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 420px);
+  gap: 1.1rem;
+  border: 1px solid rgba(187, 247, 208, 0.95);
+  background:
+    linear-gradient(135deg, rgba(240, 253, 244, 0.94), rgba(255, 255, 255, 0.98)),
+    #ffffff;
+  box-shadow: 0 18px 46px rgba(6, 78, 59, 0.12);
+}
+
+#posSaleForm .pos-order-menu {
+  padding: clamp(1rem, 1.4vw, 1.35rem);
+}
+
+#posSaleForm .pos-order-toolbar {
+  gap: 0.85rem;
+  margin-bottom: 0.85rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid rgba(187, 247, 208, 0.85);
+}
+
+#posSaleForm .pos-cart-trigger {
+  display: inline-grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.45rem;
+  min-height: 2.65rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  font-weight: 900;
+  box-shadow: 0 10px 20px rgba(6, 78, 59, 0.1);
+  white-space: nowrap;
+}
+
+#posSaleForm .pos-cart-trigger-icon {
+  display: inline-grid;
+  min-width: 2.2rem;
+  min-height: 1.8rem;
+  place-items: center;
+  border-radius: 999px;
+  background: #dcfce7;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+}
+
+#posSaleForm .pos-cart-trigger-text {
+  font-size: 0.86rem;
+}
+
+#posSaleForm .pos-cart-trigger-badge {
+  display: inline-grid;
+  min-width: 1.55rem;
+  height: 1.55rem;
+  place-items: center;
+  border-radius: 999px;
+  background: #ffffff;
+  color: var(--pos-green-dark);
+  font-size: 0.78rem;
+}
+
+#posSaleForm .pos-cart-trigger strong {
+  grid-column: 1 / -1;
+  color: var(--pos-green-dark);
+  font-size: 0.82rem;
+  line-height: 1;
+}
+
+#posSaleForm .pos-order-toolbar h1,
+#posSaleForm .pos-menu-heading h2,
+#posSaleForm .pos-summary-top h2 {
+  color: var(--pos-heading);
+  letter-spacing: 0;
+}
+
+#posSaleForm .pos-order-toolbar h1 {
+  font-size: 1.45rem;
+  line-height: 1.05;
+}
+
+#posSaleForm .pos-order-toolbar h1 span,
+#posSaleForm .pos-menu-heading h2 span {
+  color: var(--pos-green-dark);
+  font-weight: 800;
+}
+
+#posSaleForm .pos-order-search {
+  width: min(100%, 360px);
+  padding: 0.28rem 0.85rem;
+  border-color: var(--pos-border);
+  border-radius: 999px;
+  background: #ffffff;
+  box-shadow: 0 10px 24px rgba(6, 78, 59, 0.08);
+}
+
+#posSaleForm .pos-order-search .form-control {
+  min-height: 2.45rem;
+  color: var(--pos-heading);
+  font-size: 0.9rem;
+  font-weight: 750;
+}
+
+#posSaleForm .pos-order-search .form-control::placeholder {
+  color: #6f9784;
+}
+
+#posSaleForm .pos-category-row {
+  gap: 0.55rem;
+  margin-bottom: 0.9rem;
+  padding-bottom: 0.3rem;
+}
+
+#posSaleForm .pos-category-pill {
+  min-height: 3.25rem;
+  min-width: 5.6rem;
+  width: 5.6rem;
+  gap: 0.32rem;
+  padding: 0.42rem 0.65rem;
+  border-color: var(--pos-border);
+  border-radius: 13px;
+  box-shadow: 0 8px 18px rgba(6, 78, 59, 0.08);
+  transition:
+    transform 0.16s ease,
+    border-color 0.16s ease,
+    box-shadow 0.16s ease,
+    background 0.16s ease;
+}
+
+#posSaleForm .pos-category-pill:hover,
+#posSaleForm .pos-category-pill:focus-visible {
+  border-color: var(--pos-green);
+  box-shadow: 0 12px 24px rgba(6, 78, 59, 0.14);
+  transform: translateY(-1px);
+}
+
+#posSaleForm .pos-category-pill span {
+  width: 2.15rem;
+  height: 1.85rem;
+  border-color: rgba(187, 247, 208, 0.95);
+  border-radius: 9px;
+  background: #f0fdf4;
+  color: var(--pos-green-dark);
+}
+
+#posSaleForm .pos-category-pill strong {
+  color: inherit;
+  font-size: 0.78rem;
+  line-height: 1.1;
+}
+
+#posSaleForm .pos-category-pill.is-active {
+  border-color: var(--pos-border-strong);
+  background: var(--app-gradient);
+  box-shadow: 0 14px 26px rgba(22, 163, 74, 0.22);
+}
+
+#posSaleForm .pos-menu-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.65rem;
+}
+
+#posSaleForm .pos-menu-heading h2 {
+  font-size: 1.08rem;
+  font-weight: 950;
+}
+
+#posSaleForm .pos-menu-heading div {
+  padding: 0.25rem 0.6rem;
+  border: 1px solid var(--pos-border);
+  border-radius: 999px;
+  background: #f0fdf4;
+  color: var(--pos-muted);
+  font-size: 0.76rem;
+}
+
+#posSaleForm #productMenu .pos-product-grid {
+  grid-template-columns: repeat(auto-fill, minmax(10.1rem, 1fr));
+  gap: 0.7rem;
+}
+
+#posSaleForm #productMenu .pos-menu-product-card {
+  overflow: hidden;
+  grid-template-rows: minmax(7.1rem, auto) minmax(2.55rem, auto) auto auto 1fr auto;
+  gap: 0.18rem;
+  height: 15.45rem;
+  padding: 0.82rem 0.82rem 1.08rem;
+  border: 1px solid rgba(187, 247, 208, 0.95);
+  border-radius: 18px;
+  background: #ffffff;
+  box-shadow: 0 10px 24px rgba(6, 78, 59, 0.08);
+  transition:
+    transform 0.16s ease,
+    border-color 0.16s ease,
+    box-shadow 0.16s ease;
+}
+
+#posSaleForm #productMenu .pos-menu-product-card::before {
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  height: 4px;
+  background: linear-gradient(90deg, rgba(187, 247, 208, 0), #22c55e, rgba(187, 247, 208, 0));
+  content: "";
+  opacity: 0;
+  transition: opacity 0.16s ease;
+}
+
+#posSaleForm #productMenu .pos-menu-product-card:hover,
+#posSaleForm #productMenu .pos-menu-product-card:focus-within {
+  border-color: var(--pos-green);
+  box-shadow: 0 16px 34px rgba(6, 78, 59, 0.14);
+  transform: translateY(-2px);
+}
+
+#posSaleForm #productMenu .pos-menu-product-card:hover::before,
+#posSaleForm #productMenu .pos-menu-product-card:focus-within::before {
+  opacity: 1;
+}
+
+#posSaleForm #productMenu .pos-product-visual {
+  align-self: start;
+  width: min(60%, 6.7rem);
+  aspect-ratio: 1 / 1;
+  height: auto;
+  border: 1px solid rgba(134, 239, 172, 0.9);
+  border-radius: 16px;
+  background: linear-gradient(135deg, #dcfce7, #bbf7d0);
+  color: var(--pos-green-dark);
+  font-size: 1.08rem;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.8),
+    0 8px 16px rgba(6, 78, 59, 0.1);
+}
+
+#posSaleForm #productMenu .pos-product-visual img {
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  object-fit: cover;
+}
+
+#posSaleForm #productMenu .pos-menu-product-card h3 {
+  align-self: end;
+  min-height: 2.45rem;
+  margin-top: 0.18rem;
+  color: var(--pos-heading);
+  font-size: 1.02rem;
+  font-weight: 900;
+  line-height: 1.18;
+}
+
+#posSaleForm #productMenu .pos-menu-product-card p {
+  color: #047857;
+  font-size: 0.86rem;
+  font-weight: 950;
+  line-height: 1.1;
+}
+
+#posSaleForm #productMenu .pos-menu-product-card small {
+  color: var(--pos-muted);
+  font-size: 0.76rem;
+  font-weight: 850;
+  line-height: 1.1;
+}
+
+#posSaleForm #productMenu .pos-menu-product-card small::before {
+  content: "(";
+}
+
+#posSaleForm #productMenu .pos-menu-product-card small::after {
+  content: ")";
+}
+
+#posSaleForm #productMenu .pos-quantity-control {
+  align-self: end;
+  min-height: 2.05rem;
+  margin-top: 0.38rem;
+  padding: 0.28rem 0.38rem 0.28rem 0.55rem;
+  border: 1px solid #d7f8e3;
+  border-radius: 999px;
+  background: var(--pos-surface);
+}
+
+#posSaleForm #productMenu .pos-quantity-control span {
+  overflow: hidden;
+  color: var(--pos-green-dark);
+  font-size: 0;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+#posSaleForm #productMenu .pos-quantity-control span::after {
+  content: "Quantity";
+  font-size: 0.72rem;
+}
+
+#posSaleForm #productMenu .pos-quantity-control .form-control {
+  width: 3.35rem;
+  min-height: 1.62rem;
+  padding: 0.1rem 0.25rem;
+  border-color: var(--pos-border-strong);
+  border-radius: 999px;
+  background: #ffffff;
+  color: var(--pos-heading);
+  font-weight: 900;
+}
+
+#posSaleForm .pos-order-summary {
+  border-left: 1px solid rgba(187, 247, 208, 0.9);
+  position: sticky;
+  top: 0.85rem;
+  max-height: calc(100vh - 8.5rem);
+  overflow-y: auto;
+  border-radius: 0 24px 24px 0;
+  background: linear-gradient(180deg, #ffffff 0%, #f7fef9 100%);
+  box-shadow: -12px 0 28px rgba(6, 78, 59, 0.08);
+}
+
+#posSaleForm .pos-summary-top {
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid #d7f8e3;
+}
+
+#posSaleForm .pos-summary-top h2 {
+  font-size: 1.22rem;
+  font-weight: 950;
+}
+
+#posSaleForm .pos-summary-top span {
+  width: auto;
+  height: auto;
+  min-height: 1.9rem;
+  padding: 0.28rem 0.65rem;
+  border-color: var(--pos-border);
+  border-radius: 999px;
+  background: #dcfce7;
+  color: var(--pos-green-dark);
+}
+
+#posSaleForm .pos-cart-list {
+  gap: 0.55rem;
+  min-height: 10rem;
+  max-height: min(34vh, 18rem);
+  overflow-y: auto;
+}
+
+#posSaleForm .pos-cart-item {
+  align-items: center;
+  padding: 0.62rem;
+  border: 1px solid #d7f8e3;
+  border-radius: 12px;
+  background: #ffffff;
+  box-shadow: 0 8px 18px rgba(6, 78, 59, 0.07);
+}
+
+#posSaleForm .pos-cart-thumb {
+  width: 2.35rem;
+  height: 2.35rem;
+  border: 1px solid rgba(134, 239, 172, 0.9);
+  border-radius: 10px;
+  background: linear-gradient(135deg, #dcfce7, #bbf7d0);
+  color: var(--pos-green-dark);
+}
+
+#posSaleForm .pos-cart-item strong {
+  color: var(--pos-heading);
+  font-size: 0.86rem;
+}
+
+#posSaleForm .pos-cart-item span {
+  color: var(--pos-muted);
+}
+
+#posSaleForm .pos-cart-item b {
+  color: var(--pos-green-dark);
+}
+
+#posSaleForm .pos-summary-totals {
+  gap: 0.58rem;
+  padding: 0.85rem;
+  border: 1px solid var(--pos-border);
+  border-radius: 14px;
+  background: #ecfdf5;
+}
+
+#posSaleForm .pos-summary-totals div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+#posSaleForm .pos-summary-totals div:last-child {
+  padding-top: 0.58rem;
+  border-top: 1px solid var(--pos-border);
+}
+
+#posSaleForm .pos-summary-totals div:last-child strong {
+  color: var(--pos-green-dark);
+  font-size: 1.24rem;
+}
+
+#posSaleForm .pos-summary-fields {
+  gap: 0.7rem;
+}
+
+#posSaleForm .pos-summary-fields .form-control,
+#posSaleForm .pos-summary-fields .form-select,
+#posSaleForm .pos-summary-fields .input-group-text {
+  min-height: 2.55rem;
+  border-color: #9fd9b4;
+}
+
+#posSaleForm .pos-summary-fields .form-control,
+#posSaleForm .pos-summary-fields .form-select {
+  color: var(--pos-heading);
+  font-weight: 750;
+}
+
+#posSaleForm .pos-charge-button {
+  min-height: 3.2rem;
+  border-radius: 14px;
+  font-size: 1.02rem;
+  font-weight: 950;
+  box-shadow: 0 14px 28px rgba(6, 78, 59, 0.22);
+}
+
+#posSaleForm .pos-empty-cart {
+  min-height: 8rem;
+  border-color: var(--pos-border);
+  border-radius: 14px;
+  background: rgba(240, 253, 244, 0.75);
+  color: var(--pos-muted);
+}
+
+#posSaleForm .pos-receipt-modal .modal-content {
+  overflow: hidden;
+  border: 1px solid rgba(187, 247, 208, 0.95);
+  border-radius: 20px;
+  box-shadow: 0 28px 70px rgba(6, 78, 59, 0.22);
+}
+
+#posSaleForm .pos-receipt-modal .modal-header,
+#posSaleForm .pos-receipt-modal-footer {
+  background: #f7fef9;
+  border-color: rgba(187, 247, 208, 0.95);
+}
+
+#posSaleForm .pos-receipt-modal-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+#posSaleForm .pos-receipt-modal .salesman-receipt-preview {
+  min-height: 0;
+}
+
+#posSaleForm .pos-receipt-modal .salesman-receipt-preview {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+#posSaleForm .pos-receipt-modal .salesman-receipt-print {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+}
+
+#posSaleForm .pos-receipt-modal-footer {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+#posSaleForm .pos-receipt-modal-footer .salesman-receipt-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.55rem;
+}
+
+@media (max-width: 1399.98px) {
+  #posSaleForm .pos-order-layout {
+    grid-template-columns: minmax(0, 1fr) minmax(280px, 380px);
+  }
+
+  #posSaleForm .pos-order-summary {
+    border-left: 0;
+  }
+}
+
+@media (max-width: 991.98px) {
+  #posSaleForm .pos-order-toolbar {
+    align-items: stretch;
+    flex-wrap: wrap;
+  }
+
+  #posSaleForm .pos-order-search {
+    width: min(100%, 32rem);
+  }
+
+  #posSaleForm .pos-cart-trigger {
+    margin-left: auto;
+  }
+
+  #posSaleForm .pos-order-layout,
+  #posSaleForm .pos-receipt-modal-grid {
+    grid-template-columns: 1fr;
+  }
+
+  #posSaleForm .pos-order-summary {
+    position: static;
+    max-height: none;
+    border-top: 1px solid rgba(187, 247, 208, 0.9);
+    border-radius: 0 0 24px 24px;
+    box-shadow: 0 -12px 28px rgba(6, 78, 59, 0.08);
+  }
+
+  #posSaleForm #productMenu .pos-menu-product-card {
+    height: 14.85rem;
+  }
+
+  #posSaleForm #productMenu .pos-product-visual {
+    width: min(60%, 6.35rem);
+    height: auto;
+  }
+}
+
+@media (max-width: 575.98px) {
+  #posSaleForm .pos-order-menu,
+  #posSaleForm .pos-order-summary {
+    padding: 0.9rem;
+  }
+
+  #posSaleForm .pos-order-search,
+  #posSaleForm .pos-cart-trigger {
+    width: 100%;
+  }
+
+  #posSaleForm .pos-cart-trigger {
+    grid-template-columns: auto 1fr auto auto;
+  }
+
+  #posSaleForm .pos-cart-trigger strong {
+    grid-column: auto;
+    justify-self: end;
+  }
+
+  #posSaleForm .pos-category-pill {
+    min-width: 5rem;
+    width: 5rem;
+  }
+
+  #posSaleForm #productMenu .pos-product-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.6rem;
+  }
+
+  #posSaleForm #productMenu .pos-menu-product-card {
+    height: 14.18rem;
+    padding: 0.68rem 0.68rem 0.95rem;
+  }
+
+  #posSaleForm #productMenu .pos-product-visual {
+    width: min(60%, 5.35rem);
+    height: auto;
+    border-radius: 14px;
+  }
+
+  #posSaleForm #productMenu .pos-menu-product-card h3 {
+    font-size: 0.94rem;
+  }
+}
+
 .salesman-pos-bottom-bar {
   border-color: var(--app-line);
   background: var(--app-primary-soft);
@@ -4266,6 +4889,23 @@ textarea.form-control {
   flex: 1 1 auto;
   min-height: 18rem;
   overflow: auto;
+  overflow-x: auto;
+}
+
+.transaction-ui-table-wrap .sales-summary-table {
+  width: max-content;
+  min-width: 100%;
+}
+
+.transaction-ui-table-wrap .sales-summary-table th,
+.transaction-ui-table-wrap .sales-summary-table td {
+  white-space: nowrap;
+}
+
+.transaction-ui-table-wrap .product-sales-summary-table th:nth-child(3),
+.transaction-ui-table-wrap .product-sales-summary-table td:nth-child(3) {
+  min-width: 16rem;
+  white-space: normal;
 }
 
 .transaction-ui-actions {

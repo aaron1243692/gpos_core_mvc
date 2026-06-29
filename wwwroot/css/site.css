@@ -1763,7 +1763,7 @@ textarea.form-control {
   padding-bottom: 1rem;
   border-color: #cfd9e6;
   color: #07111f;
-  font-weight: 800;
+  font-weight: 400;
 }
 
 .app-table tbody tr:last-child td {
@@ -4055,6 +4055,11 @@ textarea.form-control {
 .salesman-product-table td,
 .receipt-product-table td {
   border-color: #d7f8e3;
+  font-weight: 400;
+}
+
+table tbody td {
+  font-weight: 400;
 }
 
 .app-table tbody tr:hover td,
@@ -4884,6 +4889,23 @@ textarea.form-control {
   flex: 1 1 auto;
   min-height: 18rem;
   overflow: auto;
+  overflow-x: auto;
+}
+
+.transaction-ui-table-wrap .sales-summary-table {
+  width: max-content;
+  min-width: 100%;
+}
+
+.transaction-ui-table-wrap .sales-summary-table th,
+.transaction-ui-table-wrap .sales-summary-table td {
+  white-space: nowrap;
+}
+
+.transaction-ui-table-wrap .product-sales-summary-table th:nth-child(3),
+.transaction-ui-table-wrap .product-sales-summary-table td:nth-child(3) {
+  min-width: 16rem;
+  white-space: normal;
 }
 
 .transaction-ui-actions {

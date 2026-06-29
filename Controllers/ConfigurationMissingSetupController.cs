@@ -55,7 +55,7 @@ namespace gpos.Controllers
 
         public async Task<IActionResult> Rebate(string? search)
         {
-            return View(await BuildRebatePageAsync(search));
+            return View("~/Views/Configuration/Rebate.cshtml", await BuildRebatePageAsync(search));
         }
 
         public async Task<IActionResult> PointsLedger(string? search)
@@ -535,7 +535,7 @@ namespace gpos.Controllers
 
             if (!ModelState.IsValid)
             {
-                return View("Rebate", await BuildRebatePageAsync(search, form, activeModalId: "rebateRuleModal"));
+                return View("~/Views/Configuration/Rebate.cshtml", await BuildRebatePageAsync(search, form, activeModalId: "rebateRuleModal"));
             }
 
             var now = DateTime.Now;

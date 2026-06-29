@@ -36,6 +36,7 @@ namespace gpos.Models.ViewModels
         public string MemberName { get; set; } = "-";
         public DateTime? SaleDate { get; set; }
         public string PaymentType { get; set; } = "-";
+        public decimal Cost { get; set; }
         public decimal GrossTotal { get; set; }
         public decimal RebateAmount { get; set; }
         public decimal MemberDiscount { get; set; }
@@ -43,13 +44,15 @@ namespace gpos.Models.ViewModels
         public decimal TotalDiscount { get; set; }
         public decimal NetTotal { get; set; }
         public decimal NetSales { get; set; }
+        public decimal NetProfit { get; set; }
         public decimal Loss { get; set; }
         public decimal CashAmount { get; set; }
         public decimal Change { get; set; }
         public decimal PointsPaid { get; set; }
         public decimal PointConversionUsed { get; set; }
         public decimal PointsMonetaryValue { get; set; }
-        public List<SaleDetailLineViewModel> DetailLines { get; set; } = new();
+        public string ItemSummary { get; set; } = "-";
+        public string ItemSummaryTitle { get; set; } = "-";
         public string Status { get; set; } = "Completed";
     }
 
@@ -68,6 +71,7 @@ namespace gpos.Models.ViewModels
         public string MemberName { get; set; } = "-";
         public DateTime? SaleDate { get; set; }
         public string PaymentType { get; set; } = "-";
+        public decimal Cost { get; set; }
         public decimal GrossTotal { get; set; }
         public decimal RebateAmount { get; set; }
         public decimal MemberDiscount { get; set; }
@@ -75,23 +79,16 @@ namespace gpos.Models.ViewModels
         public decimal TotalDiscount { get; set; }
         public decimal NetTotal { get; set; }
         public decimal NetSales { get; set; }
+        public decimal NetProfit { get; set; }
         public decimal Loss { get; set; }
         public decimal CashAmount { get; set; }
         public decimal Change { get; set; }
         public decimal PointsPaid { get; set; }
         public decimal PointConversionUsed { get; set; }
         public decimal PointsMonetaryValue { get; set; }
-        public List<SaleDetailLineViewModel> DetailLines { get; set; } = new();
+        public string ItemSummary { get; set; } = "-";
+        public string ItemSummaryTitle { get; set; } = "-";
         public string Status { get; set; } = "Completed";
-    }
-
-    public class SaleDetailLineViewModel
-    {
-        public string Name { get; set; } = "-";
-        public decimal Cost { get; set; }
-        public decimal Discount { get; set; }
-        public decimal VoucherDiscount { get; set; }
-        public decimal TotalPrice { get; set; }
     }
 
     public class PosSaleRequest
