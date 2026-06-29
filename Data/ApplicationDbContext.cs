@@ -60,6 +60,7 @@ namespace gpos.Data
         public DbSet<Voucher> Vouchers { get; set; }
         public DbSet<VoucherRule> VoucherRules { get; set; }
         public DbSet<VoucherRedemption> VoucherRedemptions { get; set; }
+        public DbSet<FinancialMetric> FinancialMetrics { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -1237,6 +1238,7 @@ namespace gpos.Data
                 entity.HasKey(rule => rule.Id);
 
                 entity.Property(rule => rule.Id).HasColumnName("id");
+                entity.Property(rule => rule.Code).HasColumnName("code").HasMaxLength(6);
                 entity.Property(rule => rule.Name).HasColumnName("name").HasMaxLength(100).IsRequired();
                 entity.Property(rule => rule.VoucherId).HasColumnName("voucher_id");
                 entity.Property(rule => rule.RewardType).HasColumnName("reward_type").HasMaxLength(50).IsRequired();
@@ -1264,6 +1266,7 @@ namespace gpos.Data
                 entity.Ignore(rule => rule.StartDate);
                 entity.Ignore(rule => rule.EndDate);
 
+                entity.HasIndex(rule => rule.Code).IsUnique();
                 entity.HasIndex(rule => rule.VoucherId);
                 entity.HasIndex(rule => rule.Status);
                 entity.HasIndex(rule => rule.Priority);
@@ -1300,6 +1303,24 @@ namespace gpos.Data
                     .WithMany(sale => sale.VoucherRedemptions)
                     .HasForeignKey(redemption => redemption.SaleId)
                     .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            modelBuilder.Entity<FinancialMetric>(entity =>
+            {
+                entity.ToTable("financial_metrics");
+                entity.HasKey(metric => metric.Id);
+
+                entity.Property(metric => metric.Id).HasColumnName("id");
+                entity.Property(metric => metric.MetricCode).HasColumnName("metric_code").HasMaxLength(100).IsRequired();
+                entity.Property(metric => metric.OldAmount).HasColumnName("old_amount").HasPrecision(18, 2);
+                entity.Property(metric => metric.NewAmount).HasColumnName("new_amount").HasPrecision(18, 2);
+                entity.Property(metric => metric.CurrentAmount).HasColumnName("current_amount").HasPrecision(18, 2);
+                entity.Property(metric => metric.MetricDate).HasColumnName("metric_date").HasColumnType("date");
+                entity.Property(metric => metric.CreatedAt).HasColumnName("created_at");
+                entity.Property(metric => metric.UpdatedAt).HasColumnName("updated_at");
+
+                entity.HasIndex(metric => new { metric.MetricDate, metric.MetricCode });
+                entity.HasIndex(metric => metric.MetricCode);
             });
         }
     }

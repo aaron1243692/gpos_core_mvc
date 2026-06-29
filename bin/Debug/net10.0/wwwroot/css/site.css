@@ -249,10 +249,16 @@ a {
 }
 
 .btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
   min-height: 2.35rem;
   padding: 0.5rem 0.95rem;
   border-width: 1px;
   font-weight: 800;
+  line-height: 1.2;
+  text-align: center;
   letter-spacing: 0.01em;
   transition: background-color 0.16s ease, border-color 0.16s ease, color 0.16s ease, box-shadow 0.16s ease, transform 0.16s ease;
 }
@@ -261,6 +267,7 @@ a {
   min-height: 2.15rem;
   padding: 0.42rem 0.8rem;
   font-size: 0.88rem;
+  line-height: 1.2;
 }
 
 .btn:not(:disabled):hover {
@@ -1639,6 +1646,93 @@ textarea.form-control {
 
 .discount-rules-table .col-status {
   width: 110px;
+}
+
+.admin-table.voucher-rules-table {
+  min-width: 1260px;
+  table-layout: fixed;
+}
+
+.voucher-rules-table th,
+.voucher-rules-table td {
+  vertical-align: middle;
+}
+
+.voucher-rules-table thead th {
+  white-space: nowrap;
+}
+
+.voucher-rules-table tbody td {
+  padding-top: 0.42rem;
+  padding-bottom: 0.42rem;
+  line-height: 1.2;
+}
+
+.voucher-rules-table .col-no {
+  width: 54px;
+}
+
+.voucher-rules-table .col-id {
+  width: 64px;
+}
+
+.voucher-rules-table .col-code {
+  width: 92px;
+}
+
+.voucher-rules-table .col-discount {
+  width: 132px;
+}
+
+.voucher-rules-table .col-applies-to {
+  width: 112px;
+}
+
+.voucher-rules-table .col-type {
+  width: 126px;
+}
+
+.voucher-rules-table .col-value {
+  width: 112px;
+}
+
+.voucher-rules-table .col-minimum {
+  width: 136px;
+}
+
+.voucher-rules-table .col-member-required {
+  width: 138px;
+}
+
+.voucher-rules-table .col-date {
+  width: 118px;
+}
+
+.voucher-rules-table .col-status {
+  width: 96px;
+}
+
+.voucher-rules-table .col-action {
+  width: 132px;
+}
+
+.voucher-rules-table th:nth-child(3),
+.voucher-rules-table td:nth-child(3),
+.voucher-rules-table th:nth-child(4),
+.voucher-rules-table td:nth-child(4) {
+  white-space: nowrap;
+  word-break: normal;
+  overflow-wrap: normal;
+}
+
+.voucher-rules-table .col-action {
+  text-align: center;
+}
+
+.voucher-rules-table .setup-row-actions {
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
 }
 
 .admin-table.rebate-table {
@@ -4910,6 +5004,7 @@ table tbody td {
 
 .transaction-ui-actions {
   display: inline-flex;
+  align-items: center;
   flex-wrap: wrap;
   gap: 0.35rem;
 }

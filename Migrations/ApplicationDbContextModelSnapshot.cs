@@ -569,6 +569,57 @@ namespace gpos.Migrations
                     b.ToTable("employee_shift_schedules", (string)null);
                 });
 
+            modelBuilder.Entity("gpos.Models.FinancialMetric", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("id");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime?>("CreatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("created_at");
+
+                    b.Property<decimal>("CurrentAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("current_amount");
+
+                    b.Property<string>("MetricCode")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("varchar(100)")
+                        .HasColumnName("metric_code");
+
+                    b.Property<DateTime>("MetricDate")
+                        .HasColumnType("date")
+                        .HasColumnName("metric_date");
+
+                    b.Property<decimal>("NewAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("new_amount");
+
+                    b.Property<decimal>("OldAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("old_amount");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("MetricCode");
+
+                    b.HasIndex("MetricDate", "MetricCode");
+
+                    b.ToTable("financial_metrics", (string)null);
+                });
+
             modelBuilder.Entity("gpos.Models.Fuel", b =>
                 {
                     b.Property<int>("Id")
@@ -2773,6 +2824,11 @@ namespace gpos.Migrations
                         .HasColumnType("varchar(50)")
                         .HasColumnName("applies_to");
 
+                    b.Property<string>("Code")
+                        .HasMaxLength(6)
+                        .HasColumnType("varchar(6)")
+                        .HasColumnName("code");
+
                     b.Property<DateTime?>("CreatedAt")
                         .HasColumnType("datetime(6)")
                         .HasColumnName("created_at");
@@ -2859,6 +2915,9 @@ namespace gpos.Migrations
                         .HasColumnName("voucher_id");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("Code")
+                        .IsUnique();
 
                     b.HasIndex("Priority");
 

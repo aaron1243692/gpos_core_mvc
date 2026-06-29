@@ -2,6 +2,7 @@ using gpos.Data;
 using gpos.Filters;
 using gpos.Models;
 using gpos.Models.ViewModels;
+using gpos.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
@@ -13,10 +14,12 @@ namespace gpos.Controllers
     {
         private static readonly string[] VoucherStatuses = ["Active", "Inactive"];
         private readonly ApplicationDbContext _db;
+        private readonly VoucherCodeService _voucherCodeService;
 
-        public VouchersController(ApplicationDbContext db)
+        public VouchersController(ApplicationDbContext db, VoucherCodeService voucherCodeService)
         {
             _db = db;
+            _voucherCodeService = voucherCodeService;
         }
 
         public async Task<IActionResult> Index(string? search, int? editId)
@@ -130,14 +133,14 @@ namespace gpos.Controllers
                 ModelState.AddModelError("VoucherRuleForm.VoucherId", "Voucher is required.");
             }
 
-            if (!form.UnlimitedUses && !form.MaxRedemptions.HasValue)
+            if (!form.UsageLimit.HasValue)
             {
-                ModelState.AddModelError("VoucherRuleForm.MaxRedemptions", "Maximum redemptions is required unless unlimited uses is enabled.");
+                ModelState.AddModelError("VoucherRuleForm.UsageLimit", "Usage Limit is required.");
             }
 
-            if (form.UsageLimitType == "Limited Uses" && !form.LimitedUseCount.HasValue)
+            if (form.UsageLimit.HasValue && form.UsageLimit.Value < 1)
             {
-                ModelState.AddModelError("VoucherRuleForm.LimitedUseCount", "Limited use count is required.");
+                ModelState.AddModelError("VoucherRuleForm.UsageLimit", "Usage Limit must be at least 1.");
             }
 
             if (!ModelState.IsValid)
@@ -149,6 +152,11 @@ namespace gpos.Controllers
             var rule = form.Id > 0 ? await _db.VoucherRules.FindAsync(form.Id) : new VoucherRule { CreatedAt = now };
             if (rule is null) return NotFound();
 
+            if (string.IsNullOrWhiteSpace(rule.Code))
+            {
+                rule.Code = await ResolveVoucherRuleCodeAsync(form.Code, rule.Id);
+            }
+
             rule.Name = voucher!.Code;
             rule.VoucherId = form.VoucherId;
             rule.AppliesTo = appliesTo!;
@@ -159,13 +167,7 @@ namespace gpos.Controllers
             rule.EffectiveDate = form.StartDate?.Date;
             rule.ExpirationDate = form.EndDate?.Date;
             rule.NoExpiration = !form.EndDate.HasValue;
-            rule.MaxDiscountAmount = form.MaxDiscountAmount;
-            rule.ApplicableProductIds = JoinIds(form.ProductIds);
-            rule.ApplicableCategoryIds = JoinIds(form.CategoryIds);
-            rule.UsageLimitType = form.UnlimitedUses ? "Unlimited" : form.UsageLimitType.Trim();
-            rule.MaxRedemptions = form.UnlimitedUses ? null : form.MaxRedemptions;
-            rule.LimitedUseCount = string.Equals(rule.UsageLimitType, "Limited Uses", StringComparison.OrdinalIgnoreCase) ? form.LimitedUseCount : null;
-            rule.Priority = form.Priority;
+            rule.MaxRedemptions = form.UsageLimit!.Value;
             rule.Status = form.Status;
             rule.UpdatedAt = now;
 
@@ -216,11 +218,14 @@ namespace gpos.Controllers
 
         private async Task<VoucherSetupPageViewModel> BuildRulesPageAsync(string? search, VoucherRuleForm? form = null, int? editId = null, string activeModalId = "")
         {
+            await EnsureVoucherRulesHaveCodesAsync();
+
             IQueryable<VoucherRule> query = _db.VoucherRules.AsNoTracking().Include(rule => rule.Voucher);
             var searchText = (search ?? string.Empty).Trim();
             if (!string.IsNullOrWhiteSpace(searchText))
             {
-                query = query.Where(rule => (rule.Voucher != null && rule.Voucher.Code.Contains(searchText))
+                query = query.Where(rule => (rule.Code != null && rule.Code.Contains(searchText))
+                    || (rule.Voucher != null && rule.Voucher.Code.Contains(searchText))
                     || rule.Name.Contains(searchText)
                     || rule.AppliesTo.Contains(searchText)
                     || rule.RewardType.Contains(searchText)
@@ -235,8 +240,6 @@ namespace gpos.Controllers
                 ActiveModalId = activeModalId,
                 VoucherRuleForm = form ?? await BuildVoucherRuleFormAsync(editId),
                 VoucherOptions = await BuildRequiredVoucherOptionsAsync(),
-                ProductOptions = await BuildProductOptionsAsync(),
-                CategoryOptions = await BuildCategoryOptionsAsync(),
                 VoucherRules = await query.OrderBy(rule => rule.Id).ToListAsync()
             };
         }
@@ -250,9 +253,10 @@ namespace gpos.Controllers
         private async Task<VoucherRuleForm> BuildVoucherRuleFormAsync(int? editId)
         {
             var rule = editId.HasValue ? await _db.VoucherRules.AsNoTracking().FirstOrDefaultAsync(item => item.Id == editId.Value) : null;
-            return rule is null ? new VoucherRuleForm() : new VoucherRuleForm
+            return rule is null ? new VoucherRuleForm { Code = await _voucherCodeService.GenerateUniqueVoucherRuleCodeAsync() } : new VoucherRuleForm
             {
                 Id = rule.Id,
+                Code = rule.Code ?? string.Empty,
                 VoucherId = rule.VoucherId ?? 0,
                 AppliesTo = rule.AppliesTo,
                 DiscountType = rule.RewardType,
@@ -261,15 +265,7 @@ namespace gpos.Controllers
                 MemberRequired = rule.MemberRequired == 1,
                 StartDate = rule.EffectiveDate,
                 EndDate = rule.ExpirationDate,
-                MaxDiscountAmount = rule.MaxDiscountAmount,
-                ProductIds = ParseIds(rule.ApplicableProductIds),
-                CategoryIds = ParseIds(rule.ApplicableCategoryIds),
-                NoExpiration = !rule.ExpirationDate.HasValue,
-                UnlimitedUses = string.Equals(rule.UsageLimitType, "Unlimited", StringComparison.OrdinalIgnoreCase),
-                MaxRedemptions = rule.MaxRedemptions,
-                UsageLimitType = rule.UsageLimitType,
-                LimitedUseCount = rule.LimitedUseCount,
-                Priority = rule.Priority,
+                UsageLimit = ResolveUsageLimit(rule),
                 Status = rule.Status
             };
         }
@@ -283,12 +279,66 @@ namespace gpos.Controllers
                 .ToListAsync();
         }
 
-        private async Task<List<SelectListItem>> BuildProductOptionsAsync() => await _db.Products.AsNoTracking().Where(item => item.Status == 1 && item.IsActive).OrderBy(item => item.Name).Select(item => new SelectListItem { Value = item.Id.ToString(), Text = item.Name }).ToListAsync();
-        private async Task<List<SelectListItem>> BuildCategoryOptionsAsync() => await _db.ProductCategories.AsNoTracking().Where(item => item.Status == 1 && item.IsActive).OrderBy(item => item.Name).Select(item => new SelectListItem { Value = item.Id.ToString(), Text = item.Name }).ToListAsync();
+        private async Task EnsureVoucherRulesHaveCodesAsync()
+        {
+            var rulesWithoutCodes = await _db.VoucherRules
+                .Where(rule => rule.Code == null || rule.Code == string.Empty)
+                .OrderBy(rule => rule.Id)
+                .ToListAsync();
+
+            foreach (var rule in rulesWithoutCodes)
+            {
+                rule.Code = await _voucherCodeService.GenerateUniqueVoucherRuleCodeAsync();
+                rule.UpdatedAt = DateTime.UtcNow;
+                await _db.SaveChangesAsync();
+            }
+        }
+
+        private async Task<string> ResolveVoucherRuleCodeAsync(string? requestedCode, int ruleId)
+        {
+            var normalizedCode = NormalizeVoucherRuleCode(requestedCode);
+            if (IsValidVoucherRuleCode(normalizedCode)
+                && !await _db.VoucherRules.AnyAsync(rule => rule.Id != ruleId && rule.Code == normalizedCode))
+            {
+                return normalizedCode;
+            }
+
+            return await _voucherCodeService.GenerateUniqueVoucherRuleCodeAsync();
+        }
 
         private static string NormalizeVoucherCode(string? value)
         {
             return (value ?? string.Empty).Trim().ToUpperInvariant();
+        }
+
+        private static string NormalizeVoucherRuleCode(string? value)
+        {
+            return new string((value ?? string.Empty)
+                .Trim()
+                .ToUpperInvariant()
+                .Where(character => (character >= 'A' && character <= 'Z') || (character >= '0' && character <= '9'))
+                .Take(6)
+                .ToArray());
+        }
+
+        private static bool IsValidVoucherRuleCode(string code)
+        {
+            return code.Length == 6 && code.All(character => (character >= 'A' && character <= 'Z') || (character >= '0' && character <= '9'));
+        }
+
+        private static int ResolveUsageLimit(VoucherRule rule)
+        {
+            if (rule.MaxRedemptions.HasValue && rule.MaxRedemptions.Value > 0)
+            {
+                return rule.MaxRedemptions.Value;
+            }
+
+            if (rule.LimitedUseCount.HasValue && rule.LimitedUseCount.Value > 0)
+            {
+                return rule.LimitedUseCount.Value;
+            }
+
+            return 1;
         }
 
         private static string? NormalizeDiscountRuleAppliesTo(string? appliesTo)
@@ -312,7 +362,5 @@ namespace gpos.Controllers
             };
         }
 
-        private static string? JoinIds(List<int> ids) => ids.Count == 0 ? null : string.Join(",", ids.Distinct().OrderBy(id => id));
-        private static List<int> ParseIds(string? value) => (value ?? string.Empty).Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Select(item => int.TryParse(item, out var id) ? id : 0).Where(id => id > 0).ToList();
     }
 }

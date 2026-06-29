@@ -138,7 +138,7 @@
                     </div>
                     <div id="voucherCodeField">
                         <label class="form-label" for="voucherCode">Voucher Code <span class="text-muted">(Optional)</span></label>
-                        <input class="form-control text-uppercase" id="voucherCode" name="VoucherCode" maxlength="8" placeholder="Optional voucher code" autocomplete="off" />
+                        <input class="form-control text-uppercase" id="voucherCode" name="VoucherCode" maxlength="6" placeholder="Optional voucher code" autocomplete="off" />
                     </div>
                     <div id="pointsPaymentField" hidden>
                         <div class="pos-summary-totals mb-0">
@@ -407,6 +407,8 @@
             let memberFound = false;
             let memberDiscountLookupTimer = 0;
             let memberDiscountLookupToken = 0;
+            let voucherDiscountLookupTimer = 0;
+            let voucherDiscountLookupToken = 0;
             let saleCompleted = false;
             let cartEditDraft = [];
 
@@ -710,12 +712,14 @@
                     showDisplayStockWarning();
                     updateTotal();
                     queueMemberDiscountLookup();
+                    queueVoucherDiscountLookup();
                     return;
                 }
 
                 input.value = nextQuantity;
                 updateTotal();
                 queueMemberDiscountLookup();
+                queueVoucherDiscountLookup();
             }
 
             function productInputByDisplayStockId(displayStockId) {
@@ -751,6 +755,7 @@
                 fuelLitersInput.value = "";
                 updateTotal();
                 queueMemberDiscountLookup();
+                queueVoucherDiscountLookup();
             }
 
             function removeFuelFromCart(id) {
@@ -760,6 +765,7 @@
                     fuelCart.splice(index, 1);
                     updateTotal();
                     queueMemberDiscountLookup();
+                    queueVoucherDiscountLookup();
                 }
             }
 
@@ -912,6 +918,7 @@
 
                 updateTotal();
                 queueMemberDiscountLookup();
+                queueVoucherDiscountLookup();
 
                 if (window.bootstrap) {
                     bootstrap.Modal.getInstance(cartEditModalElement)?.hide();
@@ -956,7 +963,9 @@
                     memberDiscountAmount = 0;
                     memberPoints = 0;
                     memberFound = false;
+                    voucherDiscountAmount = 0;
                     updateTotal();
+                    queueVoucherDiscountLookup();
                     return;
                 }
 
@@ -982,6 +991,7 @@
                         ? Math.max(0, Number.parseFloat(result.discountAmount) || 0)
                         : 0;
                     voucherDiscountAmount = 0;
+                    queueVoucherDiscountLookup();
                 } catch {
                     if (lookupToken === memberDiscountLookupToken) {
                         memberDiscountAmount = 0;
@@ -999,6 +1009,50 @@
                 memberDiscountLookupTimer = window.setTimeout(loadMemberDiscount, 250);
             }
 
+            async function loadVoucherDiscount() {
+                const lookupToken = voucherDiscountLookupToken + 1;
+                voucherDiscountLookupToken = lookupToken;
+
+                if (isPointsPayment() || !voucherCode() || totalAmount() <= 0) {
+                    voucherDiscountAmount = 0;
+                    updateTotal();
+                    return;
+                }
+
+                const query = new URLSearchParams({
+                    voucherCode: voucherCode(),
+                    membershipCardNo: membershipCardNoInput.value.trim(),
+                    productTotal: productTotalAmount().toString(),
+                    fuelTotal: fuelTotalAmount().toString()
+                });
+
+                try {
+                    const response = await fetch(`/Transaction/VoucherDiscount?${query.toString()}`, {
+                        headers: { "Accept": "application/json" }
+                    });
+                    const result = await response.json();
+
+                    if (lookupToken !== voucherDiscountLookupToken) {
+                        return;
+                    }
+
+                    voucherDiscountAmount = response.ok && result.success
+                        ? Math.max(0, Number.parseFloat(result.discountAmount) || 0)
+                        : 0;
+                } catch {
+                    if (lookupToken === voucherDiscountLookupToken) {
+                        voucherDiscountAmount = 0;
+                    }
+                }
+
+                updateTotal();
+            }
+
+            function queueVoucherDiscountLookup() {
+                window.clearTimeout(voucherDiscountLookupTimer);
+                voucherDiscountLookupTimer = window.setTimeout(loadVoucherDiscount, 250);
+            }
+
             function updatePaymentFields() {
                 const pointsPayment = isPointsPayment();
                 cashPaymentField.hidden = pointsPayment;
@@ -1011,10 +1065,12 @@
                     voucherCodeInput.value = "";
                     memberDiscountAmount = 0;
                     voucherDiscountAmount = 0;
+                    voucherDiscountLookupToken += 1;
                 }
 
                 updateTotal();
                 queueMemberDiscountLookup();
+                queueVoucherDiscountLookup();
             }
 
             function renderReceipt() {
@@ -1279,6 +1335,7 @@
                     input.value = wholeQuantity(input.value);
                     updateTotal();
                     queueMemberDiscountLookup();
+                    queueVoucherDiscountLookup();
                 });
             });
             fuelAmountInput.addEventListener("input", () => {
@@ -1333,11 +1390,12 @@
             });
             membershipCardNoInput.addEventListener("input", () => {
                 queueMemberDiscountLookup();
+                queueVoucherDiscountLookup();
             });
             voucherCodeInput.addEventListener("input", () => {
-                voucherCodeInput.value = voucherCodeInput.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8);
+                voucherCodeInput.value = voucherCodeInput.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 6);
                 voucherDiscountAmount = 0;
-                queueMemberDiscountLookup();
+                queueVoucherDiscountLookup();
                 updateTotal();
             });
             paymentMethodSelect.addEventListener("change", updatePaymentFields);

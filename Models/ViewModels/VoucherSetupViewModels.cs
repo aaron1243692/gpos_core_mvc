@@ -18,6 +18,7 @@ namespace gpos.Models.ViewModels
     public class VoucherRuleForm
     {
         public int Id { get; set; }
+        public string Code { get; set; } = string.Empty;
 
         [Range(1, int.MaxValue, ErrorMessage = "Voucher is required.")]
         public int VoucherId { get; set; }
@@ -43,25 +44,9 @@ namespace gpos.Models.ViewModels
         [DataType(DataType.Date)]
         public DateTime? EndDate { get; set; }
 
-        [Range(0, double.MaxValue, ErrorMessage = "Maximum discount cannot be negative.")]
-        public decimal? MaxDiscountAmount { get; set; }
-
-        public List<int> ProductIds { get; set; } = new();
-        public List<int> CategoryIds { get; set; } = new();
-
-        public bool NoExpiration { get; set; }
-        public bool UnlimitedUses { get; set; }
-
-        [Range(1, int.MaxValue, ErrorMessage = "Maximum redemptions must be at least 1.")]
-        public int? MaxRedemptions { get; set; }
-
         [Required(ErrorMessage = "Usage Limit is required.")]
-        public string UsageLimitType { get; set; } = "Once Per Voucher";
-
-        [Range(1, int.MaxValue, ErrorMessage = "Limited use count must be at least 1.")]
-        public int? LimitedUseCount { get; set; }
-
-        public int Priority { get; set; }
+        [Range(1, int.MaxValue, ErrorMessage = "Usage Limit must be at least 1.")]
+        public int? UsageLimit { get; set; } = 1;
 
         [Range(0, 1, ErrorMessage = "Status is required.")]
         public int Status { get; set; } = 1;
@@ -76,7 +61,5 @@ namespace gpos.Models.ViewModels
         public List<Voucher> Vouchers { get; set; } = new();
         public List<VoucherRule> VoucherRules { get; set; } = new();
         public List<SelectListItem> VoucherOptions { get; set; } = new();
-        public List<SelectListItem> ProductOptions { get; set; } = new();
-        public List<SelectListItem> CategoryOptions { get; set; } = new();
     }
 }
