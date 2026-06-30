@@ -74,6 +74,22 @@ namespace gpos.Controllers
             return RedirectToAction(nameof(Index), new { search });
         }
 
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Activate(int id, string? search)
+        {
+            var supplier = await _db.Suppliers.FindAsync(id);
+            if (supplier is not null)
+            {
+                supplier.Status = 1;
+                supplier.UpdatedAt = DateTime.UtcNow;
+                TempData["SupplierFeedback"] = "Supplier activated.";
+                await _db.SaveChangesAsync();
+            }
+            return RedirectToAction(nameof(Index), new { search });
+        }
+
+
         private async Task<SupplierPageViewModel> BuildSuppliersPageAsync(string? search, SupplierForm? form = null, int? editId = null, string activeModalId = "")
         {
             IQueryable<Supplier> query = _db.Suppliers.AsNoTracking();

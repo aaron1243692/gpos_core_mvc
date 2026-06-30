@@ -72,12 +72,24 @@
                             <div class="table-actions employee-action-buttons">
                                 <a class="btn btn-sm btn-outline-primary" asp-action="Index" asp-route-editId="@Model.EmployeeAccounts[i].Id" asp-route-search="@Model.Search">Edit</a>
                                 <a class="btn btn-sm btn-outline-success" asp-action="Index" asp-route-resetPasswordId="@Model.EmployeeAccounts[i].Id" asp-route-search="@Model.Search">Reset Password</a>
-                                <form asp-action="Delete" method="post" onsubmit="return confirm('Disable this employee?');">
+                                @if (Model.EmployeeAccounts[i].Status == 1)
+                                {
+                                    <form asp-action="Delete" method="post" onsubmit="return confirm('Are you sure you want to disable this employee?');">
                                     @Html.AntiForgeryToken()
                                     <input name="id" type="hidden" value="@Model.EmployeeAccounts[i].Id" />
                                     <input name="search" type="hidden" value="@Model.Search" />
-                                    <button class="btn btn-sm btn-outline-danger" type="submit">Delete</button>
+                                    <button class="btn btn-sm btn-outline-danger" type="submit">Disable</button>
                                 </form>
+                                }
+                                @if (!(Model.EmployeeAccounts[i].Status == 1))
+                                {
+                                    <form asp-action="Activate" method="post" onsubmit="return confirm('Are you sure you want to activate this employee?');">
+                                    @Html.AntiForgeryToken()
+                                    <input name="id" type="hidden" value="@Model.EmployeeAccounts[i].Id" />
+                                    <input name="search" type="hidden" value="@Model.Search" />
+                                    <button class="btn btn-sm btn-outline-success" type="submit">Activate</button>
+                                </form>
+                                }
                             </div>
                         </td>
                     </tr>

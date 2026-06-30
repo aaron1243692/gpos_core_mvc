@@ -181,6 +181,21 @@ namespace gpos.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ActivateProductUnit(int id, string? search)
+        {
+            var unit = await _db.ProductUnits.FindAsync(id);
+            if (unit is not null)
+            {
+                unit.Status = 1;
+                unit.UpdatedAt = DateTime.UtcNow;
+                await _db.SaveChangesAsync();
+            }
+            return RedirectToAction(nameof(ProductUnits), new { search });
+        }
+
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> SaveProductBatch([Bind(Prefix = "ProductBatchForm")] ProductBatchForm form, string? search)
         {
             if (!ModelState.IsValid)
@@ -235,6 +250,22 @@ namespace gpos.Controllers
             }
             return RedirectToAction(nameof(ProductBatches), new { search });
         }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ActivateProductBatch(int id, string? search)
+        {
+            var batch = await _db.ProductBatches.FindAsync(id);
+            if (batch is not null)
+            {
+                batch.Status = 1;
+                batch.IsActive = true;
+                batch.UpdatedAt = DateTime.UtcNow;
+                await _db.SaveChangesAsync();
+            }
+            return RedirectToAction(nameof(ProductBatches), new { search });
+        }
+
 
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -331,6 +362,21 @@ namespace gpos.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ActivateLowStockSetting(int id, string? search)
+        {
+            var setting = await _db.LowStockSettings.FindAsync(id);
+            if (setting is not null)
+            {
+                setting.Status = 1;
+                setting.UpdatedAt = DateTime.UtcNow;
+                await _db.SaveChangesAsync();
+            }
+            return RedirectToAction(nameof(LowStockSettings), new { search });
+        }
+
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> SaveNozzle([Bind(Prefix = "NozzleForm")] NozzleForm form, string? search)
         {
             if (!ModelState.IsValid)
@@ -363,6 +409,21 @@ namespace gpos.Controllers
             }
             return RedirectToAction(nameof(Nozzles), new { search });
         }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ActivateNozzle(int id, string? search)
+        {
+            var nozzle = await _db.Nozzles.FindAsync(id);
+            if (nozzle is not null)
+            {
+                nozzle.Status = 1;
+                nozzle.UpdatedAt = DateTime.UtcNow;
+                await _db.SaveChangesAsync();
+            }
+            return RedirectToAction(nameof(Nozzles), new { search });
+        }
+
 
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -699,6 +760,21 @@ namespace gpos.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ActivateDiscountRule(int id, string? search)
+        {
+            var rule = await _db.DiscountRules.FindAsync(id);
+            if (rule is not null)
+            {
+                rule.Status = 1;
+                rule.UpdatedAt = DateTime.UtcNow;
+                await _db.SaveChangesAsync();
+            }
+            return RedirectToAction(nameof(DiscountRules), new { search });
+        }
+
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> SaveEarningRule([Bind(Prefix = "EarningRuleForm")] EarningRuleForm form, string? search)
         {
             var earnType = NormalizeEarningRuleType(form.EarnType);
@@ -777,6 +853,21 @@ namespace gpos.Controllers
             }
             return RedirectToAction(nameof(EarningRules), new { search });
         }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ActivateEarningRule(int id, string? search)
+        {
+            var rule = await _db.EarningRules.FindAsync(id);
+            if (rule is not null)
+            {
+                rule.Status = 1;
+                rule.UpdatedAt = DateTime.UtcNow;
+                await _db.SaveChangesAsync();
+            }
+            return RedirectToAction(nameof(EarningRules), new { search });
+        }
+
 
         [HttpPost]
         [ValidateAntiForgeryToken]

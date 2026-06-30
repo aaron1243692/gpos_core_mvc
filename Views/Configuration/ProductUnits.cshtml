@@ -27,7 +27,14 @@
                     <tr>
                         <td class="col-no">@(i + 1)</td><td class="col-id">@Model.ProductUnits[i].Id</td><td>@Model.ProductUnits[i].Name</td><td>@Model.ProductUnits[i].Abbreviation</td>
                         <td><span class="badge @(Model.ProductUnits[i].Status == 1 ? "text-bg-success" : "text-bg-secondary")">@(Model.ProductUnits[i].Status == 1 ? "Active" : "Disabled")</span></td>
-                        <td class="col-action"><div class="setup-row-actions"><a class="btn btn-sm btn-outline-primary" asp-action="ProductUnits" asp-route-editId="@Model.ProductUnits[i].Id" asp-route-search="@Model.Search">Edit</a><form asp-action="DeleteProductUnit" method="post" onsubmit="return confirm('Disable this unit?');">@Html.AntiForgeryToken()<input name="id" type="hidden" value="@Model.ProductUnits[i].Id" /><input name="search" type="hidden" value="@Model.Search" /><button class="btn btn-sm btn-outline-danger" type="submit">Delete</button></form></div></td>
+                        <td class="col-action"><div class="setup-row-actions"><a class="btn btn-sm btn-outline-primary" asp-action="ProductUnits" asp-route-editId="@Model.ProductUnits[i].Id" asp-route-search="@Model.Search">Edit</a>@if (Model.ProductUnits[i].Status == 1)
+                                {
+                                    <form asp-action="DeleteProductUnit" method="post" onsubmit="return confirm('Are you sure you want to disable this unit?');">@Html.AntiForgeryToken()<input name="id" type="hidden" value="@Model.ProductUnits[i].Id" /><input name="search" type="hidden" value="@Model.Search" /><button class="btn btn-sm btn-outline-danger" type="submit">Disable</button></form>
+                                }
+                                @if (!(Model.ProductUnits[i].Status == 1))
+                                {
+                                    <form asp-action="ActivateProductUnit" method="post" onsubmit="return confirm('Are you sure you want to activate this unit?');">@Html.AntiForgeryToken()<input name="id" type="hidden" value="@Model.ProductUnits[i].Id" /><input name="search" type="hidden" value="@Model.Search" /><button class="btn btn-sm btn-outline-success" type="submit">Activate</button></form>
+                                }</div></td>
                     </tr>
                 }
             </tbody>

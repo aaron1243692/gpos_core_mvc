@@ -62,11 +62,11 @@
                         <td>
                             <div class="setup-row-actions">
                                 <a class="btn btn-sm btn-outline-primary" asp-action="Position" asp-route-editId="@Model.Positions[i].Id" asp-route-search="@Model.Search">Edit</a>
-                                <form asp-action="DeletePosition" method="post" onsubmit="return confirm('Delete or disable this position?');">
+                                <form asp-action="DeletePosition" method="post" onsubmit="return confirm('Are you sure you want to disable this position?');">
                                     @Html.AntiForgeryToken()
                                     <input name="id" type="hidden" value="@Model.Positions[i].Id" />
                                     <input name="search" type="hidden" value="@Model.Search" />
-                                    <button class="btn btn-sm btn-outline-danger" type="submit">Delete</button>
+                                    <button class="btn btn-sm btn-outline-danger" type="submit">Disable</button>
                                 </form>
                             </div>
                         </td>

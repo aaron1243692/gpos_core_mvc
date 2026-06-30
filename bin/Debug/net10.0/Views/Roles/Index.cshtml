@@ -32,6 +32,7 @@
                 <col class="col-no" />
                 <col class="col-id" />
                 <col class="col-name" />
+                <col class="col-status" />
                 <col class="col-action" />
             </colgroup>
             <thead>
@@ -39,13 +40,14 @@
                     <th class="col-no">No</th>
                     <th class="col-id">ID</th>
                     <th class="col-name">Name</th>
+                    <th class="col-status">Status</th>
                     <th class="col-action">Action</th>
                 </tr>
             </thead>
             <tbody>
                 @if (Model.Roles.Count == 0)
                 {
-                    <tr><td class="text-center text-muted fw-bold" colspan="4">No roles found.</td></tr>
+                    <tr><td class="text-center text-muted fw-bold" colspan="5">No roles found.</td></tr>
                 }
                 @for (var i = 0; i < Model.Roles.Count; i++)
                 {
@@ -53,11 +55,23 @@
                         <td class="col-no">@(i + 1)</td>
                         <td class="col-id">@Model.Roles[i].Id</td>
                         <td>@Model.Roles[i].Name</td>
+                        <td><span class="badge @(Model.Roles[i].Status == 1 ? "text-bg-success" : "text-bg-secondary")">@(Model.Roles[i].Status == 1 ? "Active" : "Disabled")</span></td>
                         <td class="col-action">
                             <div class="setup-row-actions">
                                 <a class="btn btn-sm btn-outline-primary" asp-action="Index" asp-route-editId="@Model.Roles[i].Id" asp-route-search="@Model.Search">Edit</a>
-                                <button class="btn btn-sm btn-outline-success role-permissions-button" type="button" data-role-id="@Model.Roles[i].Id" data-role-name="@Model.Roles[i].Name">Permissions</button>
-                                <button class="btn btn-sm btn-outline-danger role-delete-button" type="button" data-role-id="@Model.Roles[i].Id" data-role-name="@Model.Roles[i].Name" data-bs-toggle="modal" data-bs-target="#deleteRoleModal">Delete</button>
+                                @if (Model.Roles[i].Status == 1)
+                                {
+                                    <button class="btn btn-sm btn-outline-danger role-delete-button" type="button" data-role-id="@Model.Roles[i].Id" data-role-name="@Model.Roles[i].Name" data-bs-toggle="modal" data-bs-target="#deleteRoleModal">Disable</button>
+                                }
+                                @if (Model.Roles[i].Status != 1)
+                                {
+                                    <form asp-action="Activate" method="post" onsubmit="return confirm('Are you sure you want to activate this role?');">
+                                        @Html.AntiForgeryToken()
+                                        <input name="id" type="hidden" value="@Model.Roles[i].Id" />
+                                        <input name="search" type="hidden" value="@Model.Search" />
+                                        <button class="btn btn-sm btn-outline-success" type="submit">Activate</button>
+                                    </form>
+                                }
                             </div>
                         </td>
                     </tr>
@@ -94,34 +108,6 @@
     </div>
 </div>
 
-<div class="modal fade" id="permissionsModal" tabindex="-1" aria-labelledby="permissionsModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
-        <div class="modal-content">
-            <form id="permissionsForm">
-                @Html.AntiForgeryToken()
-                <input id="permissionsRoleId" type="hidden" />
-                <div class="modal-header">
-                    <div>
-                        <h2 class="modal-title fs-5" id="permissionsModalLabel">Modify Permissions</h2>
-                        <p class="text-muted mb-0 small">Select the actions this role can access.</p>
-                    </div>
-                    <button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <div id="permissionsFeedback" class="alert d-none" role="alert"></div>
-                    <div id="permissionsCardList" class="role-permissions-grid">
-                        <div class="text-muted">Loading permissions...</div>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button>
-                    <button class="btn btn-primary" type="submit">Save Permissions</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
 <div class="modal fade" id="deleteRoleModal" tabindex="-1" aria-labelledby="deleteRoleModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
@@ -130,15 +116,15 @@
                 <input id="deleteRoleId" name="id" type="hidden" />
                 <input name="search" type="hidden" value="@Model.Search" />
                 <div class="modal-header">
-                    <h2 class="modal-title fs-5" id="deleteRoleModalLabel">Delete Role</h2>
+                    <h2 class="modal-title fs-5" id="deleteRoleModalLabel">Disable Role</h2>
                     <button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <p class="mb-0">Disable <strong id="deleteRoleName">this role</strong>?</p>
+                    <p class="mb-0">Are you sure you want to disable <strong id="deleteRoleName">this role</strong>?</p>
                 </div>
                 <div class="modal-footer">
                     <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button>
-                    <button class="btn btn-danger" type="submit">Delete</button>
+                    <button class="btn btn-danger" type="submit">Disable</button>
                 </div>
             </form>
         </div>
@@ -147,137 +133,13 @@
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
-    <style>
-        .role-permissions-grid {
-            display: grid;
-            gap: 1rem;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-        }
-
-        .role-permission-card {
-            border: 1px solid #dcefe3;
-            border-radius: 0.75rem;
-            padding: 1rem;
-            background: #fbfefc;
-        }
-
-        .role-permission-parent {
-            font-weight: 700;
-            color: #14532d;
-        }
-
-        .role-permission-children {
-            display: flex;
-            flex-direction: column;
-            gap: 0.5rem;
-            margin-top: 0.75rem;
-            padding-left: 1.5rem;
-        }
-
-        @@media (max-width: 767.98px) {
-            .role-permissions-grid {
-                grid-template-columns: 1fr;
-            }
-        }
-    </style>
     <script>
         document.addEventListener("DOMContentLoaded", () => {
             const modalId = "@Model.ActiveModalId";
             const modalElement = modalId ? document.getElementById(modalId) : null;
-            const permissionsModalElement = document.getElementById("permissionsModal");
-            const permissionsModal = permissionsModalElement && window.bootstrap
-                ? bootstrap.Modal.getOrCreateInstance(permissionsModalElement)
-                : null;
-            const permissionsForm = document.getElementById("permissionsForm");
-            const permissionsRoleId = document.getElementById("permissionsRoleId");
-            const permissionsModalLabel = document.getElementById("permissionsModalLabel");
-            const permissionsCardList = document.getElementById("permissionsCardList");
-            const permissionsFeedback = document.getElementById("permissionsFeedback");
-            const tokenInput = permissionsForm.querySelector("input[name='__RequestVerificationToken']");
 
             if (modalElement && window.bootstrap) {
                 bootstrap.Modal.getOrCreateInstance(modalElement).show();
-            }
-
-            function escapeHtml(value) {
-                return String(value || "")
-                    .replaceAll("&", "&amp;")
-                    .replaceAll("<", "&lt;")
-                    .replaceAll(">", "&gt;")
-                    .replaceAll('"', "&quot;")
-                    .replaceAll("'", "&#039;");
-            }
-
-            function showPermissionsFeedback(message, tone) {
-                permissionsFeedback.textContent = message;
-                permissionsFeedback.className = `alert ${tone === "error" ? "alert-danger" : "alert-success"}`;
-            }
-
-            function hidePermissionsFeedback() {
-                permissionsFeedback.textContent = "";
-                permissionsFeedback.className = "alert d-none";
-            }
-
-            function setPermissionsLoading(message) {
-                permissionsCardList.innerHTML = `<div class="text-muted">${escapeHtml(message)}</div>`;
-            }
-
-            function renderPermissionCards(permissions) {
-                if (!permissions.length) {
-                    setPermissionsLoading("No permissions available.");
-                    return;
-                }
-
-                permissionsCardList.innerHTML = permissions.map((permission) => {
-                    const children = permission.children || [];
-                    const childrenMarkup = children.length
-                        ? children.map((child) => `
-                            <label class="form-check role-permission-child-row">
-                                <input class="form-check-input permission-child" type="checkbox" value="${child.id}" data-parent-id="${permission.id}" ${child.checked ? "checked" : ""} />
-                                <span class="form-check-label">${escapeHtml(child.name)}</span>
-                            </label>
-                        `).join("")
-                        : `<p class="text-muted small mb-0">No child permissions.</p>`;
-
-                    return `
-                        <section class="role-permission-card">
-                            <label class="form-check role-permission-parent">
-                                <input class="form-check-input permission-parent" type="checkbox" value="${permission.id}" ${permission.checked ? "checked" : ""} />
-                                <span class="form-check-label">${escapeHtml(permission.name)}</span>
-                            </label>
-                            <div class="role-permission-children">
-                                ${childrenMarkup}
-                            </div>
-                        </section>
-                    `;
-                }).join("");
-            }
-
-            async function loadPermissions(roleId, roleName) {
-                permissionsRoleId.value = roleId;
-                permissionsModalLabel.textContent = `Modify Permissions: ${roleName}`;
-                hidePermissionsFeedback();
-                setPermissionsLoading("Loading permissions...");
-
-                if (permissionsModal) {
-                    permissionsModal.show();
-                }
-
-                try {
-                    const response = await fetch(`/Roles/${roleId}/Permissions`, {
-                        headers: { "Accept": "application/json" }
-                    });
-                    const payload = await response.json();
-
-                    if (!response.ok || !payload.success) {
-                        throw new Error(payload.message || "Failed to load permissions.");
-                    }
-
-                    renderPermissionCards(payload.permissions || []);
-                } catch (error) {
-                    setPermissionsLoading("Failed to load permissions.");
-                    showPermissionsFeedback(error.message || "Failed to load permissions.", "error");
-                }
             }
 
             document.querySelectorAll(".role-delete-button").forEach((button) => {
@@ -285,71 +147,6 @@
                     document.getElementById("deleteRoleId").value = button.dataset.roleId || "";
                     document.getElementById("deleteRoleName").textContent = button.dataset.roleName || "this role";
                 });
-            });
-
-            document.querySelectorAll(".role-permissions-button").forEach((button) => {
-                button.addEventListener("click", () => {
-                    loadPermissions(button.dataset.roleId || "", button.dataset.roleName || "Role");
-                });
-            });
-
-            permissionsCardList.addEventListener("change", (event) => {
-                const parentCheckbox = event.target.closest(".permission-parent");
-
-                if (parentCheckbox) {
-                    const card = parentCheckbox.closest(".role-permission-card");
-                    card.querySelectorAll(".permission-child").forEach((checkbox) => {
-                        checkbox.checked = parentCheckbox.checked;
-                    });
-                    return;
-                }
-
-                const childCheckbox = event.target.closest(".permission-child");
-
-                if (!childCheckbox) {
-                    return;
-                }
-
-                const card = childCheckbox.closest(".role-permission-card");
-                const parent = card.querySelector(".permission-parent");
-                const children = Array.from(card.querySelectorAll(".permission-child"));
-                parent.checked = children.some((checkbox) => checkbox.checked);
-            });
-
-            permissionsForm.addEventListener("submit", async (event) => {
-                event.preventDefault();
-                hidePermissionsFeedback();
-
-                const roleId = permissionsRoleId.value;
-                const formData = new FormData();
-
-                formData.append("__RequestVerificationToken", tokenInput.value);
-                permissionsCardList.querySelectorAll("input[type='checkbox']:checked").forEach((checkbox) => {
-                    formData.append("permissionIds", checkbox.value);
-                });
-
-                try {
-                    const response = await fetch(`/Roles/${roleId}/Permissions`, {
-                        method: "POST",
-                        headers: { "Accept": "application/json" },
-                        body: formData
-                    });
-                    const payload = await response.json();
-
-                    if (!response.ok || !payload.success) {
-                        throw new Error(payload.message || "Failed to save permissions.");
-                    }
-
-                    showPermissionsFeedback(payload.message || "Permissions saved successfully.", "success");
-
-                    window.setTimeout(() => {
-                        if (permissionsModal) {
-                            permissionsModal.hide();
-                        }
-                    }, 700);
-                } catch (error) {
-                    showPermissionsFeedback(error.message || "Failed to save permissions.", "error");
-                }
             });
         });
     </script>

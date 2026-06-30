@@ -146,6 +146,22 @@ namespace gpos.Controllers
             return RedirectToAction(nameof(Index), new { search });
         }
 
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Activate(int id, string? search)
+        {
+            var account = await _db.EmployeeAccounts.FindAsync(id);
+            if (account is not null)
+            {
+                account.Status = 1;
+                account.UpdatedAt = DateTime.UtcNow;
+                TempData["EmployeeSetupFeedback"] = "Employee activated.";
+                await _db.SaveChangesAsync();
+            }
+            return RedirectToAction(nameof(Index), new { search });
+        }
+
+
         private async Task<EmployeeSetupPageViewModel> BuildEmployeesPageAsync(
             string? search,
             EmployeeForm? form = null,

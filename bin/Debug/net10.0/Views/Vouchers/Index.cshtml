@@ -89,7 +89,19 @@
                         <td class="col-action">
                             <div class="setup-row-actions">
                                 <a class="btn btn-sm btn-outline-primary" asp-action="Index" asp-route-editId="@rule.Id" asp-route-search="@Model.Search">Edit</a>
-                                <button class="btn btn-sm btn-outline-danger voucher-delete-button" type="button" data-bs-toggle="modal" data-bs-target="#voucherDeleteModal" data-voucher-id="@rule.Id" data-voucher-name="@rule.Name">Delete</button>
+                                @if (rule.Status == 1)
+                                {
+                                    <button class="btn btn-sm btn-outline-danger voucher-delete-button" type="button" data-bs-toggle="modal" data-bs-target="#voucherDeleteModal" data-voucher-id="@rule.Id" data-voucher-name="@rule.Name">Disable</button>
+                                }
+                                @if (rule.Status != 1)
+                                {
+                                    <form asp-action="ActivateVoucher" method="post" onsubmit="return confirm('Are you sure you want to activate this voucher?');">
+                                        @Html.AntiForgeryToken()
+                                        <input name="id" type="hidden" value="@rule.Id" />
+                                        <input name="search" type="hidden" value="@Model.Search" />
+                                        <button class="btn btn-sm btn-outline-success" type="submit">Activate</button>
+                                    </form>
+                                }
                             </div>
                         </td>
                     </tr>
@@ -196,7 +208,7 @@
                 <input id="voucherDeleteId" name="id" type="hidden" />
                 <input name="search" type="hidden" value="@Model.Search" />
                 <div class="modal-header">
-                    <h2 class="modal-title fs-5">Delete Voucher</h2>
+                    <h2 class="modal-title fs-5">Disable Voucher</h2>
                     <button class="btn-close" type="button" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
@@ -205,7 +217,7 @@
                 </div>
                 <div class="modal-footer">
                     <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button>
-                    <button class="btn btn-danger" type="submit">Delete</button>
+                    <button class="btn btn-danger" type="submit">Disable</button>
                 </div>
             </form>
         </div>

@@ -83,12 +83,24 @@
                         <td class="col-action">
                             <div class="setup-row-actions">
                                 <a class="btn btn-sm btn-outline-primary" asp-action="Members" asp-route-editId="@Model.Members[i].Id" asp-route-search="@Model.Search">Edit</a>
-                                <form asp-action="DeleteMember" method="post" onsubmit="return confirm('Disable this member?');">
+                                @if (Model.Members[i].Status == 1)
+                                {
+                                    <form asp-action="DeleteMember" method="post" onsubmit="return confirm('Are you sure you want to disable this member?');">
                                     @Html.AntiForgeryToken()
                                     <input name="id" type="hidden" value="@Model.Members[i].Id" />
                                     <input name="search" type="hidden" value="@Model.Search" />
-                                    <button class="btn btn-sm btn-outline-danger" type="submit">Delete</button>
+                                    <button class="btn btn-sm btn-outline-danger" type="submit">Disable</button>
                                 </form>
+                                }
+                                @if (!(Model.Members[i].Status == 1))
+                                {
+                                    <form asp-action="ActivateMember" method="post" onsubmit="return confirm('Are you sure you want to activate this member?');">
+                                    @Html.AntiForgeryToken()
+                                    <input name="id" type="hidden" value="@Model.Members[i].Id" />
+                                    <input name="search" type="hidden" value="@Model.Search" />
+                                    <button class="btn btn-sm btn-outline-success" type="submit">Activate</button>
+                                </form>
+                                }
                             </div>
                         </td>
                     </tr>

@@ -177,11 +177,26 @@ namespace gpos.Controllers
             return RedirectToAction(nameof(Index), new { search });
         }
 
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Activate(int id, string? search)
+        {
+            var role = await _db.Roles.FindAsync(id);
+            if (role is not null)
+            {
+                role.Status = 1;
+                role.UpdatedAt = DateTime.UtcNow;
+                TempData["RolesFeedback"] = "Role activated.";
+                await _db.SaveChangesAsync();
+            }
+            return RedirectToAction(nameof(Index), new { search });
+        }
+
+
         private async Task<RolesPageViewModel> BuildRolesPageAsync(string? search, RoleForm? form = null, int? editId = null, string activeModalId = "")
         {
             IQueryable<Role> query = _db.Roles
-                .AsNoTracking()
-                .Where(role => role.Status == 1);
+                .AsNoTracking();
             var searchText = (search ?? string.Empty).Trim();
 
             if (!string.IsNullOrWhiteSpace(searchText))
@@ -201,7 +216,7 @@ namespace gpos.Controllers
         private async Task<RoleForm> BuildRoleFormAsync(int? editId)
         {
             var role = editId.HasValue
-                ? await _db.Roles.AsNoTracking().FirstOrDefaultAsync(item => item.Id == editId.Value && item.Status == 1)
+                ? await _db.Roles.AsNoTracking().FirstOrDefaultAsync(item => item.Id == editId.Value)
                 : null;
 
             return role is null ? new RoleForm() : new RoleForm

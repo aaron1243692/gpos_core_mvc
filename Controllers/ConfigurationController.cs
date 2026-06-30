@@ -181,6 +181,22 @@ namespace gpos.Controllers
             return RedirectToAction(nameof(ProductCategories), new { search });
         }
 
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ActivateProductCategory(int id, string? search)
+        {
+            var category = await _db.ProductCategories.FindAsync(id);
+            if (category is not null)
+            {
+                category.IsActive = true;
+                category.Status = 1;
+                category.UpdatedAt = DateTime.UtcNow;
+                await _db.SaveChangesAsync();
+            }
+            return RedirectToAction(nameof(ProductCategories), new { search });
+        }
+
+
         public IActionResult ItemUnits() => View();
         public IActionResult FuelTypes() => View();
         public IActionResult FuelPrices() => View();
@@ -249,6 +265,22 @@ namespace gpos.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ActivateDiscount(int id, string? search)
+        {
+            var discount = await _db.Discounts.FindAsync(id);
+            if (discount is not null)
+            {
+                discount.Status = 1;
+                discount.UpdatedAt = DateTime.UtcNow;
+                TempData["DiscountSetupFeedback"] = "Discount activated.";
+                await _db.SaveChangesAsync();
+            }
+            return RedirectToAction(nameof(Discounts), new { search });
+        }
+
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> SaveEarnings([Bind(Prefix = "EarningsForm")] EarningsForm form, string? search)
         {
             if (!ModelState.IsValid)
@@ -303,6 +335,22 @@ namespace gpos.Controllers
 
             return RedirectToAction(nameof(Earnings), new { search });
         }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ActivateEarnings(int id, string? search)
+        {
+            var earnings = await _db.Earnings.FindAsync(id);
+            if (earnings is not null)
+            {
+                earnings.Status = 1;
+                earnings.UpdatedAt = DateTime.UtcNow;
+                TempData["DiscountSetupFeedback"] = "Earnings activated.";
+                await _db.SaveChangesAsync();
+            }
+            return RedirectToAction(nameof(Earnings), new { search });
+        }
+
 
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -402,6 +450,22 @@ namespace gpos.Controllers
             return RedirectToAction(nameof(Members), new { search });
         }
 
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ActivateMember(int id, string? search)
+        {
+            var member = await _db.Members.FindAsync(id);
+            if (member is not null)
+            {
+                member.Status = 1;
+                member.UpdatedAt = DateTime.UtcNow;
+                TempData["DiscountSetupFeedback"] = "Member activated.";
+                await _db.SaveChangesAsync();
+            }
+            return RedirectToAction(nameof(Members), new { search });
+        }
+
+
         [NonAction]
         public async Task<IActionResult> Position(string? search, int? editId)
         {
@@ -480,6 +544,22 @@ namespace gpos.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ActivateBranch(int id, string? search)
+        {
+            var branch = await _db.Branches.FindAsync(id);
+            if (branch is not null)
+            {
+                branch.Status = 1;
+                branch.UpdatedAt = DateTime.UtcNow;
+                TempData["ConfigSetupFeedback"] = "Branch activated.";
+                await _db.SaveChangesAsync();
+            }
+            return RedirectToAction(nameof(Branch), new { search });
+        }
+
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> SaveDepartment([Bind(Prefix = "DepartmentForm")] DepartmentForm form, string? search)
         {
             if (!ModelState.IsValid)
@@ -549,6 +629,22 @@ namespace gpos.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ActivateDepartment(int id, string? search)
+        {
+            var department = await _db.Departments.FindAsync(id);
+            if (department is not null)
+            {
+                department.Status = 1;
+                department.UpdatedAt = DateTime.UtcNow;
+                TempData["ConfigSetupFeedback"] = "Department activated.";
+                await _db.SaveChangesAsync();
+            }
+            return RedirectToAction(nameof(Department), new { search });
+        }
+
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
         [NonAction]
         public async Task<IActionResult> SavePosition([Bind(Prefix = "PositionForm")] PositionForm form, string? search)
         {
@@ -597,6 +693,10 @@ namespace gpos.Controllers
 
             return RedirectToAction(nameof(Position), new { search });
         }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+
 
         public async Task<IActionResult> Fuels(string? search, int? editId)
         {
@@ -667,6 +767,23 @@ namespace gpos.Controllers
             return RedirectToAction(nameof(Fuels), new { search });
         }
 
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ActivateFuel(int id, string? search)
+        {
+            var fuel = await _db.Fuels.FindAsync(id);
+            if (fuel is not null)
+            {
+                fuel.IsActive = true;
+                fuel.Status = 1;
+                fuel.UpdatedAt = DateTime.UtcNow;
+                TempData["FuelSetupFeedback"] = "Fuel activated.";
+                await _db.SaveChangesAsync();
+            }
+            return RedirectToAction(nameof(Fuels), new { search });
+        }
+
+
         public async Task<IActionResult> Tanks(string? search, int? editId)
         {
             return View(await BuildTanksPageAsync(search, editId: editId, activeModalId: editId.HasValue ? "tankModal" : ""));
@@ -733,6 +850,23 @@ namespace gpos.Controllers
             return RedirectToAction(nameof(Tanks), new { search });
         }
 
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ActivateTank(int id, string? search)
+        {
+            var tank = await _db.Tanks.FindAsync(id);
+            if (tank is not null)
+            {
+                tank.IsActive = true;
+                tank.Status = 1;
+                tank.UpdatedAt = DateTime.UtcNow;
+                TempData["FuelSetupFeedback"] = "Tank activated.";
+                await _db.SaveChangesAsync();
+            }
+            return RedirectToAction(nameof(Tanks), new { search });
+        }
+
+
         public async Task<IActionResult> Pumps(string? search, int? editId)
         {
             return View(await BuildPumpsPageAsync(search, editId: editId, activeModalId: editId.HasValue ? "pumpModal" : ""));
@@ -794,6 +928,22 @@ namespace gpos.Controllers
 
             return RedirectToAction(nameof(Pumps), new { search });
         }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ActivatePump(int id, string? search)
+        {
+            var pump = await _db.Pumps.FindAsync(id);
+            if (pump is not null)
+            {
+                pump.Status = 1;
+                pump.UpdatedAt = DateTime.UtcNow;
+                TempData["FuelSetupFeedback"] = "Pump activated.";
+                await _db.SaveChangesAsync();
+            }
+            return RedirectToAction(nameof(Pumps), new { search });
+        }
+
 
         private async Task<ProductStockPageViewModel> BuildDisplayProductsPageAsync(string? search, ProductStockForm? form = null, string activeModalId = "")
         {

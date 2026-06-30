@@ -64,12 +64,24 @@
                         <td class="col-action">
                             <div class="setup-row-actions">
                                 <button class="btn btn-outline-secondary btn-sm" type="button" disabled>Edit</button>
-                                <form asp-action="DeleteProductCategory" method="post" onsubmit="return confirm('Disable this category?');">
+                                @if (Model.Categories[index].Status == 1 && Model.Categories[index].IsActive)
+                                {
+                                    <form asp-action="DeleteProductCategory" method="post" onsubmit="return confirm('Are you sure you want to disable this category?');">
                                     @Html.AntiForgeryToken()
                                     <input name="id" type="hidden" value="@Model.Categories[index].Id" />
                                     <input name="search" type="hidden" value="@Model.Search" />
-                                    <button class="btn btn-sm btn-outline-danger" type="submit">Delete</button>
+                                    <button class="btn btn-sm btn-outline-danger" type="submit">Disable</button>
                                 </form>
+                                }
+                                @if (!(Model.Categories[index].Status == 1 && Model.Categories[index].IsActive))
+                                {
+                                    <form asp-action="ActivateProductCategory" method="post" onsubmit="return confirm('Are you sure you want to activate this category?');">
+                                    @Html.AntiForgeryToken()
+                                    <input name="id" type="hidden" value="@Model.Categories[index].Id" />
+                                    <input name="search" type="hidden" value="@Model.Search" />
+                                    <button class="btn btn-sm btn-outline-success" type="submit">Activate</button>
+                                </form>
+                                }
                             </div>
                         </td>
                     </tr>

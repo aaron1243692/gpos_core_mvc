@@ -650,11 +650,11 @@ namespace gpos.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> SaveDisplayToWarehouseProduct(StockTransferForm form, string? search) => await SaveStockTransfer("DisplayToWarehouseProduct", form, nameof(DisplayToWarehouseProduct), search);
+        public async Task<IActionResult> SaveDisplayToWarehouseProduct(StockTransferForm form, string? search) => await SaveProductTransferFifo("DisplayToWarehouseProduct", form, nameof(DisplayToWarehouseProduct), search);
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> SaveBranchToBranchProduct(StockTransferForm form, string? search) => await SaveStockTransfer("BranchToBranchProduct", form, nameof(BranchToBranchProduct), search);
+        public async Task<IActionResult> SaveBranchToBranchProduct(StockTransferForm form, string? search) => await SaveProductTransferFifo("BranchToBranchProduct", form, nameof(BranchToBranchProduct), search);
 
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -1510,12 +1510,17 @@ namespace gpos.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> SaveWarehouseToDisplayProductFifo(StockTransferForm form, string? search)
         {
+            return await SaveProductTransferFifo("WarehouseToDisplayProduct", form, nameof(WarehouseToDisplayProduct), search);
+        }
+
+        private async Task<IActionResult> SaveProductTransferFifo(string transferType, StockTransferForm form, string redirectAction, string? search)
+        {
             await EnsureStockTransferSchemaAsync();
             var userId = CurrentUserId();
             if (!userId.HasValue)
             {
                 TempData["TransferMessage"] = "Please sign in before saving transfer.";
-                return RedirectToAction(nameof(WarehouseToDisplayProduct), new { search });
+                return RedirectToAction(redirectAction, new { search });
             }
 
             await using var transaction = await _db.Database.BeginTransactionAsync();
@@ -1531,32 +1536,26 @@ namespace gpos.Controllers
                     throw new InvalidOperationException("Quantity must be greater than 0.");
                 }
 
+                if (transferType == "BranchToBranchProduct" && (!form.SourceBranchId.HasValue || !form.DestinationBranchId.HasValue || form.SourceBranchId == form.DestinationBranchId))
+                {
+                    throw new InvalidOperationException("Select different source and destination branches.");
+                }
+
                 var product = await _db.Products.AsNoTracking().FirstOrDefaultAsync(item => item.Id == form.ProductId.Value);
                 if (product is null)
                 {
                     throw new InvalidOperationException("Product was not found.");
                 }
 
-                var fifoStocks = await _db.WarehouseStocks
-                    .Include(stock => stock.Batch)
-                    .Where(stock => stock.ProductId == form.ProductId.Value && stock.Quantity > 0 && stock.Batch != null)
-                    .OrderBy(stock => stock.Batch!.CreatedAt ?? DateTime.MinValue)
-                    .ThenBy(stock => stock.Batch!.Id)
-                    .ThenBy(stock => stock.Id)
-                    .ToListAsync();
-                var totalWarehouseStock = fifoStocks.Sum(stock => stock.Quantity);
-                if (totalWarehouseStock < form.Quantity)
-                {
-                    throw new InvalidOperationException($"Not enough warehouse stock for {product.Name}.");
-                }
-
                 var now = DateTime.Now;
                 var transfer = new StockTransfer
                 {
                     TransferNo = await GenerateTransferNoAsync(),
-                    TransferType = "WarehouseToDisplayProduct",
-                    SourceLocation = "Warehouse",
-                    DestinationLocation = "Display",
+                    TransferType = transferType,
+                    SourceBranchId = form.SourceBranchId,
+                    DestinationBranchId = form.DestinationBranchId,
+                    SourceLocation = transferType == "DisplayToWarehouseProduct" ? "Display" : "Warehouse",
+                    DestinationLocation = transferType == "WarehouseToDisplayProduct" ? "Display" : "Warehouse",
                     Status = "Completed",
                     Remarks = form.Remarks,
                     TransferredBy = userId.Value,
@@ -1567,53 +1566,13 @@ namespace gpos.Controllers
                 _db.StockTransfers.Add(transfer);
                 await _db.SaveChangesAsync();
 
-                var remainingQuantity = form.Quantity;
-                for (var i = 0; i < fifoStocks.Count && remainingQuantity > 0; i += 1)
+                if (transferType == "DisplayToWarehouseProduct")
                 {
-                    var warehouse = fifoStocks[i];
-                    var allocatedQuantity = Math.Min(remainingQuantity, warehouse.Quantity);
-                    var display = await _db.DisplayStocks.FirstOrDefaultAsync(stock => stock.ProductId == warehouse.ProductId && stock.BatchId == warehouse.BatchId && stock.BranchId == warehouse.BranchId);
-                    if (display is null)
-                    {
-                        display = new DisplayStock { ProductId = warehouse.ProductId, BatchId = warehouse.BatchId, BranchId = warehouse.BranchId, Quantity = 0m, CreatedAt = now };
-                        _db.DisplayStocks.Add(display);
-                    }
-
-                    var warehouseBefore = warehouse.Quantity;
-                    var displayBefore = display.Quantity;
-                    warehouse.Quantity -= allocatedQuantity;
-                    display.Quantity += allocatedQuantity;
-                    warehouse.UpdatedAt = now;
-                    display.UpdatedAt = now;
-                    var item = new StockTransferItem
-                    {
-                        StockTransferId = transfer.Id,
-                        ProductId = warehouse.ProductId,
-                        BatchId = warehouse.BatchId,
-                        Quantity = allocatedQuantity,
-                        SourceBefore = warehouseBefore,
-                        SourceAfter = warehouse.Quantity,
-                        DestinationBefore = displayBefore,
-                        DestinationAfter = display.Quantity,
-                        CreatedAt = now,
-                        UpdatedAt = now
-                    };
-                    _db.StockTransferItems.Add(item);
-                    _db.StockMovements.Add(new StockMovement
-                    {
-                        ProductId = warehouse.ProductId,
-                        ProductBatchId = warehouse.BatchId,
-                        SourceLocation = "Warehouse",
-                        DestinationLocation = "Display",
-                        MovementType = "Transfer",
-                        Quantity = allocatedQuantity,
-                        ReferenceType = "WarehouseToDisplayProduct",
-                        ReferenceId = transfer.Id,
-                        CreatedBy = userId.Value,
-                        Remarks = form.Remarks,
-                        CreatedAt = now
-                    });
-                    remainingQuantity -= allocatedQuantity;
+                    await ApplyDisplayToWarehouseFifo(transfer, form, product.Name, userId.Value, now);
+                }
+                else
+                {
+                    await ApplyWarehouseSourceFifo(transfer, form, product.Name, userId.Value, now);
                 }
 
                 await _db.SaveChangesAsync();
@@ -1626,7 +1585,7 @@ namespace gpos.Controllers
                 TempData["TransferMessage"] = $"Failed to save transfer: {ex.Message}";
             }
 
-            return RedirectToAction(nameof(WarehouseToDisplayProduct), new { search });
+            return RedirectToAction(redirectAction, new { search });
         }
 
         private async Task<IActionResult> CompleteStockTransfer(int id, string redirectAction, string? search)
@@ -1745,6 +1704,111 @@ namespace gpos.Controllers
             item.SourceAfter = warehouse.Quantity;
             item.DestinationAfter = display.Quantity;
             AddTransferMovement(item, "Transfer", "Warehouse", "Display", transfer, userId, now);
+        }
+
+        private async Task ApplyWarehouseSourceFifo(StockTransfer transfer, StockTransferForm form, string productName, int userId, DateTime now)
+        {
+            var fifoStocks = await _db.WarehouseStocks
+                .Include(stock => stock.Batch)
+                .Where(stock => stock.ProductId == form.ProductId!.Value
+                    && stock.Quantity > 0
+                    && stock.Batch != null
+                    && (transfer.TransferType != "BranchToBranchProduct" || stock.BranchId == form.SourceBranchId))
+                .OrderBy(stock => stock.Batch!.CreatedAt ?? DateTime.MinValue)
+                .ThenBy(stock => stock.Batch!.Id)
+                .ThenBy(stock => stock.Id)
+                .ToListAsync();
+            if (fifoStocks.Sum(stock => stock.Quantity) < form.Quantity)
+            {
+                throw new InvalidOperationException($"Not enough warehouse stock for {productName}.");
+            }
+
+            var remainingQuantity = form.Quantity;
+            for (var i = 0; i < fifoStocks.Count && remainingQuantity > 0; i += 1)
+            {
+                var source = fifoStocks[i];
+                var allocatedQuantity = Math.Min(remainingQuantity, source.Quantity);
+                if (transfer.TransferType == "BranchToBranchProduct")
+                {
+                    var destinationWarehouse = await _db.WarehouseStocks.FirstOrDefaultAsync(stock => stock.ProductId == source.ProductId && stock.BatchId == source.BatchId && stock.BranchId == form.DestinationBranchId);
+                    if (destinationWarehouse is null)
+                    {
+                        destinationWarehouse = new WarehouseStock { ProductId = source.ProductId, BatchId = source.BatchId, BranchId = form.DestinationBranchId, Quantity = 0m, CreatedAt = now };
+                        _db.WarehouseStocks.Add(destinationWarehouse);
+                    }
+
+                    AddFifoTransferItemAndMove(source, destinationWarehouse, transfer, allocatedQuantity, "Warehouse", "Warehouse", userId, now);
+                }
+                else
+                {
+                    var display = await _db.DisplayStocks.FirstOrDefaultAsync(stock => stock.ProductId == source.ProductId && stock.BatchId == source.BatchId && stock.BranchId == source.BranchId);
+                    if (display is null)
+                    {
+                        display = new DisplayStock { ProductId = source.ProductId, BatchId = source.BatchId, BranchId = source.BranchId, Quantity = 0m, CreatedAt = now };
+                        _db.DisplayStocks.Add(display);
+                    }
+
+                    AddFifoTransferItemAndMove(source, display, transfer, allocatedQuantity, "Warehouse", "Display", userId, now);
+                }
+
+                remainingQuantity -= allocatedQuantity;
+            }
+        }
+
+        private async Task ApplyDisplayToWarehouseFifo(StockTransfer transfer, StockTransferForm form, string productName, int userId, DateTime now)
+        {
+            var fifoStocks = await _db.DisplayStocks
+                .Include(stock => stock.Batch)
+                .Where(stock => stock.ProductId == form.ProductId!.Value && stock.Quantity > 0 && stock.Batch != null)
+                .OrderByDescending(stock => stock.Batch!.CreatedAt ?? DateTime.MinValue)
+                .ThenByDescending(stock => stock.Batch!.Id)
+                .ThenBy(stock => stock.Id)
+                .ToListAsync();
+            if (fifoStocks.Sum(stock => stock.Quantity) < form.Quantity)
+            {
+                throw new InvalidOperationException($"Not enough display stock for {productName}.");
+            }
+
+            var remainingQuantity = form.Quantity;
+            for (var i = 0; i < fifoStocks.Count && remainingQuantity > 0; i += 1)
+            {
+                var source = fifoStocks[i];
+                var allocatedQuantity = Math.Min(remainingQuantity, source.Quantity);
+                var warehouse = await _db.WarehouseStocks.FirstOrDefaultAsync(stock => stock.ProductId == source.ProductId && stock.BatchId == source.BatchId && stock.BranchId == source.BranchId);
+                if (warehouse is null)
+                {
+                    warehouse = new WarehouseStock { ProductId = source.ProductId, BatchId = source.BatchId, BranchId = source.BranchId, Quantity = 0m, CreatedAt = now };
+                    _db.WarehouseStocks.Add(warehouse);
+                }
+
+                AddFifoTransferItemAndMove(source, warehouse, transfer, allocatedQuantity, "Display", "Warehouse", userId, now);
+                remainingQuantity -= allocatedQuantity;
+            }
+        }
+
+        private void AddFifoTransferItemAndMove(dynamic source, dynamic destination, StockTransfer transfer, decimal allocatedQuantity, string sourceLocation, string destinationLocation, int userId, DateTime now)
+        {
+            var sourceBefore = source.Quantity;
+            var destinationBefore = destination.Quantity;
+            source.Quantity -= allocatedQuantity;
+            destination.Quantity += allocatedQuantity;
+            source.UpdatedAt = now;
+            destination.UpdatedAt = now;
+            var item = new StockTransferItem
+            {
+                StockTransferId = transfer.Id,
+                ProductId = source.ProductId,
+                BatchId = source.BatchId,
+                Quantity = allocatedQuantity,
+                SourceBefore = sourceBefore,
+                SourceAfter = source.Quantity,
+                DestinationBefore = destinationBefore,
+                DestinationAfter = destination.Quantity,
+                CreatedAt = now,
+                UpdatedAt = now
+            };
+            _db.StockTransferItems.Add(item);
+            AddTransferMovement(item, "Transfer", sourceLocation, destinationLocation, transfer, userId, now);
         }
 
         private async Task MoveProductDisplayToWarehouse(StockTransfer transfer, StockTransferItem item, int userId, DateTime now)

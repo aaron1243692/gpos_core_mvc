@@ -128,6 +128,22 @@ namespace gpos.Controllers
             return RedirectToAction(nameof(Index), new { search });
         }
 
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Activate(int id, string? search)
+        {
+            var user = await _db.Users.FindAsync(id);
+            if (user is not null)
+            {
+                user.Status = 1;
+                user.UpdatedAt = DateTime.UtcNow;
+                TempData["UsersFeedback"] = "User activated.";
+                await _db.SaveChangesAsync();
+            }
+            return RedirectToAction(nameof(Index), new { search });
+        }
+
+
         private async Task<UsersPageViewModel> BuildUsersPageAsync(
             string? search,
             UserForm? form = null,

@@ -139,6 +139,22 @@ namespace gpos.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ActivateVoucher(int id, string? search)
+        {
+            var rule = await _db.VoucherRules.FindAsync(id);
+            if (rule is not null)
+            {
+                rule.Status = 1;
+                rule.UpdatedAt = DateTime.UtcNow;
+                await _db.SaveChangesAsync();
+                TempData["VoucherSetupFeedback"] = "Voucher activated.";
+            }
+            return RedirectToAction(nameof(Index), new { search });
+        }
+
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> SaveRule([Bind(Prefix = "VoucherRuleForm")] VoucherRuleForm form, string? search)
         {
             return await SaveVoucher(form, search);
@@ -159,6 +175,22 @@ namespace gpos.Controllers
 
             return RedirectToAction(nameof(Index), new { search });
         }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ActivateRule(int id, string? search)
+        {
+            var rule = await _db.VoucherRules.FindAsync(id);
+            if (rule is not null)
+            {
+                rule.Status = 1;
+                rule.UpdatedAt = DateTime.UtcNow;
+                await _db.SaveChangesAsync();
+                TempData["VoucherSetupFeedback"] = "Voucher rule activated.";
+            }
+            return RedirectToAction(nameof(Index), new { search });
+        }
+
 
         private async Task<VoucherSetupPageViewModel> BuildVouchersPageAsync(string? search, VoucherRuleForm? form = null, int? editId = null, string activeModalId = "")
         {
