@@ -1163,7 +1163,7 @@ namespace gpos.Controllers
             {
                 ProductId = form.ProductId,
                 SupplierId = form.SupplierId,
-                BatchNo = await GenerateUniqueBatchNoAsync(),
+                BatchNo = await GenerateNextBatchNoAsync(),
                 CostPrice = form.CostPrice,
                 SellingPrice = form.SellingPrice,
                 ExpiryDate = form.ExpiryDate,
@@ -1242,19 +1242,33 @@ namespace gpos.Controllers
             }
         }
 
-        private async Task<string> GenerateUniqueBatchNoAsync()
+        private async Task<string> GenerateNextBatchNoAsync()
         {
-            for (var attempt = 0; attempt < 100; attempt += 1)
+            var batchNumbers = await _db.ProductBatches
+                .AsNoTracking()
+                .Select(batch => batch.BatchNo)
+                .ToListAsync();
+            var nextNumber = 1;
+
+            for (var i = 0; i < batchNumbers.Count; i += 1)
             {
-                var batchNo = Random.Shared.Next(10000000, 100000000).ToString();
+                if (int.TryParse(batchNumbers[i], out var numericBatchNo) && numericBatchNo >= nextNumber)
+                {
+                    nextNumber = numericBatchNo + 1;
+                }
+            }
+
+            while (true)
+            {
+                var batchNo = nextNumber.ToString("D8");
                 var exists = await _db.ProductBatches.AsNoTracking().AnyAsync(batch => batch.BatchNo == batchNo);
                 if (!exists)
                 {
                     return batchNo;
                 }
-            }
 
-            throw new InvalidOperationException("Unable to generate a unique batch number. Please try again.");
+                nextNumber += 1;
+            }
         }
 
         private async Task CompleteProductReceiving(StockReceiving receiving, StockReceivingItem item, int userId, DateTime now)
@@ -1490,6 +1504,129 @@ namespace gpos.Controllers
             }
 
             return RedirectToAction(redirectAction, new { search });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> SaveWarehouseToDisplayProductFifo(StockTransferForm form, string? search)
+        {
+            await EnsureStockTransferSchemaAsync();
+            var userId = CurrentUserId();
+            if (!userId.HasValue)
+            {
+                TempData["TransferMessage"] = "Please sign in before saving transfer.";
+                return RedirectToAction(nameof(WarehouseToDisplayProduct), new { search });
+            }
+
+            await using var transaction = await _db.Database.BeginTransactionAsync();
+            try
+            {
+                if (!form.ProductId.HasValue || form.ProductId.Value <= 0)
+                {
+                    throw new InvalidOperationException("Product is required.");
+                }
+
+                if (form.Quantity <= 0)
+                {
+                    throw new InvalidOperationException("Quantity must be greater than 0.");
+                }
+
+                var product = await _db.Products.AsNoTracking().FirstOrDefaultAsync(item => item.Id == form.ProductId.Value);
+                if (product is null)
+                {
+                    throw new InvalidOperationException("Product was not found.");
+                }
+
+                var fifoStocks = await _db.WarehouseStocks
+                    .Include(stock => stock.Batch)
+                    .Where(stock => stock.ProductId == form.ProductId.Value && stock.Quantity > 0 && stock.Batch != null)
+                    .OrderBy(stock => stock.Batch!.CreatedAt ?? DateTime.MinValue)
+                    .ThenBy(stock => stock.Batch!.Id)
+                    .ThenBy(stock => stock.Id)
+                    .ToListAsync();
+                var totalWarehouseStock = fifoStocks.Sum(stock => stock.Quantity);
+                if (totalWarehouseStock < form.Quantity)
+                {
+                    throw new InvalidOperationException($"Not enough warehouse stock for {product.Name}.");
+                }
+
+                var now = DateTime.Now;
+                var transfer = new StockTransfer
+                {
+                    TransferNo = await GenerateTransferNoAsync(),
+                    TransferType = "WarehouseToDisplayProduct",
+                    SourceLocation = "Warehouse",
+                    DestinationLocation = "Display",
+                    Status = "Completed",
+                    Remarks = form.Remarks,
+                    TransferredBy = userId.Value,
+                    CompletedAt = now,
+                    CreatedAt = now,
+                    UpdatedAt = now
+                };
+                _db.StockTransfers.Add(transfer);
+                await _db.SaveChangesAsync();
+
+                var remainingQuantity = form.Quantity;
+                for (var i = 0; i < fifoStocks.Count && remainingQuantity > 0; i += 1)
+                {
+                    var warehouse = fifoStocks[i];
+                    var allocatedQuantity = Math.Min(remainingQuantity, warehouse.Quantity);
+                    var display = await _db.DisplayStocks.FirstOrDefaultAsync(stock => stock.ProductId == warehouse.ProductId && stock.BatchId == warehouse.BatchId && stock.BranchId == warehouse.BranchId);
+                    if (display is null)
+                    {
+                        display = new DisplayStock { ProductId = warehouse.ProductId, BatchId = warehouse.BatchId, BranchId = warehouse.BranchId, Quantity = 0m, CreatedAt = now };
+                        _db.DisplayStocks.Add(display);
+                    }
+
+                    var warehouseBefore = warehouse.Quantity;
+                    var displayBefore = display.Quantity;
+                    warehouse.Quantity -= allocatedQuantity;
+                    display.Quantity += allocatedQuantity;
+                    warehouse.UpdatedAt = now;
+                    display.UpdatedAt = now;
+                    var item = new StockTransferItem
+                    {
+                        StockTransferId = transfer.Id,
+                        ProductId = warehouse.ProductId,
+                        BatchId = warehouse.BatchId,
+                        Quantity = allocatedQuantity,
+                        SourceBefore = warehouseBefore,
+                        SourceAfter = warehouse.Quantity,
+                        DestinationBefore = displayBefore,
+                        DestinationAfter = display.Quantity,
+                        CreatedAt = now,
+                        UpdatedAt = now
+                    };
+                    _db.StockTransferItems.Add(item);
+                    _db.StockMovements.Add(new StockMovement
+                    {
+                        ProductId = warehouse.ProductId,
+                        ProductBatchId = warehouse.BatchId,
+                        SourceLocation = "Warehouse",
+                        DestinationLocation = "Display",
+                        MovementType = "Transfer",
+                        Quantity = allocatedQuantity,
+                        ReferenceType = "WarehouseToDisplayProduct",
+                        ReferenceId = transfer.Id,
+                        CreatedBy = userId.Value,
+                        Remarks = form.Remarks,
+                        CreatedAt = now
+                    });
+                    remainingQuantity -= allocatedQuantity;
+                }
+
+                await _db.SaveChangesAsync();
+                await transaction.CommitAsync();
+                TempData["TransferMessage"] = "Transfer saved successfully.";
+            }
+            catch (Exception ex)
+            {
+                await transaction.RollbackAsync();
+                TempData["TransferMessage"] = $"Failed to save transfer: {ex.Message}";
+            }
+
+            return RedirectToAction(nameof(WarehouseToDisplayProduct), new { search });
         }
 
         private async Task<IActionResult> CompleteStockTransfer(int id, string redirectAction, string? search)

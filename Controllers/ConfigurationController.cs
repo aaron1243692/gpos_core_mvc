@@ -817,10 +817,11 @@ namespace gpos.Controllers
                 StockForm = form ?? new ProductStockForm(),
                 CategoryOptions = await BuildCategoryOptionsAsync(),
                 DisplayStocks = await query
-                    .OrderBy(stock => stock.Product!.Name)
+                    .Where(stock => stock.Quantity > 0)
+                    .OrderBy(stock => stock.Batch!.BatchNo)
                     .ThenBy(stock => stock.Batch!.CreatedAt ?? DateTime.MinValue)
                     .ThenBy(stock => stock.Batch!.Id)
-                    .ThenBy(stock => stock.Batch!.BatchNo)
+                    .ThenBy(stock => stock.Product!.Name)
                     .ThenBy(stock => stock.Id)
                     .ToListAsync()
             };
@@ -848,10 +849,11 @@ namespace gpos.Controllers
                 StockForm = form ?? new ProductStockForm(),
                 CategoryOptions = await BuildCategoryOptionsAsync(),
                 WarehouseStocks = await query
-                    .OrderBy(stock => stock.Product!.Name)
+                    .Where(stock => stock.Quantity > 0)
+                    .OrderBy(stock => stock.Batch!.BatchNo)
                     .ThenBy(stock => stock.Batch!.CreatedAt ?? DateTime.MinValue)
                     .ThenBy(stock => stock.Batch!.Id)
-                    .ThenBy(stock => stock.Batch!.BatchNo)
+                    .ThenBy(stock => stock.Product!.Name)
                     .ThenBy(stock => stock.Id)
                     .ToListAsync()
             };
