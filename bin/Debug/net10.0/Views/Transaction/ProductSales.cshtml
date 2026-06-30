@@ -48,6 +48,7 @@
                         <th>Date &amp; Time</th>
                         <th>Name (Quantity / Liters)</th>
                         <th>Amount Paid</th>
+                        <th>Change</th>
                         <th>Points Paid</th>
                         <th>Cost</th>
                         <th>Discount</th>
@@ -64,7 +65,7 @@
                 <tbody>
                     @if (Model.Sales.Count == 0)
                     {
-                        <tr><td class="text-center text-muted fw-bold" colspan="15">No sales found.</td></tr>
+                        <tr><td class="text-center text-muted fw-bold" colspan="16">No sales found.</td></tr>
                     }
                     @for (var i = 0; i < Model.Sales.Count; i += 1)
                     {
@@ -80,6 +81,7 @@
                             <td class="text-nowrap">@sale.SaleDate?.ToString("yyyy-MM-dd HH:mm")</td>
                             <td style="min-width: 16rem;" title="@sale.ItemSummaryTitle">@sale.ItemSummary</td>
                             <td class="text-nowrap">₱@amountPaid.ToString("N2")</td>
+                            <td class="text-nowrap">₱@sale.Change.ToString("N2")</td>
                             <td class="text-nowrap">@sale.PointsPaid.ToString("N0")</td>
                             <td class="text-nowrap">₱@sale.Cost.ToString("N2")</td>
                             <td class="text-nowrap">₱@sale.MemberDiscount.ToString("N2")</td>

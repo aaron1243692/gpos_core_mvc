@@ -1648,6 +1648,86 @@ textarea.form-control {
   width: 110px;
 }
 
+.admin-table.earning-rules-table {
+  min-width: 1480px;
+  table-layout: fixed;
+}
+
+.earning-rules-table th,
+.earning-rules-table td {
+  vertical-align: middle;
+}
+
+.earning-rules-table thead th {
+  white-space: nowrap;
+}
+
+.earning-rules-table tbody td {
+  white-space: nowrap;
+}
+
+.earning-rules-table .col-no {
+  width: 54px;
+}
+
+.earning-rules-table .col-id {
+  width: 64px;
+}
+
+.earning-rules-table .col-discount {
+  width: 170px;
+}
+
+.earning-rules-table .col-name {
+  width: 190px;
+}
+
+.earning-rules-table .col-applies-to {
+  width: 112px;
+}
+
+.earning-rules-table .col-type {
+  width: 132px;
+}
+
+.earning-rules-table .col-value {
+  width: 126px;
+}
+
+.earning-rules-table .col-minimum {
+  width: 150px;
+}
+
+.earning-rules-table .col-member-required {
+  width: 138px;
+}
+
+.earning-rules-table .col-date {
+  width: 128px;
+}
+
+.earning-rules-table .col-status {
+  width: 104px;
+}
+
+.earning-rules-table .col-action {
+  width: 154px;
+  text-align: center;
+}
+
+.earning-rules-table td:nth-child(3),
+.earning-rules-table td:nth-child(4) {
+  overflow-wrap: normal;
+  white-space: normal;
+  word-break: normal;
+}
+
+.earning-rules-table .setup-row-actions {
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+}
+
 .admin-table.voucher-rules-table {
   min-width: 1190px;
   table-layout: fixed;

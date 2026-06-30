@@ -14939,4 +14939,4 @@ C:\project\gpos_core_mvc\artifacts\verify-sales-cost\ru\Microsoft.CodeAnalysis.W
 C:\project\gpos_core_mvc\artifacts\verify-sales-cost\tr\Microsoft.CodeAnalysis.Workspaces.MSBuild.BuildHost.resources.dll
 C:\project\gpos_core_mvc\artifacts\verify-sales-cost\zh-Hans\Microsoft.CodeAnalysis.Workspaces.MSBuild.BuildHost.resources.dll
 C:\project\gpos_core_mvc\artifacts\verify-sales-cost\zh-Hant\Microsoft.CodeAnalysis.Workspaces.MSBuild.BuildHost.resources.dll
-C:\project\gpos_core_mvc\obj\Debug\net10.0\compressed\ios0330fcj-{0}-wswc5ritig-wswc5ritig.gz
+C:\project\gpos_core_mvc\obj\Debug\net10.0\compressed\ios0330fcj-{0}-pcqc8nm6hw-pcqc8nm6hw.gz
