@@ -5127,3 +5127,85 @@ table tbody td {
     width: 100%;
   }
 }
+.product-receiving-page {
+    min-height: calc(100vh - 48px);
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+}
+
+.product-receiving-container {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.product-receiving-toolbar {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+}
+
+.product-receiving-toolbar .transaction-ui-search {
+    max-width: 28rem;
+}
+
+.product-receiving-table-wrapper {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: auto;
+}
+
+.product-receiving-table-wrapper .app-table {
+    min-width: 1180px;
+}
+
+.product-receiving-table-wrapper th,
+.product-receiving-table-wrapper td {
+    white-space: nowrap;
+    vertical-align: middle;
+}
+
+@media (max-width: 768px) {
+    .product-receiving-page {
+        padding: .75rem;
+    }
+
+    .product-receiving-toolbar {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .product-receiving-toolbar .transaction-ui-search {
+        max-width: none;
+        width: 100%;
+    }
+}
+/* Product Receiving follows the Display Products full-height card pattern. */
+.product-receiving-page {
+    min-height: calc(100vh - 48px);
+    display: flex;
+    flex-direction: column;
+}
+
+.product-receiving-container {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.product-receiving-body {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.product-receiving-table-wrapper {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: auto;
+}

@@ -4,6 +4,8 @@ namespace gpos.Models
     {
         public int Id { get; set; }
         public int FuelId { get; set; }
+        [System.ComponentModel.DataAnnotations.Schema.Column("branch_id")]
+        public int? BranchId { get; set; }
         public string TankNo { get; set; } = string.Empty;
         public decimal CapacityLiters { get; set; }
         public decimal CurrentLiters { get; set; }
@@ -13,6 +15,7 @@ namespace gpos.Models
         public DateTime? UpdatedAt { get; set; }
 
         public Fuel? Fuel { get; set; }
+        public Branch? Branch { get; set; }
         public ICollection<Pump> Pumps { get; set; } = new List<Pump>();
         public ICollection<FuelDelivery> FuelDeliveries { get; set; } = new List<FuelDelivery>();
     }

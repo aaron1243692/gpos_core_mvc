@@ -1,19 +1,224 @@
-﻿<section class="transaction-ui-page">
-    <div class="content-card transaction-ui-card">
-        <div class="card-title-row"><div><h1>Product Receiving</h1><p>UI-only receiving page. Future flow: product receiving adds stock to warehouse_stocks.</p></div><span class="status-badge">UI Only</span></div>
-        <div class="transaction-ui-toolbar"><input class="form-control transaction-ui-search" type="search" placeholder="Search product receiving..." data-transaction-search="#productReceivingTable" /><button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#productReceivingFormModal">Add Receiving</button></div>
-        <div class="table-responsive transaction-ui-table-wrap">
-            <table class="table app-table table-sm align-middle mb-0" id="productReceivingTable">
-                <thead><tr><th>No</th><th>Receiving No</th><th>Supplier</th><th>Product</th><th>Batch</th><th>Quantity</th><th>Cost Price</th><th>Selling Price</th><th>Warehouse Stock After</th><th>Received By</th><th>Date</th><th>Status</th><th>Action</th></tr></thead>
-                <tbody>
-                    <tr data-search-row><td>1</td><td>RCV-P-0001</td><td>ABC Supply</td><td>Engine Oil 1L</td><td>BAT-0012</td><td>48.00</td><td>₱220.00</td><td>₱320.00</td><td>168.00</td><td>admin</td><td>2026-06-24</td><td><span class="badge text-bg-warning">Pending</span></td><td><span class="transaction-ui-actions"><button class="btn btn-sm btn-outline-primary" type="button" data-bs-toggle="modal" data-bs-target="#productReceivingViewModal">View</button><button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="modal" data-bs-target="#productReceivingFormModal">Edit</button><button class="btn btn-sm btn-outline-danger" type="button" data-bs-toggle="modal" data-bs-target="#productReceivingConfirmModal">Complete</button></span></td></tr>
-                    <tr data-empty-row hidden><td class="text-center text-muted fw-bold" colspan="13">No records found.</td></tr>
-                </tbody>
-            </table>
+@model gpos.Models.ViewModels.ProductReceivingPageViewModel
+
+<section class="product-receiving-page">
+    <div class="content-card transaction-ui-card product-receiving-container">
+        <div class="card-title-row page-header">
+            <div>
+                <h1>Product Receiving</h1>
+                <p>Receive product batches into warehouse stock.</p>
+            </div>
+            <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#productReceivingFormModal">Add Receiving</button>
+        </div>
+
+        <div class="product-receiving-body">
+            @if (TempData["ReceivingMessage"] is not null)
+            {
+                <div class="alert alert-warning">@TempData["ReceivingMessage"]</div>
+            }
+            @if (TempData["ReceivingWarning"] is not null)
+            {
+                <div class="alert alert-warning">@TempData["ReceivingWarning"]</div>
+            }
+
+            <form asp-action="ProductReceiving" method="get" class="transaction-ui-toolbar product-receiving-toolbar toolbar">
+                <input class="form-control transaction-ui-search" name="search" value="@Model.Search" type="search" placeholder="Search receiving, supplier, product, batch, status..." />
+                <button class="btn btn-outline-primary" type="submit">Search</button>
+            </form>
+
+            <div class="table-responsive transaction-ui-table-wrap product-receiving-table-wrapper">
+                <table class="table app-table table-sm align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>No</th>
+                            <th>Receiving No</th>
+                            <th>Supplier</th>
+                            <th>Product</th>
+                            <th>Batch</th>
+                            <th>Quantity</th>
+                            <th>Cost Price</th>
+                            <th>Selling Price</th>
+                            <th>Warehouse Stock Before</th>
+                            <th>Warehouse Stock After</th>
+                            <th>Received By</th>
+                            <th>Date</th>
+                            <th>Status</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model.Receivings.Count == 0)
+                        {
+                            <tr><td class="text-center text-muted fw-bold" colspan="14">No product receiving records found.</td></tr>
+                        }
+                        @for (var i = 0; i < Model.Receivings.Count; i += 1)
+                        {
+                            <tr>
+                                <td class="text-nowrap">@(i + 1)</td>
+                                <td class="text-nowrap">@Model.Receivings[i].ReceivingNo</td>
+                                <td>@Model.Receivings[i].Supplier</td>
+                                <td>@Model.Receivings[i].Product</td>
+                                <td class="text-nowrap">@Model.Receivings[i].Batch</td>
+                                <td class="text-nowrap">@Model.Receivings[i].Quantity.ToString("N2")</td>
+                                <td class="text-nowrap">₱@Model.Receivings[i].CostPrice.ToString("N2")</td>
+                                <td class="text-nowrap">₱@Model.Receivings[i].SellingPrice.ToString("N2")</td>
+                                <td class="text-nowrap">@(Model.Receivings[i].WarehouseStockBefore.HasValue ? Model.Receivings[i].WarehouseStockBefore!.Value.ToString("N2") : "-")</td>
+                                <td class="text-nowrap">@(Model.Receivings[i].WarehouseStockAfter.HasValue ? Model.Receivings[i].WarehouseStockAfter!.Value.ToString("N2") : "-")</td>
+                                <td class="text-nowrap">@Model.Receivings[i].ReceivedBy</td>
+                                <td class="text-nowrap">@Model.Receivings[i].Date.ToString("yyyy-MM-dd HH:mm")</td>
+                                <td><span class="badge @(Model.Receivings[i].Status == 1 ? "text-bg-success" : Model.Receivings[i].Status == 2 ? "text-bg-secondary" : "text-bg-warning")">@(Model.Receivings[i].Status == 1 ? "Completed" : Model.Receivings[i].Status == 2 ? "Cancelled" : "Pending")</span></td>
+                                <td class="text-nowrap">
+                                    <button class="btn btn-sm btn-outline-primary" type="button" data-bs-toggle="modal" data-bs-target="#productReceivingViewModal_@Model.Receivings[i].Id">View</button>
+                                    @if (Model.Receivings[i].Status == 0)
+                                    {
+                                        <form asp-action="CompleteProductReceiving" method="post" class="d-inline" onsubmit="return confirm('Complete this product receiving?');">
+                                            @Html.AntiForgeryToken()
+                                            <input name="id" type="hidden" value="@Model.Receivings[i].Id" />
+                                            <input name="search" type="hidden" value="@Model.Search" />
+                                            <button class="btn btn-sm btn-outline-success" type="submit">Complete</button>
+                                        </form>
+                                        <form asp-action="CancelProductReceiving" method="post" class="d-inline" onsubmit="return confirm('Cancel this pending product receiving?');">
+                                            @Html.AntiForgeryToken()
+                                            <input name="id" type="hidden" value="@Model.Receivings[i].Id" />
+                                            <input name="search" type="hidden" value="@Model.Search" />
+                                            <button class="btn btn-sm btn-outline-danger" type="submit">Cancel</button>
+                                        </form>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
-    <div class="content-card transaction-db-card"><h2 class="h5 mb-1">Recommended Future Stock Flow</h2><p class="mb-0">Product Receiving -> add stock to <strong>warehouse_stocks</strong>; later write stock_movements with movement_type = Receiving.</p><ul class="transaction-db-list"><li>warehouse_stocks</li><li>stock_receivings</li><li>stock_receiving_items</li><li>stock_movements</li></ul></div>
 </section>
-<div class="modal fade" id="productReceivingFormModal" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-dialog-centered modal-lg"><div class="modal-content"><div class="modal-header"><h2 class="modal-title fs-5">Product Receiving</h2><button class="btn-close" type="button" data-bs-dismiss="modal"></button></div><div class="modal-body"><div class="row g-3"><div class="col-md-6"><label class="form-label">Supplier</label><input class="form-control" value="ABC Supply" /></div><div class="col-md-6"><label class="form-label">Product</label><input class="form-control" value="Engine Oil 1L" /></div><div class="col-md-4"><label class="form-label">Batch</label><input class="form-control" value="BAT-0012" /></div><div class="col-md-4"><label class="form-label">Quantity</label><input class="form-control" type="number" value="48" /></div><div class="col-md-4"><label class="form-label">Status</label><select class="form-select"><option>Pending</option><option>Completed</option><option>Cancelled</option></select></div><div class="col-md-6"><label class="form-label">Cost Price</label><input class="form-control" type="number" value="220" /></div><div class="col-md-6"><label class="form-label">Selling Price</label><input class="form-control" type="number" value="320" /></div><div class="col-12"><label class="form-label">Remarks</label><textarea class="form-control" rows="3">Warehouse receiving draft only.</textarea></div></div></div><div class="modal-footer"><button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button><button class="btn btn-primary" type="button" data-bs-dismiss="modal">Save UI Draft</button></div></div></div></div>
-<div class="modal fade" id="productReceivingViewModal" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-dialog-centered"><div class="modal-content"><div class="modal-header"><h2 class="modal-title fs-5">Product Receiving Details</h2><button class="btn-close" type="button" data-bs-dismiss="modal"></button></div><div class="modal-body">Product receiving preview only. No warehouse stock is added.</div><div class="modal-footer"><button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Close</button></div></div></div></div>
-<div class="modal fade" id="productReceivingConfirmModal" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-dialog-centered"><div class="modal-content"><div class="modal-header"><h2 class="modal-title fs-5">Complete Receiving</h2><button class="btn-close" type="button" data-bs-dismiss="modal"></button></div><div class="modal-body">Complete this product receiving? This is UI only and will not update warehouse stock.</div><div class="modal-footer"><button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button><button class="btn btn-primary" type="button" data-bs-dismiss="modal">Complete</button></div></div></div></div>
+
+<div class="modal fade" id="productReceivingFormModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <form asp-action="SaveProductReceiving" method="post">
+                @Html.AntiForgeryToken()
+                <input name="search" type="hidden" value="@Model.Search" />
+                <div class="modal-header">
+                    <h2 class="modal-title fs-5">Add Product Receiving</h2>
+                    <button class="btn-close" type="button" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label asp-for="Form.SupplierId" class="form-label">Supplier</label>
+                            <select asp-for="Form.SupplierId" asp-items="Model.SupplierOptions" class="form-select"></select>
+                            <span asp-validation-for="Form.SupplierId" class="text-danger"></span>
+                        </div>
+                        <div class="col-md-6">
+                            <label asp-for="Form.ProductMode" class="form-label">Product Mode</label>
+                            <select asp-for="Form.ProductMode" class="form-select" data-product-mode>
+                                <option value="Existing">Existing Product</option>
+                                <option value="New">New Product</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 product-existing-fields">
+                            <label asp-for="Form.ProductId" class="form-label">Product</label>
+                            <select asp-for="Form.ProductId" asp-items="Model.ProductOptions" class="form-select"></select>
+                            <span asp-validation-for="Form.ProductId" class="text-danger"></span>
+                        </div>
+                        <div class="col-md-6 product-new-fields d-none">
+                            <label asp-for="Form.NewProductName" class="form-label">Product Name</label>
+                            <input asp-for="Form.NewProductName" class="form-control" />
+                        </div>
+                        <div class="col-md-6 product-new-fields d-none">
+                            <label asp-for="Form.NewProductCategoryId" class="form-label">Category</label>
+                            <select asp-for="Form.NewProductCategoryId" asp-items="Model.CategoryOptions" class="form-select"></select>
+                        </div>
+                        <div class="col-md-6 product-new-fields d-none">
+                            <label asp-for="Form.NewProductUnitId" class="form-label">Unit</label>
+                            <select asp-for="Form.NewProductUnitId" asp-items="Model.UnitOptions" class="form-select"></select>
+                        </div>
+                        <div class="col-md-6 product-new-fields d-none">
+                            <label asp-for="Form.NewProductDescription" class="form-label">Description</label>
+                            <input asp-for="Form.NewProductDescription" class="form-control" />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Batch No</label>
+                            <input class="form-control" value="Auto-generated on save" readonly />
+                        </div>
+                        <div class="col-md-4">
+                            <label asp-for="Form.ExpiryDate" class="form-label">Expiry Date</label>
+                            <input asp-for="Form.ExpiryDate" class="form-control" type="date" />
+                        </div>
+                        <input asp-for="Form.Status" type="hidden" value="1" />
+                        <div class="col-md-4">
+                            <label asp-for="Form.Quantity" class="form-label">Quantity</label>
+                            <input asp-for="Form.Quantity" class="form-control" type="number" step="0.01" min="0.01" />
+                            <span asp-validation-for="Form.Quantity" class="text-danger"></span>
+                        </div>
+                        <div class="col-md-4">
+                            <label asp-for="Form.CostPrice" class="form-label">Cost Price</label>
+                            <input asp-for="Form.CostPrice" class="form-control" type="number" step="0.01" min="0" />
+                            <span asp-validation-for="Form.CostPrice" class="text-danger"></span>
+                        </div>
+                        <div class="col-md-4">
+                            <label asp-for="Form.SellingPrice" class="form-label">Selling Price</label>
+                            <input asp-for="Form.SellingPrice" class="form-control" type="number" step="0.01" min="0" />
+                            <span asp-validation-for="Form.SellingPrice" class="text-danger"></span>
+                        </div>
+                        <div class="col-12">
+                            <label asp-for="Form.Remarks" class="form-label">Remarks</label>
+                            <textarea asp-for="Form.Remarks" class="form-control" rows="3"></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button>
+                    <button class="btn btn-primary" type="submit">Save Receiving</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@for (var i = 0; i < Model.Receivings.Count; i += 1)
+{
+    <div class="modal fade" id="productReceivingViewModal_@Model.Receivings[i].Id" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 class="modal-title fs-5">Product Receiving Details</h2>
+                    <button class="btn-close" type="button" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <dl class="row mb-0">
+                        <dt class="col-sm-5">Receiving No</dt><dd class="col-sm-7">@Model.Receivings[i].ReceivingNo</dd>
+                        <dt class="col-sm-5">Supplier</dt><dd class="col-sm-7">@Model.Receivings[i].Supplier</dd>
+                        <dt class="col-sm-5">Product</dt><dd class="col-sm-7">@Model.Receivings[i].Product</dd>
+                        <dt class="col-sm-5">Batch</dt><dd class="col-sm-7">@Model.Receivings[i].Batch</dd>
+                        <dt class="col-sm-5">Remarks</dt><dd class="col-sm-7">@Model.Receivings[i].Remarks</dd>
+                    </dl>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const mode = document.querySelector("[data-product-mode]");
+        const existingFields = Array.from(document.querySelectorAll(".product-existing-fields"));
+        const newFields = Array.from(document.querySelectorAll(".product-new-fields"));
+
+        function syncProductMode() {
+            const isNew = mode && mode.value === "New";
+            existingFields.forEach(function (field) { field.classList.toggle("d-none", isNew); });
+            newFields.forEach(function (field) { field.classList.toggle("d-none", !isNew); });
+        }
+
+        if (mode) {
+            mode.addEventListener("change", syncProductMode);
+            syncProductMode();
+        }
+    });
+</script>

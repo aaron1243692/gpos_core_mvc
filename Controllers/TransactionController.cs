@@ -258,7 +258,6 @@ namespace gpos.Controllers
                 Status = normalizedStatus ?? string.Empty,
                 StatusOptions = BuildStatusOptions(normalizedStatus),
                 Sales = items
-                    .DistinctBy(item => item.SaleId)
                     .Select(item =>
                     {
                         var row = ToProductSaleRow(item);
@@ -302,12 +301,396 @@ namespace gpos.Controllers
         public IActionResult DailyCash() => View();
         public IActionResult CashIn() => View();
         public IActionResult CashOut() => View();
-        public IActionResult ProductReceiving() => View();
-        public IActionResult FuelReceiving() => View();
-        public IActionResult WarehouseToDisplay() => View();
-        public IActionResult DisplayToWarehouse() => View();
-        public IActionResult BranchProductTransfer() => View();
-        public IActionResult BranchFuelTransfer() => View();
+        public async Task<IActionResult> ProductReceiving(string? search)
+        {
+            return View(await BuildProductReceivingPage(search));
+        }
+
+        public async Task<IActionResult> FuelReceiving(string? search)
+        {
+            return View(await BuildFuelReceivingPage(search));
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> SaveProductReceiving([Bind(Prefix = "Form")] ProductReceivingForm form, string? search)
+        {
+            var userId = CurrentUserId();
+            if (!userId.HasValue)
+            {
+                TempData["ReceivingMessage"] = "Failed to save product receiving: Please sign in before saving receiving.";
+                return RedirectToAction(nameof(ProductReceiving), new { search });
+            }
+
+            await using var transaction = await _db.Database.BeginTransactionAsync();
+            try
+            {
+                var now = DateTime.Now;
+                ValidateProductReceivingForm(form);
+                var product = await ResolveReceivingProduct(form, now);
+                form.ProductId = product.Id;
+                var batch = await CreateGeneratedProductBatch(form, now);
+                var receiving = new StockReceiving
+                {
+                    ReceivingNo = await GenerateProductReceivingNoAsync(),
+                    SupplierId = form.SupplierId,
+                    ReceivedDate = now,
+                    TotalAmount = form.Quantity * form.CostPrice,
+                    Remarks = form.Remarks,
+                    Status = 1,
+                    CreatedAt = now,
+                    UpdatedAt = now
+                };
+                var item = new StockReceivingItem
+                {
+                    ProductId = form.ProductId,
+                    ProductBatchId = batch.Id,
+                    Quantity = form.Quantity,
+                    CostPrice = form.CostPrice,
+                    SellingPrice = form.SellingPrice,
+                    ExpiryDate = form.ExpiryDate,
+                    Subtotal = form.Quantity * form.CostPrice,
+                    CreatedAt = now,
+                    UpdatedAt = now
+                };
+
+                receiving.Items.Add(item);
+                _db.StockReceivings.Add(receiving);
+                await _db.SaveChangesAsync();
+                await CompleteProductReceiving(receiving, item, userId.Value, now);
+                await _db.SaveChangesAsync();
+                await transaction.CommitAsync();
+                TempData["ReceivingMessage"] = "Product receiving saved successfully.";
+            }
+            catch (Exception ex)
+            {
+                await transaction.RollbackAsync();
+                TempData["ReceivingMessage"] = $"Failed to save product receiving: {ex.Message}";
+            }
+
+            return RedirectToAction(nameof(ProductReceiving), new { search });
+        }
+
+        private async Task<IActionResult> SaveProductReceivingOld([Bind(Prefix = "Form")] ProductReceivingForm form, string? search)
+        {
+            if (form.SellingPrice < form.CostPrice)
+            {
+                TempData["ReceivingWarning"] = "Selling Price is lower than Cost Price. Receiving was saved with warning.";
+            }
+
+            if (!ModelState.IsValid)
+            {
+                return View("ProductReceiving", await BuildProductReceivingPage(search, form));
+            }
+
+            var userId = CurrentUserId();
+            if (!userId.HasValue)
+            {
+                ModelState.AddModelError(string.Empty, "Please sign in before saving receiving.");
+                return View("ProductReceiving", await BuildProductReceivingPage(search, form));
+            }
+
+            await using var transaction = await _db.Database.BeginTransactionAsync();
+            try
+            {
+                var now = DateTime.Now;
+                var receiving = form.Id > 0
+                    ? await _db.StockReceivings.Include(item => item.Items).FirstOrDefaultAsync(item => item.Id == form.Id)
+                    : new StockReceiving { ReceivingNo = await GenerateProductReceivingNoAsync(), ReceivedDate = now, CreatedAt = now };
+
+                if (receiving is null)
+                {
+                    ModelState.AddModelError(string.Empty, "Receiving record was not found.");
+                    return View("ProductReceiving", await BuildProductReceivingPage(search, form));
+                }
+
+                if (form.Id > 0 && receiving.Status == 1)
+                {
+                    TempData["ReceivingMessage"] = "Completed receiving records cannot be edited. Create an adjustment instead.";
+                    return RedirectToAction(nameof(ProductReceiving), new { search });
+                }
+
+                var product = await ResolveReceivingProduct(form, now);
+                form.ProductId = product.Id;
+                var batch = await CreateGeneratedProductBatch(form, now);
+                var item = receiving.Items.FirstOrDefault();
+                receiving.SupplierId = form.SupplierId;
+                receiving.ReceivedDate = receiving.ReceivedDate == default ? now : receiving.ReceivedDate;
+                receiving.TotalAmount = form.Quantity * form.CostPrice;
+                receiving.Remarks = form.Remarks;
+                receiving.Status = form.Status;
+                receiving.UpdatedAt = now;
+
+                if (item is null)
+                {
+                    item = new StockReceivingItem { CreatedAt = now };
+                    receiving.Items.Add(item);
+                }
+
+                item.ProductId = form.ProductId;
+                item.ProductBatchId = batch.Id;
+                item.Quantity = form.Quantity;
+                item.CostPrice = form.CostPrice;
+                item.SellingPrice = form.SellingPrice;
+                item.ExpiryDate = form.ExpiryDate;
+                item.Subtotal = form.Quantity * form.CostPrice;
+                item.UpdatedAt = now;
+
+                if (form.Id == 0)
+                {
+                    _db.StockReceivings.Add(receiving);
+                }
+
+                await _db.SaveChangesAsync();
+
+                if (form.Status == 1)
+                {
+                    await CompleteProductReceiving(receiving, item, userId.Value, now);
+                    await _db.SaveChangesAsync();
+                }
+
+                await transaction.CommitAsync();
+                return RedirectToAction(nameof(ProductReceiving), new { search });
+            }
+            catch (InvalidOperationException ex)
+            {
+                await transaction.RollbackAsync();
+                ModelState.AddModelError(string.Empty, ex.Message);
+                return View("ProductReceiving", await BuildProductReceivingPage(search, form));
+            }
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> CompleteProductReceiving(int id, string? search)
+        {
+            var userId = CurrentUserId();
+            if (!userId.HasValue)
+            {
+                TempData["ReceivingMessage"] = "Please sign in before completing receiving.";
+                return RedirectToAction(nameof(ProductReceiving), new { search });
+            }
+
+            var receiving = await _db.StockReceivings.Include(item => item.Items).ThenInclude(item => item.ProductBatch).FirstOrDefaultAsync(item => item.Id == id);
+            var item = receiving?.Items.FirstOrDefault();
+            if (receiving is null || item is null)
+            {
+                TempData["ReceivingMessage"] = "Receiving record was not found.";
+                return RedirectToAction(nameof(ProductReceiving), new { search });
+            }
+
+            if (receiving.Status == 1)
+            {
+                TempData["ReceivingMessage"] = "Completed receiving records cannot be edited. Create an adjustment instead.";
+                return RedirectToAction(nameof(ProductReceiving), new { search });
+            }
+
+            if (receiving.Status == 2)
+            {
+                TempData["ReceivingMessage"] = "Cancelled receiving records cannot be completed.";
+                return RedirectToAction(nameof(ProductReceiving), new { search });
+            }
+
+            await using var transaction = await _db.Database.BeginTransactionAsync();
+            receiving.Status = 1;
+            receiving.UpdatedAt = DateTime.Now;
+            await CompleteProductReceiving(receiving, item, userId.Value, DateTime.Now);
+            await _db.SaveChangesAsync();
+            await transaction.CommitAsync();
+            return RedirectToAction(nameof(ProductReceiving), new { search });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> CancelProductReceiving(int id, string? search)
+        {
+            var receiving = await _db.StockReceivings.FindAsync(id);
+            if (receiving is not null && receiving.Status == 0)
+            {
+                receiving.Status = 2;
+                receiving.UpdatedAt = DateTime.Now;
+                await _db.SaveChangesAsync();
+            }
+            else if (receiving?.Status == 1)
+            {
+                TempData["ReceivingMessage"] = "Completed receiving records cannot be edited. Create an adjustment instead.";
+            }
+
+            return RedirectToAction(nameof(ProductReceiving), new { search });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> SaveFuelReceiving(FuelReceivingForm form, string? search)
+        {
+            if (!ModelState.IsValid)
+            {
+                return View("FuelReceiving", await BuildFuelReceivingPage(search, form));
+            }
+
+            var tank = await _db.Tanks.Include(item => item.Fuel).FirstOrDefaultAsync(item => item.Id == form.TankId && item.Status == 1 && item.IsActive);
+            if (tank is null || tank.FuelId != form.FuelId)
+            {
+                ModelState.AddModelError(nameof(form.TankId), "Tank must belong to the selected fuel.");
+                return View("FuelReceiving", await BuildFuelReceivingPage(search, form));
+            }
+
+            var now = DateTime.Now;
+            var delivery = form.Id > 0 ? await _db.FuelDeliveries.FindAsync(form.Id) : new FuelDelivery { DeliveryNo = await GenerateFuelReceivingNoAsync(), DeliveryDate = now, CreatedAt = now };
+            if (delivery is null)
+            {
+                ModelState.AddModelError(string.Empty, "Fuel receiving record was not found.");
+                return View("FuelReceiving", await BuildFuelReceivingPage(search, form));
+            }
+
+            if (form.Id > 0 && delivery.Status == 1)
+            {
+                TempData["ReceivingMessage"] = "Completed receiving records cannot be edited. Create an adjustment instead.";
+                return RedirectToAction(nameof(FuelReceiving), new { search });
+            }
+
+            await using var transaction = await _db.Database.BeginTransactionAsync();
+            delivery.SupplierId = form.SupplierId;
+            delivery.FuelId = form.FuelId;
+            delivery.TankId = form.TankId;
+            delivery.DeliveredLiters = form.Liters;
+            delivery.CostPerLiter = form.CostPerLiter;
+            delivery.TotalCost = form.Liters * form.CostPerLiter;
+            delivery.Remarks = form.Remarks;
+            delivery.Status = form.Status;
+            delivery.UpdatedAt = now;
+
+            if (form.Id == 0)
+            {
+                _db.FuelDeliveries.Add(delivery);
+            }
+
+            if (form.Status == 1)
+            {
+                tank.CurrentLiters += form.Liters;
+                tank.UpdatedAt = now;
+                if (tank.Fuel is not null && tank.Fuel.CurrentPricePerLiter != form.SellingPricePerLiter)
+                {
+                    tank.Fuel.CurrentPricePerLiter = form.SellingPricePerLiter;
+                    tank.Fuel.UpdatedAt = now;
+                }
+            }
+
+            await _db.SaveChangesAsync();
+            await transaction.CommitAsync();
+            return RedirectToAction(nameof(FuelReceiving), new { search });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> CompleteFuelReceiving(int id, string? search)
+        {
+            var delivery = await _db.FuelDeliveries.Include(item => item.Tank).Include(item => item.Fuel).FirstOrDefaultAsync(item => item.Id == id);
+            if (delivery is null)
+            {
+                TempData["ReceivingMessage"] = "Fuel receiving record was not found.";
+                return RedirectToAction(nameof(FuelReceiving), new { search });
+            }
+
+            if (delivery.Status == 1)
+            {
+                TempData["ReceivingMessage"] = "Completed receiving records cannot be edited. Create an adjustment instead.";
+                return RedirectToAction(nameof(FuelReceiving), new { search });
+            }
+
+            if (delivery.Status == 2)
+            {
+                TempData["ReceivingMessage"] = "Cancelled receiving records cannot be completed.";
+                return RedirectToAction(nameof(FuelReceiving), new { search });
+            }
+
+            if (delivery.Tank is not null)
+            {
+                delivery.Tank.CurrentLiters += delivery.DeliveredLiters;
+                delivery.Tank.UpdatedAt = DateTime.Now;
+            }
+
+            delivery.Status = 1;
+            delivery.UpdatedAt = DateTime.Now;
+            await _db.SaveChangesAsync();
+            return RedirectToAction(nameof(FuelReceiving), new { search });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> CancelFuelReceiving(int id, string? search)
+        {
+            var delivery = await _db.FuelDeliveries.FindAsync(id);
+            if (delivery is not null && delivery.Status == 0)
+            {
+                delivery.Status = 2;
+                delivery.UpdatedAt = DateTime.Now;
+                await _db.SaveChangesAsync();
+            }
+            else if (delivery?.Status == 1)
+            {
+                TempData["ReceivingMessage"] = "Completed receiving records cannot be edited. Create an adjustment instead.";
+            }
+
+            return RedirectToAction(nameof(FuelReceiving), new { search });
+        }
+        public async Task<IActionResult> WarehouseToDisplayProduct(string? search) => View(await BuildStockTransferPage("WarehouseToDisplayProduct", "Warehouse to Display Product", nameof(SaveWarehouseToDisplayProduct), nameof(CompleteWarehouseToDisplayProduct), nameof(CancelWarehouseToDisplayProduct), search));
+        public async Task<IActionResult> DisplayToWarehouseProduct(string? search) => View(await BuildStockTransferPage("DisplayToWarehouseProduct", "Display to Warehouse Product", nameof(SaveDisplayToWarehouseProduct), nameof(CompleteDisplayToWarehouseProduct), nameof(CancelDisplayToWarehouseProduct), search));
+        public async Task<IActionResult> BranchToBranchProduct(string? search) => View(await BuildStockTransferPage("BranchToBranchProduct", "Branch to Branch Product", nameof(SaveBranchToBranchProduct), nameof(CompleteBranchToBranchProduct), nameof(CancelBranchToBranchProduct), search));
+        public async Task<IActionResult> BranchToBranchFuel(string? search) => View(await BuildStockTransferPage("BranchToBranchFuel", "Branch to Branch Fuel", nameof(SaveBranchToBranchFuel), nameof(CompleteBranchToBranchFuel), nameof(CancelBranchToBranchFuel), search));
+
+        public IActionResult WarehouseToDisplay() => RedirectToAction(nameof(WarehouseToDisplayProduct));
+        public IActionResult DisplayToWarehouse() => RedirectToAction(nameof(DisplayToWarehouseProduct));
+        public IActionResult BranchProductTransfer() => RedirectToAction(nameof(BranchToBranchProduct));
+        public IActionResult BranchFuelTransfer() => RedirectToAction(nameof(BranchToBranchFuel));
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> SaveWarehouseToDisplayProduct(StockTransferForm form, string? search) => await SaveStockTransfer("WarehouseToDisplayProduct", form, nameof(WarehouseToDisplayProduct), search);
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> SaveDisplayToWarehouseProduct(StockTransferForm form, string? search) => await SaveStockTransfer("DisplayToWarehouseProduct", form, nameof(DisplayToWarehouseProduct), search);
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> SaveBranchToBranchProduct(StockTransferForm form, string? search) => await SaveStockTransfer("BranchToBranchProduct", form, nameof(BranchToBranchProduct), search);
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> SaveBranchToBranchFuel(StockTransferForm form, string? search) => await SaveStockTransfer("BranchToBranchFuel", form, nameof(BranchToBranchFuel), search);
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> CompleteWarehouseToDisplayProduct(int id, string? search) => await CompleteStockTransfer(id, nameof(WarehouseToDisplayProduct), search);
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> CompleteDisplayToWarehouseProduct(int id, string? search) => await CompleteStockTransfer(id, nameof(DisplayToWarehouseProduct), search);
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> CompleteBranchToBranchProduct(int id, string? search) => await CompleteStockTransfer(id, nameof(BranchToBranchProduct), search);
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> CompleteBranchToBranchFuel(int id, string? search) => await CompleteStockTransfer(id, nameof(BranchToBranchFuel), search);
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> CancelWarehouseToDisplayProduct(int id, string? search) => await CancelStockTransfer(id, nameof(WarehouseToDisplayProduct), search);
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> CancelDisplayToWarehouseProduct(int id, string? search) => await CancelStockTransfer(id, nameof(DisplayToWarehouseProduct), search);
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> CancelBranchToBranchProduct(int id, string? search) => await CancelStockTransfer(id, nameof(BranchToBranchProduct), search);
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> CancelBranchToBranchFuel(int id, string? search) => await CancelStockTransfer(id, nameof(BranchToBranchFuel), search);
         public IActionResult ProductReturn() => View();
         public IActionResult FuelReturn() => View();
         public IActionResult VoidSale() => View();
@@ -423,6 +806,9 @@ namespace gpos.Controllers
             var voucherDiscount = VoucherDiscountFor(sale);
             var totalDiscount = sale?.DiscountAmount ?? 0m;
             var memberDiscount = Math.Max(0m, totalDiscount - voucherDiscount);
+            var unitPrice = item.UnitPrice > 0m ? item.UnitPrice : item.Price;
+            var unitCost = item.UnitCost > 0m ? item.UnitCost : item.Batch?.CostPrice ?? 0m;
+            var grossProfit = item.GrossProfit != 0m ? item.GrossProfit : (unitPrice - unitCost) * item.Quantity;
 
             return new ProductSaleRowViewModel
             {
@@ -432,13 +818,16 @@ namespace gpos.Controllers
                 ProductName = item.Product?.Name ?? "-",
                 BatchNo = item.Batch?.BatchNo ?? "-",
                 Quantity = item.Quantity,
-                Price = item.Price,
+                Price = unitPrice,
+                UnitCost = unitCost,
+                UnitPrice = unitPrice,
                 Subtotal = item.Subtotal,
+                GrossProfit = grossProfit,
                 CashierName = UserDisplayName(sale?.User),
                 MemberName = sale?.Member?.FullName ?? "-",
                 SaleDate = sale?.CreatedAt ?? item.CreatedAt,
                 PaymentType = PaymentTypeFor(sale),
-                Cost = item.Batch is null ? 0m : item.Batch.CostPrice * item.Quantity,
+                Cost = unitCost * item.Quantity,
                 GrossTotal = sale?.GrossTotal ?? 0m,
                 RebateAmount = sale?.RebateAmount ?? 0m,
                 MemberDiscount = memberDiscount,
@@ -523,7 +912,8 @@ namespace gpos.Controllers
                     Name = item.Product != null ? item.Product.Name : null,
                     item.Quantity,
                     item.Subtotal,
-                    Cost = item.Batch == null ? 0m : item.Batch.CostPrice * item.Quantity
+                    item.UnitCost,
+                    Cost = item.UnitCost > 0m ? item.UnitCost * item.Quantity : item.Batch == null ? 0m : item.Batch.CostPrice * item.Quantity
                 })
                 .ToListAsync();
 
@@ -652,6 +1042,818 @@ namespace gpos.Controllers
                 .Distinct());
         }
 
+        private async Task<ProductReceivingPageViewModel> BuildProductReceivingPage(string? search, ProductReceivingForm? form = null)
+        {
+            var searchText = (search ?? string.Empty).Trim();
+            var query = _db.StockReceivings
+                .AsNoTracking()
+                .Include(item => item.Supplier)
+                .Include(item => item.Items)
+                    .ThenInclude(item => item.Product)
+                .Include(item => item.Items)
+                    .ThenInclude(item => item.ProductBatch)
+                .AsQueryable();
+
+            if (!string.IsNullOrWhiteSpace(searchText))
+            {
+                query = query.Where(item =>
+                    item.ReceivingNo.Contains(searchText)
+                    || (item.Supplier != null && item.Supplier.Name.Contains(searchText))
+                    || item.Items.Any(line => line.Product != null && line.Product.Name.Contains(searchText))
+                    || item.Items.Any(line => line.ProductBatch != null && line.ProductBatch.BatchNo.Contains(searchText))
+                    || (item.Remarks != null && item.Remarks.Contains(searchText)));
+            }
+
+            var receivings = await query.OrderByDescending(item => item.ReceivedDate).ThenByDescending(item => item.Id).Take(100).ToListAsync();
+            var movementLookup = await _db.StockMovements
+                .AsNoTracking()
+                .Where(item => item.ReferenceType == "ProductReceiving" && item.ReferenceId.HasValue)
+                .GroupBy(item => item.ReferenceId!.Value)
+                .Select(group => new { ReceivingId = group.Key, UserId = group.OrderByDescending(item => item.Id).Select(item => item.CreatedBy).FirstOrDefault() })
+                .ToDictionaryAsync(item => item.ReceivingId, item => item.UserId);
+            var userIds = movementLookup.Values.Where(id => id.HasValue).Select(id => id!.Value).Distinct().ToList();
+            var userLookup = await _db.Users.AsNoTracking().Where(user => userIds.Contains(user.Id)).ToDictionaryAsync(user => user.Id, user => string.IsNullOrWhiteSpace(user.FullName) ? user.Username : user.FullName!);
+
+            return new ProductReceivingPageViewModel
+            {
+                Search = searchText,
+                Form = form ?? new ProductReceivingForm(),
+                SupplierOptions = await BuildSupplierOptionsAsync(),
+                ProductOptions = await BuildProductOptionsAsync(),
+                CategoryOptions = await BuildProductCategoryOptionsAsync(),
+                UnitOptions = await BuildProductUnitOptionsAsync(),
+                Receivings = receivings.Select(item =>
+                {
+                    var line = item.Items.FirstOrDefault();
+                    var after = item.Status == 1 && line?.ProductBatchId is not null
+                        ? _db.WarehouseStocks.AsNoTracking().Where(stock => stock.ProductId == line.ProductId && stock.BatchId == line.ProductBatchId.Value).Select(stock => (decimal?)stock.Quantity).FirstOrDefault()
+                        : null;
+                    var before = after.HasValue && line is not null ? after.Value - line.Quantity : (decimal?)null;
+                    var receivedBy = movementLookup.TryGetValue(item.Id, out var movementUserId) && movementUserId.HasValue && userLookup.TryGetValue(movementUserId.Value, out var userName) ? userName : "-";
+                    return new ProductReceivingRowViewModel
+                    {
+                        Id = item.Id,
+                        ReceivingNo = item.ReceivingNo,
+                        Supplier = item.Supplier?.Name ?? "-",
+                        Product = line?.Product?.Name ?? "-",
+                        Batch = line?.ProductBatch?.BatchNo ?? "-",
+                        Quantity = line?.Quantity ?? 0m,
+                        CostPrice = line?.CostPrice ?? 0m,
+                        SellingPrice = line?.SellingPrice ?? 0m,
+                        WarehouseStockBefore = before,
+                        WarehouseStockAfter = after,
+                        ReceivedBy = receivedBy,
+                        Date = item.ReceivedDate,
+                        Status = item.Status,
+                        Remarks = item.Remarks ?? string.Empty
+                    };
+                }).ToList()
+            };
+        }
+
+        private async Task<FuelReceivingPageViewModel> BuildFuelReceivingPage(string? search, FuelReceivingForm? form = null)
+        {
+            var searchText = (search ?? string.Empty).Trim();
+            var query = _db.FuelDeliveries.AsNoTracking().Include(item => item.Supplier).Include(item => item.Fuel).Include(item => item.Tank).AsQueryable();
+            if (!string.IsNullOrWhiteSpace(searchText))
+            {
+                query = query.Where(item =>
+                    item.DeliveryNo.Contains(searchText)
+                    || (item.Supplier != null && item.Supplier.Name.Contains(searchText))
+                    || (item.Fuel != null && item.Fuel.Name.Contains(searchText))
+                    || (item.Tank != null && item.Tank.TankNo.Contains(searchText))
+                    || (item.Remarks != null && item.Remarks.Contains(searchText)));
+            }
+
+            var deliveries = await query.OrderByDescending(item => item.DeliveryDate).ThenByDescending(item => item.Id).Take(100).ToListAsync();
+            return new FuelReceivingPageViewModel
+            {
+                Search = searchText,
+                Form = form ?? new FuelReceivingForm(),
+                SupplierOptions = await BuildSupplierOptionsAsync(),
+                FuelOptions = await BuildFuelOptionsAsync(),
+                TankOptions = await BuildTankOptionsAsync(),
+                Receivings = deliveries.Select(item =>
+                {
+                    var after = item.Status == 1 && item.Tank is not null ? (decimal?)item.Tank.CurrentLiters : null;
+                    var before = after.HasValue ? after.Value - item.DeliveredLiters : (decimal?)null;
+                    return new FuelReceivingRowViewModel
+                    {
+                        Id = item.Id,
+                        ReceivingNo = item.DeliveryNo,
+                        Supplier = item.Supplier?.Name ?? "-",
+                        Fuel = item.Fuel?.Name ?? "-",
+                        Tank = item.Tank?.TankNo ?? "-",
+                        Liters = item.DeliveredLiters,
+                        CostPerLiter = item.CostPerLiter ?? 0m,
+                        SellingPricePerLiter = item.Fuel?.CurrentPricePerLiter ?? 0m,
+                        TankLitersBefore = before,
+                        TankLitersAfter = after,
+                        Date = item.DeliveryDate,
+                        Status = item.Status,
+                        Remarks = item.Remarks ?? string.Empty
+                    };
+                }).ToList()
+            };
+        }
+
+        private async Task<ProductBatch> CreateGeneratedProductBatch(ProductReceivingForm form, DateTime now)
+        {
+            var batch = new ProductBatch
+            {
+                ProductId = form.ProductId,
+                SupplierId = form.SupplierId,
+                BatchNo = await GenerateUniqueBatchNoAsync(),
+                CostPrice = form.CostPrice,
+                SellingPrice = form.SellingPrice,
+                ExpiryDate = form.ExpiryDate,
+                Status = 1,
+                IsActive = true,
+                CreatedAt = now,
+                UpdatedAt = now
+            };
+            _db.ProductBatches.Add(batch);
+            await _db.SaveChangesAsync();
+            return batch;
+        }
+
+        private async Task<Product> ResolveReceivingProduct(ProductReceivingForm form, DateTime now)
+        {
+            if (!string.Equals(form.ProductMode, "New", StringComparison.OrdinalIgnoreCase))
+            {
+                var existing = await _db.Products.FirstOrDefaultAsync(product => product.Id == form.ProductId && product.Status == 1 && product.IsActive);
+                if (existing is null)
+                {
+                    throw new InvalidOperationException("Product is required.");
+                }
+
+                return existing;
+            }
+
+            var productName = (form.NewProductName ?? string.Empty).Trim();
+            if (string.IsNullOrWhiteSpace(productName))
+            {
+                throw new InvalidOperationException("Product Name is required.");
+            }
+
+            var duplicateExists = await _db.Products
+                .AsNoTracking()
+                .AnyAsync(product => product.Status == 1 && product.IsActive && product.Name == productName);
+            if (duplicateExists)
+            {
+                throw new InvalidOperationException("Product already exists. Select it from Existing Product instead.");
+            }
+
+            var product = new Product
+            {
+                Name = productName,
+                CategoryId = form.NewProductCategoryId > 0 ? form.NewProductCategoryId : null,
+                ProductUnitId = form.NewProductUnitId > 0 ? form.NewProductUnitId : null,
+                Status = 1,
+                IsActive = true,
+                CreatedAt = now,
+                UpdatedAt = now
+            };
+            _db.Products.Add(product);
+            await _db.SaveChangesAsync();
+            return product;
+        }
+
+        private static void ValidateProductReceivingForm(ProductReceivingForm form)
+        {
+            if (form.SupplierId <= 0)
+            {
+                throw new InvalidOperationException("Supplier is required.");
+            }
+
+            if (form.Quantity <= 0)
+            {
+                throw new InvalidOperationException("Quantity must be greater than 0.");
+            }
+
+            if (form.CostPrice < 0)
+            {
+                throw new InvalidOperationException("Cost Price must be greater than or equal to 0.");
+            }
+
+            if (form.SellingPrice < 0)
+            {
+                throw new InvalidOperationException("Selling Price must be greater than or equal to 0.");
+            }
+        }
+
+        private async Task<string> GenerateUniqueBatchNoAsync()
+        {
+            for (var attempt = 0; attempt < 100; attempt += 1)
+            {
+                var batchNo = Random.Shared.Next(10000000, 100000000).ToString();
+                var exists = await _db.ProductBatches.AsNoTracking().AnyAsync(batch => batch.BatchNo == batchNo);
+                if (!exists)
+                {
+                    return batchNo;
+                }
+            }
+
+            throw new InvalidOperationException("Unable to generate a unique batch number. Please try again.");
+        }
+
+        private async Task CompleteProductReceiving(StockReceiving receiving, StockReceivingItem item, int userId, DateTime now)
+        {
+            if (!item.ProductBatchId.HasValue)
+            {
+                throw new InvalidOperationException("Receiving item must have a linked batch before completion.");
+            }
+
+            var alreadyCompleted = await _db.StockMovements.AnyAsync(movement => movement.ReferenceType == "ProductReceiving" && movement.ReferenceId == receiving.Id);
+            if (alreadyCompleted)
+            {
+                return;
+            }
+
+            var stock = await _db.WarehouseStocks.FirstOrDefaultAsync(row => row.ProductId == item.ProductId && row.BatchId == item.ProductBatchId.Value);
+            if (stock is null)
+            {
+                stock = new WarehouseStock
+                {
+                    ProductId = item.ProductId,
+                    BatchId = item.ProductBatchId.Value,
+                    Quantity = 0m,
+                    CreatedAt = now
+                };
+                _db.WarehouseStocks.Add(stock);
+            }
+
+            stock.Quantity += item.Quantity;
+            stock.UpdatedAt = now;
+            _db.StockMovements.Add(new StockMovement
+            {
+                ProductId = item.ProductId,
+                ProductBatchId = item.ProductBatchId,
+                SourceLocation = "Supplier",
+                DestinationLocation = "Warehouse",
+                MovementType = "Receiving",
+                Quantity = item.Quantity,
+                ReferenceType = "ProductReceiving",
+                ReferenceId = receiving.Id,
+                CreatedBy = userId,
+                Remarks = receiving.Remarks,
+                CreatedAt = now
+            });
+        }
+
+        private async Task<List<SelectListItem>> BuildSupplierOptionsAsync()
+        {
+            var options = await _db.Suppliers.AsNoTracking().Where(item => item.Status == 1).OrderBy(item => item.Name).Select(item => new SelectListItem { Value = item.Id.ToString(), Text = item.Name }).ToListAsync();
+            options.Insert(0, new SelectListItem { Value = "0", Text = "Select supplier" });
+            return options;
+        }
+
+        private async Task<List<SelectListItem>> BuildProductOptionsAsync()
+        {
+            var options = await _db.Products.AsNoTracking().Where(item => item.Status == 1 && item.IsActive).OrderBy(item => item.Name).Select(item => new SelectListItem { Value = item.Id.ToString(), Text = item.Name }).ToListAsync();
+            options.Insert(0, new SelectListItem { Value = "0", Text = "Select product" });
+            return options;
+        }
+
+        private async Task<List<SelectListItem>> BuildProductCategoryOptionsAsync()
+        {
+            var options = await _db.ProductCategories.AsNoTracking().Where(item => item.Status == 1 && item.IsActive).OrderBy(item => item.Name).Select(item => new SelectListItem { Value = item.Id.ToString(), Text = item.Name }).ToListAsync();
+            options.Insert(0, new SelectListItem { Value = "", Text = "Select category" });
+            return options;
+        }
+
+        private async Task<List<SelectListItem>> BuildProductUnitOptionsAsync()
+        {
+            var options = await _db.ProductUnits.AsNoTracking().Where(item => item.Status == 1).OrderBy(item => item.Name).Select(item => new SelectListItem { Value = item.Id.ToString(), Text = item.Name }).ToListAsync();
+            options.Insert(0, new SelectListItem { Value = "", Text = "Select unit" });
+            return options;
+        }
+
+        private async Task<List<SelectListItem>> BuildFuelOptionsAsync()
+        {
+            var options = await _db.Fuels.AsNoTracking().Where(item => item.Status == 1 && item.IsActive).OrderBy(item => item.Name).Select(item => new SelectListItem { Value = item.Id.ToString(), Text = item.Name }).ToListAsync();
+            options.Insert(0, new SelectListItem { Value = "0", Text = "Select fuel" });
+            return options;
+        }
+
+        private async Task<List<SelectListItem>> BuildTankOptionsAsync()
+        {
+            var options = await _db.Tanks.AsNoTracking().Include(item => item.Fuel).Where(item => item.Status == 1 && item.IsActive).OrderBy(item => item.TankNo).Select(item => new SelectListItem { Value = item.Id.ToString(), Text = $"{item.TankNo} ({item.Fuel!.Name})" }).ToListAsync();
+            options.Insert(0, new SelectListItem { Value = "0", Text = "Select tank" });
+            return options;
+        }
+
+        private async Task<string> GenerateProductReceivingNoAsync()
+        {
+            return $"PR-{DateTime.Now:yyyyMMdd}-{await _db.StockReceivings.CountAsync() + 1:0000}";
+        }
+
+        private async Task<string> GenerateFuelReceivingNoAsync()
+        {
+            return $"FR-{DateTime.Now:yyyyMMdd}-{await _db.FuelDeliveries.CountAsync() + 1:0000}";
+        }
+
+        private async Task<StockTransferPageViewModel> BuildStockTransferPage(string transferType, string title, string saveAction, string completeAction, string cancelAction, string? search)
+        {
+            await EnsureStockTransferSchemaAsync();
+            var searchText = (search ?? string.Empty).Trim();
+            var query = _db.StockTransfers
+                .AsNoTracking()
+                .Include(item => item.SourceBranch)
+                .Include(item => item.DestinationBranch)
+                .Include(item => item.User)
+                .Include(item => item.Items)
+                    .ThenInclude(item => item.Product)
+                .Include(item => item.Items)
+                    .ThenInclude(item => item.Batch)
+                .Include(item => item.Items)
+                    .ThenInclude(item => item.Fuel)
+                .Include(item => item.Items)
+                    .ThenInclude(item => item.SourceTank)
+                .Include(item => item.Items)
+                    .ThenInclude(item => item.DestinationTank)
+                .Where(item => item.TransferType == transferType);
+
+            if (!string.IsNullOrWhiteSpace(searchText))
+            {
+                query = query.Where(item =>
+                    item.TransferNo.Contains(searchText)
+                    || item.Status.Contains(searchText)
+                    || (item.SourceBranch != null && item.SourceBranch.Name.Contains(searchText))
+                    || (item.DestinationBranch != null && item.DestinationBranch.Name.Contains(searchText))
+                    || (item.User != null && ((item.User.FullName != null && item.User.FullName.Contains(searchText)) || item.User.Username.Contains(searchText)))
+                    || item.Items.Any(line => line.Product != null && line.Product.Name.Contains(searchText))
+                    || item.Items.Any(line => line.Batch != null && line.Batch.BatchNo.Contains(searchText))
+                    || item.Items.Any(line => line.Fuel != null && line.Fuel.Name.Contains(searchText)));
+            }
+
+            var transfers = await query.OrderByDescending(item => item.CreatedAt).ThenByDescending(item => item.Id).Take(100).ToListAsync();
+            return new StockTransferPageViewModel
+            {
+                Search = searchText,
+                TransferType = transferType,
+                Title = title,
+                SaveAction = saveAction,
+                CompleteAction = completeAction,
+                CancelAction = cancelAction,
+                BranchOptions = await BuildBranchOptionsAsync(),
+                ProductOptions = await BuildTransferProductOptionsAsync(transferType),
+                BatchOptions = await BuildTransferBatchOptionsAsync(transferType),
+                FuelOptions = await BuildFuelOptionsAsync(),
+                TankOptions = await BuildTankOptionsAsync(),
+                Transfers = transfers.Select(transfer =>
+                {
+                    var item = transfer.Items.FirstOrDefault();
+                    return new StockTransferRowViewModel
+                    {
+                        Id = transfer.Id,
+                        TransferNo = transfer.TransferNo,
+                        SourceBranch = transfer.SourceBranch?.Name ?? "-",
+                        DestinationBranch = transfer.DestinationBranch?.Name ?? "-",
+                        Product = item?.Product?.Name ?? "-",
+                        Batch = item?.Batch?.BatchNo ?? "-",
+                        Fuel = item?.Fuel?.Name ?? "-",
+                        SourceTank = item?.SourceTank?.TankNo ?? "-",
+                        DestinationTank = item?.DestinationTank?.TankNo ?? "-",
+                        Quantity = item?.Quantity ?? 0m,
+                        Liters = item?.Liters ?? 0m,
+                        SourceBefore = item?.SourceBefore,
+                        SourceAfter = item?.SourceAfter,
+                        DestinationBefore = item?.DestinationBefore,
+                        DestinationAfter = item?.DestinationAfter,
+                        TransferredBy = UserDisplayName(transfer.User),
+                        Date = transfer.CreatedAt,
+                        Status = transfer.Status,
+                        Remarks = transfer.Remarks ?? string.Empty
+                    };
+                }).ToList()
+            };
+        }
+
+        private async Task<IActionResult> SaveStockTransfer(string transferType, StockTransferForm form, string redirectAction, string? search)
+        {
+            await EnsureStockTransferSchemaAsync();
+            var userId = CurrentUserId();
+            if (!userId.HasValue)
+            {
+                TempData["TransferMessage"] = "Please sign in before saving transfer.";
+                return RedirectToAction(redirectAction, new { search });
+            }
+
+            try
+            {
+                ValidateTransferForm(transferType, form);
+                var now = DateTime.Now;
+                await using var transaction = await _db.Database.BeginTransactionAsync();
+                var transfer = new StockTransfer
+                {
+                    TransferNo = await GenerateTransferNoAsync(),
+                    TransferType = transferType,
+                    SourceBranchId = form.SourceBranchId,
+                    DestinationBranchId = form.DestinationBranchId,
+                    SourceLocation = TransferSourceLocation(transferType),
+                    DestinationLocation = TransferDestinationLocation(transferType),
+                    Status = NormalizeTransferStatus(form.Status),
+                    Remarks = form.Remarks,
+                    TransferredBy = userId,
+                    CreatedAt = now,
+                    UpdatedAt = now
+                };
+                transfer.Items.Add(new StockTransferItem
+                {
+                    ProductId = form.ProductId,
+                    BatchId = form.BatchId,
+                    FuelId = form.FuelId,
+                    SourceTankId = form.SourceTankId,
+                    DestinationTankId = form.DestinationTankId,
+                    Quantity = transferType == "BranchToBranchFuel" ? null : form.Quantity,
+                    Liters = transferType == "BranchToBranchFuel" ? form.Liters : null,
+                    CreatedAt = now,
+                    UpdatedAt = now
+                });
+                _db.StockTransfers.Add(transfer);
+                await _db.SaveChangesAsync();
+
+                if (transfer.Status == "Completed")
+                {
+                    await ApplyStockTransfer(transfer, transfer.Items.First(), userId.Value, now);
+                    transfer.CompletedAt = now;
+                    await _db.SaveChangesAsync();
+                }
+
+                await transaction.CommitAsync();
+                TempData["TransferMessage"] = "Transfer saved.";
+            }
+            catch (InvalidOperationException ex)
+            {
+                TempData["TransferMessage"] = ex.Message;
+            }
+
+            return RedirectToAction(redirectAction, new { search });
+        }
+
+        private async Task<IActionResult> CompleteStockTransfer(int id, string redirectAction, string? search)
+        {
+            await EnsureStockTransferSchemaAsync();
+            var userId = CurrentUserId();
+            if (!userId.HasValue)
+            {
+                TempData["TransferMessage"] = "Please sign in before completing transfer.";
+                return RedirectToAction(redirectAction, new { search });
+            }
+
+            await using var transaction = await _db.Database.BeginTransactionAsync();
+            var transfer = await _db.StockTransfers.Include(item => item.Items).FirstOrDefaultAsync(item => item.Id == id);
+            var item = transfer?.Items.FirstOrDefault();
+            if (transfer is null || item is null)
+            {
+                TempData["TransferMessage"] = "Transfer record was not found.";
+                return RedirectToAction(redirectAction, new { search });
+            }
+
+            if (transfer.Status == "Completed")
+            {
+                TempData["TransferMessage"] = "Completed transfers cannot be edited. Create another transfer or adjustment instead.";
+                return RedirectToAction(redirectAction, new { search });
+            }
+
+            if (transfer.Status == "Cancelled")
+            {
+                TempData["TransferMessage"] = "Cancelled transfers cannot be completed.";
+                return RedirectToAction(redirectAction, new { search });
+            }
+
+            try
+            {
+                var now = DateTime.Now;
+                await ApplyStockTransfer(transfer, item, userId.Value, now);
+                transfer.Status = "Completed";
+                transfer.CompletedAt = now;
+                transfer.UpdatedAt = now;
+                await _db.SaveChangesAsync();
+                await transaction.CommitAsync();
+                TempData["TransferMessage"] = "Transfer completed.";
+            }
+            catch (InvalidOperationException ex)
+            {
+                await transaction.RollbackAsync();
+                TempData["TransferMessage"] = ex.Message;
+            }
+
+            return RedirectToAction(redirectAction, new { search });
+        }
+
+        private async Task<IActionResult> CancelStockTransfer(int id, string redirectAction, string? search)
+        {
+            await EnsureStockTransferSchemaAsync();
+            var transfer = await _db.StockTransfers.FindAsync(id);
+            if (transfer is not null && transfer.Status == "Pending")
+            {
+                transfer.Status = "Cancelled";
+                transfer.CancelledAt = DateTime.Now;
+                transfer.UpdatedAt = DateTime.Now;
+                await _db.SaveChangesAsync();
+            }
+            else if (transfer?.Status == "Completed")
+            {
+                TempData["TransferMessage"] = "Completed transfers cannot be edited. Create another transfer or adjustment instead.";
+            }
+
+            return RedirectToAction(redirectAction, new { search });
+        }
+
+        private async Task ApplyStockTransfer(StockTransfer transfer, StockTransferItem item, int userId, DateTime now)
+        {
+            switch (transfer.TransferType)
+            {
+                case "WarehouseToDisplayProduct":
+                    await MoveProductWarehouseToDisplay(transfer, item, userId, now);
+                    break;
+                case "DisplayToWarehouseProduct":
+                    await MoveProductDisplayToWarehouse(transfer, item, userId, now);
+                    break;
+                case "BranchToBranchProduct":
+                    await MoveProductBranchToBranch(transfer, item, userId, now);
+                    break;
+                case "BranchToBranchFuel":
+                    await MoveFuelBranchToBranch(transfer, item, now);
+                    break;
+                default:
+                    throw new InvalidOperationException("Unsupported transfer type.");
+            }
+        }
+
+        private async Task MoveProductWarehouseToDisplay(StockTransfer transfer, StockTransferItem item, int userId, DateTime now)
+        {
+            var quantity = item.Quantity ?? 0m;
+            var warehouse = await _db.WarehouseStocks.FirstOrDefaultAsync(stock => stock.ProductId == item.ProductId && stock.BatchId == item.BatchId && stock.BranchId == transfer.SourceBranchId);
+            if (warehouse is null || warehouse.Quantity < quantity)
+            {
+                throw new InvalidOperationException("Not enough warehouse stock.");
+            }
+
+            var display = await _db.DisplayStocks.FirstOrDefaultAsync(stock => stock.ProductId == item.ProductId && stock.BatchId == item.BatchId && stock.BranchId == transfer.SourceBranchId);
+            if (display is null)
+            {
+                display = new DisplayStock { ProductId = item.ProductId!.Value, BatchId = item.BatchId!.Value, BranchId = transfer.SourceBranchId, Quantity = 0m, CreatedAt = now };
+                _db.DisplayStocks.Add(display);
+            }
+
+            item.SourceBefore = warehouse.Quantity;
+            item.DestinationBefore = display.Quantity;
+            warehouse.Quantity -= quantity;
+            display.Quantity += quantity;
+            warehouse.UpdatedAt = now;
+            display.UpdatedAt = now;
+            item.SourceAfter = warehouse.Quantity;
+            item.DestinationAfter = display.Quantity;
+            AddTransferMovement(item, "Transfer", "Warehouse", "Display", transfer, userId, now);
+        }
+
+        private async Task MoveProductDisplayToWarehouse(StockTransfer transfer, StockTransferItem item, int userId, DateTime now)
+        {
+            var quantity = item.Quantity ?? 0m;
+            var display = await _db.DisplayStocks.FirstOrDefaultAsync(stock => stock.ProductId == item.ProductId && stock.BatchId == item.BatchId && stock.BranchId == transfer.SourceBranchId);
+            if (display is null || display.Quantity < quantity)
+            {
+                throw new InvalidOperationException("Not enough display stock.");
+            }
+
+            var warehouse = await _db.WarehouseStocks.FirstOrDefaultAsync(stock => stock.ProductId == item.ProductId && stock.BatchId == item.BatchId && stock.BranchId == transfer.SourceBranchId);
+            if (warehouse is null)
+            {
+                warehouse = new WarehouseStock { ProductId = item.ProductId!.Value, BatchId = item.BatchId!.Value, BranchId = transfer.SourceBranchId, Quantity = 0m, CreatedAt = now };
+                _db.WarehouseStocks.Add(warehouse);
+            }
+
+            item.SourceBefore = display.Quantity;
+            item.DestinationBefore = warehouse.Quantity;
+            display.Quantity -= quantity;
+            warehouse.Quantity += quantity;
+            display.UpdatedAt = now;
+            warehouse.UpdatedAt = now;
+            item.SourceAfter = display.Quantity;
+            item.DestinationAfter = warehouse.Quantity;
+            AddTransferMovement(item, "Transfer", "Display", "Warehouse", transfer, userId, now);
+        }
+
+        private async Task MoveProductBranchToBranch(StockTransfer transfer, StockTransferItem item, int userId, DateTime now)
+        {
+            var quantity = item.Quantity ?? 0m;
+            var source = await _db.WarehouseStocks.FirstOrDefaultAsync(stock => stock.BranchId == transfer.SourceBranchId && stock.ProductId == item.ProductId && stock.BatchId == item.BatchId);
+            if (source is null || source.Quantity < quantity)
+            {
+                throw new InvalidOperationException("Not enough source branch warehouse stock.");
+            }
+
+            var destination = await _db.WarehouseStocks.FirstOrDefaultAsync(stock => stock.BranchId == transfer.DestinationBranchId && stock.ProductId == item.ProductId && stock.BatchId == item.BatchId);
+            if (destination is null)
+            {
+                destination = new WarehouseStock { BranchId = transfer.DestinationBranchId, ProductId = item.ProductId!.Value, BatchId = item.BatchId!.Value, Quantity = 0m, CreatedAt = now };
+                _db.WarehouseStocks.Add(destination);
+            }
+
+            item.SourceBefore = source.Quantity;
+            item.DestinationBefore = destination.Quantity;
+            source.Quantity -= quantity;
+            destination.Quantity += quantity;
+            source.UpdatedAt = now;
+            destination.UpdatedAt = now;
+            item.SourceAfter = source.Quantity;
+            item.DestinationAfter = destination.Quantity;
+            AddTransferMovement(item, "Transfer", "Warehouse", "Warehouse", transfer, userId, now);
+        }
+
+        private async Task MoveFuelBranchToBranch(StockTransfer transfer, StockTransferItem item, DateTime now)
+        {
+            var liters = item.Liters ?? 0m;
+            var source = await _db.Tanks.FirstOrDefaultAsync(tank => tank.Id == item.SourceTankId && tank.BranchId == transfer.SourceBranchId && tank.FuelId == item.FuelId);
+            var destination = await _db.Tanks.FirstOrDefaultAsync(tank => tank.Id == item.DestinationTankId && tank.BranchId == transfer.DestinationBranchId && tank.FuelId == item.FuelId);
+            if (source is null || destination is null || source.Id == destination.Id)
+            {
+                throw new InvalidOperationException("Select valid source and destination tanks for the same fuel.");
+            }
+
+            if (source.CurrentLiters < liters)
+            {
+                throw new InvalidOperationException("Not enough source tank liters.");
+            }
+
+            item.SourceBefore = source.CurrentLiters;
+            item.DestinationBefore = destination.CurrentLiters;
+            source.CurrentLiters -= liters;
+            destination.CurrentLiters += liters;
+            source.UpdatedAt = now;
+            destination.UpdatedAt = now;
+            item.SourceAfter = source.CurrentLiters;
+            item.DestinationAfter = destination.CurrentLiters;
+        }
+
+        private void AddTransferMovement(StockTransferItem item, string movementType, string source, string destination, StockTransfer transfer, int userId, DateTime now)
+        {
+            _db.StockMovements.Add(new StockMovement
+            {
+                ProductId = item.ProductId!.Value,
+                ProductBatchId = item.BatchId,
+                SourceLocation = source,
+                DestinationLocation = destination,
+                MovementType = movementType,
+                Quantity = item.Quantity ?? 0m,
+                ReferenceType = transfer.TransferType,
+                ReferenceId = transfer.Id,
+                CreatedBy = userId,
+                Remarks = transfer.Remarks,
+                CreatedAt = now
+            });
+        }
+
+        private static string NormalizeTransferStatus(string? status)
+        {
+            return string.Equals(status, "Completed", StringComparison.OrdinalIgnoreCase)
+                ? "Completed"
+                : string.Equals(status, "Cancelled", StringComparison.OrdinalIgnoreCase) ? "Cancelled" : "Pending";
+        }
+
+        private static string TransferSourceLocation(string transferType)
+        {
+            return transferType == "DisplayToWarehouseProduct" ? "Display" : transferType == "BranchToBranchFuel" ? "Tank" : "Warehouse";
+        }
+
+        private static string TransferDestinationLocation(string transferType)
+        {
+            return transferType == "WarehouseToDisplayProduct" ? "Display" : transferType == "BranchToBranchFuel" ? "Tank" : "Warehouse";
+        }
+
+        private void ValidateTransferForm(string transferType, StockTransferForm form)
+        {
+            if (transferType == "BranchToBranchProduct" || transferType == "BranchToBranchFuel")
+            {
+                if (!form.SourceBranchId.HasValue || !form.DestinationBranchId.HasValue || form.SourceBranchId == form.DestinationBranchId)
+                {
+                    throw new InvalidOperationException("Select different source and destination branches.");
+                }
+            }
+
+            if (transferType == "BranchToBranchFuel")
+            {
+                if (!form.FuelId.HasValue || !form.SourceTankId.HasValue || !form.DestinationTankId.HasValue || form.Liters <= 0)
+                {
+                    throw new InvalidOperationException("Fuel, tanks, and liters are required.");
+                }
+                return;
+            }
+
+            if (!form.ProductId.HasValue || !form.BatchId.HasValue || form.Quantity <= 0)
+            {
+                throw new InvalidOperationException("Product, batch, and quantity are required.");
+            }
+        }
+
+        private async Task<List<SelectListItem>> BuildBranchOptionsAsync()
+        {
+            var options = await _db.Branches.AsNoTracking().Where(item => item.Status == 1).OrderBy(item => item.Name).Select(item => new SelectListItem { Value = item.Id.ToString(), Text = item.Name }).ToListAsync();
+            options.Insert(0, new SelectListItem { Value = "", Text = "Select branch" });
+            return options;
+        }
+
+        private async Task<List<SelectListItem>> BuildTransferProductOptionsAsync(string transferType)
+        {
+            var query = transferType == "DisplayToWarehouseProduct"
+                ? _db.DisplayStocks.AsNoTracking().Include(stock => stock.Product).Where(stock => stock.Quantity > 0 && stock.Product != null).Select(stock => stock.Product!)
+                : _db.WarehouseStocks.AsNoTracking().Include(stock => stock.Product).Where(stock => stock.Quantity > 0 && stock.Product != null).Select(stock => stock.Product!);
+            var options = await query.Distinct().OrderBy(product => product.Name).Select(product => new SelectListItem { Value = product.Id.ToString(), Text = product.Name }).ToListAsync();
+            options.Insert(0, new SelectListItem { Value = "", Text = "Select product" });
+            return options;
+        }
+
+        private async Task<List<SelectListItem>> BuildTransferBatchOptionsAsync(string transferType)
+        {
+            var query = transferType == "DisplayToWarehouseProduct"
+                ? _db.DisplayStocks.AsNoTracking().Include(stock => stock.Product).Include(stock => stock.Batch).Where(stock => stock.Quantity > 0 && stock.Batch != null).Select(stock => stock.Batch!)
+                : _db.WarehouseStocks.AsNoTracking().Include(stock => stock.Product).Include(stock => stock.Batch).Where(stock => stock.Quantity > 0 && stock.Batch != null).Select(stock => stock.Batch!);
+            var options = await query.Distinct().OrderBy(batch => batch.Product!.Name).ThenBy(batch => batch.CreatedAt ?? DateTime.MinValue).ThenBy(batch => batch.Id).Select(batch => new SelectListItem { Value = batch.Id.ToString(), Text = $"{batch.Product!.Name} - {batch.BatchNo}" }).ToListAsync();
+            options.Insert(0, new SelectListItem { Value = "", Text = "Select batch" });
+            return options;
+        }
+
+        private async Task<string> GenerateTransferNoAsync()
+        {
+            return $"TRF-{DateTime.Now:yyyyMMdd}-{await _db.StockTransfers.CountAsync() + 1:0000}";
+        }
+
+        private async Task EnsureStockTransferSchemaAsync()
+        {
+            await EnsureColumnAsync("warehouse_stocks", "branch_id", "INT NULL");
+            await EnsureColumnAsync("display_stocks", "branch_id", "INT NULL");
+            await EnsureColumnAsync("tanks", "branch_id", "INT NULL");
+
+            await _db.Database.ExecuteSqlRawAsync("""
+                CREATE TABLE IF NOT EXISTS `stock_transfers` (
+                    `id` INT NOT NULL AUTO_INCREMENT,
+                    `transfer_no` VARCHAR(100) NOT NULL,
+                    `transfer_type` VARCHAR(100) NOT NULL,
+                    `source_branch_id` INT NULL,
+                    `destination_branch_id` INT NULL,
+                    `source_location` VARCHAR(50) NULL,
+                    `destination_location` VARCHAR(50) NULL,
+                    `status` VARCHAR(50) NOT NULL DEFAULT 'Pending',
+                    `remarks` VARCHAR(255) NULL,
+                    `transferred_by` INT NULL,
+                    `completed_at` DATETIME(6) NULL,
+                    `cancelled_at` DATETIME(6) NULL,
+                    `created_at` DATETIME(6) NULL,
+                    `updated_at` DATETIME(6) NULL,
+                    PRIMARY KEY (`id`),
+                    UNIQUE KEY `IX_stock_transfers_transfer_no` (`transfer_no`),
+                    KEY `IX_stock_transfers_source_branch_id` (`source_branch_id`),
+                    KEY `IX_stock_transfers_destination_branch_id` (`destination_branch_id`),
+                    KEY `IX_stock_transfers_transferred_by` (`transferred_by`)
+                );
+                """);
+
+            await _db.Database.ExecuteSqlRawAsync("""
+                CREATE TABLE IF NOT EXISTS `stock_transfer_items` (
+                    `id` INT NOT NULL AUTO_INCREMENT,
+                    `stock_transfer_id` INT NOT NULL,
+                    `product_id` INT NULL,
+                    `batch_id` INT NULL,
+                    `fuel_id` INT NULL,
+                    `source_tank_id` INT NULL,
+                    `destination_tank_id` INT NULL,
+                    `quantity` DECIMAL(18,2) NULL,
+                    `liters` DECIMAL(18,2) NULL,
+                    `source_before` DECIMAL(18,2) NULL,
+                    `source_after` DECIMAL(18,2) NULL,
+                    `destination_before` DECIMAL(18,2) NULL,
+                    `destination_after` DECIMAL(18,2) NULL,
+                    `created_at` DATETIME(6) NULL,
+                    `updated_at` DATETIME(6) NULL,
+                    PRIMARY KEY (`id`),
+                    KEY `IX_stock_transfer_items_stock_transfer_id` (`stock_transfer_id`),
+                    KEY `IX_stock_transfer_items_product_id` (`product_id`),
+                    KEY `IX_stock_transfer_items_batch_id` (`batch_id`),
+                    KEY `IX_stock_transfer_items_fuel_id` (`fuel_id`),
+                    KEY `IX_stock_transfer_items_source_tank_id` (`source_tank_id`),
+                    KEY `IX_stock_transfer_items_destination_tank_id` (`destination_tank_id`)
+                );
+                """);
+        }
+
+        private async Task EnsureColumnAsync(string tableName, string columnName, string definition)
+        {
+            var exists = await _db.Database
+                .SqlQueryRaw<int>(
+                    "SELECT COUNT(*) AS `Value` FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = {0} AND COLUMN_NAME = {1}",
+                    tableName,
+                    columnName)
+                .SingleAsync();
+
+            if (exists == 0)
+            {
+                await _db.Database.ExecuteSqlRawAsync($"ALTER TABLE `{tableName}` ADD COLUMN `{columnName}` {definition};");
+            }
+        }
+
         private int? CurrentUserId()
         {
             var sessionUserId = HttpContext.Session.GetString("UserId");
@@ -668,67 +1870,112 @@ namespace gpos.Controllers
         private async Task<List<ValidatedProductSaleItem>> BuildValidatedProductItems(List<PosProductSaleRequestItem> products)
         {
             var items = new List<ValidatedProductSaleItem>();
+            var requestedProducts = products
+                .Where(item => item.ProductId > 0)
+                .GroupBy(item => item.ProductId)
+                .Select(group => new { ProductId = group.Key, Quantity = group.Sum(item => item.Quantity) })
+                .ToList();
 
-            for (var i = 0; i < products.Count; i += 1)
+            for (var i = 0; i < requestedProducts.Count; i += 1)
             {
-                var request = products[i];
-                var displayStock = await _db.DisplayStocks
-                    .AsNoTracking()
-                    .Include(item => item.Product)
-                    .Include(item => item.Batch)
-                    .FirstOrDefaultAsync(item => item.Id == request.DisplayStockId && item.ProductId == request.ProductId && item.BatchId == request.BatchId);
-
-                if (displayStock is null || displayStock.Product is null || displayStock.Batch is null)
+                var request = requestedProducts[i];
+                if (request.Quantity <= 0)
                 {
-                    throw new InvalidOperationException("One or more selected products are no longer available in display inventory.");
+                    throw new InvalidOperationException("Product quantity must be greater than 0.");
                 }
 
-                if (displayStock.Product.Status != 1 || !displayStock.Product.IsActive || displayStock.Batch.Status != 1 || !displayStock.Batch.IsActive || displayStock.Batch.ProductId != displayStock.ProductId)
+                var product = await _db.Products
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(item => item.Id == request.ProductId && item.Status == 1 && item.IsActive);
+
+                if (product is null)
                 {
                     throw new InvalidOperationException("One or more selected products are no longer active.");
                 }
 
-                if (displayStock.Quantity <= 0 || displayStock.Quantity < request.Quantity)
+                var currentSellingPrice = await _db.ProductBatches
+                    .AsNoTracking()
+                    .Where(batch => batch.ProductId == request.ProductId && batch.Status == 1 && batch.IsActive)
+                    .OrderByDescending(batch => batch.CreatedAt ?? DateTime.MinValue)
+                    .ThenByDescending(batch => batch.Id)
+                    .Select(batch => (decimal?)batch.SellingPrice)
+                    .FirstOrDefaultAsync();
+
+                if (!currentSellingPrice.HasValue)
                 {
-                    throw new InvalidOperationException($"Display stock is not enough for {displayStock.Product.Name}.");
+                    throw new InvalidOperationException($"Not enough display stock for {product.Name}.");
                 }
 
-                var price = displayStock.Batch.SellingPrice;
-                var subtotal = request.Quantity * price;
-                var cost = request.Quantity * displayStock.Batch.CostPrice;
+                var fifoStocks = await _db.DisplayStocks
+                    .AsNoTracking()
+                    .Include(stock => stock.Batch)
+                    .Where(stock => stock.ProductId == request.ProductId
+                        && stock.Quantity > 0
+                        && stock.Batch != null
+                        && stock.Batch.Status == 1
+                        && stock.Batch.IsActive
+                        && stock.Batch.ProductId == request.ProductId)
+                    .OrderBy(stock => stock.Batch!.CreatedAt ?? DateTime.MinValue)
+                    .ThenBy(stock => stock.Batch!.Id)
+                    .ThenBy(stock => stock.Id)
+                    .ToListAsync();
 
-                items.Add(new ValidatedProductSaleItem
+                var totalDisplayStock = fifoStocks.Sum(stock => stock.Quantity);
+                if (totalDisplayStock < request.Quantity)
                 {
-                    DisplayStockId = displayStock.Id,
-                    ProductId = displayStock.ProductId,
-                    CategoryId = displayStock.Product.CategoryId,
-                    ProductName = displayStock.Product.Name,
-                    Quantity = request.Quantity,
-                    Subtotal = subtotal,
-                    Cost = cost,
-                    ProductSale = new ProductSale
+                    throw new InvalidOperationException($"Not enough display stock for {product.Name}.");
+                }
+
+                var remainingQuantity = request.Quantity;
+                for (var stockIndex = 0; stockIndex < fifoStocks.Count && remainingQuantity > 0; stockIndex += 1)
+                {
+                    var stock = fifoStocks[stockIndex];
+                    var consumedQuantity = Math.Min(remainingQuantity, stock.Quantity);
+                    var unitPrice = currentSellingPrice.Value;
+                    var unitCost = stock.Batch!.CostPrice;
+                    var subtotal = unitPrice * consumedQuantity;
+                    var cost = unitCost * consumedQuantity;
+                    var grossProfit = subtotal - cost;
+
+                    items.Add(new ValidatedProductSaleItem
                     {
-                        ProductId = displayStock.ProductId,
-                        BatchId = displayStock.BatchId,
-                        Quantity = request.Quantity,
-                        Price = price,
+                        DisplayStockId = stock.Id,
+                        ProductId = stock.ProductId,
+                        CategoryId = product.CategoryId,
+                        ProductName = product.Name,
+                        Quantity = consumedQuantity,
                         Subtotal = subtotal,
-                        Status = "Completed",
-                        CreatedAt = DateTime.Now,
-                        UpdatedAt = DateTime.Now
-                    },
-                    StockMovement = new StockMovement
-                    {
-                        ProductId = displayStock.ProductId,
-                        ProductBatchId = displayStock.BatchId,
-                        SourceLocation = "Display",
-                        MovementType = "Sale",
-                        Quantity = request.Quantity,
-                        ReferenceType = "POS",
-                        Remarks = $"POS sale for {displayStock.Product.Name}",
-                        CreatedAt = DateTime.Now
-                    }
-                });
+                        Cost = cost,
+                        ProductSale = new ProductSale
+                        {
+                            DisplayStockId = stock.Id,
+                            ProductId = stock.ProductId,
+                            BatchId = stock.BatchId,
+                            Quantity = consumedQuantity,
+                            Price = unitPrice,
+                            UnitCost = unitCost,
+                            UnitPrice = unitPrice,
+                            Subtotal = subtotal,
+                            GrossProfit = grossProfit,
+                            Status = "Completed",
+                            CreatedAt = DateTime.Now,
+                            UpdatedAt = DateTime.Now
+                        },
+                        StockMovement = new StockMovement
+                        {
+                            ProductId = stock.ProductId,
+                            ProductBatchId = stock.BatchId,
+                            SourceLocation = "Display",
+                            MovementType = "Sale",
+                            Quantity = consumedQuantity,
+                            ReferenceType = "POS",
+                            Remarks = $"POS FIFO sale for {product.Name}",
+                            CreatedAt = DateTime.Now
+                        }
+                    });
+
+                    remainingQuantity -= consumedQuantity;
+                }
             }
 
             return items;
@@ -811,7 +2058,7 @@ namespace gpos.Controllers
 
                 if (displayStock is null || displayStock.Quantity < items[i].Quantity)
                 {
-                    throw new InvalidOperationException($"Display stock is not enough for {items[i].ProductName}.");
+                    throw new InvalidOperationException($"Not enough display stock for {items[i].ProductName}.");
                 }
 
                 saleItem.DisplayStockBefore = displayStock.Quantity;

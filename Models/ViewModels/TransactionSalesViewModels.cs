@@ -31,7 +31,10 @@ namespace gpos.Models.ViewModels
         public string BatchNo { get; set; } = "-";
         public decimal Quantity { get; set; }
         public decimal Price { get; set; }
+        public decimal UnitCost { get; set; }
+        public decimal UnitPrice { get; set; }
         public decimal Subtotal { get; set; }
+        public decimal GrossProfit { get; set; }
         public string CashierName { get; set; } = "-";
         public string MemberName { get; set; } = "-";
         public DateTime? SaleDate { get; set; }
@@ -103,13 +106,11 @@ namespace gpos.Models.ViewModels
 
     public class PosProductSaleRequestItem
     {
-        [Range(1, int.MaxValue)]
         public int DisplayStockId { get; set; }
 
         [Range(1, int.MaxValue)]
         public int ProductId { get; set; }
 
-        [Range(1, int.MaxValue)]
         public int BatchId { get; set; }
 
         [Range(typeof(decimal), "0.01", "999999999")]
@@ -119,7 +120,16 @@ namespace gpos.Models.ViewModels
         public decimal Price { get; set; }
 
         [Range(typeof(decimal), "0", "999999999")]
+        public decimal UnitCost { get; set; }
+
+        [Range(typeof(decimal), "0", "999999999")]
+        public decimal UnitPrice { get; set; }
+
+        [Range(typeof(decimal), "0", "999999999")]
         public decimal Subtotal { get; set; }
+
+        [Range(typeof(decimal), "-999999999", "999999999")]
+        public decimal GrossProfit { get; set; }
     }
 
     public class PosFuelSaleRequestItem

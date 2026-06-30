@@ -1,0 +1,46 @@
+@model gpos.Models.ViewModels.StockTransferPageViewModel
+
+<section class="product-receiving-page">
+    <div class="content-card transaction-ui-card product-receiving-container">
+        <div class="card-title-row page-header">
+            <div><h1>@Model.Title</h1><p>Move product batch stock from warehouse to display.</p></div>
+            <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#transferFormModal">Add Transfer</button>
+        </div>
+        <div class="product-receiving-body">
+            @if (TempData["TransferMessage"] is not null)
+            {
+                <div class="alert alert-warning">@TempData["TransferMessage"]</div>
+            }
+            <form asp-action="WarehouseToDisplayProduct" method="get" class="transaction-ui-toolbar product-receiving-toolbar toolbar">
+                <input class="form-control transaction-ui-search" name="search" value="@Model.Search" type="search" placeholder="Search transfer, product, batch, status..." />
+                <button class="btn btn-outline-primary" type="submit">Search</button>
+            </form>
+            <div class="table-responsive transaction-ui-table-wrap product-receiving-table-wrapper">
+                <table class="table app-table table-sm align-middle mb-0">
+                    <thead><tr><th>No</th><th>Transfer No</th><th>Product</th><th>Batch</th><th>Quantity</th><th>Warehouse Before</th><th>Warehouse After</th><th>Display Before</th><th>Display After</th><th>Transferred By</th><th>Date</th><th>Status</th><th>Action</th></tr></thead>
+                    <tbody>
+                        @if (Model.Transfers.Count == 0)
+                        {
+                            <tr><td class="text-center text-muted fw-bold" colspan="13">No transfers found.</td></tr>
+                        }
+                        @for (var i = 0; i < Model.Transfers.Count; i += 1)
+                        {
+                            <tr>
+                                <td>@(i + 1)</td><td class="text-nowrap">@Model.Transfers[i].TransferNo</td><td>@Model.Transfers[i].Product</td><td>@Model.Transfers[i].Batch</td><td>@Model.Transfers[i].Quantity.ToString("N2")</td><td>@(Model.Transfers[i].SourceBefore?.ToString("N2") ?? "-")</td><td>@(Model.Transfers[i].SourceAfter?.ToString("N2") ?? "-")</td><td>@(Model.Transfers[i].DestinationBefore?.ToString("N2") ?? "-")</td><td>@(Model.Transfers[i].DestinationAfter?.ToString("N2") ?? "-")</td><td>@Model.Transfers[i].TransferredBy</td><td>@Model.Transfers[i].Date?.ToString("yyyy-MM-dd HH:mm")</td><td><span class="badge @(Model.Transfers[i].Status == "Completed" ? "text-bg-success" : Model.Transfers[i].Status == "Cancelled" ? "text-bg-secondary" : "text-bg-warning")">@Model.Transfers[i].Status</span></td>
+                                <td class="text-nowrap">
+                                    @if (Model.Transfers[i].Status == "Pending")
+                                    {
+                                        <form asp-action="CompleteWarehouseToDisplayProduct" method="post" class="d-inline" onsubmit="return confirm('Complete this transfer?');">@Html.AntiForgeryToken()<input name="id" type="hidden" value="@Model.Transfers[i].Id" /><input name="search" type="hidden" value="@Model.Search" /><button class="btn btn-sm btn-outline-success" type="submit">Complete</button></form>
+                                        <form asp-action="CancelWarehouseToDisplayProduct" method="post" class="d-inline" onsubmit="return confirm('Cancel this transfer?');">@Html.AntiForgeryToken()<input name="id" type="hidden" value="@Model.Transfers[i].Id" /><input name="search" type="hidden" value="@Model.Search" /><button class="btn btn-sm btn-outline-danger" type="submit">Cancel</button></form>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</section>
+
+<div class="modal fade" id="transferFormModal" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-dialog-centered"><div class="modal-content"><form asp-action="SaveWarehouseToDisplayProduct" method="post">@Html.AntiForgeryToken()<input name="search" type="hidden" value="@Model.Search" /><div class="modal-header"><h2 class="modal-title fs-5">Add Transfer</h2><button class="btn-close" type="button" data-bs-dismiss="modal"></button></div><div class="modal-body"><div class="row g-3"><div class="col-md-6"><label asp-for="Form.ProductId" class="form-label">Product</label><select asp-for="Form.ProductId" asp-items="Model.ProductOptions" class="form-select"></select></div><div class="col-md-6"><label asp-for="Form.BatchId" class="form-label">Batch / Warehouse Stock</label><select asp-for="Form.BatchId" asp-items="Model.BatchOptions" class="form-select"></select></div><div class="col-md-6"><label asp-for="Form.Quantity" class="form-label">Transfer Quantity</label><input asp-for="Form.Quantity" class="form-control" type="number" step="0.01" min="0.01" /></div><div class="col-md-6"><label asp-for="Form.Status" class="form-label">Status</label><select asp-for="Form.Status" class="form-select"><option>Pending</option><option>Completed</option><option>Cancelled</option></select></div><div class="col-12"><label asp-for="Form.Remarks" class="form-label">Remarks</label><textarea asp-for="Form.Remarks" class="form-control" rows="3"></textarea></div></div></div><div class="modal-footer"><button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button><button class="btn btn-primary" type="submit">Save Transfer</button></div></form></div></div></div>

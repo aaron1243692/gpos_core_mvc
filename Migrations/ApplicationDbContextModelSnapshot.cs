@@ -1558,6 +1558,17 @@ namespace gpos.Migrations
                         .HasColumnType("decimal(18,2)")
                         .HasColumnName("display_stock_before");
 
+                    b.Property<int?>("DisplayStockId")
+                        .HasColumnType("int")
+                        .HasColumnName("display_stock_id");
+
+                    b.Property<decimal>("GrossProfit")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasDefaultValue(0m)
+                        .HasColumnName("gross_profit");
+
                     b.Property<decimal>("Price")
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)")
@@ -1589,6 +1600,20 @@ namespace gpos.Migrations
                         .HasColumnType("decimal(18,2)")
                         .HasColumnName("subtotal");
 
+                    b.Property<decimal>("UnitCost")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasDefaultValue(0m)
+                        .HasColumnName("unit_cost");
+
+                    b.Property<decimal>("UnitPrice")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasDefaultValue(0m)
+                        .HasColumnName("unit_price");
+
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime(6)")
                         .HasColumnName("updated_at");
@@ -1596,6 +1621,8 @@ namespace gpos.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("BatchId");
+
+                    b.HasIndex("DisplayStockId");
 
                     b.HasIndex("ProductId");
 
@@ -3295,6 +3322,11 @@ namespace gpos.Migrations
                         .HasForeignKey("BatchId")
                         .OnDelete(DeleteBehavior.Restrict);
 
+                    b.HasOne("gpos.Models.DisplayStock", "DisplayStock")
+                        .WithMany()
+                        .HasForeignKey("DisplayStockId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("gpos.Models.Product", "Product")
                         .WithMany()
                         .HasForeignKey("ProductId")
@@ -3308,6 +3340,8 @@ namespace gpos.Migrations
                         .IsRequired();
 
                     b.Navigation("Batch");
+
+                    b.Navigation("DisplayStock");
 
                     b.Navigation("Product");
 

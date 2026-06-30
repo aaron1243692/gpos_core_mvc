@@ -816,7 +816,13 @@ namespace gpos.Controllers
                 ActiveModalId = activeModalId,
                 StockForm = form ?? new ProductStockForm(),
                 CategoryOptions = await BuildCategoryOptionsAsync(),
-                DisplayStocks = await query.OrderBy(stock => stock.Id).ToListAsync()
+                DisplayStocks = await query
+                    .OrderBy(stock => stock.Product!.Name)
+                    .ThenBy(stock => stock.Batch!.CreatedAt ?? DateTime.MinValue)
+                    .ThenBy(stock => stock.Batch!.Id)
+                    .ThenBy(stock => stock.Batch!.BatchNo)
+                    .ThenBy(stock => stock.Id)
+                    .ToListAsync()
             };
         }
 
@@ -841,7 +847,13 @@ namespace gpos.Controllers
                 ActiveModalId = activeModalId,
                 StockForm = form ?? new ProductStockForm(),
                 CategoryOptions = await BuildCategoryOptionsAsync(),
-                WarehouseStocks = await query.OrderBy(stock => stock.Id).ToListAsync()
+                WarehouseStocks = await query
+                    .OrderBy(stock => stock.Product!.Name)
+                    .ThenBy(stock => stock.Batch!.CreatedAt ?? DateTime.MinValue)
+                    .ThenBy(stock => stock.Batch!.Id)
+                    .ThenBy(stock => stock.Batch!.BatchNo)
+                    .ThenBy(stock => stock.Id)
+                    .ToListAsync()
             };
         }
 

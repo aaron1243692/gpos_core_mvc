@@ -14939,4 +14939,8 @@ C:\project\gpos_core_mvc\artifacts\verify-sales-cost\ru\Microsoft.CodeAnalysis.W
 C:\project\gpos_core_mvc\artifacts\verify-sales-cost\tr\Microsoft.CodeAnalysis.Workspaces.MSBuild.BuildHost.resources.dll
 C:\project\gpos_core_mvc\artifacts\verify-sales-cost\zh-Hans\Microsoft.CodeAnalysis.Workspaces.MSBuild.BuildHost.resources.dll
 C:\project\gpos_core_mvc\artifacts\verify-sales-cost\zh-Hant\Microsoft.CodeAnalysis.Workspaces.MSBuild.BuildHost.resources.dll
-C:\project\gpos_core_mvc\obj\Debug\net10.0\compressed\ios0330fcj-{0}-pcqc8nm6hw-pcqc8nm6hw.gz
+C:\project\gpos_core_mvc\obj\Debug\net10.0\compressed\ios0330fcj-{0}-ypq7zyv5vi-ypq7zyv5vi.gz
+C:\project\gpos_core_mvc\bin\Debug\net10.0\Views\Transaction\BranchToBranchFuel.cshtml
+C:\project\gpos_core_mvc\bin\Debug\net10.0\Views\Transaction\BranchToBranchProduct.cshtml
+C:\project\gpos_core_mvc\bin\Debug\net10.0\Views\Transaction\DisplayToWarehouseProduct.cshtml
+C:\project\gpos_core_mvc\bin\Debug\net10.0\Views\Transaction\WarehouseToDisplayProduct.cshtml

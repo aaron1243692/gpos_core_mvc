@@ -6,9 +6,13 @@ namespace gpos.Models
         public int SaleId { get; set; }
         public int ProductId { get; set; }
         public int? BatchId { get; set; }
+        public int? DisplayStockId { get; set; }
         public decimal Quantity { get; set; }
         public decimal Price { get; set; }
+        public decimal UnitCost { get; set; }
+        public decimal UnitPrice { get; set; }
         public decimal Subtotal { get; set; }
+        public decimal GrossProfit { get; set; }
         public decimal? DisplayStockBefore { get; set; }
         public decimal? DisplayStockAfter { get; set; }
         public string Status { get; set; } = "Completed";
@@ -18,5 +22,6 @@ namespace gpos.Models
         public Sale? Sale { get; set; }
         public Product? Product { get; set; }
         public ProductBatch? Batch { get; set; }
+        public DisplayStock? DisplayStock { get; set; }
     }
 }

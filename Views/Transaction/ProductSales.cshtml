@@ -44,53 +44,42 @@
             <table class="table app-table table-sm align-middle mb-0 sales-summary-table product-sales-summary-table">
                 <thead>
                     <tr>
+                        <th>No</th>
                         <th>Receipt No.</th>
-                        <th>Date &amp; Time</th>
-                        <th>Name (Quantity / Liters)</th>
-                        <th>Amount Paid</th>
-                        <th>Change</th>
-                        <th>Points Paid</th>
-                        <th>Cost</th>
-                        <th>Discount</th>
-                        <th>Voucher Discount</th>
-                        <th>Total Price</th>
+                        <th>Product</th>
+                        <th>Batch</th>
+                        <th>Quantity</th>
+                        <th>Cost Price</th>
+                        <th>Selling Price</th>
                         <th>Subtotal</th>
-                        <th>Gross Sales</th>
-                        <th>Net Sales</th>
                         <th>Gross Profit</th>
+                        <th>Cashier/User</th>
+                        <th>Date</th>
                         <th>Status</th>
-                        <th>Actions</th>
+                        <th>Action</th>
                     </tr>
                 </thead>
                 <tbody>
                     @if (Model.Sales.Count == 0)
                     {
-                        <tr><td class="text-center text-muted fw-bold" colspan="16">No sales found.</td></tr>
+                        <tr><td class="text-center text-muted fw-bold" colspan="13">No sales found.</td></tr>
                     }
                     @for (var i = 0; i < Model.Sales.Count; i += 1)
                     {
                         var sale = Model.Sales[i];
-                        var amountPaid = sale.PointsPaid > 0m ? 0m : sale.CashAmount;
-                        var grossSales = sale.Subtotal;
-                        var netSales = grossSales - sale.MemberDiscount - sale.VoucherDiscount;
-                        var totalPrice = netSales;
-                        var grossProfit = netSales - sale.Cost;
 
                         <tr>
+                            <td class="text-nowrap">@((i + 1).ToString())</td>
                             <td class="text-nowrap">@sale.ReceiptNo</td>
-                            <td class="text-nowrap">@sale.SaleDate?.ToString("yyyy-MM-dd HH:mm")</td>
-                            <td style="min-width: 16rem;" title="@sale.ItemSummaryTitle">@sale.ItemSummary</td>
-                            <td class="text-nowrap">₱@amountPaid.ToString("N2")</td>
-                            <td class="text-nowrap">₱@sale.Change.ToString("N2")</td>
-                            <td class="text-nowrap">@sale.PointsPaid.ToString("N0")</td>
-                            <td class="text-nowrap">₱@sale.Cost.ToString("N2")</td>
-                            <td class="text-nowrap">₱@sale.MemberDiscount.ToString("N2")</td>
-                            <td class="text-nowrap">₱@sale.VoucherDiscount.ToString("N2")</td>
-                            <td class="text-nowrap">₱@totalPrice.ToString("N2")</td>
+                            <td style="min-width: 12rem;">@sale.ProductName</td>
+                            <td class="text-nowrap">@sale.BatchNo</td>
+                            <td class="text-nowrap">@sale.Quantity.ToString("N2")</td>
+                            <td class="text-nowrap">₱@sale.UnitCost.ToString("N2")</td>
+                            <td class="text-nowrap">₱@sale.UnitPrice.ToString("N2")</td>
                             <td class="text-nowrap">₱@sale.Subtotal.ToString("N2")</td>
-                            <td class="text-nowrap">₱@grossSales.ToString("N2")</td>
-                            <td class="text-nowrap">₱@netSales.ToString("N2")</td>
-                            <td class="text-nowrap">₱@grossProfit.ToString("N2")</td>
+                            <td class="text-nowrap">₱@sale.GrossProfit.ToString("N2")</td>
+                            <td class="text-nowrap">@sale.CashierName</td>
+                            <td class="text-nowrap">@sale.SaleDate?.ToString("yyyy-MM-dd HH:mm")</td>
                             <td><span class="badge @(sale.Status == "Completed" ? "text-bg-success" : sale.Status == "Voided" ? "text-bg-secondary" : sale.Status == "Returned" ? "text-bg-primary" : "text-bg-warning")">@sale.Status</span></td>
                             <td><button class="btn btn-sm btn-outline-primary" type="button" data-bs-toggle="modal" data-bs-target="#productSaleViewModal_@sale.SaleItemId">View</button></td>
                         </tr>
@@ -116,8 +105,10 @@
                         <dt class="col-sm-4">Product</dt><dd class="col-sm-8">@Model.Sales[i].ProductName</dd>
                         <dt class="col-sm-4">Batch</dt><dd class="col-sm-8">@Model.Sales[i].BatchNo</dd>
                         <dt class="col-sm-4">Quantity</dt><dd class="col-sm-8">@Model.Sales[i].Quantity.ToString("N2")</dd>
-                        <dt class="col-sm-4">Price</dt><dd class="col-sm-8">₱@Model.Sales[i].Price.ToString("N2")</dd>
+                        <dt class="col-sm-4">Cost Price</dt><dd class="col-sm-8">₱@Model.Sales[i].UnitCost.ToString("N2")</dd>
+                        <dt class="col-sm-4">Selling Price</dt><dd class="col-sm-8">₱@Model.Sales[i].UnitPrice.ToString("N2")</dd>
                         <dt class="col-sm-4">Subtotal</dt><dd class="col-sm-8">₱@Model.Sales[i].Subtotal.ToString("N2")</dd>
+                        <dt class="col-sm-4">Gross Profit</dt><dd class="col-sm-8">₱@Model.Sales[i].GrossProfit.ToString("N2")</dd>
                         <dt class="col-sm-4">Cashier/User</dt><dd class="col-sm-8">@Model.Sales[i].CashierName</dd>
                         <dt class="col-sm-4">Member</dt><dd class="col-sm-8">@Model.Sales[i].MemberName</dd>
                         <dt class="col-sm-4">Sale Date</dt><dd class="col-sm-8">@Model.Sales[i].SaleDate?.ToString("yyyy-MM-dd HH:mm")</dd>

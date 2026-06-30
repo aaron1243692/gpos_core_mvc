@@ -479,6 +479,14 @@ build_metadata.AdditionalFiles.CssScope =
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcVHJhbnNhY3Rpb25cQnJhbmNoUHJvZHVjdFRyYW5zZmVyLmNzaHRtbA==
 build_metadata.AdditionalFiles.CssScope = 
 
+[C:/project/gpos_core_mvc/Views/Transaction/BranchToBranchFuel.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcVHJhbnNhY3Rpb25cQnJhbmNoVG9CcmFuY2hGdWVsLmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/project/gpos_core_mvc/Views/Transaction/BranchToBranchProduct.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcVHJhbnNhY3Rpb25cQnJhbmNoVG9CcmFuY2hQcm9kdWN0LmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
 [C:/project/gpos_core_mvc/Views/Transaction/CashIn.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcVHJhbnNhY3Rpb25cQ2FzaEluLmNzaHRtbA==
 build_metadata.AdditionalFiles.CssScope = 
@@ -497,6 +505,10 @@ build_metadata.AdditionalFiles.CssScope =
 
 [C:/project/gpos_core_mvc/Views/Transaction/DisplayToWarehouse.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcVHJhbnNhY3Rpb25cRGlzcGxheVRvV2FyZWhvdXNlLmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/project/gpos_core_mvc/Views/Transaction/DisplayToWarehouseProduct.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcVHJhbnNhY3Rpb25cRGlzcGxheVRvV2FyZWhvdXNlUHJvZHVjdC5jc2h0bWw=
 build_metadata.AdditionalFiles.CssScope = 
 
 [C:/project/gpos_core_mvc/Views/Transaction/DisplayTransfer.cshtml]
@@ -601,6 +613,10 @@ build_metadata.AdditionalFiles.CssScope =
 
 [C:/project/gpos_core_mvc/Views/Transaction/WarehouseToDisplay.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcVHJhbnNhY3Rpb25cV2FyZWhvdXNlVG9EaXNwbGF5LmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/project/gpos_core_mvc/Views/Transaction/WarehouseToDisplayProduct.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcVHJhbnNhY3Rpb25cV2FyZWhvdXNlVG9EaXNwbGF5UHJvZHVjdC5jc2h0bWw=
 build_metadata.AdditionalFiles.CssScope = 
 
 [C:/project/gpos_core_mvc/Views/Transaction/WarehouseTransfer.cshtml]

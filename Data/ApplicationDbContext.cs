@@ -26,6 +26,8 @@ namespace gpos.Data
         public DbSet<StockReceiving> StockReceivings { get; set; }
         public DbSet<StockReceivingItem> StockReceivingItems { get; set; }
         public DbSet<StockMovement> StockMovements { get; set; }
+        public DbSet<StockTransfer> StockTransfers { get; set; }
+        public DbSet<StockTransferItem> StockTransferItems { get; set; }
         public DbSet<LowStockSetting> LowStockSettings { get; set; }
         public DbSet<DisplayStock> DisplayStocks { get; set; }
         public DbSet<WarehouseStock> WarehouseStocks { get; set; }
@@ -223,6 +225,7 @@ namespace gpos.Data
 
                 entity.Property(tank => tank.Id).HasColumnName("id");
                 entity.Property(tank => tank.FuelId).HasColumnName("fuel_id");
+                entity.Property(tank => tank.BranchId).HasColumnName("branch_id");
                 entity.Property(tank => tank.TankNo).HasColumnName("tank_no").IsRequired();
                 entity.Property(tank => tank.CapacityLiters).HasColumnName("capacity_liters").HasPrecision(18, 2).HasDefaultValue(0m);
                 entity.Property(tank => tank.CurrentLiters).HasColumnName("current_liters").HasPrecision(18, 2).HasDefaultValue(0m);
@@ -232,9 +235,14 @@ namespace gpos.Data
                 entity.Property(tank => tank.UpdatedAt).HasColumnName("updated_at");
 
                 entity.HasIndex(tank => tank.FuelId);
+                entity.HasIndex(tank => tank.BranchId);
                 entity.HasOne(tank => tank.Fuel)
                     .WithMany(fuel => fuel.Tanks)
                     .HasForeignKey(tank => tank.FuelId)
+                    .OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne(tank => tank.Branch)
+                    .WithMany()
+                    .HasForeignKey(tank => tank.BranchId)
                     .OnDelete(DeleteBehavior.Restrict);
             });
 
@@ -541,6 +549,70 @@ namespace gpos.Data
                     .OnDelete(DeleteBehavior.Restrict);
             });
 
+            modelBuilder.Entity<StockTransfer>(entity =>
+            {
+                entity.ToTable("stock_transfers");
+                entity.HasKey(transfer => transfer.Id);
+
+                entity.Property(transfer => transfer.Id).HasColumnName("id");
+                entity.Property(transfer => transfer.TransferNo).HasColumnName("transfer_no").HasMaxLength(100).IsRequired();
+                entity.Property(transfer => transfer.TransferType).HasColumnName("transfer_type").HasMaxLength(100).IsRequired();
+                entity.Property(transfer => transfer.SourceBranchId).HasColumnName("source_branch_id");
+                entity.Property(transfer => transfer.DestinationBranchId).HasColumnName("destination_branch_id");
+                entity.Property(transfer => transfer.SourceLocation).HasColumnName("source_location").HasMaxLength(50);
+                entity.Property(transfer => transfer.DestinationLocation).HasColumnName("destination_location").HasMaxLength(50);
+                entity.Property(transfer => transfer.Status).HasColumnName("status").HasMaxLength(50).HasDefaultValue("Pending");
+                entity.Property(transfer => transfer.Remarks).HasColumnName("remarks").HasMaxLength(255);
+                entity.Property(transfer => transfer.TransferredBy).HasColumnName("transferred_by");
+                entity.Property(transfer => transfer.CompletedAt).HasColumnName("completed_at");
+                entity.Property(transfer => transfer.CancelledAt).HasColumnName("cancelled_at");
+                entity.Property(transfer => transfer.CreatedAt).HasColumnName("created_at");
+                entity.Property(transfer => transfer.UpdatedAt).HasColumnName("updated_at");
+
+                entity.HasIndex(transfer => transfer.TransferNo).IsUnique();
+                entity.HasIndex(transfer => transfer.SourceBranchId);
+                entity.HasIndex(transfer => transfer.DestinationBranchId);
+                entity.HasIndex(transfer => transfer.TransferredBy);
+                entity.HasOne(transfer => transfer.SourceBranch).WithMany().HasForeignKey(transfer => transfer.SourceBranchId).OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne(transfer => transfer.DestinationBranch).WithMany().HasForeignKey(transfer => transfer.DestinationBranchId).OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne(transfer => transfer.User).WithMany().HasForeignKey(transfer => transfer.TransferredBy).OnDelete(DeleteBehavior.Restrict);
+            });
+
+            modelBuilder.Entity<StockTransferItem>(entity =>
+            {
+                entity.ToTable("stock_transfer_items");
+                entity.HasKey(item => item.Id);
+
+                entity.Property(item => item.Id).HasColumnName("id");
+                entity.Property(item => item.StockTransferId).HasColumnName("stock_transfer_id");
+                entity.Property(item => item.ProductId).HasColumnName("product_id");
+                entity.Property(item => item.BatchId).HasColumnName("batch_id");
+                entity.Property(item => item.FuelId).HasColumnName("fuel_id");
+                entity.Property(item => item.SourceTankId).HasColumnName("source_tank_id");
+                entity.Property(item => item.DestinationTankId).HasColumnName("destination_tank_id");
+                entity.Property(item => item.Quantity).HasColumnName("quantity").HasPrecision(18, 2);
+                entity.Property(item => item.Liters).HasColumnName("liters").HasPrecision(18, 2);
+                entity.Property(item => item.SourceBefore).HasColumnName("source_before").HasPrecision(18, 2);
+                entity.Property(item => item.SourceAfter).HasColumnName("source_after").HasPrecision(18, 2);
+                entity.Property(item => item.DestinationBefore).HasColumnName("destination_before").HasPrecision(18, 2);
+                entity.Property(item => item.DestinationAfter).HasColumnName("destination_after").HasPrecision(18, 2);
+                entity.Property(item => item.CreatedAt).HasColumnName("created_at");
+                entity.Property(item => item.UpdatedAt).HasColumnName("updated_at");
+
+                entity.HasIndex(item => item.StockTransferId);
+                entity.HasIndex(item => item.ProductId);
+                entity.HasIndex(item => item.BatchId);
+                entity.HasIndex(item => item.FuelId);
+                entity.HasIndex(item => item.SourceTankId);
+                entity.HasIndex(item => item.DestinationTankId);
+                entity.HasOne(item => item.StockTransfer).WithMany(transfer => transfer.Items).HasForeignKey(item => item.StockTransferId).OnDelete(DeleteBehavior.Cascade);
+                entity.HasOne(item => item.Product).WithMany().HasForeignKey(item => item.ProductId).OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne(item => item.Batch).WithMany().HasForeignKey(item => item.BatchId).OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne(item => item.Fuel).WithMany().HasForeignKey(item => item.FuelId).OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne(item => item.SourceTank).WithMany().HasForeignKey(item => item.SourceTankId).OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne(item => item.DestinationTank).WithMany().HasForeignKey(item => item.DestinationTankId).OnDelete(DeleteBehavior.Restrict);
+            });
+
             modelBuilder.Entity<LowStockSetting>(entity =>
             {
                 entity.ToTable("low_stock_settings");
@@ -575,12 +647,16 @@ namespace gpos.Data
                 entity.Property(stock => stock.Id).HasColumnName("id");
                 entity.Property(stock => stock.ProductId).HasColumnName("product_id");
                 entity.Property(stock => stock.BatchId).HasColumnName("batch_id");
+                entity.Property(stock => stock.BranchId).HasColumnName("branch_id");
+                entity.Property(stock => stock.BranchId).HasColumnName("branch_id");
                 entity.Property(stock => stock.Quantity).HasColumnName("quantity").HasPrecision(18, 2).HasDefaultValue(0m);
                 entity.Property(stock => stock.CreatedAt).HasColumnName("created_at");
                 entity.Property(stock => stock.UpdatedAt).HasColumnName("updated_at");
 
                 entity.HasIndex(stock => stock.ProductId);
                 entity.HasIndex(stock => stock.BatchId);
+                entity.HasIndex(stock => stock.BranchId);
+                entity.HasIndex(stock => stock.BranchId);
                 entity.ToTable(table =>
                 {
                     table.HasCheckConstraint("CK_warehouse_stocks_quantity_non_negative", "quantity >= 0");
@@ -592,6 +668,10 @@ namespace gpos.Data
                 entity.HasOne(stock => stock.Batch)
                     .WithMany(batch => batch.WarehouseStocks)
                     .HasForeignKey(stock => stock.BatchId)
+                    .OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne(stock => stock.Branch)
+                    .WithMany()
+                    .HasForeignKey(stock => stock.BranchId)
                     .OnDelete(DeleteBehavior.Restrict);
             });
 
@@ -620,6 +700,10 @@ namespace gpos.Data
                 entity.HasOne(stock => stock.Batch)
                     .WithMany(batch => batch.DisplayStocks)
                     .HasForeignKey(stock => stock.BatchId)
+                    .OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne(stock => stock.Branch)
+                    .WithMany()
+                    .HasForeignKey(stock => stock.BranchId)
                     .OnDelete(DeleteBehavior.Restrict);
             });
 
@@ -1118,9 +1202,13 @@ namespace gpos.Data
                 entity.Property(item => item.SaleId).HasColumnName("sale_id");
                 entity.Property(item => item.ProductId).HasColumnName("product_id");
                 entity.Property(item => item.BatchId).HasColumnName("batch_id");
+                entity.Property(item => item.DisplayStockId).HasColumnName("display_stock_id");
                 entity.Property(item => item.Quantity).HasColumnName("quantity").HasPrecision(18, 2);
                 entity.Property(item => item.Price).HasColumnName("price").HasPrecision(18, 2);
+                entity.Property(item => item.UnitCost).HasColumnName("unit_cost").HasPrecision(18, 2).HasDefaultValue(0m);
+                entity.Property(item => item.UnitPrice).HasColumnName("unit_price").HasPrecision(18, 2).HasDefaultValue(0m);
                 entity.Property(item => item.Subtotal).HasColumnName("subtotal").HasPrecision(18, 2);
+                entity.Property(item => item.GrossProfit).HasColumnName("gross_profit").HasPrecision(18, 2).HasDefaultValue(0m);
                 entity.Property(item => item.DisplayStockBefore).HasColumnName("display_stock_before").HasPrecision(18, 2);
                 entity.Property(item => item.DisplayStockAfter).HasColumnName("display_stock_after").HasPrecision(18, 2);
                 entity.Property(item => item.Status).HasColumnName("status").HasMaxLength(50).HasDefaultValue("Completed");
@@ -1130,6 +1218,7 @@ namespace gpos.Data
                 entity.HasIndex(item => item.SaleId);
                 entity.HasIndex(item => item.ProductId);
                 entity.HasIndex(item => item.BatchId);
+                entity.HasIndex(item => item.DisplayStockId);
                 entity.HasOne(item => item.Sale)
                     .WithMany(sale => sale.ProductSales)
                     .HasForeignKey(item => item.SaleId)
@@ -1142,7 +1231,36 @@ namespace gpos.Data
                     .WithMany()
                     .HasForeignKey(item => item.BatchId)
                     .OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne(item => item.DisplayStock)
+                    .WithMany()
+                    .HasForeignKey(item => item.DisplayStockId)
+                    .OnDelete(DeleteBehavior.Restrict);
             });
+
+            modelBuilder.Entity<DisplayStock>()
+                .Property(stock => stock.BranchId)
+                .HasColumnName("branch_id");
+            modelBuilder.Entity<DisplayStock>()
+                .HasOne(stock => stock.Branch)
+                .WithMany()
+                .HasForeignKey(stock => stock.BranchId)
+                .OnDelete(DeleteBehavior.Restrict);
+            modelBuilder.Entity<WarehouseStock>()
+                .Property(stock => stock.BranchId)
+                .HasColumnName("branch_id");
+            modelBuilder.Entity<WarehouseStock>()
+                .HasOne(stock => stock.Branch)
+                .WithMany()
+                .HasForeignKey(stock => stock.BranchId)
+                .OnDelete(DeleteBehavior.Restrict);
+            modelBuilder.Entity<Tank>()
+                .Property(tank => tank.BranchId)
+                .HasColumnName("branch_id");
+            modelBuilder.Entity<Tank>()
+                .HasOne(tank => tank.Branch)
+                .WithMany()
+                .HasForeignKey(tank => tank.BranchId)
+                .OnDelete(DeleteBehavior.Restrict);
 
             modelBuilder.Entity<FuelSale>(entity =>
             {

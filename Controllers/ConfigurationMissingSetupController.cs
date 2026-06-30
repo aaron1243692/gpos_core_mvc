@@ -1069,7 +1069,7 @@ namespace gpos.Controllers
             IQueryable<ProductBatch> query = _db.ProductBatches.AsNoTracking().Include(batch => batch.Product).Include(batch => batch.Supplier);
             var searchText = (search ?? string.Empty).Trim();
             if (!string.IsNullOrWhiteSpace(searchText)) query = query.Where(batch => batch.BatchNo.Contains(searchText) || (batch.Product != null && batch.Product.Name.Contains(searchText)) || (batch.Supplier != null && batch.Supplier.Name.Contains(searchText)));
-            return new SetupModulesPageViewModel { Search = searchText, ActiveModalId = activeModalId, ProductBatchForm = form ?? await BuildProductBatchFormAsync(editId), ProductOptions = await BuildProductOptionsAsync(), SupplierOptions = await BuildSupplierOptionsAsync(), ProductBatches = await query.OrderBy(batch => batch.Id).ToListAsync() };
+            return new SetupModulesPageViewModel { Search = searchText, ActiveModalId = activeModalId, ProductBatchForm = form ?? await BuildProductBatchFormAsync(editId), ProductOptions = await BuildProductOptionsAsync(), SupplierOptions = await BuildSupplierOptionsAsync(), ProductBatches = await query.OrderBy(batch => batch.Product!.Name).ThenBy(batch => batch.CreatedAt ?? DateTime.MinValue).ThenBy(batch => batch.Id).ToListAsync() };
         }
 
         private async Task<SetupModulesPageViewModel> BuildStockReceivingPageAsync(string? search, StockReceivingForm? form = null, int? editId = null, string activeModalId = "")

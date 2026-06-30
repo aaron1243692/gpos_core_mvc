@@ -1,19 +1,180 @@
-﻿<section class="transaction-ui-page">
+@model gpos.Models.ViewModels.FuelReceivingPageViewModel
+
+<section class="transaction-ui-page">
     <div class="content-card transaction-ui-card">
-        <div class="card-title-row"><div><h1>Fuel Receiving</h1><p>UI-only receiving page. Future flow: fuel receiving adds liters to tanks.current_liters.</p></div><span class="status-badge">UI Only</span></div>
-        <div class="transaction-ui-toolbar"><input class="form-control transaction-ui-search" type="search" placeholder="Search fuel receiving..." data-transaction-search="#fuelReceivingTable" /><button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#fuelReceivingFormModal">Add Receiving</button></div>
+        <div class="card-title-row">
+            <div>
+                <h1>Fuel Receiving</h1>
+                <p>Receive fuel deliveries into tanks.</p>
+            </div>
+            <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#fuelReceivingFormModal">Add Receiving</button>
+        </div>
+
+        @if (TempData["ReceivingMessage"] is not null)
+        {
+            <div class="alert alert-warning">@TempData["ReceivingMessage"]</div>
+        }
+
+        <form asp-action="FuelReceiving" method="get" class="transaction-ui-toolbar">
+            <input class="form-control transaction-ui-search" name="search" value="@Model.Search" type="search" placeholder="Search receiving, supplier, fuel, tank, status..." />
+            <button class="btn btn-outline-primary" type="submit">Search</button>
+        </form>
+
         <div class="table-responsive transaction-ui-table-wrap">
-            <table class="table app-table table-sm align-middle mb-0" id="fuelReceivingTable">
-                <thead><tr><th>No</th><th>Receiving No</th><th>Supplier</th><th>Fuel</th><th>Tank</th><th>Liters</th><th>Price/Liter</th><th>Tank Liters After</th><th>Received By</th><th>Date</th><th>Status</th><th>Action</th></tr></thead>
+            <table class="table app-table table-sm align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>No</th>
+                        <th>Receiving No</th>
+                        <th>Supplier</th>
+                        <th>Fuel</th>
+                        <th>Tank</th>
+                        <th>Liters</th>
+                        <th>Cost/Liter</th>
+                        <th>Selling Price/Liter</th>
+                        <th>Tank Liters Before</th>
+                        <th>Tank Liters After</th>
+                        <th>Received By</th>
+                        <th>Date</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
                 <tbody>
-                    <tr data-search-row><td>1</td><td>RCV-F-0001</td><td>Fuel Depot</td><td>Diesel</td><td>Tank 1</td><td>2,000.00</td><td>₱54.00</td><td>10,480.00</td><td>admin</td><td>2026-06-24</td><td><span class="badge text-bg-warning">Pending</span></td><td><span class="transaction-ui-actions"><button class="btn btn-sm btn-outline-primary" type="button" data-bs-toggle="modal" data-bs-target="#fuelReceivingViewModal">View</button><button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="modal" data-bs-target="#fuelReceivingFormModal">Edit</button><button class="btn btn-sm btn-outline-danger" type="button" data-bs-toggle="modal" data-bs-target="#fuelReceivingConfirmModal">Complete</button></span></td></tr>
-                    <tr data-empty-row hidden><td class="text-center text-muted fw-bold" colspan="12">No records found.</td></tr>
+                    @if (Model.Receivings.Count == 0)
+                    {
+                        <tr><td class="text-center text-muted fw-bold" colspan="14">No fuel receiving records found.</td></tr>
+                    }
+                    @for (var i = 0; i < Model.Receivings.Count; i += 1)
+                    {
+                        <tr>
+                            <td class="text-nowrap">@(i + 1)</td>
+                            <td class="text-nowrap">@Model.Receivings[i].ReceivingNo</td>
+                            <td>@Model.Receivings[i].Supplier</td>
+                            <td>@Model.Receivings[i].Fuel</td>
+                            <td>@Model.Receivings[i].Tank</td>
+                            <td class="text-nowrap">@Model.Receivings[i].Liters.ToString("N2")</td>
+                            <td class="text-nowrap">₱@Model.Receivings[i].CostPerLiter.ToString("N2")</td>
+                            <td class="text-nowrap">₱@Model.Receivings[i].SellingPricePerLiter.ToString("N2")</td>
+                            <td class="text-nowrap">@(Model.Receivings[i].TankLitersBefore.HasValue ? Model.Receivings[i].TankLitersBefore!.Value.ToString("N2") : "-")</td>
+                            <td class="text-nowrap">@(Model.Receivings[i].TankLitersAfter.HasValue ? Model.Receivings[i].TankLitersAfter!.Value.ToString("N2") : "-")</td>
+                            <td class="text-nowrap">@Model.Receivings[i].ReceivedBy</td>
+                            <td class="text-nowrap">@Model.Receivings[i].Date.ToString("yyyy-MM-dd HH:mm")</td>
+                            <td><span class="badge @(Model.Receivings[i].Status == 1 ? "text-bg-success" : Model.Receivings[i].Status == 2 ? "text-bg-secondary" : "text-bg-warning")">@(Model.Receivings[i].Status == 1 ? "Completed" : Model.Receivings[i].Status == 2 ? "Cancelled" : "Pending")</span></td>
+                            <td class="text-nowrap">
+                                <button class="btn btn-sm btn-outline-primary" type="button" data-bs-toggle="modal" data-bs-target="#fuelReceivingViewModal_@Model.Receivings[i].Id">View</button>
+                                @if (Model.Receivings[i].Status == 0)
+                                {
+                                    <form asp-action="CompleteFuelReceiving" method="post" class="d-inline" onsubmit="return confirm('Complete this fuel receiving?');">
+                                        @Html.AntiForgeryToken()
+                                        <input name="id" type="hidden" value="@Model.Receivings[i].Id" />
+                                        <input name="search" type="hidden" value="@Model.Search" />
+                                        <button class="btn btn-sm btn-outline-success" type="submit">Complete</button>
+                                    </form>
+                                    <form asp-action="CancelFuelReceiving" method="post" class="d-inline" onsubmit="return confirm('Cancel this pending fuel receiving?');">
+                                        @Html.AntiForgeryToken()
+                                        <input name="id" type="hidden" value="@Model.Receivings[i].Id" />
+                                        <input name="search" type="hidden" value="@Model.Search" />
+                                        <button class="btn btn-sm btn-outline-danger" type="submit">Cancel</button>
+                                    </form>
+                                }
+                            </td>
+                        </tr>
+                    }
                 </tbody>
             </table>
         </div>
     </div>
-    <div class="content-card transaction-db-card"><h2 class="h5 mb-1">Recommended Future Stock Flow</h2><p class="mb-0">Fuel Receiving -> add liters to <strong>tanks.current_liters</strong>; later write fuel_movements with movement_type = Delivery.</p><ul class="transaction-db-list"><li>fuel_deliveries</li><li>tanks.current_liters</li><li>fuel_movements</li></ul></div>
 </section>
-<div class="modal fade" id="fuelReceivingFormModal" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-dialog-centered"><div class="modal-content"><div class="modal-header"><h2 class="modal-title fs-5">Fuel Receiving</h2><button class="btn-close" type="button" data-bs-dismiss="modal"></button></div><div class="modal-body"><div class="row g-3"><div class="col-md-6"><label class="form-label">Supplier</label><input class="form-control" value="Fuel Depot" /></div><div class="col-md-6"><label class="form-label">Fuel</label><input class="form-control" value="Diesel" /></div><div class="col-md-6"><label class="form-label">Tank</label><input class="form-control" value="Tank 1" /></div><div class="col-md-6"><label class="form-label">Liters</label><input class="form-control" type="number" value="2000" /></div><div class="col-md-6"><label class="form-label">Price/Liter</label><input class="form-control" type="number" value="54" /></div><div class="col-md-6"><label class="form-label">Status</label><select class="form-select"><option>Pending</option><option>Completed</option><option>Cancelled</option></select></div><div class="col-12"><label class="form-label">Remarks</label><textarea class="form-control" rows="3">Tank receiving draft only.</textarea></div></div></div><div class="modal-footer"><button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button><button class="btn btn-primary" type="button" data-bs-dismiss="modal">Save UI Draft</button></div></div></div></div>
-<div class="modal fade" id="fuelReceivingViewModal" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-dialog-centered"><div class="modal-content"><div class="modal-header"><h2 class="modal-title fs-5">Fuel Receiving Details</h2><button class="btn-close" type="button" data-bs-dismiss="modal"></button></div><div class="modal-body">Fuel receiving preview only. No tank liters are added.</div><div class="modal-footer"><button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Close</button></div></div></div></div>
-<div class="modal fade" id="fuelReceivingConfirmModal" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-dialog-centered"><div class="modal-content"><div class="modal-header"><h2 class="modal-title fs-5">Complete Receiving</h2><button class="btn-close" type="button" data-bs-dismiss="modal"></button></div><div class="modal-body">Complete this fuel receiving? This is UI only and will not update tank liters.</div><div class="modal-footer"><button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button><button class="btn btn-primary" type="button" data-bs-dismiss="modal">Complete</button></div></div></div></div>
+
+<div class="modal fade" id="fuelReceivingFormModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <form asp-action="SaveFuelReceiving" method="post">
+                @Html.AntiForgeryToken()
+                <input name="search" type="hidden" value="@Model.Search" />
+                <div class="modal-header">
+                    <h2 class="modal-title fs-5">Add Fuel Receiving</h2>
+                    <button class="btn-close" type="button" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label asp-for="Form.SupplierId" class="form-label">Supplier</label>
+                            <select asp-for="Form.SupplierId" asp-items="Model.SupplierOptions" class="form-select"></select>
+                            <span asp-validation-for="Form.SupplierId" class="text-danger"></span>
+                        </div>
+                        <div class="col-md-6">
+                            <label asp-for="Form.FuelId" class="form-label">Fuel</label>
+                            <select asp-for="Form.FuelId" asp-items="Model.FuelOptions" class="form-select"></select>
+                            <span asp-validation-for="Form.FuelId" class="text-danger"></span>
+                        </div>
+                        <div class="col-md-6">
+                            <label asp-for="Form.TankId" class="form-label">Tank</label>
+                            <select asp-for="Form.TankId" asp-items="Model.TankOptions" class="form-select"></select>
+                            <span asp-validation-for="Form.TankId" class="text-danger"></span>
+                        </div>
+                        <div class="col-md-6">
+                            <label asp-for="Form.Status" class="form-label">Status</label>
+                            <select asp-for="Form.Status" class="form-select">
+                                <option value="0">Pending</option>
+                                <option value="1">Completed</option>
+                                <option value="2">Cancelled</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label asp-for="Form.Liters" class="form-label">Liters</label>
+                            <input asp-for="Form.Liters" class="form-control" type="number" step="0.01" min="0.01" />
+                            <span asp-validation-for="Form.Liters" class="text-danger"></span>
+                        </div>
+                        <div class="col-md-4">
+                            <label asp-for="Form.CostPerLiter" class="form-label">Cost/Liter</label>
+                            <input asp-for="Form.CostPerLiter" class="form-control" type="number" step="0.01" min="0" />
+                            <span asp-validation-for="Form.CostPerLiter" class="text-danger"></span>
+                        </div>
+                        <div class="col-md-4">
+                            <label asp-for="Form.SellingPricePerLiter" class="form-label">Selling Price/Liter</label>
+                            <input asp-for="Form.SellingPricePerLiter" class="form-control" type="number" step="0.01" min="0" />
+                            <span asp-validation-for="Form.SellingPricePerLiter" class="text-danger"></span>
+                        </div>
+                        <div class="col-12">
+                            <label asp-for="Form.Remarks" class="form-label">Remarks</label>
+                            <textarea asp-for="Form.Remarks" class="form-control" rows="3"></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button>
+                    <button class="btn btn-primary" type="submit">Save Receiving</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@for (var i = 0; i < Model.Receivings.Count; i += 1)
+{
+    <div class="modal fade" id="fuelReceivingViewModal_@Model.Receivings[i].Id" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 class="modal-title fs-5">Fuel Receiving Details</h2>
+                    <button class="btn-close" type="button" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <dl class="row mb-0">
+                        <dt class="col-sm-5">Receiving No</dt><dd class="col-sm-7">@Model.Receivings[i].ReceivingNo</dd>
+                        <dt class="col-sm-5">Supplier</dt><dd class="col-sm-7">@Model.Receivings[i].Supplier</dd>
+                        <dt class="col-sm-5">Fuel</dt><dd class="col-sm-7">@Model.Receivings[i].Fuel</dd>
+                        <dt class="col-sm-5">Tank</dt><dd class="col-sm-7">@Model.Receivings[i].Tank</dd>
+                        <dt class="col-sm-5">Remarks</dt><dd class="col-sm-7">@Model.Receivings[i].Remarks</dd>
+                    </dl>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
