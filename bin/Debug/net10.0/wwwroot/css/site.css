@@ -1649,7 +1649,7 @@ textarea.form-control {
 }
 
 .admin-table.voucher-rules-table {
-  min-width: 1260px;
+  min-width: 1190px;
   table-layout: fixed;
 }
 
@@ -1702,6 +1702,10 @@ textarea.form-control {
 
 .voucher-rules-table .col-member-required {
   width: 138px;
+}
+
+.voucher-rules-table .col-usage-limit {
+  width: 72px;
 }
 
 .voucher-rules-table .col-date {

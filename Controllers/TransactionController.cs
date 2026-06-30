@@ -63,7 +63,7 @@ namespace gpos.Controllers
                 {
                     success = true,
                     discountAmount = redemption.DiscountAmount,
-                    voucherCode = redemption.Rule.Code ?? redemption.Voucher.Code
+                    voucherCode = redemption.Rule.Code ?? redemption.Voucher?.Code
                 });
             }
             catch (InvalidOperationException ex)
@@ -222,7 +222,7 @@ namespace gpos.Controllers
                     pointsEarned,
                     pointsRequired,
                     paymentMethod,
-                    voucherCode = voucherRedemption?.Rule.Code ?? voucherRedemption?.Voucher.Code,
+                    voucherCode = voucherRedemption?.Rule.Code ?? voucherRedemption?.Voucher?.Code,
                     amountTendered = cashAmount,
                     change = Math.Max(0m, cashAmount - netTotal)
                 });
@@ -1110,18 +1110,14 @@ namespace gpos.Controllers
             }
 
             var voucher = rule.Voucher;
-            if (voucher is null)
-            {
-                throw new InvalidOperationException("Voucher not found.");
-            }
-
-            if (!string.Equals(voucher.Status, "Active", StringComparison.OrdinalIgnoreCase)
+            if (voucher is not null
+                && !string.Equals(voucher.Status, "Active", StringComparison.OrdinalIgnoreCase)
                 && !string.Equals(voucher.Status, "Redeemed", StringComparison.OrdinalIgnoreCase))
             {
                 throw new InvalidOperationException("Voucher inactive.");
             }
 
-            if (voucher.MemberId.HasValue && (member is null || voucher.MemberId.Value != member.Id))
+            if (voucher?.MemberId.HasValue == true && (member is null || voucher.MemberId.Value != member.Id))
             {
                 throw new InvalidOperationException("Member required.");
             }
@@ -1132,7 +1128,7 @@ namespace gpos.Controllers
 
         private static decimal ValidateAndCalculateVoucherDiscount(
             VoucherRule rule,
-            Voucher voucher,
+            Voucher? voucher,
             Member? member,
             decimal productTotal,
             decimal fuelTotal,
@@ -1148,7 +1144,7 @@ namespace gpos.Controllers
                 throw new InvalidOperationException("Voucher has expired.");
             }
 
-            var voucherUseCount = voucher.Redemptions.Count;
+            var voucherUseCount = voucher?.Redemptions.Count ?? rule.Redemptions.Count;
             var usageLimit = Math.Max(1, rule.MaxRedemptions ?? rule.LimitedUseCount ?? 1);
             if (voucherUseCount >= usageLimit)
             {
@@ -1200,20 +1196,36 @@ namespace gpos.Controllers
 
             _db.VoucherRedemptions.Add(new VoucherRedemption
             {
-                VoucherId = redemption.Voucher.Id,
+                VoucherId = redemption.Voucher?.Id,
                 VoucherRuleId = redemption.Rule.Id,
                 SaleId = saleId,
                 DiscountAmount = redemption.DiscountAmount,
                 CreatedAt = now
             });
 
-            redemption.Voucher.Status = VoucherStatusAfterRedemption(redemption.Voucher, redemption.Rule);
-            redemption.Voucher.UpdatedAt = now;
+            if (redemption.Voucher is not null)
+            {
+                redemption.Voucher.Status = VoucherStatusAfterRedemption(redemption.Voucher, redemption.Rule);
+                redemption.Voucher.UpdatedAt = now;
+            }
+            else
+            {
+                redemption.Rule.Status = VoucherStatusAfterRedemption(redemption.Rule) == "Redeemed" ? 0 : 1;
+                redemption.Rule.UpdatedAt = now;
+            }
         }
 
         private static string VoucherStatusAfterRedemption(Voucher voucher, VoucherRule rule)
         {
             var useCountAfterRedemption = voucher.Redemptions.Count + 1;
+            var usageLimit = Math.Max(1, rule.MaxRedemptions ?? rule.LimitedUseCount ?? 1);
+
+            return useCountAfterRedemption >= usageLimit ? "Redeemed" : "Active";
+        }
+
+        private static string VoucherStatusAfterRedemption(VoucherRule rule)
+        {
+            var useCountAfterRedemption = rule.Redemptions.Count + 1;
             var usageLimit = Math.Max(1, rule.MaxRedemptions ?? rule.LimitedUseCount ?? 1);
 
             return useCountAfterRedemption >= usageLimit ? "Redeemed" : "Active";
@@ -1416,6 +1428,6 @@ namespace gpos.Controllers
             public FuelSale FuelSale { get; init; } = new();
         }
 
-        private sealed record VoucherRedemptionResult(Voucher Voucher, VoucherRule Rule, decimal DiscountAmount);
+        private sealed record VoucherRedemptionResult(Voucher? Voucher, VoucherRule Rule, decimal DiscountAmount);
     }
 }

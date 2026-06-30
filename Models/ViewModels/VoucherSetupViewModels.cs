@@ -1,27 +1,14 @@
 using System.ComponentModel.DataAnnotations;
-using Microsoft.AspNetCore.Mvc.Rendering;
-
 namespace gpos.Models.ViewModels
 {
-    public class VoucherForm
-    {
-        public int Id { get; set; }
-
-        [Required(ErrorMessage = "Name is required.")]
-        [StringLength(8, ErrorMessage = "Name must be 8 characters or fewer.")]
-        public string Name { get; set; } = string.Empty;
-
-        [Required(ErrorMessage = "Status is required.")]
-        public string Status { get; set; } = "Active";
-    }
-
     public class VoucherRuleForm
     {
         public int Id { get; set; }
         public string Code { get; set; } = string.Empty;
 
-        [Range(1, int.MaxValue, ErrorMessage = "Voucher is required.")]
-        public int VoucherId { get; set; }
+        [Required(ErrorMessage = "Voucher Name is required.")]
+        [StringLength(100, ErrorMessage = "Voucher Name must be 100 characters or fewer.")]
+        public string Name { get; set; } = string.Empty;
 
         [Required(ErrorMessage = "Applies To is required.")]
         public string AppliesTo { get; set; } = "Both";
@@ -56,10 +43,7 @@ namespace gpos.Models.ViewModels
     {
         public string Search { get; set; } = string.Empty;
         public string ActiveModalId { get; set; } = string.Empty;
-        public VoucherForm VoucherForm { get; set; } = new();
         public VoucherRuleForm VoucherRuleForm { get; set; } = new();
-        public List<Voucher> Vouchers { get; set; } = new();
         public List<VoucherRule> VoucherRules { get; set; } = new();
-        public List<SelectListItem> VoucherOptions { get; set; } = new();
     }
 }

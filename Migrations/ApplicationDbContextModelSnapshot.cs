@@ -2780,7 +2780,7 @@ namespace gpos.Migrations
                         .HasColumnType("int")
                         .HasColumnName("sale_id");
 
-                    b.Property<int>("VoucherId")
+                    b.Property<int?>("VoucherId")
                         .HasColumnType("int")
                         .HasColumnName("voucher_id");
 
@@ -2917,6 +2917,9 @@ namespace gpos.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("Code")
+                        .IsUnique();
+
+                    b.HasIndex("Name")
                         .IsUnique();
 
                     b.HasIndex("Priority");
@@ -3565,8 +3568,7 @@ namespace gpos.Migrations
                     b.HasOne("gpos.Models.Voucher", "Voucher")
                         .WithMany("Redemptions")
                         .HasForeignKey("VoucherId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("gpos.Models.VoucherRule", "VoucherRule")
                         .WithMany("Redemptions")

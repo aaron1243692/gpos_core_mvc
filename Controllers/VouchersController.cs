@@ -4,7 +4,6 @@ using gpos.Models;
 using gpos.Models.ViewModels;
 using gpos.Services;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 
 namespace gpos.Controllers
@@ -12,7 +11,6 @@ namespace gpos.Controllers
     [BlockSalesmanSession]
     public class VouchersController : Controller
     {
-        private static readonly string[] VoucherStatuses = ["Active", "Inactive"];
         private readonly ApplicationDbContext _db;
         private readonly VoucherCodeService _voucherCodeService;
 
@@ -29,75 +27,21 @@ namespace gpos.Controllers
 
         public async Task<IActionResult> Rules(string? search, int? editId)
         {
-            return View(await BuildRulesPageAsync(search, editId: editId, activeModalId: editId.HasValue ? "voucherRuleModal" : ""));
+            return RedirectToAction(nameof(Index), new { search, editId });
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> SaveVoucher([Bind(Prefix = "VoucherForm")] VoucherForm form, string? search)
+        public async Task<IActionResult> SaveVoucher([Bind(Prefix = "VoucherRuleForm")] VoucherRuleForm form, string? search)
         {
-            var name = NormalizeVoucherCode(form.Name);
-            if (string.IsNullOrWhiteSpace(name))
-            {
-                ModelState.AddModelError("VoucherForm.Name", "Name is required.");
-            }
-
-            if (!VoucherStatuses.Contains(form.Status, StringComparer.OrdinalIgnoreCase))
-            {
-                ModelState.AddModelError("VoucherForm.Status", "Select a valid status.");
-            }
-
-            if (await _db.Vouchers.AnyAsync(voucher => voucher.Id != form.Id && voucher.Code == name))
-            {
-                ModelState.AddModelError("VoucherForm.Name", "Voucher name already exists.");
-            }
-
-            if (!ModelState.IsValid)
-            {
-                form.Name = name;
-                return View("Index", await BuildVouchersPageAsync(search, form, activeModalId: "voucherModal"));
-            }
-
-            var now = DateTime.UtcNow;
-            var voucher = form.Id > 0 ? await _db.Vouchers.FindAsync(form.Id) : new Voucher { CreatedAt = now };
-            if (voucher is null) return NotFound();
-
-            voucher.Code = name;
-            voucher.Status = VoucherStatuses.First(status => string.Equals(status, form.Status, StringComparison.OrdinalIgnoreCase));
-            voucher.UpdatedAt = now;
-
-            if (form.Id == 0)
-            {
-                _db.Vouchers.Add(voucher);
-            }
-
-            await _db.SaveChangesAsync();
-            TempData["VoucherSetupFeedback"] = form.Id > 0 ? "Voucher updated." : "Voucher added.";
-            return RedirectToAction(nameof(Index), new { search });
-        }
-
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> DeleteVoucher(int id, string? search)
-        {
-            var voucher = await _db.Vouchers.FindAsync(id);
-            if (voucher is not null)
-            {
-                voucher.Status = "Inactive";
-                voucher.UpdatedAt = DateTime.UtcNow;
-                await _db.SaveChangesAsync();
-                TempData["VoucherSetupFeedback"] = "Voucher disabled.";
-            }
-
-            return RedirectToAction(nameof(Index), new { search });
-        }
-
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> SaveRule([Bind(Prefix = "VoucherRuleForm")] VoucherRuleForm form, string? search)
-        {
+            var name = NormalizeVoucherName(form.Name);
             var discountType = NormalizeDiscountRuleType(form.DiscountType);
             var appliesTo = NormalizeDiscountRuleAppliesTo(form.AppliesTo);
+
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                ModelState.AddModelError("VoucherRuleForm.Name", "Voucher Name is required.");
+            }
 
             if (discountType is null)
             {
@@ -124,13 +68,9 @@ namespace gpos.Controllers
                 ModelState.AddModelError("VoucherRuleForm.EndDate", "End Date must not be earlier than Start Date.");
             }
 
-            var voucher = form.VoucherId > 0
-                ? await _db.Vouchers.AsNoTracking().FirstOrDefaultAsync(item => item.Id == form.VoucherId)
-                : null;
-
-            if (voucher is null)
+            if (await _db.VoucherRules.AnyAsync(rule => rule.Id != form.Id && rule.Name == name))
             {
-                ModelState.AddModelError("VoucherRuleForm.VoucherId", "Voucher is required.");
+                ModelState.AddModelError("VoucherRuleForm.Name", "Voucher name already exists.");
             }
 
             if (!form.UsageLimit.HasValue)
@@ -145,7 +85,8 @@ namespace gpos.Controllers
 
             if (!ModelState.IsValid)
             {
-                return View("Rules", await BuildRulesPageAsync(search, form, activeModalId: "voucherRuleModal"));
+                form.Name = name;
+                return View("Index", await BuildVouchersPageAsync(search, form, activeModalId: "voucherModal"));
             }
 
             var now = DateTime.UtcNow;
@@ -157,8 +98,7 @@ namespace gpos.Controllers
                 rule.Code = await ResolveVoucherRuleCodeAsync(form.Code, rule.Id);
             }
 
-            rule.Name = voucher!.Code;
-            rule.VoucherId = form.VoucherId;
+            rule.Name = name;
             rule.AppliesTo = appliesTo!;
             rule.RewardType = discountType!;
             rule.RewardValue = form.DiscountValue!.Value;
@@ -177,8 +117,31 @@ namespace gpos.Controllers
             }
 
             await _db.SaveChangesAsync();
-            TempData["VoucherSetupFeedback"] = form.Id > 0 ? "Voucher rule updated." : "Voucher rule added.";
-            return RedirectToAction(nameof(Rules), new { search });
+            TempData["VoucherSetupFeedback"] = form.Id > 0 ? "Voucher updated." : "Voucher added.";
+            return RedirectToAction(nameof(Index), new { search });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> DeleteVoucher(int id, string? search)
+        {
+            var rule = await _db.VoucherRules.FindAsync(id);
+            if (rule is not null)
+            {
+                rule.Status = 0;
+                rule.UpdatedAt = DateTime.UtcNow;
+                await _db.SaveChangesAsync();
+                TempData["VoucherSetupFeedback"] = "Voucher disabled.";
+            }
+
+            return RedirectToAction(nameof(Index), new { search });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> SaveRule([Bind(Prefix = "VoucherRuleForm")] VoucherRuleForm form, string? search)
+        {
+            return await SaveVoucher(form, search);
         }
 
         [HttpPost]
@@ -194,26 +157,12 @@ namespace gpos.Controllers
                 TempData["VoucherSetupFeedback"] = "Voucher rule disabled.";
             }
 
-            return RedirectToAction(nameof(Rules), new { search });
+            return RedirectToAction(nameof(Index), new { search });
         }
 
-        private async Task<VoucherSetupPageViewModel> BuildVouchersPageAsync(string? search, VoucherForm? form = null, int? editId = null, string activeModalId = "")
+        private async Task<VoucherSetupPageViewModel> BuildVouchersPageAsync(string? search, VoucherRuleForm? form = null, int? editId = null, string activeModalId = "")
         {
-            IQueryable<Voucher> query = _db.Vouchers.AsNoTracking();
-            var searchText = (search ?? string.Empty).Trim();
-            if (!string.IsNullOrWhiteSpace(searchText))
-            {
-                query = query.Where(voucher => voucher.Code.Contains(searchText)
-                    || voucher.Status.Contains(searchText));
-            }
-
-            return new VoucherSetupPageViewModel
-            {
-                Search = searchText,
-                ActiveModalId = activeModalId,
-                VoucherForm = form ?? await BuildVoucherFormAsync(editId),
-                Vouchers = await query.OrderBy(voucher => voucher.Id).ToListAsync()
-            };
+            return await BuildRulesPageAsync(search, form, editId, activeModalId);
         }
 
         private async Task<VoucherSetupPageViewModel> BuildRulesPageAsync(string? search, VoucherRuleForm? form = null, int? editId = null, string activeModalId = "")
@@ -239,15 +188,8 @@ namespace gpos.Controllers
                 Search = searchText,
                 ActiveModalId = activeModalId,
                 VoucherRuleForm = form ?? await BuildVoucherRuleFormAsync(editId),
-                VoucherOptions = await BuildRequiredVoucherOptionsAsync(),
                 VoucherRules = await query.OrderBy(rule => rule.Id).ToListAsync()
             };
-        }
-
-        private async Task<VoucherForm> BuildVoucherFormAsync(int? editId)
-        {
-            var voucher = editId.HasValue ? await _db.Vouchers.AsNoTracking().FirstOrDefaultAsync(item => item.Id == editId.Value) : null;
-            return voucher is null ? new VoucherForm() : new VoucherForm { Id = voucher.Id, Name = voucher.Code, Status = voucher.Status };
         }
 
         private async Task<VoucherRuleForm> BuildVoucherRuleFormAsync(int? editId)
@@ -257,7 +199,7 @@ namespace gpos.Controllers
             {
                 Id = rule.Id,
                 Code = rule.Code ?? string.Empty,
-                VoucherId = rule.VoucherId ?? 0,
+                Name = rule.Name,
                 AppliesTo = rule.AppliesTo,
                 DiscountType = rule.RewardType,
                 DiscountValue = rule.RewardValue,
@@ -268,15 +210,6 @@ namespace gpos.Controllers
                 UsageLimit = ResolveUsageLimit(rule),
                 Status = rule.Status
             };
-        }
-
-        private async Task<List<SelectListItem>> BuildRequiredVoucherOptionsAsync()
-        {
-            return await _db.Vouchers.AsNoTracking()
-                .Where(item => item.Status == "Active")
-                .OrderBy(item => item.Code)
-                .Select(item => new SelectListItem { Value = item.Id.ToString(), Text = item.Code })
-                .ToListAsync();
         }
 
         private async Task EnsureVoucherRulesHaveCodesAsync()
@@ -306,9 +239,9 @@ namespace gpos.Controllers
             return await _voucherCodeService.GenerateUniqueVoucherRuleCodeAsync();
         }
 
-        private static string NormalizeVoucherCode(string? value)
+        private static string NormalizeVoucherName(string? value)
         {
-            return (value ?? string.Empty).Trim().ToUpperInvariant();
+            return (value ?? string.Empty).Trim();
         }
 
         private static string NormalizeVoucherRuleCode(string? value)

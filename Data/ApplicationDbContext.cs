@@ -1267,6 +1267,7 @@ namespace gpos.Data
                 entity.Ignore(rule => rule.EndDate);
 
                 entity.HasIndex(rule => rule.Code).IsUnique();
+                entity.HasIndex(rule => rule.Name).IsUnique();
                 entity.HasIndex(rule => rule.VoucherId);
                 entity.HasIndex(rule => rule.Status);
                 entity.HasIndex(rule => rule.Priority);
