@@ -4009,6 +4009,17 @@ textarea.form-control {
   --bs-btn-hover-border-color: #dc3545;
 }
 
+.deactivate-confirm-btn,
+.btn-danger.deactivate-confirm-btn {
+  min-width: 96px;
+  color: #ffffff;
+}
+
+.deactivate-confirm-btn:hover,
+.deactivate-confirm-btn:focus {
+  color: #ffffff;
+}
+
 .btn-outline-secondary {
   border-color: #9ccfb0;
   background: #ffffff;

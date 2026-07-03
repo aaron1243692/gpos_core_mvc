@@ -63,6 +63,7 @@ namespace gpos.Data
         public DbSet<VoucherRule> VoucherRules { get; set; }
         public DbSet<VoucherRedemption> VoucherRedemptions { get; set; }
         public DbSet<FinancialMetric> FinancialMetrics { get; set; }
+        public DbSet<VatSetting> VatSettings { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -1440,6 +1441,25 @@ namespace gpos.Data
 
                 entity.HasIndex(metric => new { metric.MetricDate, metric.MetricCode });
                 entity.HasIndex(metric => metric.MetricCode);
+            });
+
+            modelBuilder.Entity<VatSetting>(entity =>
+            {
+                entity.ToTable("vat_settings");
+                entity.HasKey(setting => setting.Id);
+
+                entity.Property(setting => setting.Id).HasColumnName("id");
+                entity.Property(setting => setting.Name).HasColumnName("name").HasMaxLength(100).IsRequired();
+                entity.Property(setting => setting.Rate).HasColumnName("rate").HasPrecision(10, 2);
+                entity.Property(setting => setting.Type).HasColumnName("type").HasMaxLength(50).IsRequired();
+                entity.Property(setting => setting.IsDefault).HasColumnName("is_default").HasDefaultValue(false);
+                entity.Property(setting => setting.IsActive).HasColumnName("is_active").HasDefaultValue(true);
+                entity.Property(setting => setting.CreatedAt).HasColumnName("created_at");
+                entity.Property(setting => setting.UpdatedAt).HasColumnName("updated_at");
+
+                entity.HasIndex(setting => setting.IsDefault);
+                entity.HasIndex(setting => setting.IsActive);
+                entity.HasIndex(setting => setting.Type);
             });
         }
     }

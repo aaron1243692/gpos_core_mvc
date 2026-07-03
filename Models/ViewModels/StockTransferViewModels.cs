@@ -15,9 +15,20 @@ namespace gpos.Models.ViewModels
         public List<StockTransferRowViewModel> Transfers { get; set; } = new();
         public List<SelectListItem> BranchOptions { get; set; } = new();
         public List<SelectListItem> ProductOptions { get; set; } = new();
+        public List<StockTransferProductSelectorRowViewModel> ProductSelectorRows { get; set; } = new();
         public List<SelectListItem> BatchOptions { get; set; } = new();
         public List<SelectListItem> FuelOptions { get; set; } = new();
         public List<SelectListItem> TankOptions { get; set; } = new();
+    }
+
+    public class StockTransferProductSelectorRowViewModel
+    {
+        public int ProductId { get; set; }
+        public int? BranchId { get; set; }
+        public string ProductName { get; set; } = string.Empty;
+        public string CategoryName { get; set; } = "-";
+        public string UnitName { get; set; } = "-";
+        public decimal AvailableQuantity { get; set; }
     }
 
     public class StockTransferForm

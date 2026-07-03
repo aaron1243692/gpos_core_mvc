@@ -22,6 +22,50 @@ namespace gpos.Models.ViewModels
         public List<FuelSaleRowViewModel> Sales { get; set; } = new();
     }
 
+    public class PosPageViewModel
+    {
+        public List<PosCategoryCardViewModel> Categories { get; set; } = new();
+        public List<PosProductCardViewModel> Products { get; set; } = new();
+        public List<PosFuelOptionViewModel> Fuels { get; set; } = new();
+        public PosRebateViewModel? ActiveRebate { get; set; }
+    }
+
+    public class PosCategoryCardViewModel
+    {
+        public int Id { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public string Code { get; set; } = string.Empty;
+    }
+
+    public class PosProductCardViewModel
+    {
+        public int ProductId { get; set; }
+        public int? CategoryId { get; set; }
+        public string ProductName { get; set; } = string.Empty;
+        public string ProductCode { get; set; } = string.Empty;
+        public string VisualText { get; set; } = string.Empty;
+        public decimal AvailableQuantity { get; set; }
+        public decimal Price { get; set; }
+        public decimal UnitCost { get; set; }
+    }
+
+    public class PosFuelOptionViewModel
+    {
+        public int FuelId { get; set; }
+        public int TankId { get; set; }
+        public int NozzleId { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public decimal Price { get; set; }
+        public bool IsChecked { get; set; }
+    }
+
+    public class PosRebateViewModel
+    {
+        public string Name { get; set; } = string.Empty;
+        public decimal PointsRequired { get; set; }
+        public decimal RebateValue { get; set; }
+    }
+
     public class ProductSaleRowViewModel
     {
         public int SaleItemId { get; set; }

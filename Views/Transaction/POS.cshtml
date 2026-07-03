@@ -1,6 +1,5 @@
-﻿@using Microsoft.EntityFrameworkCore
+﻿@model gpos.Models.ViewModels.PosPageViewModel
 @using System.Security.Claims
-@inject gpos.Data.ApplicationDbContext Db
 
 <section class="salesman-pos-page">
     <form id="posSaleForm" method="post" class="salesman-pos-card">
@@ -19,11 +18,11 @@
                 <nav class="pos-category-row" aria-label="POS menu categories">
                     <button class="pos-category-pill pos-category-btn" id="fuelModeButton" type="button" data-mode="fuel"><span>FUE</span><strong>Fuel</strong></button>
                     <button class="pos-category-pill pos-category-btn is-active" id="hotModeButton" type="button" data-mode="hot"><span>HOT</span><strong>Hot</strong></button>
-                    @for (var index = 0; index < Db.ProductCategories.AsNoTracking().Where(category => category.Status == 1 && category.IsActive && Db.DisplayStocks.Any(stock => stock.Quantity > 0 && stock.Product != null && stock.Product.CategoryId == category.Id && stock.Product.Status == 1 && stock.Product.IsActive && stock.Batch != null && stock.Batch.Status == 1 && stock.Batch.IsActive)).OrderBy(category => category.Name).ToList().Count; index++)
+                    @for (var index = 0; index < Model.Categories.Count; index++)
                     {
-                        <button class="pos-category-pill pos-category-btn" type="button" data-mode="category" data-category-id="@Db.ProductCategories.AsNoTracking().Where(category => category.Status == 1 && category.IsActive && Db.DisplayStocks.Any(stock => stock.Quantity > 0 && stock.Product != null && stock.Product.CategoryId == category.Id && stock.Product.Status == 1 && stock.Product.IsActive && stock.Batch != null && stock.Batch.Status == 1 && stock.Batch.IsActive)).OrderBy(category => category.Name).ToList()[index].Id">
-                            <span>@(Db.ProductCategories.AsNoTracking().Where(category => category.Status == 1 && category.IsActive && Db.DisplayStocks.Any(stock => stock.Quantity > 0 && stock.Product != null && stock.Product.CategoryId == category.Id && stock.Product.Status == 1 && stock.Product.IsActive && stock.Batch != null && stock.Batch.Status == 1 && stock.Batch.IsActive)).OrderBy(category => category.Name).ToList()[index].Name.Length >= 3 ? Db.ProductCategories.AsNoTracking().Where(category => category.Status == 1 && category.IsActive && Db.DisplayStocks.Any(stock => stock.Quantity > 0 && stock.Product != null && stock.Product.CategoryId == category.Id && stock.Product.Status == 1 && stock.Product.IsActive && stock.Batch != null && stock.Batch.Status == 1 && stock.Batch.IsActive)).OrderBy(category => category.Name).ToList()[index].Name.Substring(0, 3).ToUpper() : Db.ProductCategories.AsNoTracking().Where(category => category.Status == 1 && category.IsActive && Db.DisplayStocks.Any(stock => stock.Quantity > 0 && stock.Product != null && stock.Product.CategoryId == category.Id && stock.Product.Status == 1 && stock.Product.IsActive && stock.Batch != null && stock.Batch.Status == 1 && stock.Batch.IsActive)).OrderBy(category => category.Name).ToList()[index].Name.ToUpper())</span>
-                            <strong>@Db.ProductCategories.AsNoTracking().Where(category => category.Status == 1 && category.IsActive && Db.DisplayStocks.Any(stock => stock.Quantity > 0 && stock.Product != null && stock.Product.CategoryId == category.Id && stock.Product.Status == 1 && stock.Product.IsActive && stock.Batch != null && stock.Batch.Status == 1 && stock.Batch.IsActive)).OrderBy(category => category.Name).ToList()[index].Name</strong>
+                        <button class="pos-category-pill pos-category-btn" type="button" data-mode="category" data-category-id="@Model.Categories[index].Id">
+                            <span>@Model.Categories[index].Code</span>
+                            <strong>@Model.Categories[index].Name</strong>
                         </button>
                     }
                 </nav>
@@ -35,22 +34,20 @@
                     </div>
 
                     <div class="pos-product-grid">
-                        @for (var index = 0; index < Db.DisplayStocks.AsNoTracking().Include(stock => stock.Product).Include(stock => stock.Batch).Where(stock => stock.Quantity > 0 && stock.Product != null && stock.Product.Status == 1 && stock.Product.IsActive && stock.Product.CategoryId.HasValue && stock.Batch != null && stock.Batch.Status == 1 && stock.Batch.IsActive && Db.ProductCategories.Any(category => category.Id == stock.Product.CategoryId.Value && category.Status == 1 && category.IsActive)).OrderByDescending(stock => stock.UpdatedAt ?? stock.CreatedAt ?? DateTime.MinValue).ThenBy(stock => stock.Product!.Name).ThenBy(stock => stock.Id).ToList().Count; index++)
+                        @for (var index = 0; index < Model.Products.Count; index++)
                         {
-                            <article class="pos-menu-product-card" data-category-id="@Db.DisplayStocks.AsNoTracking().Include(stock => stock.Product).Include(stock => stock.Batch).Where(stock => stock.Quantity > 0 && stock.Product != null && stock.Product.Status == 1 && stock.Product.IsActive && stock.Product.CategoryId.HasValue && stock.Batch != null && stock.Batch.Status == 1 && stock.Batch.IsActive && Db.ProductCategories.Any(category => category.Id == stock.Product.CategoryId.Value && category.Status == 1 && category.IsActive)).OrderByDescending(stock => stock.UpdatedAt ?? stock.CreatedAt ?? DateTime.MinValue).ThenBy(stock => stock.Product!.Name).ThenBy(stock => stock.Id).ToList()[index].Product!.CategoryId" data-product-name="@Db.DisplayStocks.AsNoTracking().Include(stock => stock.Product).Include(stock => stock.Batch).Where(stock => stock.Quantity > 0 && stock.Product != null && stock.Product.Status == 1 && stock.Product.IsActive && stock.Product.CategoryId.HasValue && stock.Batch != null && stock.Batch.Status == 1 && stock.Batch.IsActive && Db.ProductCategories.Any(category => category.Id == stock.Product.CategoryId.Value && category.Status == 1 && category.IsActive)).OrderByDescending(stock => stock.UpdatedAt ?? stock.CreatedAt ?? DateTime.MinValue).ThenBy(stock => stock.Product!.Name).ThenBy(stock => stock.Id).ToList()[index].Product!.Name.ToLowerInvariant()" data-display-stock-id="@Db.DisplayStocks.AsNoTracking().Include(stock => stock.Product).Include(stock => stock.Batch).Where(stock => stock.Quantity > 0 && stock.Product != null && stock.Product.Status == 1 && stock.Product.IsActive && stock.Product.CategoryId.HasValue && stock.Batch != null && stock.Batch.Status == 1 && stock.Batch.IsActive && Db.ProductCategories.Any(category => category.Id == stock.Product.CategoryId.Value && category.Status == 1 && category.IsActive)).OrderByDescending(stock => stock.UpdatedAt ?? stock.CreatedAt ?? DateTime.MinValue).ThenBy(stock => stock.Product!.Name).ThenBy(stock => stock.Id).ToList()[index].Id" data-product-id="@Db.DisplayStocks.AsNoTracking().Include(stock => stock.Product).Include(stock => stock.Batch).Where(stock => stock.Quantity > 0 && stock.Product != null && stock.Product.Status == 1 && stock.Product.IsActive && stock.Product.CategoryId.HasValue && stock.Batch != null && stock.Batch.Status == 1 && stock.Batch.IsActive && Db.ProductCategories.Any(category => category.Id == stock.Product.CategoryId.Value && category.Status == 1 && category.IsActive)).OrderByDescending(stock => stock.UpdatedAt ?? stock.CreatedAt ?? DateTime.MinValue).ThenBy(stock => stock.Product!.Name).ThenBy(stock => stock.Id).ToList()[index].ProductId" data-batch-id="@Db.DisplayStocks.AsNoTracking().Include(stock => stock.Product).Include(stock => stock.Batch).Where(stock => stock.Quantity > 0 && stock.Product != null && stock.Product.Status == 1 && stock.Product.IsActive && stock.Product.CategoryId.HasValue && stock.Batch != null && stock.Batch.Status == 1 && stock.Batch.IsActive && Db.ProductCategories.Any(category => category.Id == stock.Product.CategoryId.Value && category.Status == 1 && category.IsActive)).OrderByDescending(stock => stock.UpdatedAt ?? stock.CreatedAt ?? DateTime.MinValue).ThenBy(stock => stock.Product!.Name).ThenBy(stock => stock.Id).ToList()[index].BatchId" data-available-quantity="@Db.DisplayStocks.AsNoTracking().Include(stock => stock.Product).Include(stock => stock.Batch).Where(stock => stock.Quantity > 0 && stock.Product != null && stock.Product.Status == 1 && stock.Product.IsActive && stock.Product.CategoryId.HasValue && stock.Batch != null && stock.Batch.Status == 1 && stock.Batch.IsActive && Db.ProductCategories.Any(category => category.Id == stock.Product.CategoryId.Value && category.Status == 1 && category.IsActive)).OrderByDescending(stock => stock.UpdatedAt ?? stock.CreatedAt ?? DateTime.MinValue).ThenBy(stock => stock.Product!.Name).ThenBy(stock => stock.Id).ToList()[index].Quantity">
-                                <div class="pos-product-visual">@(Db.DisplayStocks.AsNoTracking().Include(stock => stock.Product).Include(stock => stock.Batch).Where(stock => stock.Quantity > 0 && stock.Product != null && stock.Product.Status == 1 && stock.Product.IsActive && stock.Product.CategoryId.HasValue && stock.Batch != null && stock.Batch.Status == 1 && stock.Batch.IsActive && Db.ProductCategories.Any(category => category.Id == stock.Product.CategoryId.Value && category.Status == 1 && category.IsActive)).OrderByDescending(stock => stock.UpdatedAt ?? stock.CreatedAt ?? DateTime.MinValue).ThenBy(stock => stock.Product!.Name).ThenBy(stock => stock.Id).ToList()[index].Product!.Name.Length >= 2 ? Db.DisplayStocks.AsNoTracking().Include(stock => stock.Product).Include(stock => stock.Batch).Where(stock => stock.Quantity > 0 && stock.Product != null && stock.Product.Status == 1 && stock.Product.IsActive && stock.Product.CategoryId.HasValue && stock.Batch != null && stock.Batch.Status == 1 && stock.Batch.IsActive && Db.ProductCategories.Any(category => category.Id == stock.Product.CategoryId.Value && category.Status == 1 && category.IsActive)).OrderByDescending(stock => stock.UpdatedAt ?? stock.CreatedAt ?? DateTime.MinValue).ThenBy(stock => stock.Product!.Name).ThenBy(stock => stock.Id).ToList()[index].Product!.Name.Substring(0, 2).ToUpper() : Db.DisplayStocks.AsNoTracking().Include(stock => stock.Product).Include(stock => stock.Batch).Where(stock => stock.Quantity > 0 && stock.Product != null && stock.Product.Status == 1 && stock.Product.IsActive && stock.Product.CategoryId.HasValue && stock.Batch != null && stock.Batch.Status == 1 && stock.Batch.IsActive && Db.ProductCategories.Any(category => category.Id == stock.Product.CategoryId.Value && category.Status == 1 && category.IsActive)).OrderByDescending(stock => stock.UpdatedAt ?? stock.CreatedAt ?? DateTime.MinValue).ThenBy(stock => stock.Product!.Name).ThenBy(stock => stock.Id).ToList()[index].Product!.Name.ToUpper())</div>
-                                <h3>@Db.DisplayStocks.AsNoTracking().Include(stock => stock.Product).Include(stock => stock.Batch).Where(stock => stock.Quantity > 0 && stock.Product != null && stock.Product.Status == 1 && stock.Product.IsActive && stock.Product.CategoryId.HasValue && stock.Batch != null && stock.Batch.Status == 1 && stock.Batch.IsActive && Db.ProductCategories.Any(category => category.Id == stock.Product.CategoryId.Value && category.Status == 1 && category.IsActive)).OrderByDescending(stock => stock.UpdatedAt ?? stock.CreatedAt ?? DateTime.MinValue).ThenBy(stock => stock.Product!.Name).ThenBy(stock => stock.Id).ToList()[index].Product!.Name</h3>
-                                <span class="pos-product-batch">Batch: @Db.DisplayStocks.AsNoTracking().Include(stock => stock.Product).Include(stock => stock.Batch).Where(stock => stock.Quantity > 0 && stock.Product != null && stock.Product.Status == 1 && stock.Product.IsActive && stock.Product.CategoryId.HasValue && stock.Batch != null && stock.Batch.Status == 1 && stock.Batch.IsActive && Db.ProductCategories.Any(category => category.Id == stock.Product.CategoryId.Value && category.Status == 1 && category.IsActive)).OrderByDescending(stock => stock.UpdatedAt ?? stock.CreatedAt ?? DateTime.MinValue).ThenBy(stock => stock.Product!.Name).ThenBy(stock => stock.Id).ToList()[index].Batch!.BatchNo</span>
-                                <p>₱@Db.DisplayStocks.AsNoTracking().Include(stock => stock.Product).Include(stock => stock.Batch).Where(stock => stock.Quantity > 0 && stock.Product != null && stock.Product.Status == 1 && stock.Product.IsActive && stock.Product.CategoryId.HasValue && stock.Batch != null && stock.Batch.Status == 1 && stock.Batch.IsActive && Db.ProductCategories.Any(category => category.Id == stock.Product.CategoryId.Value && category.Status == 1 && category.IsActive)).OrderByDescending(stock => stock.UpdatedAt ?? stock.CreatedAt ?? DateTime.MinValue).ThenBy(stock => stock.Product!.Name).ThenBy(stock => stock.Id).ToList()[index].Batch!.SellingPrice.ToString("N2")</p>
-                                <small>Expiry: @(Db.DisplayStocks.AsNoTracking().Include(stock => stock.Product).Include(stock => stock.Batch).Where(stock => stock.Quantity > 0 && stock.Product != null && stock.Product.Status == 1 && stock.Product.IsActive && stock.Product.CategoryId.HasValue && stock.Batch != null && stock.Batch.Status == 1 && stock.Batch.IsActive && Db.ProductCategories.Any(category => category.Id == stock.Product.CategoryId.Value && category.Status == 1 && category.IsActive)).OrderByDescending(stock => stock.UpdatedAt ?? stock.CreatedAt ?? DateTime.MinValue).ThenBy(stock => stock.Product!.Name).ThenBy(stock => stock.Id).ToList()[index].Batch!.ExpiryDate.HasValue ? Db.DisplayStocks.AsNoTracking().Include(stock => stock.Product).Include(stock => stock.Batch).Where(stock => stock.Quantity > 0 && stock.Product != null && stock.Product.Status == 1 && stock.Product.IsActive && stock.Product.CategoryId.HasValue && stock.Batch != null && stock.Batch.Status == 1 && stock.Batch.IsActive && Db.ProductCategories.Any(category => category.Id == stock.Product.CategoryId.Value && category.Status == 1 && category.IsActive)).OrderByDescending(stock => stock.UpdatedAt ?? stock.CreatedAt ?? DateTime.MinValue).ThenBy(stock => stock.Product!.Name).ThenBy(stock => stock.Id).ToList()[index].Batch!.ExpiryDate!.Value.ToString("yyyy-MM-dd") : "No expiry")</small>
-                                <small>Available: @Db.DisplayStocks.AsNoTracking().Include(stock => stock.Product).Include(stock => stock.Batch).Where(stock => stock.Quantity > 0 && stock.Product != null && stock.Product.Status == 1 && stock.Product.IsActive && stock.Product.CategoryId.HasValue && stock.Batch != null && stock.Batch.Status == 1 && stock.Batch.IsActive && Db.ProductCategories.Any(category => category.Id == stock.Product.CategoryId.Value && category.Status == 1 && category.IsActive)).OrderByDescending(stock => stock.UpdatedAt ?? stock.CreatedAt ?? DateTime.MinValue).ThenBy(stock => stock.Product!.Name).ThenBy(stock => stock.Id).ToList()[index].Quantity.ToString("N0")</small>
-                                <label class="pos-quantity-control" for="productQuantity_@Db.DisplayStocks.AsNoTracking().Include(stock => stock.Product).Include(stock => stock.Batch).Where(stock => stock.Quantity > 0 && stock.Product != null && stock.Product.Status == 1 && stock.Product.IsActive && stock.Product.CategoryId.HasValue && stock.Batch != null && stock.Batch.Status == 1 && stock.Batch.IsActive && Db.ProductCategories.Any(category => category.Id == stock.Product.CategoryId.Value && category.Status == 1 && category.IsActive)).OrderByDescending(stock => stock.UpdatedAt ?? stock.CreatedAt ?? DateTime.MinValue).ThenBy(stock => stock.Product!.Name).ThenBy(stock => stock.Id).ToList()[index].Id">
+                            <article class="pos-menu-product-card" data-category-id="@Model.Products[index].CategoryId" data-product-name="@Model.Products[index].ProductName.ToLowerInvariant()" data-product-id="@Model.Products[index].ProductId" data-price="@Model.Products[index].Price" data-available="@Model.Products[index].AvailableQuantity" data-available-quantity="@Model.Products[index].AvailableQuantity">
+                                <div class="pos-product-visual">@Model.Products[index].VisualText</div>
+                                <h3>@Model.Products[index].ProductName</h3>
+                                <small>Available: @Model.Products[index].AvailableQuantity.ToString("N0")</small>
+                                <p>₱@Model.Products[index].Price.ToString("N2")</p>
+                                <label class="pos-quantity-control" for="productQuantity_@Model.Products[index].ProductId">
                                     <span>Qty</span>
-                                    <input class="form-control product-quantity-input" id="productQuantity_@Db.DisplayStocks.AsNoTracking().Include(stock => stock.Product).Include(stock => stock.Batch).Where(stock => stock.Quantity > 0 && stock.Product != null && stock.Product.Status == 1 && stock.Product.IsActive && stock.Product.CategoryId.HasValue && stock.Batch != null && stock.Batch.Status == 1 && stock.Batch.IsActive && Db.ProductCategories.Any(category => category.Id == stock.Product.CategoryId.Value && category.Status == 1 && category.IsActive)).OrderByDescending(stock => stock.UpdatedAt ?? stock.CreatedAt ?? DateTime.MinValue).ThenBy(stock => stock.Product!.Name).ThenBy(stock => stock.Id).ToList()[index].Id" name="Products[@index].Quantity" type="number" min="0" step="1" inputmode="numeric" max="@Db.DisplayStocks.AsNoTracking().Include(stock => stock.Product).Include(stock => stock.Batch).Where(stock => stock.Quantity > 0 && stock.Product != null && stock.Product.Status == 1 && stock.Product.IsActive && stock.Product.CategoryId.HasValue && stock.Batch != null && stock.Batch.Status == 1 && stock.Batch.IsActive && Db.ProductCategories.Any(category => category.Id == stock.Product.CategoryId.Value && category.Status == 1 && category.IsActive)).OrderByDescending(stock => stock.UpdatedAt ?? stock.CreatedAt ?? DateTime.MinValue).ThenBy(stock => stock.Product!.Name).ThenBy(stock => stock.Id).ToList()[index].Quantity" value="0" data-price="@Db.DisplayStocks.AsNoTracking().Include(stock => stock.Product).Include(stock => stock.Batch).Where(stock => stock.Quantity > 0 && stock.Product != null && stock.Product.Status == 1 && stock.Product.IsActive && stock.Product.CategoryId.HasValue && stock.Batch != null && stock.Batch.Status == 1 && stock.Batch.IsActive && Db.ProductCategories.Any(category => category.Id == stock.Product.CategoryId.Value && category.Status == 1 && category.IsActive)).OrderByDescending(stock => stock.UpdatedAt ?? stock.CreatedAt ?? DateTime.MinValue).ThenBy(stock => stock.Product!.Name).ThenBy(stock => stock.Id).ToList()[index].Batch!.SellingPrice" data-unit-cost="@Db.DisplayStocks.AsNoTracking().Include(stock => stock.Product).Include(stock => stock.Batch).Where(stock => stock.Quantity > 0 && stock.Product != null && stock.Product.Status == 1 && stock.Product.IsActive && stock.Product.CategoryId.HasValue && stock.Batch != null && stock.Batch.Status == 1 && stock.Batch.IsActive && Db.ProductCategories.Any(category => category.Id == stock.Product.CategoryId.Value && category.Status == 1 && category.IsActive)).OrderByDescending(stock => stock.UpdatedAt ?? stock.CreatedAt ?? DateTime.MinValue).ThenBy(stock => stock.Product!.Name).ThenBy(stock => stock.Id).ToList()[index].Batch!.CostPrice" data-batch-no="@Db.DisplayStocks.AsNoTracking().Include(stock => stock.Product).Include(stock => stock.Batch).Where(stock => stock.Quantity > 0 && stock.Product != null && stock.Product.Status == 1 && stock.Product.IsActive && stock.Product.CategoryId.HasValue && stock.Batch != null && stock.Batch.Status == 1 && stock.Batch.IsActive && Db.ProductCategories.Any(category => category.Id == stock.Product.CategoryId.Value && category.Status == 1 && category.IsActive)).OrderByDescending(stock => stock.UpdatedAt ?? stock.CreatedAt ?? DateTime.MinValue).ThenBy(stock => stock.Product!.Name).ThenBy(stock => stock.Id).ToList()[index].Batch!.BatchNo" data-no="P-@Db.DisplayStocks.AsNoTracking().Include(stock => stock.Product).Include(stock => stock.Batch).Where(stock => stock.Quantity > 0 && stock.Product != null && stock.Product.Status == 1 && stock.Product.IsActive && stock.Product.CategoryId.HasValue && stock.Batch != null && stock.Batch.Status == 1 && stock.Batch.IsActive && Db.ProductCategories.Any(category => category.Id == stock.Product.CategoryId.Value && category.Status == 1 && category.IsActive)).OrderByDescending(stock => stock.UpdatedAt ?? stock.CreatedAt ?? DateTime.MinValue).ThenBy(stock => stock.Product!.Name).ThenBy(stock => stock.Id).ToList()[index].ProductId.ToString("000")" data-name="@Db.DisplayStocks.AsNoTracking().Include(stock => stock.Product).Include(stock => stock.Batch).Where(stock => stock.Quantity > 0 && stock.Product != null && stock.Product.Status == 1 && stock.Product.IsActive && stock.Product.CategoryId.HasValue && stock.Batch != null && stock.Batch.Status == 1 && stock.Batch.IsActive && Db.ProductCategories.Any(category => category.Id == stock.Product.CategoryId.Value && category.Status == 1 && category.IsActive)).OrderByDescending(stock => stock.UpdatedAt ?? stock.CreatedAt ?? DateTime.MinValue).ThenBy(stock => stock.Product!.Name).ThenBy(stock => stock.Id).ToList()[index].Product!.Name" aria-label="@Db.DisplayStocks.AsNoTracking().Include(stock => stock.Product).Include(stock => stock.Batch).Where(stock => stock.Quantity > 0 && stock.Product != null && stock.Product.Status == 1 && stock.Product.IsActive && stock.Product.CategoryId.HasValue && stock.Batch != null && stock.Batch.Status == 1 && stock.Batch.IsActive && Db.ProductCategories.Any(category => category.Id == stock.Product.CategoryId.Value && category.Status == 1 && category.IsActive)).OrderByDescending(stock => stock.UpdatedAt ?? stock.CreatedAt ?? DateTime.MinValue).ThenBy(stock => stock.Product!.Name).ThenBy(stock => stock.Id).ToList()[index].Product!.Name quantity" />
+                                    <input class="form-control product-quantity-input" id="productQuantity_@Model.Products[index].ProductId" name="Products[@index].Quantity" type="number" min="0" step="0.01" inputmode="decimal" max="@Model.Products[index].AvailableQuantity" value="0" data-product-id="@Model.Products[index].ProductId" data-price="@Model.Products[index].Price" data-unit-cost="@Model.Products[index].UnitCost" data-available="@Model.Products[index].AvailableQuantity" data-batch-no="-" data-no="@Model.Products[index].ProductCode" data-name="@Model.Products[index].ProductName" aria-label="@Model.Products[index].ProductName quantity" onfocus="this.select()" />
                                 </label>
                                 <input type="hidden" name="Products.Index" value="@index" />
-                                <input type="hidden" name="Products[@index].Code" value="P-@Db.DisplayStocks.AsNoTracking().Include(stock => stock.Product).Include(stock => stock.Batch).Where(stock => stock.Quantity > 0 && stock.Product != null && stock.Product.Status == 1 && stock.Product.IsActive && stock.Product.CategoryId.HasValue && stock.Batch != null && stock.Batch.Status == 1 && stock.Batch.IsActive && Db.ProductCategories.Any(category => category.Id == stock.Product.CategoryId.Value && category.Status == 1 && category.IsActive)).OrderByDescending(stock => stock.UpdatedAt ?? stock.CreatedAt ?? DateTime.MinValue).ThenBy(stock => stock.Product!.Name).ThenBy(stock => stock.Id).ToList()[index].ProductId.ToString("000")" />
-                                <input type="hidden" name="Products[@index].Name" value="@Db.DisplayStocks.AsNoTracking().Include(stock => stock.Product).Include(stock => stock.Batch).Where(stock => stock.Quantity > 0 && stock.Product != null && stock.Product.Status == 1 && stock.Product.IsActive && stock.Product.CategoryId.HasValue && stock.Batch != null && stock.Batch.Status == 1 && stock.Batch.IsActive && Db.ProductCategories.Any(category => category.Id == stock.Product.CategoryId.Value && category.Status == 1 && category.IsActive)).OrderByDescending(stock => stock.UpdatedAt ?? stock.CreatedAt ?? DateTime.MinValue).ThenBy(stock => stock.Product!.Name).ThenBy(stock => stock.Id).ToList()[index].Product!.Name" />
+                                <input type="hidden" name="Products[@index].Code" value="@Model.Products[index].ProductCode" />
+                                <input type="hidden" name="Products[@index].Name" value="@Model.Products[index].ProductName" />
                             </article>
                         }
                     </div>
@@ -65,11 +62,11 @@
                     </div>
 
                     <div class="fuel-type-grid">
-                        @for (var index = 0; index < Db.Fuels.AsNoTracking().Where(fuel => fuel.Status == 1 && fuel.IsActive).OrderBy(fuel => fuel.Name).ToList().Count; index++)
+                        @for (var index = 0; index < Model.Fuels.Count; index++)
                         {
                             <label class="fuel-option">
-                                <input class="form-check-input fuel-choice" type="radio" name="FuelType" value="@Db.Fuels.AsNoTracking().Where(fuel => fuel.Status == 1 && fuel.IsActive).OrderBy(fuel => fuel.Name).ToList()[index].Name" data-fuel-id="@Db.Fuels.AsNoTracking().Where(fuel => fuel.Status == 1 && fuel.IsActive).OrderBy(fuel => fuel.Name).Skip(index).Select(fuel => fuel.Id).FirstOrDefault()" data-tank-id="@Db.Tanks.AsNoTracking().Where(tank => tank.Status == 1 && tank.IsActive && tank.FuelId == Db.Fuels.AsNoTracking().Where(fuel => fuel.Status == 1 && fuel.IsActive).OrderBy(fuel => fuel.Name).Skip(index).Select(fuel => fuel.Id).FirstOrDefault()).OrderBy(tank => tank.Id).Select(tank => tank.Id).FirstOrDefault()" data-nozzle-id="@Db.Nozzles.AsNoTracking().Include(nozzle => nozzle.Pump).Where(nozzle => nozzle.Status == 1 && nozzle.Pump != null && Db.Tanks.Any(tank => tank.Id == nozzle.Pump.TankId && tank.Status == 1 && tank.IsActive && tank.FuelId == Db.Fuels.AsNoTracking().Where(fuel => fuel.Status == 1 && fuel.IsActive).OrderBy(fuel => fuel.Name).Skip(index).Select(fuel => fuel.Id).FirstOrDefault())).OrderBy(nozzle => nozzle.Id).Select(nozzle => nozzle.Id).FirstOrDefault()" data-price="@Db.Fuels.AsNoTracking().Where(fuel => fuel.Status == 1 && fuel.IsActive).OrderBy(fuel => fuel.Name).ToList()[index].CurrentPricePerLiter" @(index == 0 ? "checked" : "") />
-                                <span>@Db.Fuels.AsNoTracking().Where(fuel => fuel.Status == 1 && fuel.IsActive).OrderBy(fuel => fuel.Name).ToList()[index].Name <small>₱@Db.Fuels.AsNoTracking().Where(fuel => fuel.Status == 1 && fuel.IsActive).OrderBy(fuel => fuel.Name).ToList()[index].CurrentPricePerLiter.ToString("N2")/L</small></span>
+                                <input class="form-check-input fuel-choice" type="radio" name="FuelType" value="@Model.Fuels[index].Name" data-fuel-id="@Model.Fuels[index].FuelId" data-tank-id="@Model.Fuels[index].TankId" data-nozzle-id="@Model.Fuels[index].NozzleId" data-price="@Model.Fuels[index].Price" @(Model.Fuels[index].IsChecked ? "checked" : "") />
+                                <span>@Model.Fuels[index].Name <small>₱@Model.Fuels[index].Price.ToString("N2")/L</small></span>
                             </label>
                         }
                     </div>
@@ -147,7 +144,7 @@
                     </div>
                 </div>
 
-                <button class="btn btn-primary btn-lg pos-charge-button" id="submitSaleButton" type="submit">Checkout</button>
+                <button class="btn btn-primary btn-lg pos-charge-button" id="submitSaleButton" type="button">Checkout</button>
                 <button class="btn btn-outline-secondary" id="newSaleButton" type="button">New Sale</button>
             </aside>
         </div>
@@ -239,10 +236,12 @@
                                                     <th>No</th>
                                                     <th>Name</th>
                                                     <th>Quantity</th>
+                                                    <th>Price</th>
+                                                    <th>Subtotal</th>
                                                 </tr>
                                             </thead>
                                             <tbody id="receiptProductRows">
-                                                <tr><td colspan="3">No selected products.</td></tr>
+                                                <tr><td colspan="5">No selected products.</td></tr>
                                             </tbody>
                                         </table>
                                     </div>
@@ -285,7 +284,8 @@
                     </div>
                     <div class="modal-footer pos-receipt-modal-footer">
                         <div class="salesman-receipt-actions">
-                            <button class="btn btn-outline-secondary" id="modalPrintReceiptButton" type="button">Print Receipt</button>
+                            <button class="btn btn-outline-secondary" id="modalPrintReceiptButton" type="button" disabled>Print Receipt</button>
+                            <button class="btn btn-primary" id="modalConfirmSaleButton" type="button">Confirm Sale</button>
                             <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Close</button>
                         </div>
                     </div>
@@ -325,7 +325,7 @@
     <script>
         (() => {
             const peso = new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP", currencyDisplay: "narrowSymbol" });
-            const activeRebate = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Db.RebateRules.AsNoTracking().Where(rebate => rebate.Status == 1).OrderByDescending(rebate => rebate.CreatedAt).ThenByDescending(rebate => rebate.Id).Select(rebate => new { name = rebate.Name, pointsRequired = rebate.PointsRequired, rebateValue = rebate.RebateValue }).FirstOrDefault()));
+            const activeRebate = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.ActiveRebate));
             const form = document.getElementById("posSaleForm");
             const submitMessage = document.getElementById("posSubmitMessage");
             const antiForgeryToken = form.querySelector("input[name='__RequestVerificationToken']")?.value || "";
@@ -391,6 +391,7 @@
             const receiptChangeAmount = document.getElementById("receiptChangeAmount");
             const receiptPointsEarned = document.getElementById("receiptPointsEarned");
             const modalPrintReceiptButton = document.getElementById("modalPrintReceiptButton");
+            const modalConfirmSaleButton = document.getElementById("modalConfirmSaleButton");
             const submitSaleButton = document.getElementById("submitSaleButton");
             const newSaleButton = document.getElementById("newSaleButton");
             const fuelCart = [];
@@ -461,27 +462,32 @@
                 }
 
                 const card = input.closest(".pos-menu-product-card");
-                return card ? Math.max(0, Number.parseFloat(card.dataset.availableQuantity) || 0) : 0;
+                return Math.max(0, Number.parseFloat(input.dataset.available) || Number.parseFloat(card?.dataset.available) || Number.parseFloat(card?.dataset.availableQuantity) || 0);
             }
 
             function showDisplayStockWarning() {
                 showSubmitMessage("Not enough display stock.", false);
             }
 
-            function wholeQuantity(value) {
-                return Math.max(0, Math.floor(Number.parseFloat(value) || 0));
+            function cartQuantity(value) {
+                return Math.max(0, Number.parseFloat(value) || 0);
             }
 
-            function preventDecimalQuantityKey(event) {
-                if ([".", ",", "e", "E", "+", "-"].includes(event.key)) {
+            function formatQuantity(value) {
+                const quantity = cartQuantity(value);
+                return Number.isInteger(quantity) ? quantity.toString() : quantity.toFixed(2).replace(/\.?0+$/, "");
+            }
+
+            function preventInvalidQuantityKey(event) {
+                if ([",", "e", "E", "+", "-"].includes(event.key)) {
                     event.preventDefault();
                 }
             }
 
             function selectedProducts() {
                 return productQuantityInputs.reduce((products, input) => {
-                    const availableQuantity = wholeQuantity(availableDisplayQuantity(input));
-                    let quantity = wholeQuantity(input.value);
+                    const availableQuantity = cartQuantity(availableDisplayQuantity(input));
+                    let quantity = cartQuantity(input.value);
 
                     if (numericValue(input) < 0) {
                         input.value = 0;
@@ -489,12 +495,12 @@
 
                     if (quantity > availableQuantity) {
                         quantity = availableQuantity;
-                        input.value = availableQuantity;
+                        input.value = formatQuantity(availableQuantity);
                         showDisplayStockWarning();
                     }
 
                     if (numericValue(input) !== quantity) {
-                        input.value = quantity;
+                        input.value = formatQuantity(quantity);
                     }
 
                     if (quantity > 0) {
@@ -502,9 +508,9 @@
                         const unitPrice = Number.parseFloat(input.dataset.price) || 0;
                         const unitCost = Number.parseFloat(input.dataset.unitCost) || 0;
                         products.push({
-                            displayStockId: Number.parseInt(card.dataset.displayStockId, 10) || 0,
-                            productId: Number.parseInt(card.dataset.productId, 10) || 0,
-                            batchId: Number.parseInt(card.dataset.batchId, 10) || 0,
+                            displayStockId: 0,
+                            productId: Number.parseInt(input.dataset.productId, 10) || Number.parseInt(card.dataset.productId, 10) || 0,
+                            batchId: 0,
                             no: input.dataset.no,
                             name: input.dataset.name,
                             batchNo: input.dataset.batchNo || "-",
@@ -726,10 +732,10 @@
                 queueVoucherDiscountLookup();
             }
 
-            function productInputByDisplayStockId(displayStockId) {
+            function productInputByProductId(productId) {
                 return productQuantityInputs.find(input => {
                     const card = input.closest(".pos-menu-product-card");
-                    return card && card.dataset.displayStockId === displayStockId;
+                    return card && card.dataset.productId === productId;
                 }) || null;
             }
 
@@ -776,14 +782,14 @@
             function renderCart() {
                 const products = selectedProducts();
                 const productMarkup = products.map(product => {
-                    return `<div class="pos-cart-item" data-cart-product="${product.displayStockId}">
+                    return `<div class="pos-cart-item" data-cart-product="${product.productId}">
                         <div class="pos-cart-thumb">${product.no.substring(0, 2)}</div>
                         <div>
                             <strong>${product.name}</strong>
-                            <span>Batch ${product.batchNo} - ${peso.format(product.unitPrice)} each - Qty ${wholeQuantity(product.quantity)}</span>
+                            <span>${peso.format(product.unitPrice)} each - Qty ${formatQuantity(product.quantity)}</span>
                         </div>
                         <div class="text-end">
-                            <b>${peso.format(wholeQuantity(product.quantity) * product.price)}</b>
+                            <b>${peso.format(cartQuantity(product.quantity) * product.price)}</b>
                         </div>
                     </div>`;
                 }).join("");
@@ -808,16 +814,16 @@
             function buildCartEditDraft() {
                 return [
                     ...selectedProducts().map(product => {
-                        const productInput = productInputByDisplayStockId(product.displayStockId.toString());
+                        const productInput = productInputByProductId(product.productId.toString());
 
                         return {
                             type: "product",
-                            id: product.displayStockId.toString(),
-                            name: `${product.name} - Batch ${product.batchNo}`,
+                            id: product.productId.toString(),
+                            name: product.name,
                             unitPrice: product.unitPrice,
-                            quantity: wholeQuantity(product.quantity),
-                            step: 1,
-                            max: wholeQuantity(availableDisplayQuantity(productInput))
+                            quantity: cartQuantity(product.quantity),
+                            step: 0.01,
+                            max: cartQuantity(availableDisplayQuantity(productInput))
                         };
                     }),
                     ...fuelCart.map(fuel => ({
@@ -825,8 +831,8 @@
                         id: fuel.id,
                         name: fuel.type,
                         unitPrice: fuel.price,
-                        quantity: wholeQuantity(fuel.liters),
-                        step: 1,
+                        quantity: cartQuantity(fuel.liters),
+                        step: 0.01,
                         max: null
                     }))
                 ];
@@ -841,7 +847,7 @@
                 }
 
                 cartEditRows.innerHTML = activeItems.map(item => {
-                    const quantityValue = wholeQuantity(item.quantity).toString();
+                    const quantityValue = formatQuantity(item.quantity);
                     const unitLabel = item.type === "fuel" ? `${peso.format(item.unitPrice)}/L` : peso.format(item.unitPrice);
                     const maxAttribute = item.max === null ? "" : `max="${item.max}"`;
 
@@ -851,7 +857,7 @@
                         <td>
                             <div class="input-group input-group-sm">
                                 <button class="btn btn-outline-secondary" type="button" data-edit-cart-step="${item.type}:${item.id}" data-step="-${item.step}" aria-label="Decrease ${item.name} quantity">-</button>
-                                <input class="form-control text-center" type="number" min="0" ${maxAttribute} step="${item.step}" inputmode="numeric" value="${quantityValue}" data-edit-cart-quantity="${item.type}:${item.id}" aria-label="${item.name} quantity" />
+                                <input class="form-control text-center" type="number" min="0" ${maxAttribute} step="0.01" inputmode="decimal" value="${quantityValue}" data-edit-cart-quantity="${item.type}:${item.id}" aria-label="${item.name} quantity" onfocus="this.select()" />
                                 <button class="btn btn-outline-secondary" type="button" data-edit-cart-step="${item.type}:${item.id}" data-step="${item.step}" aria-label="Increase ${item.name} quantity">+</button>
                             </div>
                         </td>
@@ -875,14 +881,23 @@
                 return cartEditDraft.find(item => item.type === type && item.id === id) || null;
             }
 
-            function setCartEditDraftQuantity(key, quantity) {
+            function updateCartEditDraftTotal(key) {
+                const item = findCartEditDraftItem(key);
+                const totalCell = cartEditRows.querySelector(`[data-edit-cart-total="${key}"]`);
+
+                if (item && totalCell) {
+                    totalCell.textContent = peso.format(item.quantity * item.unitPrice);
+                }
+            }
+
+            function setCartEditDraftQuantity(key, quantity, renderRows = true) {
                 const item = findCartEditDraftItem(key);
 
                 if (!item) {
                     return;
                 }
 
-                const requestedQuantity = wholeQuantity(quantity);
+                const requestedQuantity = cartQuantity(quantity);
                 const nextQuantity = item.max === null
                     ? requestedQuantity
                     : Math.min(item.max, requestedQuantity);
@@ -892,7 +907,11 @@
                 }
 
                 item.quantity = nextQuantity;
-                renderCartEditRows();
+                if (renderRows) {
+                    renderCartEditRows();
+                } else {
+                    updateCartEditDraftTotal(key);
+                }
             }
 
             function saveCartEditDraft() {
@@ -900,10 +919,10 @@
                 const fuelDrafts = cartEditDraft.filter(item => item.type === "fuel");
 
                 productDrafts.forEach(item => {
-                    const input = productInputByDisplayStockId(item.id);
+                    const input = productInputByProductId(item.id);
 
                     if (input) {
-                        input.value = wholeQuantity(item.quantity);
+                        input.value = formatQuantity(item.quantity);
                     }
                 });
 
@@ -913,9 +932,9 @@
                         const existingFuel = fuelCart.find(fuel => fuel.id === item.id);
                         return {
                             ...existingFuel,
-                            liters: wholeQuantity(item.quantity),
-                            amount: wholeQuantity(item.quantity) * item.unitPrice,
-                            subtotal: wholeQuantity(item.quantity) * item.unitPrice
+                            liters: cartQuantity(item.quantity),
+                            amount: cartQuantity(item.quantity) * item.unitPrice,
+                            subtotal: cartQuantity(item.quantity) * item.unitPrice
                         };
                     })
                     .filter(fuel => fuel.id));
@@ -949,12 +968,14 @@
                 if (cartItemCount) {
                     cartItemCount.textContent = itemCount.toString();
                 }
-                modalCartCount.textContent = `${itemCount} ${itemCount === 1 ? "item" : "items"}`;
+                if (modalCartCount) {
+                    modalCartCount.textContent = `${itemCount} ${itemCount === 1 ? "item" : "items"}`;
+                }
             }
 
             function updateTotal() {
-                updateSummaryAmounts();
                 renderCart();
+                updateSummaryAmounts();
                 renderReceipt();
             }
 
@@ -1106,8 +1127,8 @@
                     ? fuelCart.map(fuel => `<tr><td>${fuel.type}<br><small>${peso.format(fuel.price)}/L</small></td><td>${fuel.liters.toFixed(2)} L</td><td>${peso.format(fuel.amount)}</td></tr>`).join("")
                     : `<tr><td colspan="3">No selected fuel.</td></tr>`;
                 receiptProductRows.innerHTML = products.length
-                    ? products.map(product => `<tr><td>${product.no}</td><td>${product.name}<br><small>${peso.format(product.price)}</small></td><td>${wholeQuantity(product.quantity)}</td></tr>`).join("")
-                    : `<tr><td colspan="3">No selected products.</td></tr>`;
+                    ? products.map(product => `<tr><td>${product.no}</td><td>${product.name}</td><td>${formatQuantity(product.quantity)}</td><td>${peso.format(product.price)}</td><td>${peso.format(product.subtotal)}</td></tr>`).join("")
+                    : `<tr><td colspan="5">No selected products.</td></tr>`;
             }
 
             function showReceipt() {
@@ -1166,6 +1187,31 @@
                 setTimeout(printReceiptFrame, 100);
             }
 
+            async function openCheckoutSummary() {
+                let payload = buildSalePayload();
+
+                if (!payload.products.length && !payload.fuels.length) {
+                    showSubmitMessage("Please select at least one item before checkout.", false);
+                    return;
+                }
+
+                await loadMemberDiscount();
+                payload = buildSalePayload();
+
+                if (!validateCheckout()) {
+                    return;
+                }
+
+                completedReceiptNo = "";
+                completedReceiptTotals = null;
+                saleCompleted = false;
+                modalConfirmSaleButton.disabled = false;
+                modalPrintReceiptButton.disabled = true;
+                submitSaleButton.disabled = false;
+                showSubmitMessage("Review the sale summary, then confirm sale.", true);
+                showReceipt();
+            }
+
             function showSubmitMessage(message, isSuccess) {
                 submitMessage.textContent = message;
                 submitMessage.classList.remove("d-none", "alert-success", "alert-danger");
@@ -1175,9 +1221,7 @@
             function buildSalePayload() {
                 const products = selectedProducts().map(product => {
                     return {
-                        displayStockId: product.displayStockId,
                         productId: product.productId,
-                        batchId: product.batchId,
                         quantity: product.quantity,
                         price: product.unitPrice,
                         unitCost: product.unitCost,
@@ -1208,7 +1252,7 @@
             }
 
             async function submitSale(event) {
-                event.preventDefault();
+                event?.preventDefault();
                 let payload = buildSalePayload();
 
                 if (!payload.products.length && !payload.fuels.length) {
@@ -1224,6 +1268,7 @@
                 }
 
                 submitSaleButton.disabled = true;
+                modalConfirmSaleButton.disabled = true;
                 showSubmitMessage("Saving sale...", true);
 
                 try {
@@ -1259,11 +1304,16 @@
                     saleCompleted = true;
                     renderReceipt();
                     showReceipt();
+                    modalPrintReceiptButton.disabled = false;
                     showSubmitMessage(`${result.message} Receipt No: ${result.receiptNo}`, true);
                 } catch {
                     showSubmitMessage("Unable to save sale. Please try again.", false);
+                    modalConfirmSaleButton.disabled = false;
                 } finally {
                     submitSaleButton.disabled = saleCompleted;
+                    if (!saleCompleted) {
+                        modalConfirmSaleButton.disabled = false;
+                    }
                 }
             }
 
@@ -1294,6 +1344,8 @@
                 completedReceiptTotals = null;
                 saleCompleted = false;
                 submitSaleButton.disabled = false;
+                modalConfirmSaleButton.disabled = false;
+                modalPrintReceiptButton.disabled = true;
                 productSearch.value = "";
                 productQuantityInputs.forEach(input => {
                     input.value = 0;
@@ -1337,13 +1389,14 @@
                 });
             });
             productQuantityInputs.forEach(input => {
-                input.addEventListener("keydown", preventDecimalQuantityKey);
-                input.addEventListener("input", () => {
-                    input.value = wholeQuantity(input.value);
+                input.addEventListener("keydown", preventInvalidQuantityKey);
+                const updateProductQuantity = () => {
                     updateTotal();
                     queueMemberDiscountLookup();
                     queueVoucherDiscountLookup();
-                });
+                };
+                input.addEventListener("input", updateProductQuantity);
+                input.addEventListener("change", updateProductQuantity);
             });
             fuelAmountInput.addEventListener("input", () => {
                 activeFuelInput = "amount";
@@ -1381,6 +1434,13 @@
                 const quantityInput = event.target.closest("[data-edit-cart-quantity]");
 
                 if (quantityInput) {
+                    setCartEditDraftQuantity(quantityInput.dataset.editCartQuantity, numericValue(quantityInput), false);
+                }
+            });
+            cartEditRows.addEventListener("change", event => {
+                const quantityInput = event.target.closest("[data-edit-cart-quantity]");
+
+                if (quantityInput) {
                     setCartEditDraftQuantity(quantityInput.dataset.editCartQuantity, numericValue(quantityInput));
                 }
             });
@@ -1388,7 +1448,7 @@
                 const quantityInput = event.target.closest("[data-edit-cart-quantity]");
 
                 if (quantityInput) {
-                    preventDecimalQuantityKey(event);
+                    preventInvalidQuantityKey(event);
                 }
             });
             cartEditSaveButton.addEventListener("click", saveCartEditDraft);
@@ -1408,8 +1468,18 @@
             paymentMethodSelect.addEventListener("change", updatePaymentFields);
             productSearch.addEventListener("input", filterProducts);
             modalPrintReceiptButton.addEventListener("click", printModalReceipt);
+            modalConfirmSaleButton.addEventListener("click", submitSale);
+            submitSaleButton.addEventListener("click", openCheckoutSummary);
             newSaleButton.addEventListener("click", resetSale);
-            form.addEventListener("submit", submitSale);
+            receiptModalElement.addEventListener("hidden.bs.modal", () => {
+                if (saleCompleted) {
+                    resetSale();
+                }
+            });
+            form.addEventListener("submit", event => {
+                event.preventDefault();
+                openCheckoutSummary();
+            });
             window.addEventListener("pageshow", restoreProductSubmitFields);
             showHotMode();
             updatePaymentFields();

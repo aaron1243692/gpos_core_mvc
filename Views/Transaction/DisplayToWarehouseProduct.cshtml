@@ -2,31 +2,171 @@
 
 <section class="product-receiving-page">
     <div class="content-card transaction-ui-card product-receiving-container">
-        <div class="card-title-row page-header"><div><h1>@Model.Title</h1><p>Move product batch stock from display back to warehouse.</p></div><button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#transferFormModal">Add Transfer</button></div>
+        <div class="card-title-row page-header">
+            <div><h1>@Model.Title</h1><p>Move product batch stock from display back to warehouse.</p></div>
+            <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#transferFormModal">Add Transfer</button>
+        </div>
         <div class="product-receiving-body">
             @if (TempData["TransferMessage"] is not null)
             {
                 <div class="alert alert-warning">@TempData["TransferMessage"]</div>
             }
-            <form asp-action="DisplayToWarehouseProduct" method="get" class="transaction-ui-toolbar product-receiving-toolbar toolbar"><input class="form-control transaction-ui-search" name="search" value="@Model.Search" type="search" placeholder="Search transfer, product, batch, status..." /><button class="btn btn-outline-primary" type="submit">Search</button></form>
+            <form asp-action="DisplayToWarehouseProduct" method="get" class="transaction-ui-toolbar product-receiving-toolbar toolbar">
+                <input class="form-control transaction-ui-search" name="search" value="@Model.Search" type="search" placeholder="Search transfer, product, batch, status..." />
+                <button class="btn btn-outline-primary" type="submit">Search</button>
+            </form>
             <div class="table-responsive transaction-ui-table-wrap product-receiving-table-wrapper">
-                <table class="table app-table table-sm align-middle mb-0"><thead><tr><th>No</th><th>Transfer No</th><th>Product</th><th>Batch</th><th>Quantity</th><th>Display Before</th><th>Display After</th><th>Warehouse Before</th><th>Warehouse After</th><th>Transferred By</th><th>Date</th><th>Status</th><th>Action</th></tr></thead><tbody>
-                    @if (Model.Transfers.Count == 0)
-                    {
-                        <tr><td class="text-center text-muted fw-bold" colspan="13">No transfers found.</td></tr>
-                    }
-                    @for (var i = 0; i < Model.Transfers.Count; i += 1)
-                    {
-<tr><td>@(i + 1)</td><td>@Model.Transfers[i].TransferNo</td><td>@Model.Transfers[i].Product</td><td>@Model.Transfers[i].Batch</td><td>@Model.Transfers[i].Quantity.ToString("N2")</td><td>@(Model.Transfers[i].SourceBefore?.ToString("N2") ?? "-")</td><td>@(Model.Transfers[i].SourceAfter?.ToString("N2") ?? "-")</td><td>@(Model.Transfers[i].DestinationBefore?.ToString("N2") ?? "-")</td><td>@(Model.Transfers[i].DestinationAfter?.ToString("N2") ?? "-")</td><td>@Model.Transfers[i].TransferredBy</td><td>@Model.Transfers[i].Date?.ToString("yyyy-MM-dd HH:mm")</td><td><span class="badge @(Model.Transfers[i].Status == "Completed" ? "text-bg-success" : Model.Transfers[i].Status == "Cancelled" ? "text-bg-secondary" : "text-bg-warning")">@Model.Transfers[i].Status</span></td><td class="text-nowrap">-</td></tr>
-                    }
-                </tbody></table>
+                <table class="table app-table table-sm align-middle mb-0">
+                    <thead><tr><th>No</th><th>Transfer No</th><th>Product</th><th>Batch</th><th>Quantity</th><th>Display Before</th><th>Display After</th><th>Warehouse Before</th><th>Warehouse After</th><th>Transferred By</th><th>Date</th><th>Status</th><th>Action</th></tr></thead>
+                    <tbody>
+                        @if (Model.Transfers.Count == 0)
+                        {
+                            <tr><td class="text-center text-muted fw-bold" colspan="13">No transfers found.</td></tr>
+                        }
+                        @for (var i = 0; i < Model.Transfers.Count; i += 1)
+                        {
+                            <tr>
+                                <td>@(i + 1)</td><td>@Model.Transfers[i].TransferNo</td><td>@Model.Transfers[i].Product</td><td>@Model.Transfers[i].Batch</td><td>@Model.Transfers[i].Quantity.ToString("N2")</td><td>@(Model.Transfers[i].SourceBefore?.ToString("N2") ?? "-")</td><td>@(Model.Transfers[i].SourceAfter?.ToString("N2") ?? "-")</td><td>@(Model.Transfers[i].DestinationBefore?.ToString("N2") ?? "-")</td><td>@(Model.Transfers[i].DestinationAfter?.ToString("N2") ?? "-")</td><td>@Model.Transfers[i].TransferredBy</td><td>@Model.Transfers[i].Date?.ToString("yyyy-MM-dd HH:mm")</td><td><span class="badge @(Model.Transfers[i].Status == "Completed" ? "text-bg-success" : Model.Transfers[i].Status == "Cancelled" ? "text-bg-secondary" : "text-bg-warning")">@Model.Transfers[i].Status</span></td><td class="text-nowrap">-</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>
 </section>
 
-<div class="modal fade" id="transferFormModal" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-dialog-centered"><div class="modal-content"><form asp-action="SaveDisplayToWarehouseProduct" method="post">@Html.AntiForgeryToken()<input name="search" type="hidden" value="@Model.Search" /><input asp-for="Form.ProductId" type="hidden" data-selected-product-id /><div class="modal-header"><h2 class="modal-title fs-5">Add Transfer</h2><button class="btn-close" type="button" data-bs-dismiss="modal"></button></div><div class="modal-body"><div class="row g-3"><div class="col-12"><label class="form-label">Product</label><div class="input-group"><input class="form-control" type="text" placeholder="Search/select product..." readonly data-selected-product-name data-open-product-selector /><button class="btn btn-outline-secondary" type="button" data-open-product-selector><img src="/icons/search.png" alt="Search" class="transfer-search-icon" /></button></div></div><div class="col-md-6"><label asp-for="Form.Quantity" class="form-label">Transfer Quantity</label><input asp-for="Form.Quantity" class="form-control" type="number" step="0.01" min="0.01" /></div><div class="col-md-6"><label class="form-label">Batch</label><input class="form-control" value="Auto-selected by FIFO" readonly /></div><div class="col-12"><label asp-for="Form.Remarks" class="form-label">Remarks</label><textarea asp-for="Form.Remarks" class="form-control" rows="3"></textarea></div></div></div><div class="modal-footer"><button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button><button class="btn btn-primary" type="submit">Save Transfer</button></div></form></div></div></div>
+<div class="modal fade" id="transferFormModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <form asp-action="SaveDisplayToWarehouseProduct" method="post" data-transfer-form>
+                @Html.AntiForgeryToken()
+                <input name="search" type="hidden" value="@Model.Search" />
+                <input asp-for="Form.ProductId" type="hidden" data-selected-product-id />
+                <div class="modal-header"><h2 class="modal-title fs-5">Add Transfer</h2><button class="btn-close" type="button" data-bs-dismiss="modal"></button></div>
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label class="form-label">Product</label>
+                            <div class="input-group">
+                                <input class="form-control" type="text" placeholder="Search/select product..." readonly data-selected-product-name data-open-product-selector />
+                                <button class="btn btn-outline-secondary" type="button" data-open-product-selector><img src="/icons/search.png" alt="Search" class="transfer-search-icon" /></button>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label asp-for="Form.Quantity" class="form-label">Transfer Quantity</label>
+                            <input asp-for="Form.Quantity" class="form-control" type="number" step="0.01" min="0.01" onfocus="this.select();" data-transfer-quantity />
+                            <div class="form-text" data-available-text>Available: Select product first</div>
+                        </div>
+                        <div class="col-md-6"><label class="form-label">Batch</label><input class="form-control" value="Auto-selected by latest batch first" readonly /></div>
+                        <div class="col-12"><label asp-for="Form.Remarks" class="form-label">Remarks</label><textarea asp-for="Form.Remarks" class="form-control" rows="3"></textarea></div>
+                    </div>
+                </div>
+                <div class="modal-footer"><button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button><button class="btn btn-primary" type="submit">Save Transfer</button></div>
+            </form>
+        </div>
+    </div>
+</div>
 
-<div class="modal fade" id="productSelectorModal" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-dialog-centered modal-lg"><div class="modal-content"><div class="modal-header"><h2 class="modal-title fs-5">Select Product</h2><button class="btn-close" type="button" data-bs-dismiss="modal"></button></div><div class="modal-body"><input class="form-control mb-3" type="search" placeholder="Search product..." data-product-selector-search /><div class="table-responsive"><table class="table app-table table-sm align-middle mb-0"><thead><tr><th>No</th><th>Product</th><th>Category</th><th>Unit</th><th>Available Quantity</th><th>Action</th></tr></thead><tbody>@for (var i = 1; i < Model.ProductOptions.Count; i += 1) { <tr data-product-selector-row data-search-text="@Model.ProductOptions[i].Text.ToLowerInvariant()"><td>@i</td><td>@Model.ProductOptions[i].Text</td><td>-</td><td>-</td><td>-</td><td><button class="btn btn-sm btn-outline-primary" type="button" data-select-product-id="@Model.ProductOptions[i].Value" data-select-product-name="@Model.ProductOptions[i].Text">Select</button></td></tr> }</tbody></table></div></div><div class="modal-footer"><button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Close</button></div></div></div></div>
+<div class="modal fade" id="productSelectorModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header"><h2 class="modal-title fs-5">Select Product</h2><button class="btn-close" type="button" data-bs-dismiss="modal"></button></div>
+            <div class="modal-body">
+                <input class="form-control mb-3" type="search" placeholder="Search product..." data-product-selector-search />
+                <div class="table-responsive">
+                    <table class="table app-table table-sm align-middle mb-0">
+                        <thead><tr><th>No</th><th>Product</th><th>Category</th><th>Unit</th><th>Available</th><th>Action</th></tr></thead>
+                        <tbody>
+                            @for (var i = 0; i < Model.ProductSelectorRows.Count; i += 1)
+                            {
+                                <tr data-product-selector-row data-search-text="@($"{Model.ProductSelectorRows[i].ProductName} {Model.ProductSelectorRows[i].CategoryName} {Model.ProductSelectorRows[i].UnitName}".ToLowerInvariant())">
+                                    <td>@(i + 1)</td><td>@Model.ProductSelectorRows[i].ProductName</td><td>@Model.ProductSelectorRows[i].CategoryName</td><td>@Model.ProductSelectorRows[i].UnitName</td><td>@Model.ProductSelectorRows[i].AvailableQuantity.ToString("N2")</td>
+                                    <td><button class="btn btn-sm btn-outline-primary" type="button" data-select-product-id="@Model.ProductSelectorRows[i].ProductId" data-select-product-name="@Model.ProductSelectorRows[i].ProductName" data-available="@Model.ProductSelectorRows[i].AvailableQuantity" data-available-quantity="@Model.ProductSelectorRows[i].AvailableQuantity">Select</button></td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer"><button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Close</button></div>
+        </div>
+    </div>
+</div>
 
-<script>document.addEventListener("DOMContentLoaded",function(){const productIdInput=document.querySelector("[data-selected-product-id]");const productNameInput=document.querySelector("[data-selected-product-name]");const selectorModalElement=document.getElementById("productSelectorModal");const selectorModal=selectorModalElement&&window.bootstrap?new bootstrap.Modal(selectorModalElement):null;const selectorSearch=document.querySelector("[data-product-selector-search]");const selectorRows=Array.from(document.querySelectorAll("[data-product-selector-row]"));document.querySelectorAll("[data-open-product-selector]").forEach(function(trigger){trigger.addEventListener("click",function(){if(selectorModal){selectorModal.show();}});});document.querySelectorAll("[data-select-product-id]").forEach(function(button){button.addEventListener("click",function(){productIdInput.value=button.dataset.selectProductId||"";productNameInput.value=button.dataset.selectProductName||"";if(selectorModal){selectorModal.hide();}});});if(selectorSearch){selectorSearch.addEventListener("input",function(){const query=selectorSearch.value.trim().toLowerCase();selectorRows.forEach(function(row){row.hidden=query.length>0&&!(row.dataset.searchText||"").includes(query);});});}});</script>
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const productIdInput = document.querySelector("[data-selected-product-id]");
+        const productNameInput = document.querySelector("[data-selected-product-name]");
+        const quantityInput = document.querySelector("[data-transfer-quantity]");
+        const availableText = document.querySelector("[data-available-text]");
+        const transferForm = document.querySelector("[data-transfer-form]");
+        const selectorModalElement = document.getElementById("productSelectorModal");
+        const selectorModal = selectorModalElement && window.bootstrap ? new bootstrap.Modal(selectorModalElement) : null;
+        const selectorSearch = document.querySelector("[data-product-selector-search]");
+        const selectorRows = Array.from(document.querySelectorAll("[data-product-selector-row]"));
+        let selectedAvailable = 0;
+
+        function setAvailable(value, emptyText) {
+            selectedAvailable = Math.max(0, Number.parseFloat(value) || 0);
+            if (quantityInput) {
+                quantityInput.max = selectedAvailable > 0 ? selectedAvailable.toString() : "";
+            }
+            if (availableText) {
+                availableText.textContent = selectedAvailable > 0 ? `Available: ${selectedAvailable.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}` : `Available: ${emptyText || "0"}`;
+            }
+        }
+
+        function filterSelectorRows() {
+            const query = selectorSearch ? selectorSearch.value.trim().toLowerCase() : "";
+            selectorRows.forEach(function (row) {
+                row.hidden = query.length > 0 && !(row.dataset.searchText || "").includes(query);
+            });
+        }
+
+        document.querySelectorAll("[data-open-product-selector]").forEach(function (trigger) {
+            trigger.addEventListener("click", function () {
+                filterSelectorRows();
+                if (selectorModal) {
+                    selectorModal.show();
+                }
+            });
+        });
+
+        document.querySelectorAll("[data-select-product-id]").forEach(function (button) {
+            button.addEventListener("click", function () {
+                productIdInput.value = button.dataset.selectProductId || "";
+                productNameInput.value = button.dataset.selectProductName || "";
+                setAvailable(button.dataset.available || button.dataset.availableQuantity, "0");
+                if (selectorModal) {
+                    selectorModal.hide();
+                }
+            });
+        });
+
+        if (quantityInput) {
+            quantityInput.addEventListener("input", function () {
+                const quantity = Number.parseFloat(quantityInput.value) || 0;
+                if (selectedAvailable > 0 && quantity > selectedAvailable) {
+                    quantityInput.value = selectedAvailable;
+                }
+            });
+        }
+
+        if (transferForm) {
+            transferForm.addEventListener("submit", function (event) {
+                const quantity = Number.parseFloat(quantityInput?.value || "0") || 0;
+                if (selectedAvailable > 0 && quantity > selectedAvailable) {
+                    event.preventDefault();
+                    alert("Transfer quantity cannot exceed available quantity.");
+                }
+            });
+        }
+
+        if (selectorSearch) {
+            selectorSearch.addEventListener("input", filterSelectorRows);
+        }
+
+        setAvailable(0, "Select product first");
+    });
+</script>

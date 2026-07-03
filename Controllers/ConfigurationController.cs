@@ -14,6 +14,7 @@ namespace gpos.Controllers
     {
         private readonly ApplicationDbContext _db;
         private readonly ProductBatchNumberService _batchNumberService;
+        private static readonly string[] VatTypeValues = { "Inclusive", "Exclusive", "Exempt", "ZeroRated" };
 
         public ConfigurationController(ApplicationDbContext db, ProductBatchNumberService batchNumberService)
         {
@@ -161,6 +162,33 @@ namespace gpos.Controllers
             });
 
             await _db.SaveChangesAsync();
+            TempData["SuccessMessage"] = "Product category saved successfully.";
+            return RedirectToAction(nameof(ProductCategories), new { search });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> UpdateProductCategory([Bind(Prefix = "CategoryForm")] ProductCategoryForm form, string? search)
+        {
+            if (!ModelState.IsValid)
+            {
+                return View("ProductCategories", await BuildProductCategoriesPageAsync(search, form, "editCategoryModal"));
+            }
+
+            var category = await _db.ProductCategories.FindAsync(form.Id);
+
+            if (category is null)
+            {
+                ModelState.AddModelError(string.Empty, "Product category was not found.");
+                return View("ProductCategories", await BuildProductCategoriesPageAsync(search, form, "editCategoryModal"));
+            }
+
+            category.Name = form.Name.Trim();
+            category.Description = form.Description.Trim();
+            category.UpdatedAt = DateTime.UtcNow;
+
+            await _db.SaveChangesAsync();
+            TempData["SuccessMessage"] = "Product category updated successfully.";
             return RedirectToAction(nameof(ProductCategories), new { search });
         }
 
@@ -176,6 +204,7 @@ namespace gpos.Controllers
                 category.Status = 0;
                 category.UpdatedAt = DateTime.UtcNow;
                 await _db.SaveChangesAsync();
+                TempData["SuccessMessage"] = "Product category disabled successfully.";
             }
 
             return RedirectToAction(nameof(ProductCategories), new { search });
@@ -192,8 +221,48 @@ namespace gpos.Controllers
                 category.Status = 1;
                 category.UpdatedAt = DateTime.UtcNow;
                 await _db.SaveChangesAsync();
+                TempData["SuccessMessage"] = "Product category activated successfully.";
             }
             return RedirectToAction(nameof(ProductCategories), new { search });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> DeactivateProductFromStock(int id, string source, string? search)
+        {
+            var product = await _db.Products.FindAsync(id);
+            if (product is not null)
+            {
+                product.IsActive = false;
+                product.Status = 0;
+                product.UpdatedAt = DateTime.UtcNow;
+                await _db.SaveChangesAsync();
+            }
+
+            return RedirectToStockSource(source, search);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ActivateProductFromStock(int id, string source, string? search)
+        {
+            var product = await _db.Products.FindAsync(id);
+            if (product is not null)
+            {
+                product.IsActive = true;
+                product.Status = 1;
+                product.UpdatedAt = DateTime.UtcNow;
+                await _db.SaveChangesAsync();
+            }
+
+            return RedirectToStockSource(source, search);
+        }
+
+        private IActionResult RedirectToStockSource(string source, string? search)
+        {
+            return string.Equals(source, "Warehouse", StringComparison.OrdinalIgnoreCase)
+                ? RedirectToAction(nameof(WarehouseProducts), new { search })
+                : RedirectToAction(nameof(DisplayProducts), new { search });
         }
 
 
@@ -214,6 +283,141 @@ namespace gpos.Controllers
         public async Task<IActionResult> Members(string? search, int? editId)
         {
             return View(await BuildMembersPageAsync(search, editId: editId, activeModalId: editId.HasValue ? "memberModal" : ""));
+        }
+
+        public async Task<IActionResult> Vat(string? search, int? editId)
+        {
+            await EnsureDefaultVatSettingAsync();
+            return View(await BuildVatPageAsync(search, editId: editId, activeModalId: editId.HasValue ? "vatModal" : ""));
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> SaveVat([Bind(Prefix = "VatForm")] VatSettingForm form, string? search)
+        {
+            ValidateVatForm(form);
+
+            if (!ModelState.IsValid)
+            {
+                return View("Vat", await BuildVatPageAsync(search, form, activeModalId: "vatModal"));
+            }
+
+            var now = DateTime.UtcNow;
+            var vat = form.Id > 0
+                ? await _db.VatSettings.FirstOrDefaultAsync(setting => setting.Id == form.Id)
+                : new VatSetting { CreatedAt = now, IsActive = true };
+
+            if (vat is null)
+            {
+                return NotFound();
+            }
+
+            if (form.IsDefault && !vat.IsActive)
+            {
+                ModelState.AddModelError("VatForm.IsDefault", "Only active VAT settings can be set as default.");
+                return View("Vat", await BuildVatPageAsync(search, form, activeModalId: "vatModal"));
+            }
+
+            vat.Name = form.Name.Trim();
+            vat.Rate = form.Rate;
+            vat.Type = form.Type.Trim();
+            vat.IsDefault = form.IsDefault;
+            vat.UpdatedAt = now;
+
+            if (form.Id <= 0)
+            {
+                _db.VatSettings.Add(vat);
+            }
+
+            if (form.IsDefault)
+            {
+                var otherDefaults = await _db.VatSettings
+                    .Where(setting => setting.Id != vat.Id && setting.IsDefault)
+                    .ToListAsync();
+
+                for (var index = 0; index < otherDefaults.Count; index += 1)
+                {
+                    otherDefaults[index].IsDefault = false;
+                    otherDefaults[index].UpdatedAt = now;
+                }
+            }
+
+            await _db.SaveChangesAsync();
+            TempData["SuccessMessage"] = "VAT setting saved successfully.";
+            return RedirectToAction(nameof(Vat), new { search });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> DisableVat(int id, string? search)
+        {
+            var vat = await _db.VatSettings.FirstOrDefaultAsync(setting => setting.Id == id);
+
+            if (vat is null)
+            {
+                return NotFound();
+            }
+
+            if (vat.IsDefault)
+            {
+                TempData["ErrorMessage"] = "Default VAT cannot be disabled. Set another active VAT as default first.";
+                return RedirectToAction(nameof(Vat), new { search });
+            }
+
+            vat.IsActive = false;
+            vat.UpdatedAt = DateTime.UtcNow;
+            await _db.SaveChangesAsync();
+            TempData["SuccessMessage"] = "VAT setting disabled successfully.";
+            return RedirectToAction(nameof(Vat), new { search });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ActivateVat(int id, string? search)
+        {
+            var vat = await _db.VatSettings.FirstOrDefaultAsync(setting => setting.Id == id);
+
+            if (vat is null)
+            {
+                return NotFound();
+            }
+
+            vat.IsActive = true;
+            vat.UpdatedAt = DateTime.UtcNow;
+            await _db.SaveChangesAsync();
+            TempData["SuccessMessage"] = "VAT setting activated successfully.";
+            return RedirectToAction(nameof(Vat), new { search });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> SetDefaultVat(int id, string? search)
+        {
+            var vat = await _db.VatSettings.FirstOrDefaultAsync(setting => setting.Id == id);
+
+            if (vat is null)
+            {
+                return NotFound();
+            }
+
+            if (!vat.IsActive)
+            {
+                TempData["ErrorMessage"] = "Only active VAT settings can be set as default.";
+                return RedirectToAction(nameof(Vat), new { search });
+            }
+
+            var vatSettings = await _db.VatSettings.ToListAsync();
+            var now = DateTime.UtcNow;
+
+            for (var index = 0; index < vatSettings.Count; index += 1)
+            {
+                vatSettings[index].IsDefault = vatSettings[index].Id == id;
+                vatSettings[index].UpdatedAt = now;
+            }
+
+            await _db.SaveChangesAsync();
+            TempData["SuccessMessage"] = "Default VAT updated successfully.";
+            return RedirectToAction(nameof(Vat), new { search });
         }
 
         [HttpPost]
@@ -1301,6 +1505,83 @@ namespace gpos.Controllers
                 EarningsOptions = await BuildEarningsOptionsAsync(),
                 Members = await query.OrderBy(member => member.Id).ToListAsync()
             };
+        }
+
+        private async Task<VatSetupPageViewModel> BuildVatPageAsync(string? search, VatSettingForm? form = null, int? editId = null, string activeModalId = "")
+        {
+            IQueryable<VatSetting> query = _db.VatSettings.AsNoTracking();
+            var searchText = (search ?? string.Empty).Trim();
+
+            if (!string.IsNullOrWhiteSpace(searchText))
+            {
+                query = query.Where(setting => setting.Name.Contains(searchText)
+                    || setting.Type.Contains(searchText)
+                    || (searchText == "Active" && setting.IsActive)
+                    || (searchText == "Inactive" && !setting.IsActive)
+                    || (searchText == "Disabled" && !setting.IsActive));
+            }
+
+            return new VatSetupPageViewModel
+            {
+                Search = searchText,
+                ActiveModalId = activeModalId,
+                VatForm = form ?? await BuildVatFormAsync(editId),
+                TypeOptions = BuildVatTypeOptions(),
+                VatSettings = await query.OrderByDescending(setting => setting.IsDefault)
+                    .ThenByDescending(setting => setting.IsActive)
+                    .ThenBy(setting => setting.Id)
+                    .ToListAsync()
+            };
+        }
+
+        private async Task<VatSettingForm> BuildVatFormAsync(int? editId)
+        {
+            var vat = editId.HasValue ? await _db.VatSettings.AsNoTracking().FirstOrDefaultAsync(setting => setting.Id == editId.Value) : null;
+
+            return vat is null ? new VatSettingForm() : new VatSettingForm
+            {
+                Id = vat.Id,
+                Name = vat.Name,
+                Rate = vat.Rate,
+                Type = vat.Type,
+                IsDefault = vat.IsDefault
+            };
+        }
+
+        private static List<SelectListItem> BuildVatTypeOptions()
+        {
+            return VatTypeValues
+                .Select(type => new SelectListItem { Value = type, Text = type })
+                .ToList();
+        }
+
+        private void ValidateVatForm(VatSettingForm form)
+        {
+            if (!VatTypeValues.Contains(form.Type))
+            {
+                ModelState.AddModelError("VatForm.Type", "Select a valid VAT type.");
+            }
+        }
+
+        private async Task EnsureDefaultVatSettingAsync()
+        {
+            if (await _db.VatSettings.AnyAsync())
+            {
+                return;
+            }
+
+            var now = DateTime.UtcNow;
+            _db.VatSettings.Add(new VatSetting
+            {
+                Name = "VAT 12%",
+                Rate = 12.00m,
+                Type = "Inclusive",
+                IsDefault = true,
+                IsActive = true,
+                CreatedAt = now,
+                UpdatedAt = now
+            });
+            await _db.SaveChangesAsync();
         }
 
         private async Task<DiscountForm> BuildDiscountFormAsync(int? editId)

@@ -5,13 +5,12 @@
         <nav aria-label="breadcrumb">
             <ol class="breadcrumb">
                 <li class="breadcrumb-item">GPOS</li>
-                <li class="breadcrumb-item">Setup</li>
-                <li class="breadcrumb-item">Products</li>
+                <li class="breadcrumb-item">Inventory</li>
                 <li class="breadcrumb-item active" aria-current="page">Warehouse</li>
             </ol>
         </nav>
         <h1>Warehouse Products</h1>
-        <p class="page-subtitle">Manage products stored in the warehouse.</p>
+        <p class="page-subtitle">View warehouse stock by product batch.</p>
     </div>
 </div>
 
@@ -21,34 +20,31 @@
             <label class="visually-hidden" for="warehouse-product-search">Search warehouse products</label>
             <input class="form-control form-control-sm products-search" id="warehouse-product-search" name="search" value="@Model.Search" type="search" placeholder="Search warehouse products" autocomplete="off" />
         </form>
-        <div class="col-12 col-sm-auto ms-sm-auto">
-            <button class="btn btn-primary btn-sm w-100" type="button" data-bs-toggle="modal" data-bs-target="#warehouseProductModal">Add Product</button>
-        </div>
     </div>
 
     <div class="table-responsive table-scroll-wrap flex-table-wrap">
         <table class="table table-sm table-hover align-middle admin-table mb-0">
             <colgroup>
                 <col class="col-no" />
-                <col class="col-id" />
                 <col class="col-normal" />
                 <col class="col-name" />
                 <col class="col-normal" />
                 <col class="col-normal" />
                 <col class="col-normal" />
                 <col class="col-normal" />
+                <col class="col-status" />
                 <col class="col-action" />
             </colgroup>
             <thead>
                 <tr>
                     <th class="col-no" scope="col">No</th>
-                    <th class="col-id" scope="col">ID</th>
-                    <th class="col-batch" scope="col">Batch #</th>
-                    <th class="col-name" scope="col">Name</th>
-                    <th scope="col">Category</th>
+                    <th class="col-batch" scope="col">Batch</th>
+                    <th class="col-name" scope="col">Product</th>
                     <th class="col-money" scope="col">Cost Price</th>
                     <th class="col-money" scope="col">Selling Price</th>
                     <th class="col-qty" scope="col">Quantity</th>
+                    <th scope="col">Expiry Date</th>
+                    <th class="col-status" scope="col">Status</th>
                     <th class="col-action" scope="col">Action</th>
                 </tr>
             </thead>
@@ -63,15 +59,30 @@
                 {
                     <tr>
                         <td class="col-no">@(index + 1)</td>
-                        <td class="col-id">@Model.WarehouseStocks[index].Id</td>
                         <td class="col-batch">@(Model.WarehouseStocks[index].Batch?.BatchNo ?? "-")</td>
                         <td class="col-name">@(Model.WarehouseStocks[index].Product?.Name ?? "-")</td>
-                        <td>@(Model.WarehouseStocks[index].Product?.Category?.Name ?? "No category")</td>
                         <td>₱@(Model.WarehouseStocks[index].Batch?.CostPrice.ToString("N2") ?? "0.00")</td>
                         <td>₱@(Model.WarehouseStocks[index].Batch?.SellingPrice.ToString("N2") ?? "0.00")</td>
                         <td class="col-qty">@Model.WarehouseStocks[index].Quantity.ToString("N2")</td>
+                        <td>@(Model.WarehouseStocks[index].Batch?.ExpiryDate?.ToString("yyyy-MM-dd") ?? "-")</td>
+                        <td><span class="badge @((Model.WarehouseStocks[index].Product?.IsActive ?? false) && (Model.WarehouseStocks[index].Product?.Status == 1) ? "text-bg-success" : "text-bg-secondary")">@((Model.WarehouseStocks[index].Product?.IsActive ?? false) && (Model.WarehouseStocks[index].Product?.Status == 1) ? "Active" : "Inactive")</span></td>
                         <td class="col-action">
-                            <button class="btn btn-outline-secondary btn-sm" type="button" disabled>Edit</button>
+                            <div class="setup-row-actions">
+                                @if ((Model.WarehouseStocks[index].Product?.IsActive ?? false) && Model.WarehouseStocks[index].Product?.Status == 1)
+                                {
+                                    <button class="btn btn-sm btn-outline-danger product-deactivate-button" type="button" data-bs-toggle="modal" data-bs-target="#productStatusModal" data-product-id="@Model.WarehouseStocks[index].ProductId" data-product-name="@(Model.WarehouseStocks[index].Product?.Name ?? "Product")" data-action-url="@Url.Action("DeactivateProductFromStock", "Configuration")">Deactivate</button>
+                                }
+                                @if (!((Model.WarehouseStocks[index].Product?.IsActive ?? false) && Model.WarehouseStocks[index].Product?.Status == 1))
+                                {
+                                    <form asp-action="ActivateProductFromStock" method="post">
+                                        @Html.AntiForgeryToken()
+                                        <input name="id" type="hidden" value="@Model.WarehouseStocks[index].ProductId" />
+                                        <input name="source" type="hidden" value="Warehouse" />
+                                        <input name="search" type="hidden" value="@Model.Search" />
+                                        <button class="btn btn-sm btn-outline-success" type="submit">Activate</button>
+                                    </form>
+                                }
+                            </div>
                         </td>
                     </tr>
                 }
@@ -80,56 +91,24 @@
     </div>
 </section>
 
-<div class="modal fade" id="warehouseProductModal" tabindex="-1" aria-labelledby="warehouseProductModalLabel" aria-hidden="true">
+<div class="modal fade" id="productStatusModal" tabindex="-1" aria-labelledby="productStatusModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
-            <form asp-action="SaveWarehouseProduct" method="post">
+            <form id="productStatusForm" method="post">
                 @Html.AntiForgeryToken()
-                <input type="hidden" name="search" value="@Model.Search" />
+                <input id="productStatusId" name="id" type="hidden" />
+                <input name="source" type="hidden" value="Warehouse" />
+                <input name="search" type="hidden" value="@Model.Search" />
                 <div class="modal-header">
-                    <h2 class="modal-title fs-5" id="warehouseProductModalLabel">Add Warehouse Product</h2>
+                    <h2 class="modal-title fs-5" id="productStatusModalLabel">Deactivate Product</h2>
                     <button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <div class="d-grid gap-3">
-                        <div>
-                            <label class="form-label" asp-for="StockForm.CategoryId">Category</label>
-                            <select class="form-select" asp-for="StockForm.CategoryId" asp-items="Model.CategoryOptions">
-                                <option value="">Select category</option>
-                            </select>
-                            <span class="text-danger small" asp-validation-for="StockForm.CategoryId"></span>
-                        </div>
-                        <div>
-                            <label class="form-label" asp-for="StockForm.ProductName">Product Name</label>
-                            <input class="form-control" asp-for="StockForm.ProductName" autocomplete="off" />
-                            <span class="text-danger small" asp-validation-for="StockForm.ProductName"></span>
-                        </div>
-                        <div>
-                            <label class="form-label" asp-for="StockForm.CostPrice">Cost Price</label>
-                            <input class="form-control" asp-for="StockForm.CostPrice" type="number" min="0" step="0.01" placeholder="Enter cost price" />
-                            <span class="text-danger small" asp-validation-for="StockForm.CostPrice"></span>
-                        </div>
-                        <div>
-                            <label class="form-label" asp-for="StockForm.SellingPrice">Selling Price</label>
-                            <input class="form-control" asp-for="StockForm.SellingPrice" type="number" min="0" step="0.01" placeholder="Enter selling price" />
-                            <span class="text-danger small" asp-validation-for="StockForm.SellingPrice"></span>
-                        </div>
-                        <div>
-                            <label class="form-label" asp-for="StockForm.Quantity">Quantity</label>
-                            <input class="form-control" asp-for="StockForm.Quantity" type="number" min="0" step="0.01" placeholder="Enter quantity" />
-                            <span class="text-danger small" asp-validation-for="StockForm.Quantity"></span>
-                        </div>
-                        <div>
-                            <label class="form-check">
-                                <input class="form-check-input" asp-for="StockForm.IsActive" />
-                                <span class="form-check-label">Active</span>
-                            </label>
-                        </div>
-                    </div>
+                    <p class="mb-0" id="productStatusMessage">Are you sure you want to deactivate this product?</p>
                 </div>
                 <div class="modal-footer">
                     <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button>
-                    <button class="btn btn-primary" type="submit">Save</button>
+                    <button class="btn btn-danger deactivate-confirm-btn" id="productStatusConfirmButton" type="submit">Deactivate</button>
                 </div>
             </form>
         </div>
@@ -137,20 +116,41 @@
 </div>
 
 @section Scripts {
-    <partial name="_ValidationScriptsPartial" />
     <script>
         document.addEventListener("DOMContentLoaded", () => {
-            const activeModalId = "@Model.ActiveModalId";
+            const form = document.getElementById("productStatusForm");
+            const idInput = document.getElementById("productStatusId");
+            const title = document.getElementById("productStatusModalLabel");
+            const message = document.getElementById("productStatusMessage");
+            const confirmButton = document.getElementById("productStatusConfirmButton");
 
-            if (!activeModalId || !window.bootstrap) {
-                return;
-            }
+            document.querySelectorAll(".product-deactivate-button").forEach(button => {
+                button.addEventListener("click", () => {
+                    const productName = button.dataset.productName || "Product";
 
-            const activeModal = document.getElementById(activeModalId);
+                    if (form) {
+                        form.action = button.dataset.actionUrl || "";
+                    }
 
-            if (activeModal) {
-                bootstrap.Modal.getOrCreateInstance(activeModal).show();
-            }
+                    if (idInput) {
+                        idInput.value = button.dataset.productId || "";
+                    }
+
+                    if (title) {
+                        title.textContent = "Deactivate Product";
+                    }
+
+                    if (message) {
+                        message.textContent = `Are you sure you want to deactivate product "${productName}"?`;
+                    }
+
+                    if (confirmButton) {
+                        confirmButton.textContent = "Deactivate";
+                        confirmButton.classList.add("btn-danger");
+                        confirmButton.classList.remove("btn-primary", "btn-success");
+                    }
+                });
+            });
         });
     </script>
 }

@@ -28,6 +28,8 @@ namespace gpos.Models.ViewModels
 
     public class ProductCategoryForm
     {
+        public int Id { get; set; }
+
         [Required(ErrorMessage = "Name is required.")]
         public string Name { get; set; } = string.Empty;
 

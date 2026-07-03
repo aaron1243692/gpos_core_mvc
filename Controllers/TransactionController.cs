@@ -23,7 +23,132 @@ namespace gpos.Controllers
             _financialMetrics = financialMetrics;
         }
 
-        public IActionResult POS() => View();
+        public async Task<IActionResult> POS()
+        {
+            return View(await BuildPosPageAsync());
+        }
+
+        private async Task<PosPageViewModel> BuildPosPageAsync()
+        {
+            var displayStocks = await _db.DisplayStocks
+                .AsNoTracking()
+                .Include(stock => stock.Product)
+                    .ThenInclude(product => product!.Category)
+                .Include(stock => stock.Batch)
+                .Where(stock => stock.Quantity > 0
+                    && stock.Product != null
+                    && stock.Product.Status == 1
+                    && stock.Product.IsActive
+                    && stock.Product.CategoryId.HasValue
+                    && stock.Product.Category != null
+                    && stock.Product.Category.Status == 1
+                    && stock.Product.Category.IsActive
+                    && stock.Batch != null
+                    && stock.Batch.Status == 1
+                    && stock.Batch.IsActive)
+                .ToListAsync();
+
+            var productIds = displayStocks.Select(stock => stock.ProductId).Distinct().ToList();
+            var latestBatches = await _db.ProductBatches
+                .AsNoTracking()
+                .Where(batch => productIds.Contains(batch.ProductId) && batch.Status == 1 && batch.IsActive)
+                .OrderByDescending(batch => batch.CreatedAt ?? DateTime.MinValue)
+                .ThenByDescending(batch => batch.Id)
+                .ToListAsync();
+            var latestBatchLookup = latestBatches
+                .GroupBy(batch => batch.ProductId)
+                .ToDictionary(group => group.Key, group => group.First());
+
+            var fuels = await _db.Fuels
+                .AsNoTracking()
+                .Where(fuel => fuel.Status == 1 && fuel.IsActive)
+                .OrderBy(fuel => fuel.Name)
+                .ToListAsync();
+            var tanks = await _db.Tanks
+                .AsNoTracking()
+                .Where(tank => tank.Status == 1 && tank.IsActive)
+                .OrderBy(tank => tank.Id)
+                .ToListAsync();
+            var nozzles = await _db.Nozzles
+                .AsNoTracking()
+                .Include(nozzle => nozzle.Pump)
+                .Where(nozzle => nozzle.Status == 1 && nozzle.Pump != null)
+                .OrderBy(nozzle => nozzle.Id)
+                .ToListAsync();
+            var activeRebate = await _db.RebateRules
+                .AsNoTracking()
+                .Where(rebate => rebate.Status == 1)
+                .OrderByDescending(rebate => rebate.CreatedAt)
+                .ThenByDescending(rebate => rebate.Id)
+                .Select(rebate => new PosRebateViewModel
+                {
+                    Name = rebate.Name,
+                    PointsRequired = rebate.PointsRequired,
+                    RebateValue = rebate.RebateValue
+                })
+                .FirstOrDefaultAsync();
+
+            return new PosPageViewModel
+            {
+                ActiveRebate = activeRebate,
+                Categories = displayStocks
+                    .Where(stock => stock.Product?.Category != null)
+                    .GroupBy(stock => stock.Product!.Category!.Id)
+                    .OrderBy(group => group.First().Product!.Category!.Name)
+                    .Select(group =>
+                    {
+                        var category = group.First().Product!.Category!;
+                        return new PosCategoryCardViewModel
+                        {
+                            Id = category.Id,
+                            Name = category.Name,
+                            Code = category.Name.Length >= 3 ? category.Name[..3].ToUpper() : category.Name.ToUpper()
+                        };
+                    })
+                    .ToList(),
+                Products = displayStocks
+                    .GroupBy(stock => stock.ProductId)
+                    .OrderBy(group => group.First().Product!.Name)
+                    .Select(group =>
+                    {
+                        var product = group.First().Product!;
+                        var latestBatch = latestBatchLookup.TryGetValue(product.Id, out var batch)
+                            ? batch
+                            : group.Select(stock => stock.Batch!)
+                                .OrderByDescending(item => item.CreatedAt ?? DateTime.MinValue)
+                                .ThenByDescending(item => item.Id)
+                                .First();
+                        return new PosProductCardViewModel
+                        {
+                            ProductId = product.Id,
+                            CategoryId = product.CategoryId,
+                            ProductName = product.Name,
+                            ProductCode = $"P-{product.Id:000}",
+                            VisualText = product.Name.Length >= 2 ? product.Name[..2].ToUpper() : product.Name.ToUpper(),
+                            AvailableQuantity = group.Sum(stock => stock.Quantity),
+                            Price = latestBatch.SellingPrice,
+                            UnitCost = latestBatch.CostPrice
+                        };
+                    })
+                    .ToList(),
+                Fuels = fuels
+                    .Select((fuel, index) =>
+                    {
+                        var tank = tanks.FirstOrDefault(item => item.FuelId == fuel.Id);
+                        var nozzle = tank is null ? null : nozzles.FirstOrDefault(item => item.Pump?.TankId == tank.Id);
+                        return new PosFuelOptionViewModel
+                        {
+                            FuelId = fuel.Id,
+                            TankId = tank?.Id ?? 0,
+                            NozzleId = nozzle?.Id ?? 0,
+                            Name = fuel.Name,
+                            Price = fuel.CurrentPricePerLiter,
+                            IsChecked = index == 0
+                        };
+                    })
+                    .ToList()
+            };
+        }
 
         [HttpGet]
         public async Task<IActionResult> MemberDiscount(string? membershipCardNo, decimal productTotal = 0m, decimal fuelTotal = 0m)
@@ -1412,6 +1537,7 @@ namespace gpos.Controllers
                 CancelAction = cancelAction,
                 BranchOptions = await BuildBranchOptionsAsync(),
                 ProductOptions = await BuildTransferProductOptionsAsync(transferType),
+                ProductSelectorRows = await BuildTransferProductSelectorRowsAsync(transferType),
                 BatchOptions = await BuildTransferBatchOptionsAsync(transferType),
                 FuelOptions = await BuildFuelOptionsAsync(),
                 TankOptions = await BuildTankOptionsAsync(),
@@ -1965,6 +2091,80 @@ namespace gpos.Controllers
             var options = await query.Distinct().OrderBy(product => product.Name).Select(product => new SelectListItem { Value = product.Id.ToString(), Text = product.Name }).ToListAsync();
             options.Insert(0, new SelectListItem { Value = "", Text = "Select product" });
             return options;
+        }
+
+        private async Task<List<StockTransferProductSelectorRowViewModel>> BuildTransferProductSelectorRowsAsync(string transferType)
+        {
+            if (transferType == "DisplayToWarehouseProduct")
+            {
+                return await _db.DisplayStocks
+                    .AsNoTracking()
+                    .Where(stock => stock.Quantity > 0 && stock.Product != null)
+                    .GroupBy(stock => new
+                    {
+                        stock.ProductId,
+                        ProductName = stock.Product!.Name,
+                        CategoryName = stock.Product.Category != null ? stock.Product.Category.Name : "-",
+                        UnitName = stock.Product.ProductUnit != null ? stock.Product.ProductUnit.Name : "-"
+                    })
+                    .OrderBy(group => group.Key.ProductName)
+                    .Select(group => new StockTransferProductSelectorRowViewModel
+                    {
+                        ProductId = group.Key.ProductId,
+                        ProductName = group.Key.ProductName,
+                        CategoryName = group.Key.CategoryName,
+                        UnitName = group.Key.UnitName,
+                        AvailableQuantity = group.Sum(stock => stock.Quantity)
+                    })
+                    .ToListAsync();
+            }
+
+            if (transferType == "BranchToBranchProduct")
+            {
+                return await _db.WarehouseStocks
+                    .AsNoTracking()
+                    .Where(stock => stock.Quantity > 0 && stock.Product != null)
+                    .GroupBy(stock => new
+                    {
+                        stock.BranchId,
+                        stock.ProductId,
+                        ProductName = stock.Product!.Name,
+                        CategoryName = stock.Product.Category != null ? stock.Product.Category.Name : "-",
+                        UnitName = stock.Product.ProductUnit != null ? stock.Product.ProductUnit.Name : "-"
+                    })
+                    .OrderBy(group => group.Key.ProductName)
+                    .Select(group => new StockTransferProductSelectorRowViewModel
+                    {
+                        BranchId = group.Key.BranchId,
+                        ProductId = group.Key.ProductId,
+                        ProductName = group.Key.ProductName,
+                        CategoryName = group.Key.CategoryName,
+                        UnitName = group.Key.UnitName,
+                        AvailableQuantity = group.Sum(stock => stock.Quantity)
+                    })
+                    .ToListAsync();
+            }
+
+            return await _db.WarehouseStocks
+                .AsNoTracking()
+                .Where(stock => stock.Quantity > 0 && stock.Product != null)
+                .GroupBy(stock => new
+                {
+                    stock.ProductId,
+                    ProductName = stock.Product!.Name,
+                    CategoryName = stock.Product.Category != null ? stock.Product.Category.Name : "-",
+                    UnitName = stock.Product.ProductUnit != null ? stock.Product.ProductUnit.Name : "-"
+                })
+                .OrderBy(group => group.Key.ProductName)
+                .Select(group => new StockTransferProductSelectorRowViewModel
+                {
+                    ProductId = group.Key.ProductId,
+                    ProductName = group.Key.ProductName,
+                    CategoryName = group.Key.CategoryName,
+                    UnitName = group.Key.UnitName,
+                    AvailableQuantity = group.Sum(stock => stock.Quantity)
+                })
+                .ToListAsync();
         }
 
         private async Task<List<SelectListItem>> BuildTransferBatchOptionsAsync(string transferType)
