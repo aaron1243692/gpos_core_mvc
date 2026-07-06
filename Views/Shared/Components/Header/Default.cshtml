@@ -2,48 +2,58 @@
 
 <header class="eg-rb" data-gpos-ribbon aria-label="Primary navigation">
     <div class="eg-rb-top">
-        <a class="eg-rb-brand" asp-controller="Dashboard" asp-action="Index" aria-label="GPOS dashboard">
+        <a class="eg-rb-brand" asp-controller="Dashboard" asp-action="Index" aria-label="GTech GPOS dashboard">
             <span class="eg-rb-brand-mark" aria-hidden="true">G</span>
-            <span>GPOS / Gas Station POS</span>
+            <span>GTech GPOS</span>
         </a>
 
         <nav class="eg-rb-tabs" aria-label="Main page groups">
+            <a class="eg-rb-tab @(Model.ActivePage == "Transaction.POS" ? "is-active" : "")" asp-controller="Transaction" asp-action="POS">POS</a>
             <div class="dropdown eg-rb-nav-dropdown eg-rb-setup-dropdown">
                 <button class="eg-rb-tab dropdown-toggle @(Model.ActiveTab == "Configuration" ? "is-active" : "")" type="button" id="gposSetupDropdown" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">Setup</button>
                 <div class="dropdown-menu eg-rb-setup-menu" aria-labelledby="gposSetupDropdown">
+                    <div class="dropend eg-rb-dropdown-group">
+                        <button class="dropdown-item eg-rb-dropdown-group-toggle nav-group-partial" type="button">Config <span class="nav-status-pill">Partial</span></button>
+                        <div class="dropdown-menu eg-rb-submenu">
+                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Configuration.Branch" ? "active" : "")" asp-controller="Configuration" asp-action="Branch">Branch</a>
+                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Configuration.Department" ? "active" : "")" asp-controller="Configuration" asp-action="Department">Department</a>
+                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Suppliers.Index" ? "active" : "")" asp-controller="Suppliers" asp-action="Index">Suppliers</a>
+                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Configuration.Vat" ? "active" : "")" asp-controller="Configuration" asp-action="Vat">VAT</a>
+                            @* Partial / needs verification *@
+                            <a class="dropdown-item eg-rb-dropdown-link nav-page-partial @(Model.ActivePage == "Configuration.LowStockSettings" ? "active" : "")" asp-controller="Configuration" asp-action="LowStockSettings">Low Stock Settings <span class="nav-status-pill">Partial</span></a>
+                        </div>
+                    </div>
                     <div class="dropend eg-rb-dropdown-group">
                         <button class="dropdown-item eg-rb-dropdown-group-toggle" type="button">Access</button>
                         <div class="dropdown-menu eg-rb-submenu">
                             <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Users.Index" ? "active" : "")" asp-controller="Users" asp-action="Index">Users</a>
                             <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Roles.Index" ? "active" : "")" asp-controller="Roles" asp-action="Index">Roles</a>
+                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Permissions.Index" ? "active" : "")" asp-controller="Permissions" asp-action="Index">Permissions</a>
                         </div>
                     </div>
                     <div class="dropend eg-rb-dropdown-group">
-                        <button class="dropdown-item eg-rb-dropdown-group-toggle" type="button">Branch Management</button>
-                        <div class="dropdown-menu eg-rb-submenu">
-                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Configuration.Branch" ? "active" : "")" asp-controller="Configuration" asp-action="Branch">Branch</a>
-                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Configuration.Department" ? "active" : "")" asp-controller="Configuration" asp-action="Department">Department</a>
-                        </div>
-                    </div>
-                    <div class="dropend eg-rb-dropdown-group">
-                        <button class="dropdown-item eg-rb-dropdown-group-toggle" type="button">Product Management</button>
+                        <button class="dropdown-item eg-rb-dropdown-group-toggle" type="button">Products</button>
                         <div class="dropdown-menu eg-rb-submenu">
                             <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Configuration.ProductCategories" ? "active" : "")" asp-controller="Configuration" asp-action="ProductCategories">Product Categories</a>
                             <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Configuration.ProductUnits" ? "active" : "")" asp-controller="Configuration" asp-action="ProductUnits">Product Units</a>
+                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Configuration.ProductBatches" ? "active" : "")" asp-controller="Configuration" asp-action="ProductBatches">Product Batches</a>
+                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Configuration.WarehouseProducts" ? "active" : "")" asp-controller="Configuration" asp-action="WarehouseProducts">Warehouse Products</a>
+                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Configuration.DisplayProducts" ? "active" : "")" asp-controller="Configuration" asp-action="DisplayProducts">Display Products</a>
                         </div>
                     </div>
                     <div class="dropend eg-rb-dropdown-group">
-                        <button class="dropdown-item eg-rb-dropdown-group-toggle" type="button">Fuel Management</button>
+                        <button class="dropdown-item eg-rb-dropdown-group-toggle nav-group-partial" type="button">Fuel <span class="nav-status-pill">Partial</span></button>
                         <div class="dropdown-menu eg-rb-submenu">
                             <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Configuration.Fuels" ? "active" : "")" asp-controller="Configuration" asp-action="Fuels">Fuels</a>
+                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Configuration.Tanks" ? "active" : "")" asp-controller="Configuration" asp-action="Tanks">Tanks</a>
                             <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Configuration.Pumps" ? "active" : "")" asp-controller="Configuration" asp-action="Pumps">Pumps</a>
                             <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Configuration.Nozzles" ? "active" : "")" asp-controller="Configuration" asp-action="Nozzles">Nozzles</a>
-                        </div>
-                    </div>
-                    <div class="dropend eg-rb-dropdown-group">
-                        <button class="dropdown-item eg-rb-dropdown-group-toggle" type="button">Supplier Management</button>
-                        <div class="dropdown-menu eg-rb-submenu">
-                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Suppliers.Index" ? "active" : "")" asp-controller="Suppliers" asp-action="Index">Suppliers</a>
+                            @* Partial / needs verification *@
+                            <a class="dropdown-item eg-rb-dropdown-link nav-page-partial @(Model.ActivePage == "Configuration.FuelBatches" ? "active" : "")" asp-controller="Configuration" asp-action="FuelBatches">Fuel Batches <span class="nav-status-pill">Partial</span></a>
+                            @* Partial / needs verification *@
+                            <a class="dropdown-item eg-rb-dropdown-link nav-page-partial @(Model.ActivePage == "Configuration.FuelDeliveries" ? "active" : "")" asp-controller="Configuration" asp-action="FuelDeliveries">Fuel Deliveries <span class="nav-status-pill">Partial</span></a>
+                            @* Partial / needs verification *@
+                            <a class="dropdown-item eg-rb-dropdown-link nav-page-partial @(Model.ActivePage == "Configuration.PumpMeterReadings" ? "active" : "")" asp-controller="Configuration" asp-action="PumpMeterReadings">Pump Meter Readings <span class="nav-status-pill">Partial</span></a>
                         </div>
                     </div>
                     <div class="dropend eg-rb-dropdown-group">
@@ -73,10 +83,32 @@
                             <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Vouchers.Index" ? "active" : "")" asp-controller="Vouchers" asp-action="Index">Vouchers</a>
                         </div>
                     </div>
+                </div>
+            </div>
+            <div class="dropdown eg-rb-nav-dropdown">
+                <button class="eg-rb-tab dropdown-toggle @(Model.ActiveTab == "Inventory" ? "is-active" : "")" type="button" id="gposInventoryDropdown" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">Inventory</button>
+                <div class="dropdown-menu eg-rb-setup-menu" aria-labelledby="gposInventoryDropdown">
                     <div class="dropend eg-rb-dropdown-group">
-                        <button class="dropdown-item eg-rb-dropdown-group-toggle" type="button">Tax Management</button>
+                        <button class="dropdown-item eg-rb-dropdown-group-toggle" type="button">Product Stock</button>
                         <div class="dropdown-menu eg-rb-submenu">
-                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Configuration.Vat" ? "active" : "")" asp-controller="Configuration" asp-action="Vat">VAT</a>
+                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Configuration.WarehouseProducts" ? "active" : "")" asp-controller="Configuration" asp-action="WarehouseProducts">Warehouse Products</a>
+                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Configuration.DisplayProducts" ? "active" : "")" asp-controller="Configuration" asp-action="DisplayProducts">Display Products</a>
+                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Configuration.ProductBatches" ? "active" : "")" asp-controller="Configuration" asp-action="ProductBatches">Product Batches</a>
+                        </div>
+                    </div>
+                    <div class="dropend eg-rb-dropdown-group">
+                        <button class="dropdown-item eg-rb-dropdown-group-toggle nav-group-partial" type="button">Fuel Stock <span class="nav-status-pill">Partial</span></button>
+                        <div class="dropdown-menu eg-rb-submenu">
+                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Configuration.Tanks" ? "active" : "")" asp-controller="Configuration" asp-action="Tanks">Tanks</a>
+                            @* Partial / needs verification *@
+                            <a class="dropdown-item eg-rb-dropdown-link nav-page-partial @(Model.ActivePage == "Configuration.FuelBatches" ? "active" : "")" asp-controller="Configuration" asp-action="FuelBatches">Fuel Batches <span class="nav-status-pill">Partial</span></a>
+                        </div>
+                    </div>
+                    <div class="dropend eg-rb-dropdown-group">
+                        <button class="dropdown-item eg-rb-dropdown-group-toggle nav-group-partial" type="button">Settings <span class="nav-status-pill">Partial</span></button>
+                        <div class="dropdown-menu eg-rb-submenu">
+                            @* Partial / needs verification *@
+                            <a class="dropdown-item eg-rb-dropdown-link nav-page-partial @(Model.ActivePage == "Configuration.LowStockSettings" ? "active" : "")" asp-controller="Configuration" asp-action="LowStockSettings">Low Stock Settings <span class="nav-status-pill">Partial</span></a>
                         </div>
                     </div>
                 </div>
@@ -113,10 +145,11 @@
                         </div>
                     </div>
                     <div class="dropend eg-rb-dropdown-group">
-                        <button class="dropdown-item eg-rb-dropdown-group-toggle" type="button">Price Adjustment</button>
+                        <button class="dropdown-item eg-rb-dropdown-group-toggle nav-group-partial" type="button">Price Adjustment <span class="nav-status-pill">Partial</span></button>
                         <div class="dropdown-menu eg-rb-submenu">
                             <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Transaction.FuelPriceAdjustment" ? "active" : "")" asp-controller="Transaction" asp-action="FuelPriceAdjustment">Fuel Price Adjustment</a>
-                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Transaction.ProductPriceAdjustment" ? "active" : "")" asp-controller="Transaction" asp-action="ProductPriceAdjustment">Product Price Adjustment</a>
+                            @* Partial / needs verification *@
+                            <a class="dropdown-item eg-rb-dropdown-link nav-page-partial @(Model.ActivePage == "Transaction.ProductPriceAdjustment" ? "active" : "")" asp-controller="Transaction" asp-action="ProductPriceAdjustment">Product Price Adjustment <span class="nav-status-pill">Partial</span></a>
                         </div>
                     </div>
                     <div class="dropend eg-rb-dropdown-group">
@@ -164,79 +197,26 @@
                 </div>
             </div>
             <div class="dropdown eg-rb-nav-dropdown">
-                <button class="eg-rb-tab dropdown-toggle" type="button" id="gposReportsDropdown" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">Reports</button>
+                <button class="eg-rb-tab dropdown-toggle @(Model.ActiveTab == "Reports" ? "is-active" : "")" type="button" id="gposReportsDropdown" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">Reports</button>
                 <div class="dropdown-menu eg-rb-setup-menu" aria-labelledby="gposReportsDropdown">
-                    <div class="dropend eg-rb-dropdown-group">
-                        <button class="dropdown-item eg-rb-dropdown-group-toggle nav-group-partial" type="button">Member Reports <span class="nav-status-pill">Partial</span></button>
-                        <div class="dropdown-menu eg-rb-submenu">
-                            @* Partial / needs verification *@
-                            <a class="dropdown-item eg-rb-dropdown-link nav-page-partial @(Model.ActivePage == "Configuration.PointsLedger" ? "active" : "")" asp-controller="Configuration" asp-action="PointsLedger">Points Ledger <span class="nav-status-pill">Partial</span></a>
-                        </div>
-                    </div>
-                    <div class="dropend eg-rb-dropdown-group">
-                        <button class="dropdown-item eg-rb-dropdown-group-toggle nav-group-partial" type="button">Fuel Reports <span class="nav-status-pill">Partial</span></button>
-                        <div class="dropdown-menu eg-rb-submenu">
-                            @* Partial / needs verification *@
-                            <a class="dropdown-item eg-rb-dropdown-link nav-page-partial @(Model.ActivePage == "Configuration.FuelDeliveries" ? "active" : "")" asp-controller="Configuration" asp-action="FuelDeliveries">Fuel Deliveries <span class="nav-status-pill">Partial</span></a>
-                            @* Partial / needs verification *@
-                            <a class="dropdown-item eg-rb-dropdown-link nav-page-partial @(Model.ActivePage == "Configuration.PumpMeterReadings" ? "active" : "")" asp-controller="Configuration" asp-action="PumpMeterReadings">Pump Meter Readings <span class="nav-status-pill">Partial</span></a>
-                            @* UI-only / not working yet *@
-                            <a class="dropdown-item eg-rb-dropdown-link nav-page-not-working" asp-controller="Reports" asp-action="FuelSalesReport">Fuel Sales Report <span class="nav-status-pill">Not Working</span></a>
-                        </div>
-                    </div>
-                    <div class="dropend eg-rb-dropdown-group">
-                        <button class="dropdown-item eg-rb-dropdown-group-toggle nav-group-partial" type="button">Audit Reports <span class="nav-status-pill">Partial</span></button>
-                        <div class="dropdown-menu eg-rb-submenu">
-                            @* Partial / needs verification *@
-                            <a class="dropdown-item eg-rb-dropdown-link nav-page-partial @(Model.ActivePage == "Configuration.ActivityLogs" ? "active" : "")" asp-controller="Configuration" asp-action="ActivityLogs">Activity Logs <span class="nav-status-pill">Partial</span></a>
-                        </div>
-                    </div>
                     <div class="dropend eg-rb-dropdown-group">
                         <button class="dropdown-item eg-rb-dropdown-group-toggle nav-group-not-working" type="button">Sales Reports <span class="nav-status-pill">Not Working</span></button>
                         <div class="dropdown-menu eg-rb-submenu">
                             @* UI-only / not working yet *@
-                            <a class="dropdown-item eg-rb-dropdown-link nav-page-not-working" asp-controller="Reports" asp-action="DailySales">Daily Sales <span class="nav-status-pill">Not Working</span></a>
+                            <a class="dropdown-item eg-rb-dropdown-link nav-page-not-working @(Model.ActivePage == "Reports.DailySales" ? "active" : "")" asp-controller="Reports" asp-action="DailySales">Daily Sales <span class="nav-status-pill">Not Working</span></a>
                             @* UI-only / not working yet *@
-                            <a class="dropdown-item eg-rb-dropdown-link nav-page-not-working" asp-controller="Reports" asp-action="FuelSales">Fuel Sales <span class="nav-status-pill">Not Working</span></a>
+                            <a class="dropdown-item eg-rb-dropdown-link nav-page-not-working @(Model.ActivePage == "Reports.FuelSales" ? "active" : "")" asp-controller="Reports" asp-action="FuelSales">Fuel Sales <span class="nav-status-pill">Not Working</span></a>
                             @* UI-only / not working yet *@
-                            <a class="dropdown-item eg-rb-dropdown-link nav-page-not-working" asp-controller="Reports" asp-action="ProductSales">Product Sales <span class="nav-status-pill">Not Working</span></a>
+                            <a class="dropdown-item eg-rb-dropdown-link nav-page-not-working @(Model.ActivePage == "Reports.ProductSales" ? "active" : "")" asp-controller="Reports" asp-action="ProductSales">Product Sales <span class="nav-status-pill">Not Working</span></a>
                         </div>
                     </div>
                     <div class="dropend eg-rb-dropdown-group">
                         <button class="dropdown-item eg-rb-dropdown-group-toggle nav-group-not-working" type="button">Shift and Cash Reports <span class="nav-status-pill">Not Working</span></button>
                         <div class="dropdown-menu eg-rb-submenu">
                             @* UI-only / not working yet *@
-                            <a class="dropdown-item eg-rb-dropdown-link nav-page-not-working" asp-controller="Reports" asp-action="ShiftReport">Shift Report <span class="nav-status-pill">Not Working</span></a>
+                            <a class="dropdown-item eg-rb-dropdown-link nav-page-not-working @(Model.ActivePage == "Reports.ShiftReport" ? "active" : "")" asp-controller="Reports" asp-action="ShiftReport">Shift Report <span class="nav-status-pill">Not Working</span></a>
                             @* UI-only / not working yet *@
-                            <a class="dropdown-item eg-rb-dropdown-link nav-page-not-working" asp-controller="Reports" asp-action="CashReport">Cash Report <span class="nav-status-pill">Not Working</span></a>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="dropdown eg-rb-nav-dropdown">
-                <button class="eg-rb-tab dropdown-toggle @(Model.ActiveTab == "Inventory" ? "is-active" : "")" type="button" id="gposInventoryDropdown" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">Inventory</button>
-                <div class="dropdown-menu eg-rb-setup-menu" aria-labelledby="gposInventoryDropdown">
-                    <div class="dropend eg-rb-dropdown-group">
-                        <button class="dropdown-item eg-rb-dropdown-group-toggle" type="button">Product Stock</button>
-                        <div class="dropdown-menu eg-rb-submenu">
-                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Configuration.WarehouseProducts" ? "active" : "")" asp-controller="Configuration" asp-action="WarehouseProducts">Warehouse Products</a>
-                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Configuration.DisplayProducts" ? "active" : "")" asp-controller="Configuration" asp-action="DisplayProducts">Display Products</a>
-                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Configuration.ProductBatches" ? "active" : "")" asp-controller="Configuration" asp-action="ProductBatches">Product Batches</a>
-                        </div>
-                    </div>
-                    <div class="dropend eg-rb-dropdown-group">
-                        <button class="dropdown-item eg-rb-dropdown-group-toggle nav-group-partial" type="button">Fuel Stock <span class="nav-status-pill">Partial</span></button>
-                        <div class="dropdown-menu eg-rb-submenu">
-                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Configuration.Tanks" ? "active" : "")" asp-controller="Configuration" asp-action="Tanks">Tanks</a>
-                            @* Partial / needs verification *@
-                            <a class="dropdown-item eg-rb-dropdown-link nav-page-partial @(Model.ActivePage == "Configuration.FuelBatches" ? "active" : "")" asp-controller="Configuration" asp-action="FuelBatches">Fuel Batches <span class="nav-status-pill">Partial</span></a>
-                        </div>
-                    </div>
-                    <div class="dropend eg-rb-dropdown-group">
-                        <button class="dropdown-item eg-rb-dropdown-group-toggle nav-group-partial" type="button">Settings <span class="nav-status-pill">Partial</span></button>
-                        <div class="dropdown-menu eg-rb-submenu">
-                            @* Partial / needs verification *@
-                            <a class="dropdown-item eg-rb-dropdown-link nav-page-partial @(Model.ActivePage == "Configuration.LowStockSettings" ? "active" : "")" asp-controller="Configuration" asp-action="LowStockSettings">Low Stock Settings <span class="nav-status-pill">Partial</span></a>
+                            <a class="dropdown-item eg-rb-dropdown-link nav-page-not-working @(Model.ActivePage == "Reports.CashReport" ? "active" : "")" asp-controller="Reports" asp-action="CashReport">Cash Report <span class="nav-status-pill">Not Working</span></a>
                         </div>
                     </div>
                     <div class="dropend eg-rb-dropdown-group">
@@ -257,6 +237,20 @@
                             <a class="dropdown-item eg-rb-dropdown-link nav-page-not-working @(Model.ActivePage == "Reports.DisplayDailyStock" ? "active" : "")" asp-controller="Reports" asp-action="DisplayDailyStock">Display <span class="nav-status-pill">Not Working</span></a>
                             @* UI-only / not working yet *@
                             <a class="dropdown-item eg-rb-dropdown-link nav-page-not-working @(Model.ActivePage == "Reports.TankDailyStock" ? "active" : "")" asp-controller="Reports" asp-action="TankDailyStock">Tank <span class="nav-status-pill">Not Working</span></a>
+                        </div>
+                    </div>
+                    <div class="dropend eg-rb-dropdown-group">
+                        <button class="dropdown-item eg-rb-dropdown-group-toggle nav-group-partial" type="button">Member Reports <span class="nav-status-pill">Partial</span></button>
+                        <div class="dropdown-menu eg-rb-submenu">
+                            @* Partial / needs verification *@
+                            <a class="dropdown-item eg-rb-dropdown-link nav-page-partial @(Model.ActivePage == "Configuration.PointsLedger" ? "active" : "")" asp-controller="Configuration" asp-action="PointsLedger">Points Ledger <span class="nav-status-pill">Partial</span></a>
+                        </div>
+                    </div>
+                    <div class="dropend eg-rb-dropdown-group">
+                        <button class="dropdown-item eg-rb-dropdown-group-toggle nav-group-partial" type="button">Audit Reports <span class="nav-status-pill">Partial</span></button>
+                        <div class="dropdown-menu eg-rb-submenu">
+                            @* Partial / needs verification *@
+                            <a class="dropdown-item eg-rb-dropdown-link nav-page-partial @(Model.ActivePage == "Configuration.ActivityLogs" ? "active" : "")" asp-controller="Configuration" asp-action="ActivityLogs">Activity Logs <span class="nav-status-pill">Partial</span></a>
                         </div>
                     </div>
                 </div>
