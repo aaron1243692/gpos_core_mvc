@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("gpos_core_mvc")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+5947c50b6326a4f17e265caeb9d521ff55918ce6")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+3616512b3f23899b975c4dd7a69fe48f180c8112")]
 [assembly: System.Reflection.AssemblyProductAttribute("gpos_core_mvc")]
 [assembly: System.Reflection.AssemblyTitleAttribute("gpos_core_mvc")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
