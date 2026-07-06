@@ -303,45 +303,18 @@ namespace gpos.Controllers
             }
 
             var now = DateTime.UtcNow;
-            var vat = form.Id > 0
-                ? await _db.VatSettings.FirstOrDefaultAsync(setting => setting.Id == form.Id)
-                : new VatSetting { CreatedAt = now, IsActive = true };
-
-            if (vat is null)
+            var vat = new VatSetting
             {
-                return NotFound();
-            }
+                Name = form.Name.Trim(),
+                Rate = form.Rate,
+                Type = form.Type.Trim(),
+                IsDefault = form.IsDefault,
+                IsActive = true,
+                CreatedAt = now,
+                UpdatedAt = now
+            };
 
-            if (form.IsDefault && !vat.IsActive)
-            {
-                ModelState.AddModelError("VatForm.IsDefault", "Only active VAT settings can be set as default.");
-                return View("Vat", await BuildVatPageAsync(search, form, activeModalId: "vatModal"));
-            }
-
-            vat.Name = form.Name.Trim();
-            vat.Rate = form.Rate;
-            vat.Type = form.Type.Trim();
-            vat.IsDefault = form.IsDefault;
-            vat.UpdatedAt = now;
-
-            if (form.Id <= 0)
-            {
-                _db.VatSettings.Add(vat);
-            }
-
-            if (form.IsDefault)
-            {
-                var otherDefaults = await _db.VatSettings
-                    .Where(setting => setting.Id != vat.Id && setting.IsDefault)
-                    .ToListAsync();
-
-                for (var index = 0; index < otherDefaults.Count; index += 1)
-                {
-                    otherDefaults[index].IsDefault = false;
-                    otherDefaults[index].UpdatedAt = now;
-                }
-            }
-
+            _db.VatSettings.Add(vat);
             await _db.SaveChangesAsync();
             TempData["SuccessMessage"] = "VAT setting saved successfully.";
             return RedirectToAction(nameof(Vat), new { search });
@@ -358,14 +331,7 @@ namespace gpos.Controllers
                 return NotFound();
             }
 
-            if (vat.IsDefault)
-            {
-                TempData["ErrorMessage"] = "Default VAT cannot be disabled. Set another active VAT as default first.";
-                return RedirectToAction(nameof(Vat), new { search });
-            }
-
-            vat.IsActive = false;
-            vat.UpdatedAt = DateTime.UtcNow;
+            _db.VatSettings.Add(CreateVatVersion(vat, isActive: false, isDefault: false, DateTime.UtcNow));
             await _db.SaveChangesAsync();
             TempData["SuccessMessage"] = "VAT setting disabled successfully.";
             return RedirectToAction(nameof(Vat), new { search });
@@ -382,8 +348,7 @@ namespace gpos.Controllers
                 return NotFound();
             }
 
-            vat.IsActive = true;
-            vat.UpdatedAt = DateTime.UtcNow;
+            _db.VatSettings.Add(CreateVatVersion(vat, isActive: true, isDefault: vat.IsDefault, DateTime.UtcNow));
             await _db.SaveChangesAsync();
             TempData["SuccessMessage"] = "VAT setting activated successfully.";
             return RedirectToAction(nameof(Vat), new { search });
@@ -406,15 +371,7 @@ namespace gpos.Controllers
                 return RedirectToAction(nameof(Vat), new { search });
             }
 
-            var vatSettings = await _db.VatSettings.ToListAsync();
-            var now = DateTime.UtcNow;
-
-            for (var index = 0; index < vatSettings.Count; index += 1)
-            {
-                vatSettings[index].IsDefault = vatSettings[index].Id == id;
-                vatSettings[index].UpdatedAt = now;
-            }
-
+            _db.VatSettings.Add(CreateVatVersion(vat, isActive: true, isDefault: true, DateTime.UtcNow));
             await _db.SaveChangesAsync();
             TempData["SuccessMessage"] = "Default VAT updated successfully.";
             return RedirectToAction(nameof(Vat), new { search });
@@ -1509,6 +1466,11 @@ namespace gpos.Controllers
 
         private async Task<VatSetupPageViewModel> BuildVatPageAsync(string? search, VatSettingForm? form = null, int? editId = null, string activeModalId = "")
         {
+            var currentVat = await _db.VatSettings.AsNoTracking()
+                .OrderByDescending(setting => setting.CreatedAt)
+                .ThenByDescending(setting => setting.Id)
+                .FirstOrDefaultAsync();
+
             IQueryable<VatSetting> query = _db.VatSettings.AsNoTracking();
             var searchText = (search ?? string.Empty).Trim();
 
@@ -1521,16 +1483,23 @@ namespace gpos.Controllers
                     || (searchText == "Disabled" && !setting.IsActive));
             }
 
+            var vatSettings = await query
+                .OrderByDescending(setting => setting.CreatedAt)
+                .ThenByDescending(setting => setting.Id)
+                .ToListAsync();
+            var history = currentVat is null
+                ? vatSettings
+                : vatSettings.Where(setting => setting.Id != currentVat.Id).ToList();
+
             return new VatSetupPageViewModel
             {
                 Search = searchText,
                 ActiveModalId = activeModalId,
                 VatForm = form ?? await BuildVatFormAsync(editId),
                 TypeOptions = BuildVatTypeOptions(),
-                VatSettings = await query.OrderByDescending(setting => setting.IsDefault)
-                    .ThenByDescending(setting => setting.IsActive)
-                    .ThenBy(setting => setting.Id)
-                    .ToListAsync()
+                CurrentVatSetting = currentVat,
+                VatHistory = history,
+                VatSettings = vatSettings
             };
         }
 
@@ -1561,6 +1530,20 @@ namespace gpos.Controllers
             {
                 ModelState.AddModelError("VatForm.Type", "Select a valid VAT type.");
             }
+        }
+
+        private static VatSetting CreateVatVersion(VatSetting source, bool isActive, bool isDefault, DateTime now)
+        {
+            return new VatSetting
+            {
+                Name = source.Name,
+                Rate = source.Rate,
+                Type = source.Type,
+                IsDefault = isDefault,
+                IsActive = isActive,
+                CreatedAt = now,
+                UpdatedAt = now
+            };
         }
 
         private async Task EnsureDefaultVatSettingAsync()

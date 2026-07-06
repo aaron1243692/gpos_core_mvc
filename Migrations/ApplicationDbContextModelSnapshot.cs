@@ -681,6 +681,131 @@ namespace gpos.Migrations
                     b.ToTable("fuels", (string)null);
                 });
 
+            modelBuilder.Entity("gpos.Models.FuelBatch", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("id");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("BatchNo")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("varchar(100)")
+                        .HasColumnName("batch_no");
+
+                    b.Property<int?>("BranchId")
+                        .HasColumnType("int")
+                        .HasColumnName("branch_id");
+
+                    b.Property<decimal>("CostPricePerLiter")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasDefaultValue(0m)
+                        .HasColumnName("cost_price_per_liter");
+
+                    b.Property<DateTime?>("CreatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("created_at");
+
+                    b.Property<DateTime?>("ExpiryDate")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("expiry_date");
+
+                    b.Property<int?>("FuelDeliveryId")
+                        .HasColumnType("int")
+                        .HasColumnName("fuel_delivery_id");
+
+                    b.Property<int>("FuelId")
+                        .HasColumnType("int")
+                        .HasColumnName("fuel_id");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("tinyint(1)")
+                        .HasDefaultValue(true)
+                        .HasColumnName("is_active");
+
+                    b.Property<DateTime>("ReceivedDate")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("received_date");
+
+                    b.Property<decimal>("ReceivedLiters")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasDefaultValue(0m)
+                        .HasColumnName("received_liters");
+
+                    b.Property<decimal>("RemainingLiters")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasDefaultValue(0m)
+                        .HasColumnName("remaining_liters");
+
+                    b.Property<string>("Remarks")
+                        .HasMaxLength(255)
+                        .HasColumnType("varchar(255)")
+                        .HasColumnName("remarks");
+
+                    b.Property<decimal>("SellingPricePerLiter")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasDefaultValue(0m)
+                        .HasColumnName("selling_price_per_liter");
+
+                    b.Property<int>("Status")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(1)
+                        .HasColumnName("status");
+
+                    b.Property<int?>("SupplierId")
+                        .HasColumnType("int")
+                        .HasColumnName("supplier_id");
+
+                    b.Property<int?>("TankId")
+                        .HasColumnType("int")
+                        .HasColumnName("tank_id");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BatchNo")
+                        .IsUnique();
+
+                    b.HasIndex("BranchId");
+
+                    b.HasIndex("FuelDeliveryId");
+
+                    b.HasIndex("FuelId");
+
+                    b.HasIndex("SupplierId");
+
+                    b.HasIndex("TankId");
+
+                    b.HasIndex("FuelId", "Status", "IsActive", "ReceivedDate", "Id");
+
+                    b.ToTable("fuel_batches", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_fuel_batches_cost_price_non_negative", "cost_price_per_liter >= 0");
+
+                            t.HasCheckConstraint("CK_fuel_batches_received_liters_non_negative", "received_liters >= 0");
+
+                            t.HasCheckConstraint("CK_fuel_batches_remaining_liters_non_negative", "remaining_liters >= 0");
+
+                            t.HasCheckConstraint("CK_fuel_batches_selling_price_non_negative", "selling_price_per_liter >= 0");
+                        });
+                });
+
             modelBuilder.Entity("gpos.Models.FuelDelivery", b =>
                 {
                     b.Property<int>("Id")
@@ -3373,6 +3498,45 @@ namespace gpos.Migrations
                     b.Navigation("Supplier");
                 });
 
+            modelBuilder.Entity("gpos.Models.FuelBatch", b =>
+                {
+                    b.HasOne("gpos.Models.Branch", "Branch")
+                        .WithMany()
+                        .HasForeignKey("BranchId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("gpos.Models.FuelDelivery", "FuelDelivery")
+                        .WithMany("FuelBatches")
+                        .HasForeignKey("FuelDeliveryId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("gpos.Models.Fuel", "Fuel")
+                        .WithMany("FuelBatches")
+                        .HasForeignKey("FuelId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("gpos.Models.Supplier", "Supplier")
+                        .WithMany("FuelBatches")
+                        .HasForeignKey("SupplierId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("gpos.Models.Tank", "Tank")
+                        .WithMany("FuelBatches")
+                        .HasForeignKey("TankId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Branch");
+
+                    b.Navigation("Fuel");
+
+                    b.Navigation("FuelDelivery");
+
+                    b.Navigation("Supplier");
+
+                    b.Navigation("Tank");
+                });
+
             modelBuilder.Entity("gpos.Models.FuelDelivery", b =>
                 {
                     b.HasOne("gpos.Models.Fuel", "Fuel")
@@ -4017,11 +4181,18 @@ namespace gpos.Migrations
 
             modelBuilder.Entity("gpos.Models.Fuel", b =>
                 {
+                    b.Navigation("FuelBatches");
+
                     b.Navigation("FuelDeliveries");
 
                     b.Navigation("FuelPriceHistory");
 
                     b.Navigation("Tanks");
+                });
+
+            modelBuilder.Entity("gpos.Models.FuelDelivery", b =>
+                {
+                    b.Navigation("FuelBatches");
                 });
 
             modelBuilder.Entity("gpos.Models.Member", b =>
@@ -4139,6 +4310,8 @@ namespace gpos.Migrations
 
             modelBuilder.Entity("gpos.Models.Supplier", b =>
                 {
+                    b.Navigation("FuelBatches");
+
                     b.Navigation("FuelDeliveries");
 
                     b.Navigation("Fuels");
@@ -4150,6 +4323,8 @@ namespace gpos.Migrations
 
             modelBuilder.Entity("gpos.Models.Tank", b =>
                 {
+                    b.Navigation("FuelBatches");
+
                     b.Navigation("FuelDeliveries");
 
                     b.Navigation("Pumps");

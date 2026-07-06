@@ -18,5 +18,6 @@ namespace gpos.Models
         public Branch? Branch { get; set; }
         public ICollection<Pump> Pumps { get; set; } = new List<Pump>();
         public ICollection<FuelDelivery> FuelDeliveries { get; set; } = new List<FuelDelivery>();
+        public ICollection<FuelBatch> FuelBatches { get; set; } = new List<FuelBatch>();
     }
 }

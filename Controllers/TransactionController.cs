@@ -646,7 +646,7 @@ namespace gpos.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> SaveFuelReceiving(FuelReceivingForm form, string? search)
+        public async Task<IActionResult> SaveFuelReceiving([Bind(Prefix = "Form")] FuelReceivingForm form, string? search)
         {
             if (!ModelState.IsValid)
             {
@@ -702,6 +702,12 @@ namespace gpos.Controllers
             }
 
             await _db.SaveChangesAsync();
+            if (form.Status == 1)
+            {
+                await CreateFuelBatchForDelivery(delivery, tank, form.SellingPricePerLiter, now);
+                await _db.SaveChangesAsync();
+            }
+
             await transaction.CommitAsync();
             return RedirectToAction(nameof(FuelReceiving), new { search });
         }
@@ -729,15 +735,24 @@ namespace gpos.Controllers
                 return RedirectToAction(nameof(FuelReceiving), new { search });
             }
 
+            await using var transaction = await _db.Database.BeginTransactionAsync();
+            var now = DateTime.Now;
             if (delivery.Tank is not null)
             {
                 delivery.Tank.CurrentLiters += delivery.DeliveredLiters;
-                delivery.Tank.UpdatedAt = DateTime.Now;
+                delivery.Tank.UpdatedAt = now;
             }
 
             delivery.Status = 1;
-            delivery.UpdatedAt = DateTime.Now;
+            delivery.UpdatedAt = now;
             await _db.SaveChangesAsync();
+            if (delivery.Tank is not null)
+            {
+                await CreateFuelBatchForDelivery(delivery, delivery.Tank, delivery.Fuel?.CurrentPricePerLiter ?? 0m, now);
+                await _db.SaveChangesAsync();
+            }
+
+            await transaction.CommitAsync();
             return RedirectToAction(nameof(FuelReceiving), new { search });
         }
 
@@ -825,7 +840,62 @@ namespace gpos.Controllers
         public IActionResult WarehouseStockAdjustment() => View();
         public IActionResult TankFuelAdjustment() => View();
         public IActionResult ProductPriceAdjustment() => View();
-        public IActionResult FuelPriceAdjustment() => View();
+
+        public async Task<IActionResult> FuelPriceAdjustment(string? search)
+        {
+            return View(await BuildFuelPriceAdjustmentPageAsync(search));
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> SaveFuelPriceAdjustment([Bind(Prefix = "FuelPriceHistoryForm")] FuelPriceHistoryForm form, string? search)
+        {
+            if (!ModelState.IsValid)
+            {
+                return View("FuelPriceAdjustment", await BuildFuelPriceAdjustmentPageAsync(search, form, "fuelPriceAdjustmentModal"));
+            }
+
+            var fuel = await _db.Fuels.FindAsync(form.FuelId);
+            if (fuel is null || fuel.Status != 1 || !fuel.IsActive)
+            {
+                ModelState.AddModelError("FuelPriceHistoryForm.FuelId", "Select a fuel.");
+                return View("FuelPriceAdjustment", await BuildFuelPriceAdjustmentPageAsync(search, form, "fuelPriceAdjustmentModal"));
+            }
+
+            var now = DateTime.UtcNow;
+            var history = new FuelPriceHistory
+            {
+                FuelId = form.FuelId,
+                OldPrice = fuel.CurrentPricePerLiter,
+                NewPrice = form.NewPrice!.Value,
+                EffectiveAt = form.EffectiveAt!.Value,
+                Remarks = CleanOptional(form.Remarks),
+                CreatedBy = CurrentUserId(),
+                CreatedAt = now,
+                UpdatedAt = now
+            };
+
+            fuel.CurrentPricePerLiter = history.NewPrice;
+            fuel.UpdatedAt = now;
+            _db.FuelPriceHistory.Add(history);
+            await _db.SaveChangesAsync();
+            return RedirectToAction(nameof(FuelPriceAdjustment), new { search });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> DeleteFuelPriceAdjustment(int id, string? search)
+        {
+            var history = await _db.FuelPriceHistory.FindAsync(id);
+            if (history is not null)
+            {
+                history.Status = 0;
+                history.UpdatedAt = DateTime.UtcNow;
+                await _db.SaveChangesAsync();
+            }
+
+            return RedirectToAction(nameof(FuelPriceAdjustment), new { search });
+        }
 
         private IQueryable<ProductSale> BuildProductSalesQuery(string? search, DateTime? dateFrom, DateTime? dateTo, string? status)
         {
@@ -1153,6 +1223,12 @@ namespace gpos.Controllers
             return string.IsNullOrWhiteSpace(user.FullName) ? user.Username : user.FullName;
         }
 
+        private static string? CleanOptional(string? value)
+        {
+            var trimmed = (value ?? string.Empty).Trim();
+            return string.IsNullOrWhiteSpace(trimmed) ? null : trimmed;
+        }
+
         private static string PaymentTypeFor(Sale? sale)
         {
             if (sale is null || sale.Payments.Count == 0)
@@ -1282,6 +1358,51 @@ namespace gpos.Controllers
             };
         }
 
+        private async Task<SetupModulesPageViewModel> BuildFuelPriceAdjustmentPageAsync(string? search, FuelPriceHistoryForm? form = null, string activeModalId = "")
+        {
+            IQueryable<FuelPriceHistory> query = _db.FuelPriceHistory.AsNoTracking().Include(history => history.Fuel);
+            var searchText = (search ?? string.Empty).Trim();
+
+            if (!string.IsNullOrWhiteSpace(searchText))
+            {
+                query = query.Where(history => history.Fuel != null && history.Fuel.Name.Contains(searchText));
+            }
+
+            var histories = await query
+                .OrderByDescending(history => history.EffectiveAt)
+                .ThenByDescending(history => history.CreatedAt)
+                .ThenByDescending(history => history.Id)
+                .ToListAsync();
+            var createdByIds = histories
+                .Where(history => history.CreatedBy.HasValue)
+                .Select(history => history.CreatedBy!.Value)
+                .Distinct()
+                .ToList();
+            var users = await _db.Users.AsNoTracking()
+                .Where(user => createdByIds.Contains(user.Id))
+                .ToDictionaryAsync(user => user.Id, user => string.IsNullOrWhiteSpace(user.FullName) ? user.Username : user.FullName!);
+            var currentHistoryIds = await _db.FuelPriceHistory.AsNoTracking()
+                .GroupBy(history => history.FuelId)
+                .Select(group => group
+                    .OrderByDescending(history => history.EffectiveAt)
+                    .ThenByDescending(history => history.CreatedAt)
+                    .ThenByDescending(history => history.Id)
+                    .Select(history => history.Id)
+                    .First())
+                .ToListAsync();
+
+            return new SetupModulesPageViewModel
+            {
+                Search = searchText,
+                ActiveModalId = activeModalId,
+                FuelPriceHistoryForm = form ?? new FuelPriceHistoryForm(),
+                FuelOptions = await BuildFuelOptionsAsync(),
+                FuelPriceHistory = histories,
+                FuelPriceHistoryCreatedBy = users,
+                CurrentFuelPriceHistoryIds = currentHistoryIds.ToHashSet()
+            };
+        }
+
         private async Task<ProductBatch> CreateGeneratedProductBatch(ProductReceivingForm form, DateTime now)
         {
             var batch = new ProductBatch
@@ -1300,6 +1421,55 @@ namespace gpos.Controllers
             _db.ProductBatches.Add(batch);
             await _db.SaveChangesAsync();
             return batch;
+        }
+
+        private async Task CreateFuelBatchForDelivery(FuelDelivery delivery, Tank tank, decimal sellingPricePerLiter, DateTime now)
+        {
+            if (delivery.Id > 0 && await _db.FuelBatches.AnyAsync(batch => batch.FuelDeliveryId == delivery.Id))
+            {
+                return;
+            }
+
+            _db.FuelBatches.Add(new FuelBatch
+            {
+                FuelId = delivery.FuelId,
+                SupplierId = delivery.SupplierId,
+                TankId = delivery.TankId,
+                BranchId = tank.BranchId,
+                FuelDeliveryId = delivery.Id,
+                BatchNo = await GenerateNextFuelBatchNoAsync(),
+                CostPricePerLiter = delivery.CostPerLiter ?? 0m,
+                SellingPricePerLiter = sellingPricePerLiter,
+                ReceivedLiters = delivery.DeliveredLiters,
+                RemainingLiters = delivery.DeliveredLiters,
+                ReceivedDate = delivery.DeliveryDate,
+                Remarks = delivery.Remarks,
+                Status = 1,
+                IsActive = true,
+                CreatedAt = now,
+                UpdatedAt = now
+            });
+        }
+
+        private async Task<string> GenerateNextFuelBatchNoAsync()
+        {
+            var batchNumbers = await _db.FuelBatches
+                .AsNoTracking()
+                .Select(batch => batch.BatchNo)
+                .ToListAsync();
+            var usedNumbers = batchNumbers
+                .Where(batchNo => !string.IsNullOrWhiteSpace(batchNo) && batchNo.All(char.IsDigit))
+                .Select(batchNo => int.TryParse(batchNo, out var value) ? value : 0)
+                .Where(value => value > 0)
+                .ToHashSet();
+            var next = usedNumbers.Count == 0 ? 1 : usedNumbers.Max() + 1;
+
+            while (usedNumbers.Contains(next))
+            {
+                next += 1;
+            }
+
+            return next.ToString("D8");
         }
 
         private async Task<Product> ResolveReceivingProduct(ProductReceivingForm form, DateTime now)

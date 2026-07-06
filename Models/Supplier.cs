@@ -14,6 +14,7 @@ namespace gpos.Models
 
         public ICollection<Fuel> Fuels { get; set; } = new List<Fuel>();
         public ICollection<ProductBatch> ProductBatches { get; set; } = new List<ProductBatch>();
+        public ICollection<FuelBatch> FuelBatches { get; set; } = new List<FuelBatch>();
         public ICollection<StockReceiving> StockReceivings { get; set; } = new List<StockReceiving>();
         public ICollection<FuelDelivery> FuelDeliveries { get; set; } = new List<FuelDelivery>();
     }

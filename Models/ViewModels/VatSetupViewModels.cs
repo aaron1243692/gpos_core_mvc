@@ -9,6 +9,8 @@ namespace gpos.Models.ViewModels
         public string Search { get; set; } = string.Empty;
         public string ActiveModalId { get; set; } = string.Empty;
         public VatSettingForm VatForm { get; set; } = new();
+        public VatSetting? CurrentVatSetting { get; set; }
+        public List<VatSetting> VatHistory { get; set; } = new();
         public List<VatSetting> VatSettings { get; set; } = new();
         public List<SelectListItem> TypeOptions { get; set; } = new();
     }

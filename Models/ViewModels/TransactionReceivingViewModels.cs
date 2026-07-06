@@ -49,7 +49,7 @@ namespace gpos.Models.ViewModels
         public string? Remarks { get; set; }
 
         [Range(0, 2)]
-        public int Status { get; set; } = 0;
+        public int Status { get; set; } = 1;
     }
 
     public class ProductReceivingRowViewModel

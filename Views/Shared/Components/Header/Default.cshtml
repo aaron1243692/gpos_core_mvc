@@ -29,10 +29,10 @@
                         <button class="dropdown-item eg-rb-dropdown-group-toggle" type="button">Fuel</button>
                         <div class="dropdown-menu eg-rb-submenu">
                             <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Configuration.Fuels" ? "active" : "")" asp-controller="Configuration" asp-action="Fuels">Fuels</a>
+                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Configuration.FuelBatches" ? "active" : "")" asp-controller="Configuration" asp-action="FuelBatches">Fuel Batches</a>
                             <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Configuration.Pumps" ? "active" : "")" asp-controller="Configuration" asp-action="Pumps">Pumps</a>
                             <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Configuration.Nozzles" ? "active" : "")" asp-controller="Configuration" asp-action="Nozzles">Nozzles</a>
                             <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Configuration.FuelDeliveries" ? "active" : "")" asp-controller="Configuration" asp-action="FuelDeliveries">Fuel Deliveries</a>
-                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Configuration.FuelPriceHistory" ? "active" : "")" asp-controller="Configuration" asp-action="FuelPriceHistory">Fuel Price History</a>
                             <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Configuration.PumpMeterReadings" ? "active" : "")" asp-controller="Configuration" asp-action="PumpMeterReadings">Pump Meter Readings</a>
                         </div>
                     </div>

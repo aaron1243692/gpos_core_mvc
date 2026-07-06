@@ -13,7 +13,7 @@ namespace gpos.Controllers
         public IActionResult ItemUnits() => View();
         public IActionResult Products() => View();
         public IActionResult FuelTypes() => View();
-        public IActionResult FuelPriceHistory() => View();
+        public IActionResult FuelPriceHistory() => RedirectToAction("FuelPriceAdjustment", "Transaction");
         public IActionResult PumpUnits() => View();
         public IActionResult Pumps() => View();
         public IActionResult FuelTanks() => View();

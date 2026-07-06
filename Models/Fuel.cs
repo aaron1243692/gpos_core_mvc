@@ -15,6 +15,7 @@ namespace gpos.Models
         public Supplier? Supplier { get; set; }
         public ICollection<Tank> Tanks { get; set; } = new List<Tank>();
         public ICollection<FuelDelivery> FuelDeliveries { get; set; } = new List<FuelDelivery>();
+        public ICollection<FuelBatch> FuelBatches { get; set; } = new List<FuelBatch>();
         public ICollection<FuelPriceHistory> FuelPriceHistory { get; set; } = new List<FuelPriceHistory>();
     }
 }

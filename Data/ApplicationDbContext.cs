@@ -33,6 +33,7 @@ namespace gpos.Data
         public DbSet<WarehouseStock> WarehouseStocks { get; set; }
         public DbSet<Nozzle> Nozzles { get; set; }
         public DbSet<FuelDelivery> FuelDeliveries { get; set; }
+        public DbSet<FuelBatch> FuelBatches { get; set; }
         public DbSet<FuelPriceHistory> FuelPriceHistory { get; set; }
         public DbSet<PumpMeterReading> PumpMeterReadings { get; set; }
         public DbSet<Discount> Discounts { get; set; }
@@ -320,6 +321,66 @@ namespace gpos.Data
                 entity.HasOne(delivery => delivery.Tank)
                     .WithMany(tank => tank.FuelDeliveries)
                     .HasForeignKey(delivery => delivery.TankId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            modelBuilder.Entity<FuelBatch>(entity =>
+            {
+                entity.ToTable("fuel_batches");
+                entity.HasKey(batch => batch.Id);
+
+                entity.Property(batch => batch.Id).HasColumnName("id");
+                entity.Property(batch => batch.FuelId).HasColumnName("fuel_id");
+                entity.Property(batch => batch.SupplierId).HasColumnName("supplier_id");
+                entity.Property(batch => batch.TankId).HasColumnName("tank_id");
+                entity.Property(batch => batch.BranchId).HasColumnName("branch_id");
+                entity.Property(batch => batch.FuelDeliveryId).HasColumnName("fuel_delivery_id");
+                entity.Property(batch => batch.BatchNo).HasColumnName("batch_no").HasMaxLength(100).IsRequired();
+                entity.Property(batch => batch.CostPricePerLiter).HasColumnName("cost_price_per_liter").HasPrecision(18, 2).HasDefaultValue(0m);
+                entity.Property(batch => batch.SellingPricePerLiter).HasColumnName("selling_price_per_liter").HasPrecision(18, 2).HasDefaultValue(0m);
+                entity.Property(batch => batch.ReceivedLiters).HasColumnName("received_liters").HasPrecision(18, 2).HasDefaultValue(0m);
+                entity.Property(batch => batch.RemainingLiters).HasColumnName("remaining_liters").HasPrecision(18, 2).HasDefaultValue(0m);
+                entity.Property(batch => batch.ReceivedDate).HasColumnName("received_date");
+                entity.Property(batch => batch.ExpiryDate).HasColumnName("expiry_date");
+                entity.Property(batch => batch.Remarks).HasColumnName("remarks").HasMaxLength(255);
+                entity.Property(batch => batch.Status).HasColumnName("status").HasDefaultValue(1);
+                entity.Property(batch => batch.IsActive).HasColumnName("is_active").HasDefaultValue(true);
+                entity.Property(batch => batch.CreatedAt).HasColumnName("created_at");
+                entity.Property(batch => batch.UpdatedAt).HasColumnName("updated_at");
+
+                entity.HasIndex(batch => batch.BatchNo).IsUnique();
+                entity.HasIndex(batch => batch.FuelId);
+                entity.HasIndex(batch => batch.SupplierId);
+                entity.HasIndex(batch => batch.TankId);
+                entity.HasIndex(batch => batch.BranchId);
+                entity.HasIndex(batch => batch.FuelDeliveryId);
+                entity.HasIndex(batch => new { batch.FuelId, batch.Status, batch.IsActive, batch.ReceivedDate, batch.Id });
+                entity.ToTable(table =>
+                {
+                    table.HasCheckConstraint("CK_fuel_batches_cost_price_non_negative", "cost_price_per_liter >= 0");
+                    table.HasCheckConstraint("CK_fuel_batches_selling_price_non_negative", "selling_price_per_liter >= 0");
+                    table.HasCheckConstraint("CK_fuel_batches_received_liters_non_negative", "received_liters >= 0");
+                    table.HasCheckConstraint("CK_fuel_batches_remaining_liters_non_negative", "remaining_liters >= 0");
+                });
+                entity.HasOne(batch => batch.Fuel)
+                    .WithMany(fuel => fuel.FuelBatches)
+                    .HasForeignKey(batch => batch.FuelId)
+                    .OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne(batch => batch.Supplier)
+                    .WithMany(supplier => supplier.FuelBatches)
+                    .HasForeignKey(batch => batch.SupplierId)
+                    .OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne(batch => batch.Tank)
+                    .WithMany(tank => tank.FuelBatches)
+                    .HasForeignKey(batch => batch.TankId)
+                    .OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne(batch => batch.Branch)
+                    .WithMany()
+                    .HasForeignKey(batch => batch.BranchId)
+                    .OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne(batch => batch.FuelDelivery)
+                    .WithMany(delivery => delivery.FuelBatches)
+                    .HasForeignKey(batch => batch.FuelDeliveryId)
                     .OnDelete(DeleteBehavior.Restrict);
             });
 

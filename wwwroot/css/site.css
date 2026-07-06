@@ -1441,6 +1441,119 @@ textarea.form-control {
   width: 55px;
 }
 
+.admin-table.product-batches-table {
+  min-width: 1320px;
+  table-layout: fixed;
+}
+
+.product-batches-table th,
+.product-batches-table td {
+  padding-inline: 0.75rem;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.product-batches-table .col-no {
+  width: 56px;
+}
+
+.product-batches-table .col-id {
+  width: 72px;
+}
+
+.product-batches-table .col-batch-number {
+  width: 180px;
+}
+
+.product-batches-table .col-product {
+  width: 220px;
+}
+
+.product-batches-table .col-supplier {
+  width: 180px;
+}
+
+.product-batches-table .col-cost-price,
+.product-batches-table .col-selling-price,
+.product-batches-table .col-expiry-date {
+  width: 120px;
+}
+
+.product-batches-table .col-status {
+  width: 100px;
+  text-align: center;
+}
+
+.product-batches-table .col-action {
+  width: 210px;
+  text-align: center;
+}
+
+.product-batches-table .col-product,
+.product-batches-table .col-supplier {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.admin-table.fuel-batches-table {
+  min-width: 1640px;
+  table-layout: fixed;
+}
+
+.fuel-batches-table th,
+.fuel-batches-table td {
+  padding-inline: 0.75rem;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.fuel-batches-table .col-no {
+  width: 56px;
+}
+
+.fuel-batches-table .col-id {
+  width: 72px;
+}
+
+.fuel-batches-table .col-batch-number {
+  width: 180px;
+}
+
+.fuel-batches-table .col-fuel {
+  width: 220px;
+}
+
+.fuel-batches-table .col-supplier {
+  width: 180px;
+}
+
+.fuel-batches-table .col-cost-price,
+.fuel-batches-table .col-selling-price {
+  width: 150px;
+}
+
+.fuel-batches-table .col-received-liters,
+.fuel-batches-table .col-remaining-liters,
+.fuel-batches-table .col-received-date {
+  width: 135px;
+}
+
+.fuel-batches-table .col-status {
+  width: 100px;
+  text-align: center;
+}
+
+.fuel-batches-table .col-action {
+  width: 210px;
+  text-align: center;
+}
+
+.fuel-batches-table .col-fuel,
+.fuel-batches-table .col-supplier {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .admin-table.employee-table .col-id {
   width: 65px;
 }

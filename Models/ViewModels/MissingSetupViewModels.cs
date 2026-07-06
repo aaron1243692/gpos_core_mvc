@@ -29,6 +29,19 @@ namespace gpos.Models.ViewModels
         public int Status { get; set; } = 1;
     }
 
+    public class FuelBatchForm
+    {
+        public int Id { get; set; }
+        public int? SupplierId { get; set; }
+        [Required(ErrorMessage = "Cost Price is required.")]
+        [Range(0, double.MaxValue, ErrorMessage = "Cost Price cannot be negative.")]
+        public decimal? CostPricePerLiter { get; set; }
+        [Range(0, double.MaxValue, ErrorMessage = "Selling Price cannot be negative.")]
+        public decimal? SellingPricePerLiter { get; set; }
+        public DateTime? ExpiryDate { get; set; }
+        public string? Remarks { get; set; }
+    }
+
     public class StockReceivingForm
     {
         public int Id { get; set; }
@@ -300,6 +313,7 @@ namespace gpos.Models.ViewModels
         public string ActiveModalId { get; set; } = string.Empty;
         public ProductUnitForm ProductUnitForm { get; set; } = new();
         public ProductBatchForm ProductBatchForm { get; set; } = new();
+        public FuelBatchForm FuelBatchForm { get; set; } = new();
         public StockReceivingForm StockReceivingForm { get; set; } = new();
         public LowStockSettingForm LowStockSettingForm { get; set; } = new();
         public NozzleForm NozzleForm { get; set; } = new();
@@ -335,11 +349,14 @@ namespace gpos.Models.ViewModels
         public List<ShiftScheduleShiftOption> ShiftScheduleShiftOptions { get; set; } = new();
         public List<ProductUnit> ProductUnits { get; set; } = new();
         public List<ProductBatch> ProductBatches { get; set; } = new();
+        public List<FuelBatch> FuelBatches { get; set; } = new();
         public List<StockReceiving> StockReceivings { get; set; } = new();
         public List<LowStockSetting> LowStockSettings { get; set; } = new();
         public List<Nozzle> Nozzles { get; set; } = new();
         public List<FuelDelivery> FuelDeliveries { get; set; } = new();
         public List<FuelPriceHistory> FuelPriceHistory { get; set; } = new();
+        public Dictionary<int, string> FuelPriceHistoryCreatedBy { get; set; } = new();
+        public HashSet<int> CurrentFuelPriceHistoryIds { get; set; } = new();
         public List<PumpMeterReading> PumpMeterReadings { get; set; } = new();
         public List<RebateRule> RebateRules { get; set; } = new();
         public List<PointsLedger> PointsLedger { get; set; } = new();

@@ -136,7 +136,7 @@ namespace gpos.ViewComponents
                     "ItemUnits" => "Configuration.ItemUnits",
                     "Fuels" => "Configuration.Fuels",
                     "FuelTypes" => "Configuration.FuelTypes",
-                    "FuelPriceHistory" => "Configuration.FuelPriceHistory",
+                    "FuelPriceHistory" => "Transaction.FuelPriceAdjustment",
                     "Pumps" => "Configuration.Pumps",
                     "Nozzles" => "Configuration.Nozzles",
                     "FuelDeliveries" => "Configuration.FuelDeliveries",
@@ -186,7 +186,7 @@ namespace gpos.ViewComponents
 
         private static bool IsLegacyInventoryConfiguration(string action) => action is "Products" or "Categories" or "ItemUnits" or "FuelTanks";
 
-        private static bool IsLegacySetupConfiguration(string action) => action is "Fuels" or "FuelTypes" or "FuelPriceHistory" or "Pumps" or "Nozzles" or "FuelDeliveries" or "PumpMeterReadings" or "PumpUnits" or "Discounts" or "Members" or "Rebate" or "PointsLedger" or "DiscountRules" or "Position" or "Branch" or "Department" or "RolePermissions" or "ActivityLogs";
+        private static bool IsLegacySetupConfiguration(string action) => action is "Fuels" or "FuelTypes" or "Pumps" or "Nozzles" or "FuelDeliveries" or "PumpMeterReadings" or "PumpUnits" or "Discounts" or "Members" or "Rebate" or "PointsLedger" or "DiscountRules" or "Position" or "Branch" or "Department" or "RolePermissions" or "ActivityLogs";
 
         private static bool IsLegacySetupUsers(string action) => action is "Users" or "Suppliers" or "Operations" or "Branches" or "Departments" or "Roles" or "Permissions";
 
