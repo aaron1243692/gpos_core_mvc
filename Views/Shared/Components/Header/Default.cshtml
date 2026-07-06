@@ -40,14 +40,14 @@
                         <button class="dropdown-item eg-rb-dropdown-group-toggle" type="button">Discount Management</button>
                         <div class="dropdown-menu eg-rb-submenu">
                             <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Configuration.Discounts" ? "active" : "")" asp-controller="Configuration" asp-action="Discounts">Discounts</a>
-                            @* Hidden: discount rule page is backend-backed but not ready as a primary production menu item. *@
+                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Configuration.DiscountRules" ? "active" : "")" asp-controller="Configuration" asp-action="DiscountRules">Rules</a>
                         </div>
                     </div>
                     <div class="dropend eg-rb-dropdown-group">
-                        <button class="dropdown-item eg-rb-dropdown-group-toggle" type="button">Earnings Management</button>
+                        <button class="dropdown-item eg-rb-dropdown-group-toggle" type="button">Earning Management</button>
                         <div class="dropdown-menu eg-rb-submenu">
                             <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Configuration.Earnings" ? "active" : "")" asp-controller="Configuration" asp-action="Earnings">Earnings</a>
-                            @* Hidden: earning rule page is backend-backed but not ready as a primary production menu item. *@
+                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Configuration.EarningRules" ? "active" : "")" asp-controller="Configuration" asp-action="EarningRules">Rules</a>
                         </div>
                     </div>
                     <div class="dropend eg-rb-dropdown-group">
