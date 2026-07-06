@@ -46,7 +46,7 @@ namespace gpos.ViewComponents
                 return "Dashboard";
             }
 
-            if ((Is(controller, "Configuration") && IsInventoryConfiguration(action)) || IsLegacyInventoryConfiguration(action))
+            if ((Is(controller, "Configuration") && IsInventoryConfiguration(action)) || (Is(controller, "Reports") && IsInventoryReport(action)) || IsLegacyInventoryConfiguration(action))
             {
                 return "Inventory";
             }
@@ -182,7 +182,9 @@ namespace gpos.ViewComponents
             _ => action
         };
 
-        private static bool IsInventoryConfiguration(string action) => action is "DisplayProducts" or "WarehouseProducts" or "ProductCategories" or "ProductBatches" or "StockReceiving" or "ProductUnits" or "LowStockSettings" or "Tanks";
+        private static bool IsInventoryConfiguration(string action) => action is "DisplayProducts" or "WarehouseProducts" or "ProductBatches" or "FuelBatches" or "LowStockSettings" or "Tanks";
+
+        private static bool IsInventoryReport(string action) => action is "InventoryReport" or "PurchaseHistory" or "WarehouseDailyStock" or "DisplayDailyStock" or "TankDailyStock";
 
         private static bool IsLegacyInventoryConfiguration(string action) => action is "Products" or "Categories" or "ItemUnits" or "FuelTanks";
 
