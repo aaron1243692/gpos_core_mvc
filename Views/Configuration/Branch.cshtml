@@ -64,16 +64,16 @@
                                 <a class="btn btn-sm btn-outline-primary" asp-action="Branch" asp-route-editId="@Model.Branches[i].Id" asp-route-search="@Model.Search">Edit</a>
                                 @if (Model.Branches[i].Status == 1)
                                 {
-                                    <form asp-action="DeleteBranch" method="post" onsubmit="return confirm('Are you sure you want to disable this branch?');">
+                                    <form asp-action="DeleteBranch" method="post" data-deactivate-form>
                                     @Html.AntiForgeryToken()
                                     <input name="id" type="hidden" value="@Model.Branches[i].Id" />
                                     <input name="search" type="hidden" value="@Model.Search" />
-                                    <button class="btn btn-sm btn-outline-danger" type="submit">Disable</button>
+                                    <button class="btn btn-sm btn-outline-danger" type="submit">Deactivate</button>
                                 </form>
                                 }
                                 @if (!(Model.Branches[i].Status == 1))
                                 {
-                                    <form asp-action="ActivateBranch" method="post" onsubmit="return confirm('Are you sure you want to activate this branch?');">
+                                    <form asp-action="ActivateBranch" method="post">
                                     @Html.AntiForgeryToken()
                                     <input name="id" type="hidden" value="@Model.Branches[i].Id" />
                                     <input name="search" type="hidden" value="@Model.Search" />
@@ -110,13 +110,7 @@
                         <label asp-for="BranchForm.Address" class="form-label">Address</label>
                         <textarea asp-for="BranchForm.Address" class="form-control" rows="3"></textarea>
                     </div>
-                    <div class="mb-3">
-                        <label asp-for="BranchForm.Status" class="form-label">Status</label>
-                        <select asp-for="BranchForm.Status" class="form-select">
-                            <option value="1">Active</option>
-                            <option value="0">Inactive</option>
-                        </select>
-                    </div>
+                    <input asp-for="BranchForm.Status" type="hidden" />
                 </div>
                 <div class="modal-footer">
                     <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button>

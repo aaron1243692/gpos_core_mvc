@@ -65,22 +65,22 @@
                         <td class="col-id">@Model.Categories[index].Id</td>
                         <td>@Model.Categories[index].Name</td>
                         <td>@Model.Categories[index].Description</td>
-                        <td><span class="badge @(Model.Categories[index].Status == 1 ? "text-bg-success" : "text-bg-secondary")">@(Model.Categories[index].Status == 1 ? "Active" : "Disabled")</span></td>
+                        <td><span class="badge @(Model.Categories[index].Status == 1 ? "text-bg-success" : "text-bg-secondary")">@(Model.Categories[index].Status == 1 ? "Active" : "Inactive")</span></td>
                         <td class="col-action">
                             <div class="setup-row-actions">
                                 <button class="btn btn-outline-primary btn-sm edit-category-btn" type="button" data-bs-toggle="modal" data-bs-target="#editCategoryModal" data-id="@Model.Categories[index].Id" data-name="@Model.Categories[index].Name" data-description="@Model.Categories[index].Description">Edit</button>
                                 @if (Model.Categories[index].Status == 1 && Model.Categories[index].IsActive)
                                 {
-                                    <form asp-action="DeleteProductCategory" method="post" onsubmit="return confirm('Are you sure you want to disable this category?');">
+                                    <form asp-action="DeleteProductCategory" method="post" data-deactivate-form>
                                     @Html.AntiForgeryToken()
                                     <input name="id" type="hidden" value="@Model.Categories[index].Id" />
                                     <input name="search" type="hidden" value="@Model.Search" />
-                                    <button class="btn btn-sm btn-outline-danger" type="submit">Disable</button>
+                                    <button class="btn btn-sm btn-outline-danger" type="submit">Deactivate</button>
                                 </form>
                                 }
                                 @if (!(Model.Categories[index].Status == 1 && Model.Categories[index].IsActive))
                                 {
-                                    <form asp-action="ActivateProductCategory" method="post" onsubmit="return confirm('Are you sure you want to activate this category?');">
+                                    <form asp-action="ActivateProductCategory" method="post">
                                     @Html.AntiForgeryToken()
                                     <input name="id" type="hidden" value="@Model.Categories[index].Id" />
                                     <input name="search" type="hidden" value="@Model.Search" />

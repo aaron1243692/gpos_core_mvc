@@ -100,11 +100,11 @@
                 <input name="source" type="hidden" value="Warehouse" />
                 <input name="search" type="hidden" value="@Model.Search" />
                 <div class="modal-header">
-                    <h2 class="modal-title fs-5" id="productStatusModalLabel">Deactivate Product</h2>
+                    <h2 class="modal-title fs-5" id="productStatusModalLabel">Deactivate Record</h2>
                     <button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <p class="mb-0" id="productStatusMessage">Are you sure you want to deactivate this product?</p>
+                    <p class="mb-0" id="productStatusMessage">Are you sure you want to deactivate this record?</p>
                 </div>
                 <div class="modal-footer">
                     <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button>
@@ -137,11 +137,11 @@
                     }
 
                     if (title) {
-                        title.textContent = "Deactivate Product";
+                        title.textContent = "Deactivate Record";
                     }
 
                     if (message) {
-                        message.textContent = `Are you sure you want to deactivate product "${productName}"?`;
+                        message.textContent = "Are you sure you want to deactivate this record?";
                     }
 
                     if (confirmButton) {

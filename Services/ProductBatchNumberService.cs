@@ -1,5 +1,6 @@
 using gpos.Data;
 using Microsoft.EntityFrameworkCore;
+using System.Text.RegularExpressions;
 
 namespace gpos.Services
 {
@@ -14,22 +15,45 @@ namespace gpos.Services
 
         public async Task<string> GenerateNextBatchNoAsync()
         {
-            var lastBatchNo = await _db.ProductBatches
+            var batchNumbers = await _db.ProductBatches
                 .AsNoTracking()
-                .Where(batch => batch.BatchNo.StartsWith("BATCH-"))
-                .OrderByDescending(batch => batch.Id)
                 .Select(batch => batch.BatchNo)
-                .FirstOrDefaultAsync();
+                .ToListAsync();
 
-            var nextNumber = 1;
+            var highestNumber = 0;
 
-            if (!string.IsNullOrWhiteSpace(lastBatchNo)
-                && int.TryParse(lastBatchNo.Replace("BATCH-", string.Empty), out var currentNumber))
+            for (var i = 0; i < batchNumbers.Count; i += 1)
             {
-                nextNumber = currentNumber + 1;
+                if (TryGetNumericBatchNumber(batchNumbers[i], out var batchNumber) && batchNumber > highestNumber)
+                {
+                    highestNumber = batchNumber;
+                }
             }
 
-            return $"BATCH-{nextNumber:000000}";
+            if (highestNumber >= 99999999)
+            {
+                throw new InvalidOperationException("The product batch number sequence has reached the 8-digit limit.");
+            }
+
+            return (highestNumber + 1).ToString("D8");
+        }
+
+        private static bool TryGetNumericBatchNumber(string? batchNo, out int batchNumber)
+        {
+            batchNumber = 0;
+            var value = (batchNo ?? string.Empty).Trim();
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return false;
+            }
+
+            if (value.Length <= 8 && value.All(char.IsDigit))
+            {
+                return int.TryParse(value, out batchNumber);
+            }
+
+            var legacyMatch = Regex.Match(value, "^BATCH-(\\d+)$", RegexOptions.IgnoreCase);
+            return legacyMatch.Success && int.TryParse(legacyMatch.Groups[1].Value, out batchNumber);
         }
     }
 }

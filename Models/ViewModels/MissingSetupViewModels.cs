@@ -18,7 +18,6 @@ namespace gpos.Models.ViewModels
         [Range(1, int.MaxValue, ErrorMessage = "Product is required.")]
         public int ProductId { get; set; }
         public int? SupplierId { get; set; }
-        [Required(ErrorMessage = "Batch No is required.")]
         public string BatchNo { get; set; } = string.Empty;
         [Required(ErrorMessage = "Cost Price is required.")]
         [Range(0, double.MaxValue, ErrorMessage = "Cost Price cannot be negative.")]
@@ -117,6 +116,21 @@ namespace gpos.Models.ViewModels
         public decimal? NewPrice { get; set; }
         [Required(ErrorMessage = "Effective At is required.")]
         public DateTime? EffectiveAt { get; set; } = DateTime.Today;
+        public string? Remarks { get; set; }
+    }
+
+    public class ProductPriceHistoryForm
+    {
+        public int Id { get; set; }
+        [Range(1, int.MaxValue, ErrorMessage = "Product is required.")]
+        public int ProductId { get; set; }
+        public int? BatchId { get; set; }
+        public decimal? CurrentPrice { get; set; }
+        [Required(ErrorMessage = "New Selling Price is required.")]
+        [Range(0.01, double.MaxValue, ErrorMessage = "New Selling Price must be greater than 0.")]
+        public decimal? NewPrice { get; set; }
+        [Required(ErrorMessage = "Effective Date is required.")]
+        public DateTime? EffectiveDate { get; set; } = DateTime.Today;
         public string? Remarks { get; set; }
     }
 
@@ -319,6 +333,7 @@ namespace gpos.Models.ViewModels
         public NozzleForm NozzleForm { get; set; } = new();
         public FuelDeliveryForm FuelDeliveryForm { get; set; } = new();
         public FuelPriceHistoryForm FuelPriceHistoryForm { get; set; } = new();
+        public ProductPriceHistoryForm ProductPriceHistoryForm { get; set; } = new();
         public PumpMeterReadingForm PumpMeterReadingForm { get; set; } = new();
         public RebateRuleForm RebateRuleForm { get; set; } = new();
         public PointsLedgerForm PointsLedgerForm { get; set; } = new();
@@ -357,6 +372,9 @@ namespace gpos.Models.ViewModels
         public List<FuelPriceHistory> FuelPriceHistory { get; set; } = new();
         public Dictionary<int, string> FuelPriceHistoryCreatedBy { get; set; } = new();
         public HashSet<int> CurrentFuelPriceHistoryIds { get; set; } = new();
+        public List<ProductPriceHistory> ProductPriceHistory { get; set; } = new();
+        public Dictionary<int, string> ProductPriceHistoryCreatedBy { get; set; } = new();
+        public HashSet<int> CurrentProductPriceHistoryIds { get; set; } = new();
         public List<PumpMeterReading> PumpMeterReadings { get; set; } = new();
         public List<RebateRule> RebateRules { get; set; } = new();
         public List<PointsLedger> PointsLedger { get; set; } = new();

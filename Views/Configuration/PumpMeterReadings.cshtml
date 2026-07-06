@@ -70,7 +70,7 @@
                         <td>@(Model.PumpMeterReadings[i].ClosingMeter?.ToString("N2") ?? "-")</td>
                         <td>@(Model.PumpMeterReadings[i].LitersSold?.ToString("N2") ?? "-")</td>
                         <td>@Model.PumpMeterReadings[i].ReadingDate.ToString("yyyy-MM-dd")</td>
-                        <td><span class="badge @(Model.PumpMeterReadings[i].Status == 1 ? "text-bg-success" : "text-bg-secondary")">@(Model.PumpMeterReadings[i].Status == 1 ? "Active" : "Disabled")</span></td>
+                        <td><span class="badge @(Model.PumpMeterReadings[i].Status == 1 ? "text-bg-success" : "text-bg-secondary")">@(Model.PumpMeterReadings[i].Status == 1 ? "Active" : "Inactive")</span></td>
                     </tr>
                 }
             </tbody>
@@ -132,13 +132,7 @@
                         <input asp-for="PumpMeterReadingForm.ReadingDate" class="form-control" type="date" />
                         <span asp-validation-for="PumpMeterReadingForm.ReadingDate" class="text-danger"></span>
                     </div>
-                    <div class="mb-3">
-                        <label asp-for="PumpMeterReadingForm.Status" class="form-label">Status</label>
-                        <select asp-for="PumpMeterReadingForm.Status" class="form-select">
-                            <option value="1">Active</option>
-                            <option value="0">Disabled</option>
-                        </select>
-                    </div>
+                    <input asp-for="PumpMeterReadingForm.Status" type="hidden" />
                 </div>
                 <div class="modal-footer">
                     <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button>

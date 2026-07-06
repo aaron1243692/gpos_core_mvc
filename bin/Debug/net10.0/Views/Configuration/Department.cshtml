@@ -64,16 +64,16 @@
                                 <a class="btn btn-sm btn-outline-primary" asp-action="Department" asp-route-editId="@Model.Departments[i].Id" asp-route-search="@Model.Search">Edit</a>
                                 @if (Model.Departments[i].Status == 1)
                                 {
-                                    <form asp-action="DeleteDepartment" method="post" onsubmit="return confirm('Are you sure you want to disable this department?');">
+                                    <form asp-action="DeleteDepartment" method="post" data-deactivate-form>
                                     @Html.AntiForgeryToken()
                                     <input name="id" type="hidden" value="@Model.Departments[i].Id" />
                                     <input name="search" type="hidden" value="@Model.Search" />
-                                    <button class="btn btn-sm btn-outline-danger" type="submit">Disable</button>
+                                    <button class="btn btn-sm btn-outline-danger" type="submit">Deactivate</button>
                                 </form>
                                 }
                                 @if (!(Model.Departments[i].Status == 1))
                                 {
-                                    <form asp-action="ActivateDepartment" method="post" onsubmit="return confirm('Are you sure you want to activate this department?');">
+                                    <form asp-action="ActivateDepartment" method="post">
                                     @Html.AntiForgeryToken()
                                     <input name="id" type="hidden" value="@Model.Departments[i].Id" />
                                     <input name="search" type="hidden" value="@Model.Search" />
@@ -117,13 +117,7 @@
                         <label asp-for="DepartmentForm.Description" class="form-label">Description</label>
                         <textarea asp-for="DepartmentForm.Description" class="form-control" rows="3"></textarea>
                     </div>
-                    <div class="mb-3">
-                        <label asp-for="DepartmentForm.Status" class="form-label">Status</label>
-                        <select asp-for="DepartmentForm.Status" class="form-select">
-                            <option value="1">Active</option>
-                            <option value="0">Inactive</option>
-                        </select>
-                    </div>
+                    <input asp-for="DepartmentForm.Status" type="hidden" />
                 </div>
                 <div class="modal-footer">
                     <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button>

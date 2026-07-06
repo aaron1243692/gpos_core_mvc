@@ -80,7 +80,7 @@
                             }
                             @if (Model.ProductBatches[index].Status == 0)
                             {
-                                <span class="badge text-bg-secondary">Disabled</span>
+                                <span class="badge text-bg-secondary">Inactive</span>
                             }
                         </td>
                         <td class="col-action">
@@ -88,16 +88,16 @@
                                 <a class="btn btn-sm btn-outline-primary" asp-action="ProductBatches" asp-route-editId="@Model.ProductBatches[index].Id" asp-route-search="@Model.Search">Edit</a>
                                 @if (Model.ProductBatches[index].Status == 1 && Model.ProductBatches[index].IsActive)
                                 {
-                                    <form asp-action="DeleteProductBatch" method="post" onsubmit="return confirm('Are you sure you want to disable this batch?');">
+                                    <form asp-action="DeleteProductBatch" method="post" data-deactivate-form>
                                     @Html.AntiForgeryToken()
                                     <input name="id" type="hidden" value="@Model.ProductBatches[index].Id" />
                                     <input name="search" type="hidden" value="@Model.Search" />
-                                    <button class="btn btn-sm btn-outline-danger" type="submit">Disable</button>
+                                    <button class="btn btn-sm btn-outline-danger" type="submit">Deactivate</button>
                                 </form>
                                 }
                                 @if (!(Model.ProductBatches[index].Status == 1 && Model.ProductBatches[index].IsActive))
                                 {
-                                    <form asp-action="ActivateProductBatch" method="post" onsubmit="return confirm('Are you sure you want to activate this batch?');">
+                                    <form asp-action="ActivateProductBatch" method="post">
                                     @Html.AntiForgeryToken()
                                     <input name="id" type="hidden" value="@Model.ProductBatches[index].Id" />
                                     <input name="search" type="hidden" value="@Model.Search" />
@@ -138,9 +138,9 @@
                             <select asp-for="ProductBatchForm.SupplierId" asp-items="Model.SupplierOptions" class="form-select"></select>
                         </div>
                         <div>
-                            <label asp-for="ProductBatchForm.BatchNo" class="form-label">Batch No</label>
-                            <input asp-for="ProductBatchForm.BatchNo" class="form-control" autocomplete="off" />
-                            <span asp-validation-for="ProductBatchForm.BatchNo" class="text-danger small"></span>
+                            <label class="form-label">Batch No</label>
+                            <input class="form-control" value="@(Model.ProductBatchForm.Id > 0 ? Model.ProductBatchForm.BatchNo : "Auto-generated 8-digit number on save")" readonly />
+                            <input asp-for="ProductBatchForm.BatchNo" type="hidden" />
                         </div>
                         <div>
                             <label asp-for="ProductBatchForm.CostPrice" class="form-label">Cost Price</label>
@@ -156,13 +156,7 @@
                             <label asp-for="ProductBatchForm.ExpiryDate" class="form-label">Expiry Date</label>
                             <input asp-for="ProductBatchForm.ExpiryDate" class="form-control" type="date" />
                         </div>
-                        <div>
-                            <label asp-for="ProductBatchForm.Status" class="form-label">Status</label>
-                            <select asp-for="ProductBatchForm.Status" class="form-select">
-                                <option value="1">Active</option>
-                                <option value="0">Disabled</option>
-                            </select>
-                        </div>
+                        <input asp-for="ProductBatchForm.Status" type="hidden" />
                     </div>
                 </div>
                 <div class="modal-footer">

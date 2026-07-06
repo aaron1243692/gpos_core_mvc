@@ -19,9 +19,60 @@
         </main>
     </div>
 
+    <div class="modal fade" id="deactivateRecordModal" tabindex="-1" aria-labelledby="deactivateRecordModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 class="modal-title fs-5" id="deactivateRecordModalLabel">Deactivate Record</h2>
+                    <button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="mb-0">Are you sure you want to deactivate this record?</p>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button>
+                    <button class="btn btn-danger" type="button" data-deactivate-record-confirm>Deactivate</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            const modalElement = document.getElementById("deactivateRecordModal");
+            const confirmButton = document.querySelector("[data-deactivate-record-confirm]");
+            let pendingForm = null;
+
+            document.querySelectorAll("form[data-deactivate-form]").forEach((form) => {
+                form.addEventListener("submit", (event) => {
+                    if (form.dataset.deactivateConfirmed === "true") {
+                        return;
+                    }
+
+                    event.preventDefault();
+                    pendingForm = form;
+
+                    if (modalElement && window.bootstrap) {
+                        bootstrap.Modal.getOrCreateInstance(modalElement).show();
+                    }
+                });
+            });
+
+            if (confirmButton) {
+                confirmButton.addEventListener("click", () => {
+                    if (!pendingForm) {
+                        return;
+                    }
+
+                    pendingForm.dataset.deactivateConfirmed = "true";
+                    pendingForm.submit();
+                });
+            }
+        });
+    </script>
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

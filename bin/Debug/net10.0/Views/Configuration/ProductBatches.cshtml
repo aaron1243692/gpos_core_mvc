@@ -28,16 +28,16 @@
     </div>
 
     <div class="table-responsive table-scroll-wrap flex-table-wrap">
-        <table class="table table-sm table-hover align-middle admin-table mb-0">
+        <table class="table table-sm table-hover align-middle admin-table product-batches-table mb-0">
             <colgroup>
                 <col class="col-no" />
                 <col class="col-id" />
-                <col class="col-batch" />
-                <col class="col-name" />
-                <col class="col-name" />
-                <col class="col-money" />
-                <col class="col-money" />
-                <col class="col-normal" />
+                <col class="col-batch-number" />
+                <col class="col-product" />
+                <col class="col-supplier" />
+                <col class="col-cost-price" />
+                <col class="col-selling-price" />
+                <col class="col-expiry-date" />
                 <col class="col-status" />
                 <col class="col-action" />
             </colgroup>
@@ -45,12 +45,12 @@
                 <tr>
                     <th class="col-no text-nowrap" scope="col">No</th>
                     <th class="col-id text-nowrap" scope="col">ID</th>
-                    <th class="col-batch text-nowrap" scope="col">Batch No</th>
-                    <th class="col-name" scope="col">Product</th>
-                    <th class="col-name" scope="col">Supplier</th>
-                    <th class="col-money text-nowrap" scope="col">Cost Price</th>
-                    <th class="col-money text-nowrap" scope="col">Selling Price</th>
-                    <th class="text-nowrap" scope="col">Expiry Date</th>
+                    <th class="col-batch-number text-nowrap" scope="col">Batch Number</th>
+                    <th class="col-product text-nowrap" scope="col">Product</th>
+                    <th class="col-supplier text-nowrap" scope="col">Supplier</th>
+                    <th class="col-cost-price text-nowrap" scope="col">Cost Price</th>
+                    <th class="col-selling-price text-nowrap" scope="col">Selling Price</th>
+                    <th class="col-expiry-date text-nowrap" scope="col">Expiry Date</th>
                     <th class="col-status text-nowrap" scope="col">Status</th>
                     <th class="col-action text-nowrap" scope="col">Action</th>
                 </tr>
@@ -67,12 +67,12 @@
                     <tr>
                         <td class="col-no">@(index + 1)</td>
                         <td class="col-id">@Model.ProductBatches[index].Id</td>
-                        <td class="col-batch text-nowrap">@Model.ProductBatches[index].BatchNo</td>
-                        <td class="col-name">@(Model.ProductBatches[index].Product?.Name ?? "-")</td>
-                        <td class="col-name">@(Model.ProductBatches[index].Supplier?.Name ?? "-")</td>
-                        <td class="col-money text-nowrap">&#8369;@Model.ProductBatches[index].CostPrice.ToString("N2", CultureInfo.InvariantCulture)</td>
-                        <td class="col-money text-nowrap">&#8369;@Model.ProductBatches[index].SellingPrice.ToString("N2", CultureInfo.InvariantCulture)</td>
-                        <td class="text-nowrap">@(Model.ProductBatches[index].ExpiryDate.HasValue ? Model.ProductBatches[index].ExpiryDate.GetValueOrDefault().ToString("MMM dd, yyyy", CultureInfo.InvariantCulture) : "-")</td>
+                        <td class="col-batch-number text-nowrap">@Model.ProductBatches[index].BatchNo</td>
+                        <td class="col-product text-truncate">@(Model.ProductBatches[index].Product?.Name ?? "-")</td>
+                        <td class="col-supplier text-truncate">@(Model.ProductBatches[index].Supplier?.Name ?? "-")</td>
+                        <td class="col-cost-price text-nowrap">&#8369;@Model.ProductBatches[index].CostPrice.ToString("N2", CultureInfo.InvariantCulture)</td>
+                        <td class="col-selling-price text-nowrap">&#8369;@Model.ProductBatches[index].SellingPrice.ToString("N2", CultureInfo.InvariantCulture)</td>
+                        <td class="col-expiry-date text-nowrap">@(Model.ProductBatches[index].ExpiryDate.HasValue ? Model.ProductBatches[index].ExpiryDate.GetValueOrDefault().ToString("MMM dd, yyyy", CultureInfo.InvariantCulture) : "-")</td>
                         <td class="col-status">
                             @if (Model.ProductBatches[index].Status == 1)
                             {
@@ -80,7 +80,7 @@
                             }
                             @if (Model.ProductBatches[index].Status == 0)
                             {
-                                <span class="badge text-bg-secondary">Disabled</span>
+                                <span class="badge text-bg-secondary">Inactive</span>
                             }
                         </td>
                         <td class="col-action">
@@ -88,16 +88,16 @@
                                 <a class="btn btn-sm btn-outline-primary" asp-action="ProductBatches" asp-route-editId="@Model.ProductBatches[index].Id" asp-route-search="@Model.Search">Edit</a>
                                 @if (Model.ProductBatches[index].Status == 1 && Model.ProductBatches[index].IsActive)
                                 {
-                                    <form asp-action="DeleteProductBatch" method="post" onsubmit="return confirm('Are you sure you want to disable this batch?');">
+                                    <form asp-action="DeleteProductBatch" method="post" data-deactivate-form>
                                     @Html.AntiForgeryToken()
                                     <input name="id" type="hidden" value="@Model.ProductBatches[index].Id" />
                                     <input name="search" type="hidden" value="@Model.Search" />
-                                    <button class="btn btn-sm btn-outline-danger" type="submit">Disable</button>
+                                    <button class="btn btn-sm btn-outline-danger" type="submit">Deactivate</button>
                                 </form>
                                 }
                                 @if (!(Model.ProductBatches[index].Status == 1 && Model.ProductBatches[index].IsActive))
                                 {
-                                    <form asp-action="ActivateProductBatch" method="post" onsubmit="return confirm('Are you sure you want to activate this batch?');">
+                                    <form asp-action="ActivateProductBatch" method="post">
                                     @Html.AntiForgeryToken()
                                     <input name="id" type="hidden" value="@Model.ProductBatches[index].Id" />
                                     <input name="search" type="hidden" value="@Model.Search" />
@@ -138,9 +138,9 @@
                             <select asp-for="ProductBatchForm.SupplierId" asp-items="Model.SupplierOptions" class="form-select"></select>
                         </div>
                         <div>
-                            <label asp-for="ProductBatchForm.BatchNo" class="form-label">Batch No</label>
-                            <input asp-for="ProductBatchForm.BatchNo" class="form-control" autocomplete="off" />
-                            <span asp-validation-for="ProductBatchForm.BatchNo" class="text-danger small"></span>
+                            <label class="form-label">Batch No</label>
+                            <input class="form-control" value="@(Model.ProductBatchForm.Id > 0 ? Model.ProductBatchForm.BatchNo : "Auto-generated 8-digit number on save")" readonly />
+                            <input asp-for="ProductBatchForm.BatchNo" type="hidden" />
                         </div>
                         <div>
                             <label asp-for="ProductBatchForm.CostPrice" class="form-label">Cost Price</label>
@@ -156,13 +156,7 @@
                             <label asp-for="ProductBatchForm.ExpiryDate" class="form-label">Expiry Date</label>
                             <input asp-for="ProductBatchForm.ExpiryDate" class="form-control" type="date" />
                         </div>
-                        <div>
-                            <label asp-for="ProductBatchForm.Status" class="form-label">Status</label>
-                            <select asp-for="ProductBatchForm.Status" class="form-select">
-                                <option value="1">Active</option>
-                                <option value="0">Disabled</option>
-                            </select>
-                        </div>
+                        <input asp-for="ProductBatchForm.Status" type="hidden" />
                     </div>
                 </div>
                 <div class="modal-footer">

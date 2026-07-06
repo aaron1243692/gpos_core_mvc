@@ -21,7 +21,7 @@
 
                     <nav class="eg-rb-tabs" aria-label="Salesman pages">
                         <a class="eg-rb-tab @(string.Equals(ViewContext.RouteData.Values["action"]?.ToString(), "POS", StringComparison.OrdinalIgnoreCase) ? "is-active" : "")" asp-controller="Salesman" asp-action="POS">POS</a>
-                        <a class="eg-rb-tab @(string.Equals(ViewContext.RouteData.Values["action"]?.ToString(), "MySales", StringComparison.OrdinalIgnoreCase) ? "is-active" : "")" asp-controller="Salesman" asp-action="MySales">Sales History</a>
+                        @* Hidden: Salesman sales history is a sample/view-only page and is not production-ready yet. *@
                     </nav>
 
                     <details class="eg-rb-user" id="salesmanUserDropdown">

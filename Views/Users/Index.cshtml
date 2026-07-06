@@ -69,18 +69,18 @@
                         <td>@(Model.Users[i].Branch?.Name ?? "-")</td>
                         <td>@(Model.Users[i].Department?.Name ?? "-")</td>
                         <td>@(Model.Users[i].UserRoles.FirstOrDefault()?.Role?.Name ?? "-")</td>
-                        <td><span class="badge @(Model.Users[i].Status == 1 ? "text-bg-success" : "text-bg-secondary")">@(Model.Users[i].Status == 1 ? "Active" : "Disabled")</span></td>
+                        <td><span class="badge @(Model.Users[i].Status == 1 ? "text-bg-success" : "text-bg-secondary")">@(Model.Users[i].Status == 1 ? "Active" : "Inactive")</span></td>
                         <td class="col-action-wide">
                             <div class="setup-row-actions employee-action-buttons">
                                 <a class="btn btn-sm btn-outline-primary" asp-action="Index" asp-route-editId="@Model.Users[i].Id" asp-route-search="@Model.Search">Edit</a>
                                 <button class="btn btn-sm btn-outline-secondary user-password-button" type="button" data-user-id="@Model.Users[i].Id" data-user-name="@Model.Users[i].Username" data-bs-toggle="modal" data-bs-target="#passwordModal">Reset Password</button>
                                 @if (Model.Users[i].Status == 1)
                                 {
-                                    <button class="btn btn-sm btn-outline-danger user-delete-button" type="button" data-user-id="@Model.Users[i].Id" data-user-name="@Model.Users[i].Username" data-bs-toggle="modal" data-bs-target="#deleteUserModal">Disable</button>
+                                    <button class="btn btn-sm btn-outline-danger user-delete-button" type="button" data-user-id="@Model.Users[i].Id" data-user-name="@Model.Users[i].Username" data-bs-toggle="modal" data-bs-target="#deleteUserModal">Deactivate</button>
                                 }
                                 @if (Model.Users[i].Status != 1)
                                 {
-                                    <form asp-action="Activate" method="post" onsubmit="return confirm('Are you sure you want to activate this user?');">
+                                    <form asp-action="Activate" method="post">
                                         @Html.AntiForgeryToken()
                                         <input name="id" type="hidden" value="@Model.Users[i].Id" />
                                         <input name="search" type="hidden" value="@Model.Search" />
@@ -167,14 +167,7 @@
                         </select>
                         <span asp-validation-for="UserForm.RoleId" class="text-danger"></span>
                     </div>
-                    <div class="mb-3">
-                        <label asp-for="UserForm.Status" class="form-label">Status</label>
-                        <select asp-for="UserForm.Status" class="form-select">
-                            <option value="1">Active</option>
-                            <option value="0">Disabled</option>
-                        </select>
-                        <span asp-validation-for="UserForm.Status" class="text-danger"></span>
-                    </div>
+                    <input asp-for="UserForm.Status" type="hidden" />
                 </div>
                 <div class="modal-footer">
                     <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button>
@@ -226,15 +219,15 @@
                 <input id="deleteUserId" name="id" type="hidden" />
                 <input name="search" type="hidden" value="@Model.Search" />
                 <div class="modal-header">
-                    <h2 class="modal-title fs-5" id="deleteUserModalLabel">Disable User</h2>
+                    <h2 class="modal-title fs-5" id="deleteUserModalLabel">Deactivate Record</h2>
                     <button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <p class="mb-0">Are you sure you want to disable <strong id="deleteUserName">this user</strong>?</p>
+                    <p class="mb-0">Are you sure you want to deactivate this record?</p>
                 </div>
                 <div class="modal-footer">
                     <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button>
-                    <button class="btn btn-danger" type="submit">Disable</button>
+                    <button class="btn btn-danger" type="submit">Deactivate</button>
                 </div>
             </form>
         </div>

@@ -60,15 +60,15 @@
                         <td>@Model.StockReceivings[i].Supplier?.Name</td>
                         <td>@Model.StockReceivings[i].ReceivedDate.ToString("yyyy-MM-dd")</td>
                         <td>@Model.StockReceivings[i].TotalAmount.ToString("N2")</td>
-                        <td><span class="badge @(Model.StockReceivings[i].Status == 1 ? "text-bg-success" : "text-bg-secondary")">@(Model.StockReceivings[i].Status == 1 ? "Active" : "Disabled")</span></td>
+                        <td><span class="badge @(Model.StockReceivings[i].Status == 1 ? "text-bg-success" : "text-bg-secondary")">@(Model.StockReceivings[i].Status == 1 ? "Active" : "Inactive")</span></td>
                         <td class="col-action">
                             <div class="setup-row-actions">
                                 <a class="btn btn-sm btn-outline-primary" asp-action="StockReceiving" asp-route-editId="@Model.StockReceivings[i].Id" asp-route-search="@Model.Search">Edit</a>
-                                <form asp-action="DeleteStockReceiving" method="post" onsubmit="return confirm('Are you sure you want to disable this receiving?');">
+                                <form asp-action="DeleteStockReceiving" method="post" data-deactivate-form>
                                     @Html.AntiForgeryToken()
                                     <input name="id" type="hidden" value="@Model.StockReceivings[i].Id" />
                                     <input name="search" type="hidden" value="@Model.Search" />
-                                    <button class="btn btn-sm btn-outline-danger" type="submit">Disable</button>
+                                    <button class="btn btn-sm btn-outline-danger" type="submit">Deactivate</button>
                                 </form>
                             </div>
                         </td>
@@ -146,13 +146,7 @@
                         <label asp-for="StockReceivingForm.ExpiryDate" class="form-label">Expiry Date</label>
                         <input asp-for="StockReceivingForm.ExpiryDate" class="form-control" type="date" />
                     </div>
-                    <div class="mb-3">
-                        <label asp-for="StockReceivingForm.Status" class="form-label">Status</label>
-                        <select asp-for="StockReceivingForm.Status" class="form-select">
-                            <option value="1">Active</option>
-                            <option value="0">Disabled</option>
-                        </select>
-                    </div>
+                    <input asp-for="StockReceivingForm.Status" type="hidden" />
                 </div>
                 <div class="modal-footer">
                     <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button>

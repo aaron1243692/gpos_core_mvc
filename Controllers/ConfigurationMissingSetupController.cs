@@ -215,21 +215,16 @@ namespace gpos.Controllers
                 return View("ProductBatches", await BuildProductBatchesPageAsync(search, form, activeModalId: "productBatchModal"));
             }
 
-            var batchNo = form.BatchNo.Trim();
-            var duplicate = await _db.ProductBatches.AnyAsync(batch => batch.Id != form.Id && batch.BatchNo == batchNo);
-            if (duplicate)
-            {
-                ModelState.AddModelError("ProductBatchForm.BatchNo", "Batch No already exists.");
-                return View("ProductBatches", await BuildProductBatchesPageAsync(search, form, activeModalId: "productBatchModal"));
-            }
-
             var now = DateTime.UtcNow;
             var batch = form.Id > 0 ? await _db.ProductBatches.FindAsync(form.Id) : new ProductBatch { CreatedAt = now };
             if (batch is null) return NotFound();
 
             batch.ProductId = form.ProductId;
             batch.SupplierId = form.SupplierId;
-            batch.BatchNo = batchNo;
+            if (form.Id == 0)
+            {
+                batch.BatchNo = await _batchNumberService.GenerateNextBatchNoAsync();
+            }
             batch.CostPrice = form.CostPrice!.Value;
             batch.SellingPrice = form.SellingPrice ?? 0m;
             batch.ExpiryDate = form.ExpiryDate;

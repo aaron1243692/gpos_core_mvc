@@ -65,7 +65,7 @@
                             }
                             @if (Model.Earnings[i].Status == 0)
                             {
-                                <span class="badge text-bg-secondary">Disabled</span>
+                                <span class="badge text-bg-secondary">Inactive</span>
                             }
                         </td>
                         <td class="col-action">
@@ -73,16 +73,16 @@
                                 <a class="btn btn-sm btn-outline-primary" asp-action="Earnings" asp-route-editId="@Model.Earnings[i].Id" asp-route-search="@Model.Search">Edit</a>
                                 @if (Model.Earnings[i].Status == 1)
                                 {
-                                    <form asp-action="DeleteEarnings" method="post" onsubmit="return confirm('Are you sure you want to disable this earnings profile?');">
+                                    <form asp-action="DeleteEarnings" method="post" data-deactivate-form>
                                     @Html.AntiForgeryToken()
                                     <input name="id" type="hidden" value="@Model.Earnings[i].Id" />
                                     <input name="search" type="hidden" value="@Model.Search" />
-                                    <button class="btn btn-sm btn-outline-danger" type="submit">Disable</button>
+                                    <button class="btn btn-sm btn-outline-danger" type="submit">Deactivate</button>
                                 </form>
                                 }
                                 @if (!(Model.Earnings[i].Status == 1))
                                 {
-                                    <form asp-action="ActivateEarnings" method="post" onsubmit="return confirm('Are you sure you want to activate this earnings profile?');">
+                                    <form asp-action="ActivateEarnings" method="post">
                                     @Html.AntiForgeryToken()
                                     <input name="id" type="hidden" value="@Model.Earnings[i].Id" />
                                     <input name="search" type="hidden" value="@Model.Search" />
@@ -120,14 +120,7 @@
                         <input asp-for="EarningsForm.Description" class="form-control" autocomplete="off" />
                         <span asp-validation-for="EarningsForm.Description" class="text-danger"></span>
                     </div>
-                    <div class="mb-3">
-                        <label asp-for="EarningsForm.Status" class="form-label">Status</label>
-                        <select asp-for="EarningsForm.Status" class="form-select">
-                            <option value="1">Active</option>
-                            <option value="0">Disabled</option>
-                        </select>
-                        <span asp-validation-for="EarningsForm.Status" class="text-danger"></span>
-                    </div>
+                    <input asp-for="EarningsForm.Status" type="hidden" />
                 </div>
                 <div class="modal-footer">
                     <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button>

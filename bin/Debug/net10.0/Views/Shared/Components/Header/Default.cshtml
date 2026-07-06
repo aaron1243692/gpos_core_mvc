@@ -20,7 +20,7 @@
                             <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Configuration.Department" ? "active" : "")" asp-controller="Configuration" asp-action="Department">Department</a>
                             <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Configuration.Members" ? "active" : "")" asp-controller="Configuration" asp-action="Members">Members</a>
                             <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Configuration.Rebate" ? "active" : "")" asp-controller="Configuration" asp-action="Rebate">Rebate</a>
-                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Configuration.PointsLedger" ? "active" : "")" asp-controller="Configuration" asp-action="PointsLedger">Points Ledger</a>
+                            @* Hidden: points ledger is an audit/admin detail page, not a production-ready primary setup menu item yet. *@
                             <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Vouchers.Index" ? "active" : "")" asp-controller="Vouchers" asp-action="Index">Vouchers</a>
                             <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Configuration.Vat" ? "active" : "")" asp-controller="Configuration" asp-action="Vat">VAT</a>
                         </div>
@@ -29,25 +29,25 @@
                         <button class="dropdown-item eg-rb-dropdown-group-toggle" type="button">Fuel</button>
                         <div class="dropdown-menu eg-rb-submenu">
                             <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Configuration.Fuels" ? "active" : "")" asp-controller="Configuration" asp-action="Fuels">Fuels</a>
-                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Configuration.FuelBatches" ? "active" : "")" asp-controller="Configuration" asp-action="FuelBatches">Fuel Batches</a>
+                            @* Hidden: fuel batch page is not part of the production navigation standard yet. *@
                             <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Configuration.Pumps" ? "active" : "")" asp-controller="Configuration" asp-action="Pumps">Pumps</a>
                             <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Configuration.Nozzles" ? "active" : "")" asp-controller="Configuration" asp-action="Nozzles">Nozzles</a>
-                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Configuration.FuelDeliveries" ? "active" : "")" asp-controller="Configuration" asp-action="FuelDeliveries">Fuel Deliveries</a>
-                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Configuration.PumpMeterReadings" ? "active" : "")" asp-controller="Configuration" asp-action="PumpMeterReadings">Pump Meter Readings</a>
+                            @* Hidden: fuel deliveries are handled by Transaction > Stock Receiving > Fuel Receiving. *@
+                            @* Hidden: pump meter readings are not part of the production-ready menu yet. *@
                         </div>
                     </div>
                     <div class="dropend eg-rb-dropdown-group">
                         <button class="dropdown-item eg-rb-dropdown-group-toggle" type="button">Discount Management</button>
                         <div class="dropdown-menu eg-rb-submenu">
                             <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Configuration.Discounts" ? "active" : "")" asp-controller="Configuration" asp-action="Discounts">Discounts</a>
-                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Configuration.DiscountRules" ? "active" : "")" asp-controller="Configuration" asp-action="DiscountRules">Discount Rules</a>
+                            @* Hidden: discount rule page is backend-backed but not ready as a primary production menu item. *@
                         </div>
                     </div>
                     <div class="dropend eg-rb-dropdown-group">
                         <button class="dropdown-item eg-rb-dropdown-group-toggle" type="button">Earnings Management</button>
                         <div class="dropdown-menu eg-rb-submenu">
                             <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Configuration.Earnings" ? "active" : "")" asp-controller="Configuration" asp-action="Earnings">Earnings</a>
-                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Configuration.EarningRules" ? "active" : "")" asp-controller="Configuration" asp-action="EarningRules">Earning Rules</a>
+                            @* Hidden: earning rule page is backend-backed but not ready as a primary production menu item. *@
                         </div>
                     </div>
                     <div class="dropend eg-rb-dropdown-group">
@@ -55,7 +55,8 @@
                         <div class="dropdown-menu eg-rb-submenu">
                             <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Users.Index" ? "active" : "")" asp-controller="Users" asp-action="Index">Users</a>
                             <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Roles.Index" ? "active" : "")" asp-controller="Roles" asp-action="Index">Roles</a>
-                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Configuration.ActivityLogs" ? "active" : "")" asp-controller="Configuration" asp-action="ActivityLogs">Activity Logs</a>
+                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Permissions.Index" ? "active" : "")" asp-controller="Permissions" asp-action="Index">Permissions</a>
+                            @* Hidden: activity logs are audit/admin detail, not a production-ready primary setup menu item yet. *@
                         </div>
                     </div>
                 </div>
@@ -68,7 +69,7 @@
                     <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Configuration.ProductCategories" ? "active" : "")" asp-controller="Configuration" asp-action="ProductCategories">Categories</a>
                     <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Configuration.ProductBatches" ? "active" : "")" asp-controller="Configuration" asp-action="ProductBatches">Product Batches</a>
                     <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Configuration.ProductUnits" ? "active" : "")" asp-controller="Configuration" asp-action="ProductUnits">Product Units</a>
-                    <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Configuration.LowStockSettings" ? "active" : "")" asp-controller="Configuration" asp-action="LowStockSettings">Low Stock Settings</a>
+                    @* Hidden: low stock settings are backend-backed but not ready as a primary production menu item. *@
                     <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Configuration.Tanks" ? "active" : "")" asp-controller="Configuration" asp-action="Tanks">Tanks</a>
                 </div>
             </div>
@@ -82,14 +83,7 @@
                             <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Transaction.FuelSales" ? "active" : "")" asp-controller="Transaction" asp-action="FuelSales">Fuel Sales</a>
                         </div>
                     </div>
-                    <div class="dropend eg-rb-dropdown-group">
-                        <button class="dropdown-item eg-rb-dropdown-group-toggle" type="button">Cash</button>
-                        <div class="dropdown-menu eg-rb-submenu">
-                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Transaction.DailyCash" ? "active" : "")" asp-controller="Transaction" asp-action="DailyCash">Daily Cash</a>
-                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Transaction.CashIn" ? "active" : "")" asp-controller="Transaction" asp-action="CashIn">Cash In</a>
-                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Transaction.CashOut" ? "active" : "")" asp-controller="Transaction" asp-action="CashOut">Cash Out</a>
-                        </div>
-                    </div>
+                    @* Hidden: Cash group is UI-only; Daily Cash, Cash In, and Cash Out backend are not implemented yet. *@
                     <div class="dropend eg-rb-dropdown-group">
                         <button class="dropdown-item eg-rb-dropdown-group-toggle" type="button">Stock Receiving</button>
                         <div class="dropdown-menu eg-rb-submenu">
@@ -105,29 +99,9 @@
                             <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Transaction.BranchToBranchProduct" ? "active" : "")" asp-controller="Transaction" asp-action="BranchToBranchProduct">Branch to Branch Product</a>
                         </div>
                     </div>
-                    <div class="dropend eg-rb-dropdown-group">
-                        <button class="dropdown-item eg-rb-dropdown-group-toggle" type="button">Returns</button>
-                        <div class="dropdown-menu eg-rb-submenu">
-                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Transaction.ProductReturn" ? "active" : "")" asp-controller="Transaction" asp-action="ProductReturn">Product Return</a>
-                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Transaction.FuelReturn" ? "active" : "")" asp-controller="Transaction" asp-action="FuelReturn">Fuel Return</a>
-                        </div>
-                    </div>
-                    <div class="dropend eg-rb-dropdown-group">
-                        <button class="dropdown-item eg-rb-dropdown-group-toggle" type="button">Void</button>
-                        <div class="dropdown-menu eg-rb-submenu">
-                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Transaction.VoidSale" ? "active" : "")" asp-controller="Transaction" asp-action="VoidSale">Void Sale</a>
-                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Transaction.VoidProduct" ? "active" : "")" asp-controller="Transaction" asp-action="VoidProduct">Void Product</a>
-                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Transaction.VoidFuel" ? "active" : "")" asp-controller="Transaction" asp-action="VoidFuel">Void Fuel</a>
-                        </div>
-                    </div>
-                    <div class="dropend eg-rb-dropdown-group">
-                        <button class="dropdown-item eg-rb-dropdown-group-toggle" type="button">Adjustments</button>
-                        <div class="dropdown-menu eg-rb-submenu">
-                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Transaction.DisplayStockAdjustment" ? "active" : "")" asp-controller="Transaction" asp-action="DisplayStockAdjustment">Display Stock Adjustment</a>
-                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Transaction.WarehouseStockAdjustment" ? "active" : "")" asp-controller="Transaction" asp-action="WarehouseStockAdjustment">Warehouse Stock Adjustment</a>
-                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Transaction.TankFuelAdjustment" ? "active" : "")" asp-controller="Transaction" asp-action="TankFuelAdjustment">Tank Fuel Adjustment</a>
-                        </div>
-                    </div>
+                    @* Hidden: Returns group is UI-only; product and fuel return backend are not implemented yet. *@
+                    @* Hidden: Void group is UI-only; sale, product, and fuel void backend are not implemented yet. *@
+                    @* Hidden: Stock Adjustments group is UI-only; display, warehouse, and tank adjustment backend are not implemented yet. *@
                     <div class="dropend eg-rb-dropdown-group">
                         <button class="dropdown-item eg-rb-dropdown-group-toggle" type="button">Price Adjustment</button>
                         <div class="dropdown-menu eg-rb-submenu">
@@ -137,41 +111,7 @@
                     </div>
                 </div>
             </div>
-            <div class="dropdown eg-rb-nav-dropdown">
-                <button class="eg-rb-tab dropdown-toggle @(Model.ActiveTab == "Reports" ? "is-active" : "")" type="button" id="gposReportsDropdown" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">Reports</button>
-                <div class="dropdown-menu eg-rb-setup-menu" aria-labelledby="gposReportsDropdown">
-                    <div class="dropend eg-rb-dropdown-group">
-                        <button class="dropdown-item eg-rb-dropdown-group-toggle" type="button">Sales Reports</button>
-                        <div class="dropdown-menu eg-rb-submenu">
-                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Reports.DailySales" ? "active" : "")" asp-controller="Reports" asp-action="DailySales">Daily Sales</a>
-                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Reports.FuelSales" ? "active" : "")" asp-controller="Reports" asp-action="FuelSales">Fuel Sales</a>
-                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Reports.ProductSales" ? "active" : "")" asp-controller="Reports" asp-action="ProductSales">Product Sales</a>
-                        </div>
-                    </div>
-                    <div class="dropend eg-rb-dropdown-group">
-                        <button class="dropdown-item eg-rb-dropdown-group-toggle" type="button">Shift and Cash Reports</button>
-                        <div class="dropdown-menu eg-rb-submenu">
-                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Reports.ShiftReport" ? "active" : "")" asp-controller="Reports" asp-action="ShiftReport">Shift Report</a>
-                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Reports.CashReport" ? "active" : "")" asp-controller="Reports" asp-action="CashReport">Cash Report</a>
-                        </div>
-                    </div>
-                    <div class="dropend eg-rb-dropdown-group">
-                        <button class="dropdown-item eg-rb-dropdown-group-toggle" type="button">Inventory Reports</button>
-                        <div class="dropdown-menu eg-rb-submenu">
-                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Reports.InventoryReport" ? "active" : "")" asp-controller="Reports" asp-action="InventoryReport">Inventory Report</a>
-                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Reports.PurchaseHistory" ? "active" : "")" asp-controller="Reports" asp-action="PurchaseHistory">Purchase History</a>
-                        </div>
-                    </div>
-                    <div class="dropend eg-rb-dropdown-group">
-                        <button class="dropdown-item eg-rb-dropdown-group-toggle" type="button">Daily Stock</button>
-                        <div class="dropdown-menu eg-rb-submenu">
-                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Reports.WarehouseDailyStock" ? "active" : "")" asp-controller="Reports" asp-action="WarehouseDailyStock">Warehouse</a>
-                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Reports.DisplayDailyStock" ? "active" : "")" asp-controller="Reports" asp-action="DisplayDailyStock">Display</a>
-                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Reports.TankDailyStock" ? "active" : "")" asp-controller="Reports" asp-action="TankDailyStock">Tank</a>
-                        </div>
-                    </div>
-                </div>
-            </div>
+            @* Hidden: Reports menu is placeholder/static; report pages should return once data-backed. *@
         </nav>
 
         <details class="eg-rb-user" id="gposUserDropdown">

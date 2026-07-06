@@ -35,6 +35,7 @@ namespace gpos.Data
         public DbSet<FuelDelivery> FuelDeliveries { get; set; }
         public DbSet<FuelBatch> FuelBatches { get; set; }
         public DbSet<FuelPriceHistory> FuelPriceHistory { get; set; }
+        public DbSet<ProductPriceHistory> ProductPriceHistory { get; set; }
         public DbSet<PumpMeterReading> PumpMeterReadings { get; set; }
         public DbSet<Discount> Discounts { get; set; }
         public DbSet<Earnings> Earnings { get; set; }
@@ -404,6 +405,40 @@ namespace gpos.Data
                 entity.HasOne(history => history.Fuel)
                     .WithMany(fuel => fuel.FuelPriceHistory)
                     .HasForeignKey(history => history.FuelId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            modelBuilder.Entity<ProductPriceHistory>(entity =>
+            {
+                entity.ToTable("product_price_history");
+                entity.HasKey(history => history.Id);
+
+                entity.Property(history => history.Id).HasColumnName("id");
+                entity.Property(history => history.ProductId).HasColumnName("product_id");
+                entity.Property(history => history.BatchId).HasColumnName("batch_id");
+                entity.Property(history => history.OldPrice).HasColumnName("old_price").HasPrecision(10, 2);
+                entity.Property(history => history.NewPrice).HasColumnName("new_price").HasPrecision(10, 2);
+                entity.Property(history => history.EffectiveDate).HasColumnName("effective_date");
+                entity.Property(history => history.Remarks).HasColumnName("remarks").HasMaxLength(255);
+                entity.Property(history => history.CreatedBy).HasColumnName("created_by");
+                entity.Property(history => history.Status).HasColumnName("status").HasDefaultValue(1);
+                entity.Property(history => history.CreatedAt).HasColumnName("created_at");
+                entity.Property(history => history.UpdatedAt).HasColumnName("updated_at");
+
+                entity.HasIndex(history => history.ProductId);
+                entity.HasIndex(history => history.BatchId);
+                entity.HasIndex(history => history.CreatedBy);
+                entity.HasOne(history => history.Product)
+                    .WithMany()
+                    .HasForeignKey(history => history.ProductId)
+                    .OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne(history => history.Batch)
+                    .WithMany()
+                    .HasForeignKey(history => history.BatchId)
+                    .OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne<User>()
+                    .WithMany()
+                    .HasForeignKey(history => history.CreatedBy)
                     .OnDelete(DeleteBehavior.Restrict);
             });
 

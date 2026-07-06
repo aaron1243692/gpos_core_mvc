@@ -16,11 +16,13 @@ namespace gpos.Controllers
         private static readonly string[] SaleStatuses = ["Completed", "Voided", "Returned", "Cancelled"];
         private readonly ApplicationDbContext _db;
         private readonly FinancialMetricsService _financialMetrics;
+        private readonly ProductBatchNumberService _batchNumberService;
 
-        public TransactionController(ApplicationDbContext db, FinancialMetricsService financialMetrics)
+        public TransactionController(ApplicationDbContext db, FinancialMetricsService financialMetrics, ProductBatchNumberService batchNumberService)
         {
             _db = db;
             _financialMetrics = financialMetrics;
+            _batchNumberService = batchNumberService;
         }
 
         public async Task<IActionResult> POS()
@@ -839,7 +841,63 @@ namespace gpos.Controllers
         public IActionResult DisplayStockAdjustment() => View();
         public IActionResult WarehouseStockAdjustment() => View();
         public IActionResult TankFuelAdjustment() => View();
-        public IActionResult ProductPriceAdjustment() => View();
+        public async Task<IActionResult> ProductPriceAdjustment(string? search)
+        {
+            return View(await BuildProductPriceAdjustmentPageAsync(search));
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> SaveProductPriceAdjustment([Bind(Prefix = "ProductPriceHistoryForm")] ProductPriceHistoryForm form, string? search)
+        {
+            if (!ModelState.IsValid)
+            {
+                return View("ProductPriceAdjustment", await BuildProductPriceAdjustmentPageAsync(search, form, "productPriceAdjustmentModal"));
+            }
+
+            var product = await _db.Products.AsNoTracking().FirstOrDefaultAsync(item => item.Id == form.ProductId && item.Status == 1 && item.IsActive);
+            if (product is null)
+            {
+                ModelState.AddModelError("ProductPriceHistoryForm.ProductId", "Select a product.");
+                return View("ProductPriceAdjustment", await BuildProductPriceAdjustmentPageAsync(search, form, "productPriceAdjustmentModal"));
+            }
+
+            var batch = await ResolveProductPriceBatchAsync(form.ProductId, form.BatchId);
+            if (batch is null)
+            {
+                ModelState.AddModelError("ProductPriceHistoryForm.BatchId", "No active batch was found for this product.");
+                return View("ProductPriceAdjustment", await BuildProductPriceAdjustmentPageAsync(search, form, "productPriceAdjustmentModal"));
+            }
+
+            var newPrice = form.NewPrice!.Value;
+            if (newPrice == batch.SellingPrice)
+            {
+                ModelState.AddModelError("ProductPriceHistoryForm.NewPrice", "New Selling Price must be different from the current price.");
+                form.CurrentPrice = batch.SellingPrice;
+                return View("ProductPriceAdjustment", await BuildProductPriceAdjustmentPageAsync(search, form, "productPriceAdjustmentModal"));
+            }
+
+            var now = DateTime.UtcNow;
+            var history = new ProductPriceHistory
+            {
+                ProductId = form.ProductId,
+                BatchId = batch.Id,
+                OldPrice = batch.SellingPrice,
+                NewPrice = newPrice,
+                EffectiveDate = form.EffectiveDate!.Value,
+                Remarks = CleanOptional(form.Remarks),
+                CreatedBy = CurrentUserId(),
+                Status = 1,
+                CreatedAt = now,
+                UpdatedAt = now
+            };
+
+            batch.SellingPrice = newPrice;
+            batch.UpdatedAt = now;
+            _db.ProductPriceHistory.Add(history);
+            await _db.SaveChangesAsync();
+            return RedirectToAction(nameof(ProductPriceAdjustment), new { search });
+        }
 
         public async Task<IActionResult> FuelPriceAdjustment(string? search)
         {
@@ -1358,6 +1416,95 @@ namespace gpos.Controllers
             };
         }
 
+        private async Task<SetupModulesPageViewModel> BuildProductPriceAdjustmentPageAsync(string? search, ProductPriceHistoryForm? form = null, string activeModalId = "")
+        {
+            IQueryable<ProductPriceHistory> query = _db.ProductPriceHistory
+                .AsNoTracking()
+                .Include(history => history.Product)
+                .Include(history => history.Batch);
+            var searchText = (search ?? string.Empty).Trim();
+
+            if (!string.IsNullOrWhiteSpace(searchText))
+            {
+                var createdByIds = await _db.Users
+                    .AsNoTracking()
+                    .Where(user => user.Username.Contains(searchText) || (user.FullName != null && user.FullName.Contains(searchText)))
+                    .Select(user => user.Id)
+                    .ToListAsync();
+                var hasPriceSearch = decimal.TryParse(searchText, out var priceSearch);
+
+                query = query.Where(history =>
+                    (history.Product != null && history.Product.Name.Contains(searchText))
+                    || (history.Batch != null && history.Batch.BatchNo.Contains(searchText))
+                    || (hasPriceSearch && (history.OldPrice == priceSearch || history.NewPrice == priceSearch))
+                    || (history.CreatedBy.HasValue && createdByIds.Contains(history.CreatedBy.Value)));
+            }
+
+            var histories = await query
+                .OrderByDescending(history => history.EffectiveDate)
+                .ThenByDescending(history => history.CreatedAt)
+                .ThenByDescending(history => history.Id)
+                .ToListAsync();
+            var createdByUserIds = histories
+                .Where(history => history.CreatedBy.HasValue)
+                .Select(history => history.CreatedBy!.Value)
+                .Distinct()
+                .ToList();
+            var users = await _db.Users.AsNoTracking()
+                .Where(user => createdByUserIds.Contains(user.Id))
+                .ToDictionaryAsync(user => user.Id, user => string.IsNullOrWhiteSpace(user.FullName) ? user.Username : user.FullName!);
+            var currentHistoryIds = await _db.ProductPriceHistory.AsNoTracking()
+                .Where(history => history.Status == 1)
+                .GroupBy(history => history.ProductId)
+                .Select(group => group
+                    .OrderByDescending(history => history.EffectiveDate)
+                    .ThenByDescending(history => history.CreatedAt)
+                    .ThenByDescending(history => history.Id)
+                    .Select(history => history.Id)
+                    .First())
+                .ToListAsync();
+
+            return new SetupModulesPageViewModel
+            {
+                Search = searchText,
+                ActiveModalId = activeModalId,
+                ProductPriceHistoryForm = form ?? new ProductPriceHistoryForm(),
+                ProductOptions = await BuildProductOptionsAsync(),
+                ProductBatches = await BuildActiveProductPriceBatchesAsync(),
+                ProductPriceHistory = histories,
+                ProductPriceHistoryCreatedBy = users,
+                CurrentProductPriceHistoryIds = currentHistoryIds.ToHashSet()
+            };
+        }
+
+        private async Task<ProductBatch?> ResolveProductPriceBatchAsync(int productId, int? batchId)
+        {
+            var query = _db.ProductBatches
+                .Where(batch => batch.ProductId == productId && batch.Status == 1 && batch.IsActive);
+
+            if (batchId.HasValue && batchId.Value > 0)
+            {
+                return await query.FirstOrDefaultAsync(batch => batch.Id == batchId.Value);
+            }
+
+            return await query
+                .OrderByDescending(batch => batch.CreatedAt ?? DateTime.MinValue)
+                .ThenByDescending(batch => batch.Id)
+                .FirstOrDefaultAsync();
+        }
+
+        private async Task<List<ProductBatch>> BuildActiveProductPriceBatchesAsync()
+        {
+            return await _db.ProductBatches
+                .AsNoTracking()
+                .Include(batch => batch.Product)
+                .Where(batch => batch.Status == 1 && batch.IsActive && batch.Product != null && batch.Product.Status == 1 && batch.Product.IsActive)
+                .OrderBy(batch => batch.Product!.Name)
+                .ThenByDescending(batch => batch.CreatedAt ?? DateTime.MinValue)
+                .ThenByDescending(batch => batch.Id)
+                .ToListAsync();
+        }
+
         private async Task<SetupModulesPageViewModel> BuildFuelPriceAdjustmentPageAsync(string? search, FuelPriceHistoryForm? form = null, string activeModalId = "")
         {
             IQueryable<FuelPriceHistory> query = _db.FuelPriceHistory.AsNoTracking().Include(history => history.Fuel);
@@ -1409,7 +1556,7 @@ namespace gpos.Controllers
             {
                 ProductId = form.ProductId,
                 SupplierId = form.SupplierId,
-                BatchNo = await GenerateNextBatchNoAsync(),
+                BatchNo = await _batchNumberService.GenerateNextBatchNoAsync(),
                 CostPrice = form.CostPrice,
                 SellingPrice = form.SellingPrice,
                 ExpiryDate = form.ExpiryDate,
@@ -1537,35 +1684,6 @@ namespace gpos.Controllers
             }
         }
 
-        private async Task<string> GenerateNextBatchNoAsync()
-        {
-            var batchNumbers = await _db.ProductBatches
-                .AsNoTracking()
-                .Select(batch => batch.BatchNo)
-                .ToListAsync();
-            var nextNumber = 1;
-
-            for (var i = 0; i < batchNumbers.Count; i += 1)
-            {
-                if (int.TryParse(batchNumbers[i], out var numericBatchNo) && numericBatchNo >= nextNumber)
-                {
-                    nextNumber = numericBatchNo + 1;
-                }
-            }
-
-            while (true)
-            {
-                var batchNo = nextNumber.ToString("D8");
-                var exists = await _db.ProductBatches.AsNoTracking().AnyAsync(batch => batch.BatchNo == batchNo);
-                if (!exists)
-                {
-                    return batchNo;
-                }
-
-                nextNumber += 1;
-            }
-        }
-
         private async Task CompleteProductReceiving(StockReceiving receiving, StockReceivingItem item, int userId, DateTime now)
         {
             if (!item.ProductBatchId.HasValue)
@@ -1664,7 +1782,6 @@ namespace gpos.Controllers
 
         private async Task<StockTransferPageViewModel> BuildStockTransferPage(string transferType, string title, string saveAction, string completeAction, string cancelAction, string? search)
         {
-            await EnsureStockTransferSchemaAsync();
             var searchText = (search ?? string.Empty).Trim();
             var query = _db.StockTransfers
                 .AsNoTracking()
@@ -1742,7 +1859,6 @@ namespace gpos.Controllers
 
         private async Task<IActionResult> SaveStockTransfer(string transferType, StockTransferForm form, string redirectAction, string? search)
         {
-            await EnsureStockTransferSchemaAsync();
             var userId = CurrentUserId();
             if (!userId.HasValue)
             {
@@ -1811,7 +1927,6 @@ namespace gpos.Controllers
 
         private async Task<IActionResult> SaveProductTransferFifo(string transferType, StockTransferForm form, string redirectAction, string? search)
         {
-            await EnsureStockTransferSchemaAsync();
             var userId = CurrentUserId();
             if (!userId.HasValue)
             {
@@ -1886,7 +2001,6 @@ namespace gpos.Controllers
 
         private async Task<IActionResult> CompleteStockTransfer(int id, string redirectAction, string? search)
         {
-            await EnsureStockTransferSchemaAsync();
             var userId = CurrentUserId();
             if (!userId.HasValue)
             {
@@ -1937,7 +2051,6 @@ namespace gpos.Controllers
 
         private async Task<IActionResult> CancelStockTransfer(int id, string redirectAction, string? search)
         {
-            await EnsureStockTransferSchemaAsync();
             var transfer = await _db.StockTransfers.FindAsync(id);
             if (transfer is not null && transfer.Status == "Pending")
             {
@@ -2350,79 +2463,6 @@ namespace gpos.Controllers
         private async Task<string> GenerateTransferNoAsync()
         {
             return $"TRF-{DateTime.Now:yyyyMMdd}-{await _db.StockTransfers.CountAsync() + 1:0000}";
-        }
-
-        private async Task EnsureStockTransferSchemaAsync()
-        {
-            await EnsureColumnAsync("warehouse_stocks", "branch_id", "INT NULL");
-            await EnsureColumnAsync("display_stocks", "branch_id", "INT NULL");
-            await EnsureColumnAsync("tanks", "branch_id", "INT NULL");
-
-            await _db.Database.ExecuteSqlRawAsync("""
-                CREATE TABLE IF NOT EXISTS `stock_transfers` (
-                    `id` INT NOT NULL AUTO_INCREMENT,
-                    `transfer_no` VARCHAR(100) NOT NULL,
-                    `transfer_type` VARCHAR(100) NOT NULL,
-                    `source_branch_id` INT NULL,
-                    `destination_branch_id` INT NULL,
-                    `source_location` VARCHAR(50) NULL,
-                    `destination_location` VARCHAR(50) NULL,
-                    `status` VARCHAR(50) NOT NULL DEFAULT 'Pending',
-                    `remarks` VARCHAR(255) NULL,
-                    `transferred_by` INT NULL,
-                    `completed_at` DATETIME(6) NULL,
-                    `cancelled_at` DATETIME(6) NULL,
-                    `created_at` DATETIME(6) NULL,
-                    `updated_at` DATETIME(6) NULL,
-                    PRIMARY KEY (`id`),
-                    UNIQUE KEY `IX_stock_transfers_transfer_no` (`transfer_no`),
-                    KEY `IX_stock_transfers_source_branch_id` (`source_branch_id`),
-                    KEY `IX_stock_transfers_destination_branch_id` (`destination_branch_id`),
-                    KEY `IX_stock_transfers_transferred_by` (`transferred_by`)
-                );
-                """);
-
-            await _db.Database.ExecuteSqlRawAsync("""
-                CREATE TABLE IF NOT EXISTS `stock_transfer_items` (
-                    `id` INT NOT NULL AUTO_INCREMENT,
-                    `stock_transfer_id` INT NOT NULL,
-                    `product_id` INT NULL,
-                    `batch_id` INT NULL,
-                    `fuel_id` INT NULL,
-                    `source_tank_id` INT NULL,
-                    `destination_tank_id` INT NULL,
-                    `quantity` DECIMAL(18,2) NULL,
-                    `liters` DECIMAL(18,2) NULL,
-                    `source_before` DECIMAL(18,2) NULL,
-                    `source_after` DECIMAL(18,2) NULL,
-                    `destination_before` DECIMAL(18,2) NULL,
-                    `destination_after` DECIMAL(18,2) NULL,
-                    `created_at` DATETIME(6) NULL,
-                    `updated_at` DATETIME(6) NULL,
-                    PRIMARY KEY (`id`),
-                    KEY `IX_stock_transfer_items_stock_transfer_id` (`stock_transfer_id`),
-                    KEY `IX_stock_transfer_items_product_id` (`product_id`),
-                    KEY `IX_stock_transfer_items_batch_id` (`batch_id`),
-                    KEY `IX_stock_transfer_items_fuel_id` (`fuel_id`),
-                    KEY `IX_stock_transfer_items_source_tank_id` (`source_tank_id`),
-                    KEY `IX_stock_transfer_items_destination_tank_id` (`destination_tank_id`)
-                );
-                """);
-        }
-
-        private async Task EnsureColumnAsync(string tableName, string columnName, string definition)
-        {
-            var exists = await _db.Database
-                .SqlQueryRaw<int>(
-                    "SELECT COUNT(*) AS `Value` FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = {0} AND COLUMN_NAME = {1}",
-                    tableName,
-                    columnName)
-                .SingleAsync();
-
-            if (exists == 0)
-            {
-                await _db.Database.ExecuteSqlRawAsync($"ALTER TABLE `{tableName}` ADD COLUMN `{columnName}` {definition};");
-            }
         }
 
         private int? CurrentUserId()
