@@ -101,14 +101,11 @@
                         </div>
                     </div>
                     <div class="dropend eg-rb-dropdown-group">
-                        <button class="dropdown-item eg-rb-dropdown-group-toggle nav-group-not-working" type="button">Low Stock Settings <span class="nav-status-pill">Not Working</span></button>
+                        <button class="dropdown-item eg-rb-dropdown-group-toggle" type="button">Low Stock Settings </button>
                         <div class="dropdown-menu eg-rb-submenu">
-                            @* Not working: Low Stock backend is not implemented yet *@
-                            <a class="dropdown-item eg-rb-dropdown-link nav-page-not-working @(Model.ActivePage == "Inventory.LowStockWarehouse" ? "active" : "")" asp-controller="Inventory" asp-action="LowStockWarehouse">Warehouse <span class="nav-status-pill">Not Working</span></a>
-                            @* Not working: Low Stock backend is not implemented yet *@
-                            <a class="dropdown-item eg-rb-dropdown-link nav-page-not-working @(Model.ActivePage == "Inventory.LowStockDisplay" ? "active" : "")" asp-controller="Inventory" asp-action="LowStockDisplay">Display <span class="nav-status-pill">Not Working</span></a>
-                            @* Not working: Low Stock backend is not implemented yet *@
-                            <a class="dropdown-item eg-rb-dropdown-link nav-page-not-working @(Model.ActivePage == "Inventory.LowStockFuel" ? "active" : "")" asp-controller="Inventory" asp-action="LowStockFuel">Fuel <span class="nav-status-pill">Not Working</span></a>
+                            <a class="dropdown-item eg-rb-dropdown-link  @(Model.ActivePage == "Inventory.LowStockWarehouse" ? "active" : "")" asp-controller="Inventory" asp-action="LowStockWarehouse">Warehouse </a>
+                            <a class="dropdown-item eg-rb-dropdown-link  @(Model.ActivePage == "Inventory.LowStockDisplay" ? "active" : "")" asp-controller="Inventory" asp-action="LowStockDisplay">Display </a>
+                            <a class="dropdown-item eg-rb-dropdown-link  @(Model.ActivePage == "Inventory.LowStockFuel" ? "active" : "")" asp-controller="Inventory" asp-action="LowStockFuel">Fuel </a>
                         </div>
                     </div>
                 </div>

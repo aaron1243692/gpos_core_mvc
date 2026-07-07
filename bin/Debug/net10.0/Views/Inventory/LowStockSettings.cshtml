@@ -1,0 +1,175 @@
+@model gpos.Models.ViewModels.LowStockSettingsPageViewModel
+
+@{
+    var isFuel = Model.StockType == "Fuel";
+    var isEdit = Model.Form.Id > 0;
+}
+
+<div class="page-header">
+    <div class="page-heading">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item">GPOS</li>
+                <li class="breadcrumb-item">Inventory</li>
+                <li class="breadcrumb-item">Low Stock Settings</li>
+                <li class="breadcrumb-item active" aria-current="page">@Model.StockType</li>
+            </ol>
+        </nav>
+        <h1>@Model.PageTitle</h1>
+        <p class="page-subtitle">@Model.Description</p>
+    </div>
+</div>
+
+<section class="content-card setup-crud-card setup-table-card">
+    <div class="table-actions fuel-toolbar">
+        <form asp-action="@Model.PageAction" method="get" class="setup-search-form fuel-toolbar-search">
+            <input class="form-control" name="search" value="@Model.Search" placeholder="Search low stock settings" />
+        </form>
+        <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#lowStockSettingModal">Add Setting</button>
+    </div>
+
+    <div class="setup-table-scroll">
+        <table class="table app-table table-sm align-middle admin-table mb-0">
+            <colgroup>
+                <col class="col-no" />
+                <col class="col-name" />
+                @if (isFuel)
+                {
+                    <col class="col-normal" />
+                }
+                <col class="col-normal" />
+                <col class="col-normal" />
+                <col class="col-status" />
+                <col class="col-normal" />
+                <col class="col-action" />
+            </colgroup>
+            <thead>
+                <tr>
+                    <th scope="col">No</th>
+                    <th scope="col">@(isFuel ? "Tank" : "Product")</th>
+                    @if (isFuel)
+                    {
+                        <th scope="col">Fuel</th>
+                    }
+                    <th scope="col">@Model.QuantityLabel</th>
+                    <th scope="col">Threshold</th>
+                    <th scope="col">Status</th>
+                    <th scope="col">Updated</th>
+                    <th scope="col">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model.Settings.Count == 0)
+                {
+                    <tr>
+                        <td class="text-center text-muted fw-bold" colspan="@(isFuel ? 8 : 7)">@Model.EmptyMessage</td>
+                    </tr>
+                }
+                @for (var i = 0; i < Model.Settings.Count; i += 1)
+                {
+                    var row = Model.Settings[i];
+                    <tr>
+                        <td>@(i + 1)</td>
+                        <td>@(isFuel ? row.TankName : row.ProductName)</td>
+                        @if (isFuel)
+                        {
+                            <td>@row.FuelName</td>
+                        }
+                        <td>@row.CurrentQuantity.ToString("N2")</td>
+                        <td>@row.Threshold.ToString("N2")</td>
+                        <td>
+                            <span class="badge @(row.Status == "Low Stock" ? "text-bg-warning" : "text-bg-success")">@row.Status</span>
+                        </td>
+                        <td>@(row.UpdatedAt?.ToString("yyyy-MM-dd HH:mm") ?? "-")</td>
+                        <td class="col-action">
+                            <a class="btn btn-sm btn-outline-primary" asp-action="@Model.PageAction" asp-route-editId="@row.Id" asp-route-search="@Model.Search">Edit</a>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<div class="modal fade" id="lowStockSettingModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <form asp-action="@Model.SaveAction" method="post">
+                @Html.AntiForgeryToken()
+                <input asp-for="Form.Id" type="hidden" />
+                <input asp-for="Form.StockType" type="hidden" />
+                <input name="search" type="hidden" value="@Model.Search" />
+
+                <div class="modal-header">
+                    <h2 class="modal-title fs-5">@(isEdit ? "Edit Low Stock Setting" : "Add Low Stock Setting")</h2>
+                    <button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    @if (isFuel)
+                    {
+                        <div class="mb-3">
+                            <label asp-for="Form.TankId" class="form-label">Tank</label>
+                            @if (isEdit)
+                            {
+                                <input asp-for="Form.TankId" type="hidden" />
+                                <select asp-for="Form.TankId" asp-items="Model.TankOptions" class="form-select" disabled>
+                                    <option value="">Select tank</option>
+                                </select>
+                            }
+                            else
+                            {
+                                <select asp-for="Form.TankId" asp-items="Model.TankOptions" class="form-select">
+                                    <option value="">Select tank</option>
+                                </select>
+                            }
+                            <span asp-validation-for="Form.TankId" class="text-danger"></span>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="mb-3">
+                            <label asp-for="Form.ProductId" class="form-label">Product</label>
+                            @if (isEdit)
+                            {
+                                <input asp-for="Form.ProductId" type="hidden" />
+                                <select asp-for="Form.ProductId" asp-items="Model.ProductOptions" class="form-select" disabled>
+                                    <option value="">Select product</option>
+                                </select>
+                            }
+                            else
+                            {
+                                <select asp-for="Form.ProductId" asp-items="Model.ProductOptions" class="form-select">
+                                    <option value="">Select product</option>
+                                </select>
+                            }
+                            <span asp-validation-for="Form.ProductId" class="text-danger"></span>
+                        </div>
+                    }
+
+                    <div class="mb-3">
+                        <label asp-for="Form.Threshold" class="form-label">Threshold</label>
+                        <input asp-for="Form.Threshold" class="form-control" type="number" min="0" step="0.01" />
+                        <span asp-validation-for="Form.Threshold" class="text-danger"></span>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button>
+                    <button class="btn btn-primary" type="submit">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            const id = "@Model.ActiveModalId";
+            const el = id ? document.getElementById(id) : null;
+            if (el && window.bootstrap) {
+                bootstrap.Modal.getOrCreateInstance(el).show();
+            }
+        });
+    </script>
+}

@@ -66,6 +66,7 @@ namespace gpos.Data
         public DbSet<VoucherRedemption> VoucherRedemptions { get; set; }
         public DbSet<FinancialMetric> FinancialMetrics { get; set; }
         public DbSet<VatSetting> VatSettings { get; set; }
+        public DbSet<DailyStockRecord> DailyStockRecords { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -726,14 +727,17 @@ namespace gpos.Data
                 entity.Property(setting => setting.Id).HasColumnName("id");
                 entity.Property(setting => setting.ProductId).HasColumnName("product_id");
                 entity.Property(setting => setting.ProductBatchId).HasColumnName("product_batch_id");
+                entity.Property(setting => setting.TankId).HasColumnName("tank_id");
                 entity.Property(setting => setting.Location).HasColumnName("location").HasMaxLength(50).IsRequired();
                 entity.Property(setting => setting.MinimumQuantity).HasColumnName("minimum_quantity").HasPrecision(18, 2).HasDefaultValue(0m);
+                entity.Property(setting => setting.UnitLabel).HasColumnName("unit_label").HasMaxLength(50);
                 entity.Property(setting => setting.Status).HasColumnName("status").HasDefaultValue(1);
                 entity.Property(setting => setting.CreatedAt).HasColumnName("created_at");
                 entity.Property(setting => setting.UpdatedAt).HasColumnName("updated_at");
 
                 entity.HasIndex(setting => setting.ProductId);
                 entity.HasIndex(setting => setting.ProductBatchId);
+                entity.HasIndex(setting => setting.TankId);
                 entity.HasOne(setting => setting.Product)
                     .WithMany(product => product.LowStockSettings)
                     .HasForeignKey(setting => setting.ProductId)
@@ -741,6 +745,10 @@ namespace gpos.Data
                 entity.HasOne(setting => setting.ProductBatch)
                     .WithMany(batch => batch.LowStockSettings)
                     .HasForeignKey(setting => setting.ProductBatchId)
+                    .OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne(setting => setting.Tank)
+                    .WithMany()
+                    .HasForeignKey(setting => setting.TankId)
                     .OnDelete(DeleteBehavior.Restrict);
             });
 
@@ -1564,6 +1572,40 @@ namespace gpos.Data
                 entity.HasIndex(setting => setting.IsDefault);
                 entity.HasIndex(setting => setting.IsActive);
                 entity.HasIndex(setting => setting.Type);
+            });
+
+            modelBuilder.Entity<DailyStockRecord>(entity =>
+            {
+                entity.ToTable("daily_stock_records");
+                entity.HasKey(record => record.Id);
+
+                entity.Property(record => record.Id).HasColumnName("id");
+                entity.Property(record => record.StockType).HasColumnName("stock_type").HasMaxLength(50).IsRequired();
+                entity.Property(record => record.StockDate).HasColumnName("record_date").HasColumnType("date");
+                entity.Property(record => record.ProductId).HasColumnName("product_id");
+                entity.Property(record => record.BatchId).HasColumnName("batch_id");
+                entity.Property(record => record.TankId).HasColumnName("tank_id");
+                entity.Property(record => record.FuelId).HasColumnName("fuel_id");
+                entity.Property(record => record.Beginning).HasColumnName("beginning_quantity").HasPrecision(18, 2);
+                entity.Property(record => record.Sold).HasColumnName("sold_quantity").HasPrecision(18, 2);
+                entity.Property(record => record.Actual).HasColumnName("actual_quantity").HasPrecision(18, 2);
+                entity.Property(record => record.Ending).HasColumnName("ending_quantity").HasPrecision(18, 2);
+                entity.Property(record => record.Loss).HasColumnName("loss_quantity").HasPrecision(18, 2);
+                entity.Property(record => record.Remarks).HasColumnName("remarks").HasMaxLength(255);
+                entity.Property(record => record.CreatedBy).HasColumnName("created_by");
+                entity.Property(record => record.CreatedAt).HasColumnName("created_at");
+                entity.Property(record => record.UpdatedAt).HasColumnName("updated_at");
+
+                entity.HasIndex(record => record.StockDate);
+                entity.HasIndex(record => record.StockType);
+                entity.HasIndex(record => record.ProductId);
+                entity.HasIndex(record => record.BatchId);
+                entity.HasIndex(record => record.TankId);
+                entity.HasIndex(record => record.FuelId);
+                entity.HasOne(record => record.Product).WithMany().HasForeignKey(record => record.ProductId).OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne(record => record.Batch).WithMany().HasForeignKey(record => record.BatchId).OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne(record => record.Tank).WithMany().HasForeignKey(record => record.TankId).OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne(record => record.Fuel).WithMany().HasForeignKey(record => record.FuelId).OnDelete(DeleteBehavior.Restrict);
             });
         }
     }

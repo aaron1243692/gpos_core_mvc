@@ -1606,7 +1606,7 @@ namespace gpos.Controllers
         private async Task<LowStockSettingForm> BuildLowStockSettingFormAsync(int? editId)
         {
             var item = editId.HasValue ? await _db.LowStockSettings.AsNoTracking().FirstOrDefaultAsync(setting => setting.Id == editId.Value) : null;
-            return item is null ? new LowStockSettingForm() : new LowStockSettingForm { Id = item.Id, ProductId = item.ProductId, ProductBatchId = item.ProductBatchId, Location = item.Location, MinimumQuantity = item.MinimumQuantity, Status = item.Status };
+            return item is null ? new LowStockSettingForm() : new LowStockSettingForm { Id = item.Id, ProductId = item.ProductId ?? 0, ProductBatchId = item.ProductBatchId, Location = item.Location, MinimumQuantity = item.MinimumQuantity, Status = item.Status };
         }
 
         private async Task<NozzleForm> BuildNozzleFormAsync(int? editId)

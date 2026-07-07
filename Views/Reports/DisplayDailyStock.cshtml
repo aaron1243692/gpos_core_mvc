@@ -1,3 +1,5 @@
+@model gpos.Models.ViewModels.DailyStockPageViewModel
+
 <div class="page-header">
     <div class="page-heading">
         <nav aria-label="breadcrumb">
@@ -8,36 +10,66 @@
                 <li class="breadcrumb-item active" aria-current="page">Display</li>
             </ol>
         </nav>
-        <h1>Display Daily Stock</h1>
-        <p class="page-subtitle">Review display daily stock counts.</p>
+        <h1>@Model.PageTitle</h1>
+        <p class="page-subtitle">@Model.Description</p>
     </div>
 </div>
 
-<section class="card content-card mb-4">
-    <div class="card-title-row">
-        <div>
-            <h2>Display Count</h2>
-            <p>Daily display stock count layout placeholder.</p>
-        </div>
+<section class="content-card setup-crud-card setup-table-card">
+    <div class="table-actions fuel-toolbar">
+        <form asp-action="@Model.PageAction" method="get" class="setup-search-form fuel-toolbar-search">
+            <input class="form-control" name="search" value="@Model.Search" placeholder="Search display daily stock" />
+        </form>
+        <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#dailyStockModal">Add Record</button>
     </div>
-    <div class="table-responsive">
-        <table class="table table-sm table-hover align-middle mb-0">
+
+    <div class="setup-table-scroll">
+        <table class="table app-table table-sm align-middle admin-table mb-0">
             <thead>
                 <tr>
-                    <th scope="col">No</th>
-                    <th scope="col">Date</th>
-                    <th scope="col">Product</th>
-                    <th scope="col">Beginning Count</th>
-                    <th scope="col">Ending Count</th>
-                    <th scope="col">Difference</th>
-                    <th scope="col">Status</th>
+                    <th>No</th>
+                    <th>Date</th>
+                    <th>Product</th>
+                    <th>Batch</th>
+                    <th>Beginning</th>
+                    <th>Sold</th>
+                    <th>Actual</th>
+                    <th>Ending</th>
+                    <th>Loss</th>
+                    <th>Remarks</th>
+                    <th>Action</th>
                 </tr>
             </thead>
             <tbody>
-                <tr>
-                    <td class="text-center text-muted fw-bold" colspan="7">No records yet.</td>
-                </tr>
+                @if (Model.Records.Count == 0)
+                {
+                    <tr><td class="text-center text-muted fw-bold" colspan="11">No records yet.</td></tr>
+                }
+                @for (var i = 0; i < Model.Records.Count; i += 1)
+                {
+                    var record = Model.Records[i];
+                    <tr>
+                        <td>@(i + 1)</td>
+                        <td>@record.StockDate.ToString("yyyy-MM-dd")</td>
+                        <td>@(record.Product?.Name ?? "-")</td>
+                        <td>@(record.Batch?.BatchNo ?? "-")</td>
+                        <td>@record.Beginning.ToString("N2")</td>
+                        <td>@record.Sold.ToString("N2")</td>
+                        <td>@record.Actual.ToString("N2")</td>
+                        <td>@record.Ending.ToString("N2")</td>
+                        <td>@record.Loss.ToString("N2")</td>
+                        <td>@(record.Remarks ?? "-")</td>
+                        <td class="col-action"><a class="btn btn-sm btn-outline-primary" asp-action="@Model.PageAction" asp-route-editId="@record.Id" asp-route-search="@Model.Search">Edit</a></td>
+                    </tr>
+                }
             </tbody>
         </table>
     </div>
 </section>
+
+<partial name="_ProductDailyStockModal" model="Model" />
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <partial name="_DailyStockScripts" model="Model" />
+}

@@ -111,6 +111,100 @@ namespace gpos.Migrations
                     b.ToTable("branches", (string)null);
                 });
 
+            modelBuilder.Entity("gpos.Models.DailyStockRecord", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("id");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal>("Actual")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("actual_quantity");
+
+                    b.Property<int?>("BatchId")
+                        .HasColumnType("int")
+                        .HasColumnName("batch_id");
+
+                    b.Property<decimal>("Beginning")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("beginning_quantity");
+
+                    b.Property<DateTime?>("CreatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("created_at");
+
+                    b.Property<int?>("CreatedBy")
+                        .HasColumnType("int")
+                        .HasColumnName("created_by");
+
+                    b.Property<decimal>("Ending")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("ending_quantity");
+
+                    b.Property<int?>("FuelId")
+                        .HasColumnType("int")
+                        .HasColumnName("fuel_id");
+
+                    b.Property<decimal>("Loss")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("loss_quantity");
+
+                    b.Property<int?>("ProductId")
+                        .HasColumnType("int")
+                        .HasColumnName("product_id");
+
+                    b.Property<string>("Remarks")
+                        .HasMaxLength(255)
+                        .HasColumnType("varchar(255)")
+                        .HasColumnName("remarks");
+
+                    b.Property<decimal>("Sold")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("sold_quantity");
+
+                    b.Property<DateTime>("StockDate")
+                        .HasColumnType("date")
+                        .HasColumnName("record_date");
+
+                    b.Property<string>("StockType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("varchar(50)")
+                        .HasColumnName("stock_type");
+
+                    b.Property<int?>("TankId")
+                        .HasColumnType("int")
+                        .HasColumnName("tank_id");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BatchId");
+
+                    b.HasIndex("FuelId");
+
+                    b.HasIndex("ProductId");
+
+                    b.HasIndex("StockDate");
+
+                    b.HasIndex("StockType");
+
+                    b.HasIndex("TankId");
+
+                    b.ToTable("daily_stock_records", (string)null);
+                });
+
             modelBuilder.Entity("gpos.Models.Department", b =>
                 {
                     b.Property<int>("Id")
@@ -1051,7 +1145,7 @@ namespace gpos.Migrations
                         .HasColumnType("int")
                         .HasColumnName("product_batch_id");
 
-                    b.Property<int>("ProductId")
+                    b.Property<int?>("ProductId")
                         .HasColumnType("int")
                         .HasColumnName("product_id");
 
@@ -1060,6 +1154,15 @@ namespace gpos.Migrations
                         .HasColumnType("int")
                         .HasDefaultValue(1)
                         .HasColumnName("status");
+
+                    b.Property<int?>("TankId")
+                        .HasColumnType("int")
+                        .HasColumnName("tank_id");
+
+                    b.Property<string>("UnitLabel")
+                        .HasMaxLength(50)
+                        .HasColumnType("varchar(50)")
+                        .HasColumnName("unit_label");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime(6)")
@@ -1070,6 +1173,8 @@ namespace gpos.Migrations
                     b.HasIndex("ProductBatchId");
 
                     b.HasIndex("ProductId");
+
+                    b.HasIndex("TankId");
 
                     b.ToTable("low_stock_settings", (string)null);
                 });
@@ -3469,6 +3574,37 @@ namespace gpos.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("gpos.Models.DailyStockRecord", b =>
+                {
+                    b.HasOne("gpos.Models.ProductBatch", "Batch")
+                        .WithMany()
+                        .HasForeignKey("BatchId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("gpos.Models.Fuel", "Fuel")
+                        .WithMany()
+                        .HasForeignKey("FuelId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("gpos.Models.Product", "Product")
+                        .WithMany()
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("gpos.Models.Tank", "Tank")
+                        .WithMany()
+                        .HasForeignKey("TankId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Batch");
+
+                    b.Navigation("Fuel");
+
+                    b.Navigation("Product");
+
+                    b.Navigation("Tank");
+                });
+
             modelBuilder.Entity("gpos.Models.Department", b =>
                 {
                     b.HasOne("gpos.Models.Branch", "Branch")
@@ -3701,12 +3837,18 @@ namespace gpos.Migrations
                     b.HasOne("gpos.Models.Product", "Product")
                         .WithMany("LowStockSettings")
                         .HasForeignKey("ProductId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("gpos.Models.Tank", "Tank")
+                        .WithMany()
+                        .HasForeignKey("TankId")
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("Product");
 
                     b.Navigation("ProductBatch");
+
+                    b.Navigation("Tank");
                 });
 
             modelBuilder.Entity("gpos.Models.Member", b =>
