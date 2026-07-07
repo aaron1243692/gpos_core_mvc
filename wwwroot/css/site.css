@@ -1432,6 +1432,82 @@ textarea.form-control {
   white-space: nowrap;
 }
 
+.admin-table.pump-meter-readings-table {
+  min-width: 1456px;
+  table-layout: fixed;
+}
+
+.pump-meter-readings-table th,
+.pump-meter-readings-table td {
+  white-space: nowrap;
+  word-break: normal;
+  overflow-wrap: normal;
+  vertical-align: middle;
+  padding: 0.55rem 0.7rem;
+}
+
+.pump-meter-readings-table .col-no {
+  width: 58px;
+}
+
+.pump-meter-readings-table .col-id {
+  width: 68px;
+}
+
+.pump-meter-readings-table .col-name {
+  width: 160px;
+}
+
+.pump-meter-readings-table .col-nozzle,
+.pump-meter-readings-table .col-tank {
+  width: 112px;
+}
+
+.pump-meter-readings-table .col-pump {
+  width: 150px;
+}
+
+.pump-meter-readings-table .col-fuel {
+  width: 140px;
+}
+
+.pump-meter-readings-table .col-meter {
+  width: 128px;
+}
+
+.pump-meter-readings-table .col-remarks {
+  width: 210px;
+}
+
+.pump-meter-readings-table .col-date {
+  width: 124px;
+}
+
+.pump-meter-readings-table .col-action {
+  width: 92px;
+}
+
+.pump-meter-readings-table .cell-text,
+.pump-meter-readings-table .cell-remarks {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pump-meter-readings-table .cell-number {
+  text-align: right;
+}
+
+.pump-meter-readings-table .cell-date,
+.pump-meter-readings-table .col-action,
+.pump-meter-readings-table td:last-child,
+.pump-meter-readings-table th:last-child {
+  text-align: center;
+}
+
+.pump-meter-readings-table .btn {
+  white-space: nowrap;
+}
+
 .admin-table.employee-table {
   min-width: 1180px;
   table-layout: fixed;

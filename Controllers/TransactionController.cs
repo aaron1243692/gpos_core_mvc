@@ -68,14 +68,8 @@ namespace gpos.Controllers
                 .ToListAsync();
             var tanks = await _db.Tanks
                 .AsNoTracking()
-                .Where(tank => tank.Status == 1 && tank.IsActive)
+                .Where(tank => tank.Status == 1 && tank.IsActive && tank.CurrentLiters > 0)
                 .OrderBy(tank => tank.Id)
-                .ToListAsync();
-            var nozzles = await _db.Nozzles
-                .AsNoTracking()
-                .Include(nozzle => nozzle.Pump)
-                .Where(nozzle => nozzle.Status == 1 && nozzle.Pump != null)
-                .OrderBy(nozzle => nozzle.Id)
                 .ToListAsync();
             var activeRebate = await _db.RebateRules
                 .AsNoTracking()
@@ -89,10 +83,24 @@ namespace gpos.Controllers
                     RebateValue = rebate.RebateValue
                 })
                 .FirstOrDefaultAsync();
+            var activeVat = await _db.VatSettings
+                .AsNoTracking()
+                .Where(setting => setting.IsActive)
+                .OrderByDescending(setting => setting.IsDefault)
+                .ThenByDescending(setting => setting.CreatedAt)
+                .ThenByDescending(setting => setting.Id)
+                .Select(setting => new PosVatViewModel
+                {
+                    Name = setting.Name,
+                    Rate = setting.Rate,
+                    Type = setting.Type
+                })
+                .FirstOrDefaultAsync();
 
             return new PosPageViewModel
             {
                 ActiveRebate = activeRebate,
+                ActiveVat = activeVat,
                 Categories = displayStocks
                     .Where(stock => stock.Product?.Category != null)
                     .GroupBy(stock => stock.Product!.Category!.Id)
@@ -134,19 +142,26 @@ namespace gpos.Controllers
                     })
                     .ToList(),
                 Fuels = fuels
-                    .Select((fuel, index) =>
+                    .Select(fuel =>
                     {
                         var tank = tanks.FirstOrDefault(item => item.FuelId == fuel.Id);
-                        var nozzle = tank is null ? null : nozzles.FirstOrDefault(item => item.Pump?.TankId == tank.Id);
-                        return new PosFuelOptionViewModel
-                        {
-                            FuelId = fuel.Id,
-                            TankId = tank?.Id ?? 0,
-                            NozzleId = nozzle?.Id ?? 0,
-                            Name = fuel.Name,
-                            Price = fuel.CurrentPricePerLiter,
-                            IsChecked = index == 0
-                        };
+                        return tank is null
+                            ? null
+                            : new PosFuelOptionViewModel
+                            {
+                                FuelId = fuel.Id,
+                                TankId = tank.Id,
+                                TankNo = tank.TankNo,
+                                Name = fuel.Name,
+                                AvailableLiters = tank.CurrentLiters,
+                                Price = fuel.CurrentPricePerLiter
+                            };
+                    })
+                    .Where(option => option is not null)
+                    .Select((option, index) =>
+                    {
+                        option!.IsChecked = index == 0;
+                        return option;
                     })
                     .ToList()
             };
@@ -282,11 +297,14 @@ namespace gpos.Controllers
                     rebateAmount = 0m;
                 }
 
-                var netTotal = Math.Max(0m, grossTotal - discountAmount - rebateAmount);
-                var cashAmount = isPointsPayment ? 0m : Math.Max(0m, request.CashAmount);
+                var vatSetting = await FindCurrentVatSetting();
+                var taxableAmount = Math.Max(0m, grossTotal - discountAmount - rebateAmount);
+                var taxAmount = CalculateVatAmount(taxableAmount, vatSetting);
+                var netTotal = Math.Max(0m, taxableAmount + ExclusiveVatAmount(taxAmount, vatSetting));
+                var cashAmount = isPointsPayment || netTotal <= 0m ? 0m : Math.Max(0m, request.CashAmount);
                 var pointsEarned = isPointsPayment ? 0m : await CalculateMemberEarnings(member, productTotal, fuelTotal, netTotal, now);
 
-                if (!isPointsPayment && cashAmount < netTotal)
+                if (!isPointsPayment && netTotal > 0m && cashAmount < netTotal)
                 {
                     return BadRequest(new { success = false, message = "Cash amount is not enough to checkout." });
                 }
@@ -345,6 +363,9 @@ namespace gpos.Controllers
                     memberDiscountAmount,
                     voucherDiscountAmount,
                     rebateAmount,
+                    taxAmount,
+                    vatRate = vatSetting?.Rate ?? 0m,
+                    vatType = vatSetting?.Type ?? "None",
                     netTotal,
                     pointsEarned,
                     pointsRequired,
@@ -1019,7 +1040,6 @@ namespace gpos.Controllers
                     .ThenInclude(sale => sale!.VoucherRedemptions)
                 .Include(item => item.Fuel)
                 .Include(item => item.Tank)
-                .Include(item => item.Nozzle)
                 .Where(item => item.Sale != null);
 
             if (dateFrom.HasValue)
@@ -1045,7 +1065,6 @@ namespace gpos.Controllers
                 query = query.Where(item => item.Sale!.ReceiptNo.Contains(searchText)
                     || (item.Fuel != null && item.Fuel.Name.Contains(searchText))
                     || (item.Tank != null && item.Tank.TankNo.Contains(searchText))
-                    || (item.Nozzle != null && item.Nozzle.NozzleNo.Contains(searchText))
                     || (item.Sale.User != null && ((item.Sale.User.FullName != null && item.Sale.User.FullName.Contains(searchText)) || item.Sale.User.Username.Contains(searchText)))
                     || (item.Sale.Member != null && item.Sale.Member.FullName.Contains(searchText)));
             }
@@ -1110,7 +1129,6 @@ namespace gpos.Controllers
                 ReceiptNo = sale?.ReceiptNo ?? "-",
                 FuelName = item.Fuel?.Name ?? "-",
                 TankNo = item.Tank?.TankNo ?? "-",
-                NozzleNo = item.Nozzle?.NozzleNo ?? "-",
                 Liters = item.Liters,
                 Price = item.PricePerLiter,
                 Subtotal = item.Subtotal,
@@ -2608,18 +2626,6 @@ namespace gpos.Controllers
                     throw new InvalidOperationException("One or more selected fuel items are no longer available.");
                 }
 
-                if (request.NozzleId.HasValue && request.NozzleId.Value > 0)
-                {
-                    var nozzleExists = await _db.Nozzles
-                        .Include(item => item.Pump)
-                        .AnyAsync(item => item.Id == request.NozzleId.Value && item.Status == 1 && item.Pump != null && item.Pump.TankId == tank.Id);
-
-                    if (!nozzleExists)
-                    {
-                        throw new InvalidOperationException($"No active nozzle is available for {tank.Fuel.Name}.");
-                    }
-                }
-
                 var price = tank.Fuel.CurrentPricePerLiter;
                 var subtotal = request.Liters * price;
                 var costPerLiter = await _db.FuelDeliveries
@@ -2645,7 +2651,7 @@ namespace gpos.Controllers
                     {
                         FuelId = tank.FuelId,
                         TankId = tank.Id,
-                        NozzleId = request.NozzleId.HasValue && request.NozzleId.Value > 0 ? request.NozzleId : null,
+                        NozzleId = null,
                         Liters = request.Liters,
                         PricePerLiter = price,
                         Subtotal = subtotal,
@@ -2746,6 +2752,50 @@ namespace gpos.Controllers
 
             var member = await FindActiveMemberByCard(membershipCardNo);
             return member ?? throw new InvalidOperationException("Member card was not found or is inactive.");
+        }
+
+        private async Task<VatSetting?> FindCurrentVatSetting()
+        {
+            return await _db.VatSettings
+                .AsNoTracking()
+                .Where(setting => setting.IsActive)
+                .OrderByDescending(setting => setting.IsDefault)
+                .ThenByDescending(setting => setting.CreatedAt)
+                .ThenByDescending(setting => setting.Id)
+                .FirstOrDefaultAsync();
+        }
+
+        private static decimal CalculateVatAmount(decimal taxableAmount, VatSetting? vat)
+        {
+            if (vat is null || vat.Rate <= 0m || taxableAmount <= 0m || IsVatExempt(vat.Type))
+            {
+                return 0m;
+            }
+
+            return IsVatInclusive(vat.Type)
+                ? Math.Round(taxableAmount * vat.Rate / (100m + vat.Rate), 2, MidpointRounding.AwayFromZero)
+                : Math.Round(taxableAmount * vat.Rate / 100m, 2, MidpointRounding.AwayFromZero);
+        }
+
+        private static decimal ExclusiveVatAmount(decimal taxAmount, VatSetting? vat)
+        {
+            return vat is not null && IsVatExclusive(vat.Type) ? taxAmount : 0m;
+        }
+
+        private static bool IsVatInclusive(string? vatType)
+        {
+            return string.Equals(vatType, "Inclusive", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static bool IsVatExclusive(string? vatType)
+        {
+            return string.Equals(vatType, "Exclusive", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static bool IsVatExempt(string? vatType)
+        {
+            return string.Equals(vatType, "Exempt", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(vatType, "ZeroRated", StringComparison.OrdinalIgnoreCase);
         }
 
         private async Task<Member> FindRequiredMember(string? membershipCardNo)

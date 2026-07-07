@@ -31,6 +31,7 @@
                 <col class="col-id" />
                 <col class="col-batch-number" />
                 <col class="col-fuel" />
+                <col class="col-normal" />
                 <col class="col-supplier" />
                 <col class="col-cost-price" />
                 <col class="col-selling-price" />
@@ -46,6 +47,7 @@
                     <th class="col-id text-nowrap" scope="col">ID</th>
                     <th class="col-batch-number text-nowrap" scope="col">Batch Number</th>
                     <th class="col-fuel text-nowrap" scope="col">Fuel</th>
+                    <th class="text-nowrap" scope="col">Tank</th>
                     <th class="col-supplier text-nowrap" scope="col">Supplier</th>
                     <th class="col-cost-price text-nowrap" scope="col">Cost Price / Liter</th>
                     <th class="col-selling-price text-nowrap" scope="col">Selling Price / Liter</th>
@@ -60,7 +62,7 @@
                 @if (Model.FuelBatches.Count == 0)
                 {
                     <tr>
-                        <td class="text-center text-muted fw-bold" colspan="12">No fuel batches yet.</td>
+                        <td class="text-center text-muted fw-bold" colspan="13">No fuel batches found.</td>
                     </tr>
                 }
                 @for (var index = 0; index < Model.FuelBatches.Count; index += 1)
@@ -70,6 +72,7 @@
                         <td class="col-id">@Model.FuelBatches[index].Id</td>
                         <td class="col-batch-number text-nowrap">@Model.FuelBatches[index].BatchNo</td>
                         <td class="col-fuel text-truncate">@(Model.FuelBatches[index].Fuel?.Name ?? "-")</td>
+                        <td class="text-nowrap">@(Model.FuelBatches[index].Tank?.TankNo ?? "-")</td>
                         <td class="col-supplier text-truncate">@(Model.FuelBatches[index].Supplier?.Name ?? "-")</td>
                         <td class="col-cost-price text-nowrap">&#8369;@Model.FuelBatches[index].CostPricePerLiter.ToString("N2", CultureInfo.InvariantCulture)</td>
                         <td class="col-selling-price text-nowrap">&#8369;@Model.FuelBatches[index].SellingPricePerLiter.ToString("N2", CultureInfo.InvariantCulture)</td>

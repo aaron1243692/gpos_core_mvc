@@ -78,9 +78,11 @@ namespace gpos.Models.ViewModels
     public class NozzleForm
     {
         public int Id { get; set; }
-        [Range(1, int.MaxValue, ErrorMessage = "Pump is required.")]
+        [Range(1, int.MaxValue, ErrorMessage = "Dispenser is required.")]
         public int PumpId { get; set; }
-        [Required(ErrorMessage = "Nozzle No is required.")]
+        [Range(1, int.MaxValue, ErrorMessage = "Tank is required.")]
+        public int TankId { get; set; }
+        [Required(ErrorMessage = "Nozzle name is required.")]
         public string NozzleNo { get; set; } = string.Empty;
         public int Status { get; set; } = 1;
     }
@@ -137,13 +139,18 @@ namespace gpos.Models.ViewModels
     public class PumpMeterReadingForm : IValidatableObject
     {
         public int Id { get; set; }
+        [Required(ErrorMessage = "Name is required.")]
+        [StringLength(100, ErrorMessage = "Name must be 100 characters or fewer.")]
+        public string Name { get; set; } = string.Empty;
         [Range(1, int.MaxValue, ErrorMessage = "Nozzle is required.")]
         public int NozzleId { get; set; }
         [Required(ErrorMessage = "Opening Meter is required.")]
         [Range(0, double.MaxValue, ErrorMessage = "Opening Meter cannot be negative.")]
         public decimal? OpeningMeter { get; set; }
+        [Required(ErrorMessage = "Closing Meter is required.")]
         [Range(0, double.MaxValue, ErrorMessage = "Closing Meter cannot be negative.")]
         public decimal? ClosingMeter { get; set; }
+        public string? Remarks { get; set; }
         [Required(ErrorMessage = "Reading Date is required.")]
         public DateTime? ReadingDate { get; set; } = DateTime.Today;
         public int Status { get; set; } = 1;
@@ -368,6 +375,8 @@ namespace gpos.Models.ViewModels
         public List<StockReceiving> StockReceivings { get; set; } = new();
         public List<LowStockSetting> LowStockSettings { get; set; } = new();
         public List<Nozzle> Nozzles { get; set; } = new();
+        public List<Pump> Pumps { get; set; } = new();
+        public List<Tank> Tanks { get; set; } = new();
         public List<FuelDelivery> FuelDeliveries { get; set; } = new();
         public List<FuelPriceHistory> FuelPriceHistory { get; set; } = new();
         public Dictionary<int, string> FuelPriceHistoryCreatedBy { get; set; } = new();

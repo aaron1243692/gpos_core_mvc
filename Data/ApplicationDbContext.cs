@@ -276,15 +276,21 @@ namespace gpos.Data
 
                 entity.Property(nozzle => nozzle.Id).HasColumnName("id");
                 entity.Property(nozzle => nozzle.PumpId).HasColumnName("pump_id");
+                entity.Property(nozzle => nozzle.TankId).HasColumnName("tank_id");
                 entity.Property(nozzle => nozzle.NozzleNo).HasColumnName("nozzle_no").HasMaxLength(100).IsRequired();
                 entity.Property(nozzle => nozzle.Status).HasColumnName("status").HasDefaultValue(1);
                 entity.Property(nozzle => nozzle.CreatedAt).HasColumnName("created_at");
                 entity.Property(nozzle => nozzle.UpdatedAt).HasColumnName("updated_at");
 
                 entity.HasIndex(nozzle => nozzle.PumpId);
+                entity.HasIndex(nozzle => nozzle.TankId);
                 entity.HasOne(nozzle => nozzle.Pump)
                     .WithMany(pump => pump.Nozzles)
                     .HasForeignKey(nozzle => nozzle.PumpId)
+                    .OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne(nozzle => nozzle.Tank)
+                    .WithMany()
+                    .HasForeignKey(nozzle => nozzle.TankId)
                     .OnDelete(DeleteBehavior.Restrict);
             });
 
@@ -451,9 +457,11 @@ namespace gpos.Data
                 entity.Property(reading => reading.PumpId).HasColumnName("pump_id");
                 entity.Property(reading => reading.NozzleId).HasColumnName("nozzle_id");
                 entity.Property(reading => reading.ShiftId).HasColumnName("shift_id");
+                entity.Property(reading => reading.Name).HasColumnName("name").HasMaxLength(100).HasDefaultValue("Meter Reading").IsRequired();
                 entity.Property(reading => reading.OpeningMeter).HasColumnName("opening_meter").HasPrecision(18, 2);
                 entity.Property(reading => reading.ClosingMeter).HasColumnName("closing_meter").HasPrecision(18, 2);
                 entity.Property(reading => reading.LitersSold).HasColumnName("liters_sold").HasPrecision(18, 2);
+                entity.Property(reading => reading.Remarks).HasColumnName("remarks").HasColumnType("text");
                 entity.Property(reading => reading.ReadingDate).HasColumnName("reading_date");
                 entity.Property(reading => reading.Status).HasColumnName("status").HasDefaultValue(1);
                 entity.Property(reading => reading.CreatedAt).HasColumnName("created_at");

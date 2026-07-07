@@ -52,7 +52,7 @@
                         }
                     </div>
 
-                    <div class="pos-empty-cart" id="productEmptyState" hidden>No products found for this category.</div>
+                    <div class="pos-empty-cart" id="productEmptyState" hidden>@(Model.Products.Count == 0 ? "No display products available." : "No products found for this category.")</div>
                 </section>
 
                 <section class="pos-fuel-menu" id="fuelMenu" hidden aria-label="Fuel order">
@@ -65,11 +65,15 @@
                         @for (var index = 0; index < Model.Fuels.Count; index++)
                         {
                             <label class="fuel-option">
-                                <input class="form-check-input fuel-choice" type="radio" name="FuelType" value="@Model.Fuels[index].Name" data-fuel-id="@Model.Fuels[index].FuelId" data-tank-id="@Model.Fuels[index].TankId" data-nozzle-id="@Model.Fuels[index].NozzleId" data-price="@Model.Fuels[index].Price" @(Model.Fuels[index].IsChecked ? "checked" : "") />
-                                <span>@Model.Fuels[index].Name <small>₱@Model.Fuels[index].Price.ToString("N2")/L</small></span>
+                                <input class="form-check-input fuel-choice" type="radio" name="FuelType" value="@Model.Fuels[index].Name" data-fuel-id="@Model.Fuels[index].FuelId" data-tank-id="@Model.Fuels[index].TankId" data-price="@Model.Fuels[index].Price" @(Model.Fuels[index].IsChecked ? "checked" : "") />
+                                <span>@Model.Fuels[index].Name <small>Tank @Model.Fuels[index].TankNo - @Model.Fuels[index].AvailableLiters.ToString("N2") L - ₱@Model.Fuels[index].Price.ToString("N2")/L</small></span>
                             </label>
                         }
                     </div>
+                    @if (Model.Fuels.Count == 0)
+                    {
+                        <div class="pos-empty-cart">No fuel available for sale. Check active tanks.</div>
+                    }
 
                     <div class="pos-fuel-fields">
                         <div>
@@ -85,7 +89,7 @@
                         </div>
                     </div>
 
-                    <button class="btn btn-primary pos-fuel-add-button" id="addFuelButton" type="button">Add Fuel</button>
+                    <button class="btn btn-primary pos-fuel-add-button" id="addFuelButton" type="button" disabled="@(Model.Fuels.Count == 0 ? "disabled" : null)">Add Fuel</button>
                 </section>
             </section>
 
@@ -263,6 +267,10 @@
                                         <strong id="receiptDiscountAmount">₱0.00</strong>
                                     </div>
                                     <div class="receipt-total-line">
+                                        <span>Tax</span>
+                                        <strong id="receiptTaxAmount">₱0.00</strong>
+                                    </div>
+                                    <div class="receipt-total-line">
                                         <span>Total</span>
                                         <strong id="receiptTotalAmount">₱0.00</strong>
                                     </div>
@@ -325,7 +333,8 @@
     <script>
         (() => {
             const peso = new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP", currencyDisplay: "narrowSymbol" });
-            const activeRebate = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.ActiveRebate));
+            const activeRebate = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.ActiveRebate, new System.Text.Json.JsonSerializerOptions { PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase }));
+            const activeVat = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.ActiveVat, new System.Text.Json.JsonSerializerOptions { PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase }));
             const form = document.getElementById("posSaleForm");
             const submitMessage = document.getElementById("posSubmitMessage");
             const antiForgeryToken = form.querySelector("input[name='__RequestVerificationToken']")?.value || "";
@@ -387,6 +396,7 @@
             const receiptMemberDiscountAmount = document.getElementById("receiptMemberDiscountAmount");
             const receiptVoucherDiscountAmount = document.getElementById("receiptVoucherDiscountAmount");
             const receiptDiscountAmount = document.getElementById("receiptDiscountAmount");
+            const receiptTaxAmount = document.getElementById("receiptTaxAmount");
             const receiptTotalAmount = document.getElementById("receiptTotalAmount");
             const receiptChangeAmount = document.getElementById("receiptChangeAmount");
             const receiptPointsEarned = document.getElementById("receiptPointsEarned");
@@ -413,6 +423,62 @@
 
             function numericValue(input) {
                 return Number.parseFloat(input.value) || 0;
+            }
+
+            function rebateNumber(propertyName) {
+                const value = Number.parseFloat(activeRebate?.[propertyName]);
+                return Number.isFinite(value) ? value : 0;
+            }
+
+            function rebatePointsRequired() {
+                return rebateNumber("pointsRequired");
+            }
+
+            function rebateValue() {
+                return rebateNumber("rebateValue");
+            }
+
+            function hasValidRebate() {
+                return Boolean(activeRebate) && rebatePointsRequired() > 0 && rebateValue() > 0;
+            }
+
+            function vatRate() {
+                const value = Number.parseFloat(activeVat?.rate);
+                return Number.isFinite(value) ? Math.max(0, value) : 0;
+            }
+
+            function vatType() {
+                return (activeVat?.type || "").toString().toLowerCase();
+            }
+
+            function isVatInclusive() {
+                return vatType() === "inclusive";
+            }
+
+            function isVatExclusive() {
+                return vatType() === "exclusive";
+            }
+
+            function isVatExempt() {
+                const type = vatType();
+                return type === "exempt" || type === "zerorated";
+            }
+
+            function taxableAmount() {
+                return isPointsPayment() ? 0 : Math.max(0, totalAmount() - discountAmount());
+            }
+
+            function taxAmount() {
+                const taxable = taxableAmount();
+                const rate = vatRate();
+
+                if (taxable <= 0 || rate <= 0 || isVatExempt()) {
+                    return 0;
+                }
+
+                return isVatInclusive()
+                    ? (taxable * rate) / (100 + rate)
+                    : (taxable * rate) / 100;
             }
 
             function selectedFuel() {
@@ -568,18 +634,27 @@
             }
 
             function requiredPointsForPurchase() {
-                if (!activeRebate || activeRebate.pointsRequired <= 0 || activeRebate.rebateValue <= 0 || totalAmount() <= 0) {
+                if (!hasValidRebate() || totalAmount() <= 0) {
                     return 0;
                 }
 
-                return Math.ceil((totalAmount() / activeRebate.rebateValue) * activeRebate.pointsRequired);
+                return Math.ceil((totalAmount() / rebateValue()) * rebatePointsRequired());
             }
 
             function amountToPay() {
-                return isPointsPayment() ? 0 : Math.max(0, totalAmount() - discountAmount());
+                const taxable = taxableAmount();
+                return Math.max(0, taxable + (isVatExclusive() ? taxAmount() : 0));
+            }
+
+            function hasAmountDue() {
+                return amountToPay() > 0;
             }
 
             function cashAmount() {
+                if (!hasAmountDue()) {
+                    return 0;
+                }
+
                 return Math.max(0, numericValue(paymentAmountInput));
             }
 
@@ -597,10 +672,10 @@
                 }
 
                 if (isPointsPayment()) {
-                    return memberFound && activeRebate && memberPoints >= requiredPointsForPurchase();
+                    return memberFound && hasValidRebate() && memberPoints >= requiredPointsForPurchase();
                 }
 
-                return (amountToPay() <= 0 || paymentAmountInput.value.trim().length > 0) && cashAmount() >= amountToPay();
+                return !hasAmountDue() || (paymentAmountInput.value.trim().length > 0 && cashAmount() >= amountToPay());
             }
 
             function showCheckoutWarningModal(title, message) {
@@ -631,7 +706,7 @@
                         return false;
                     }
 
-                    if (!activeRebate) {
+                    if (!hasValidRebate()) {
                         showCheckoutWarningModal("Checkout Warning", "No active rebate configuration is available for points payment.");
                         return false;
                     }
@@ -644,13 +719,13 @@
                     return true;
                 }
 
-                if (amountToPay() > 0 && paymentAmountInput.value.trim().length === 0) {
+                if (hasAmountDue() && paymentAmountInput.value.trim().length === 0) {
                     showCheckoutWarningModal("Checkout Warning", "Please enter cash amount.");
                     return false;
                 }
 
-                if (cashAmount() < amountToPay()) {
-                    showCheckoutWarningModal("Insufficient Cash", "Cash amount is lower than the total amount to pay.");
+                if (hasAmountDue() && cashAmount() < amountToPay()) {
+                    showCheckoutWarningModal("Insufficient Cash", "Cash amount is not enough.");
                     return false;
                 }
 
@@ -753,7 +828,6 @@
                     id: Date.now().toString() + fuelCart.length.toString(),
                     fuelId: Number.parseInt(selected.dataset.fuelId, 10) || 0,
                     tankId: Number.parseInt(selected.dataset.tankId, 10) || 0,
-                    nozzleId: Number.parseInt(selected.dataset.nozzleId, 10) || 0,
                     type: selectedFuelType(),
                     price,
                     liters,
@@ -950,20 +1024,29 @@
 
             function updateSummaryAmounts() {
                 const itemCount = cartItemTotal();
+                const due = amountToPay();
+                const tax = taxAmount();
                 cartSubTotal.textContent = peso.format(productTotalAmount());
                 cartFuelLine.textContent = peso.format(fuelTotalAmount());
                 cartMemberDiscountLine.textContent = peso.format(currentMemberDiscountAmount());
                 cartVoucherDiscountLine.textContent = peso.format(currentVoucherDiscountAmount());
                 cartDiscountLine.textContent = peso.format(discountAmount());
-                cartTaxLine.textContent = peso.format(0);
-                grandTotal.textContent = peso.format(amountToPay());
+                cartTaxLine.textContent = peso.format(tax);
+                grandTotal.textContent = peso.format(due);
                 memberAvailablePoints.textContent = `${memberPoints.toFixed(2)} pts`;
-                pointConversion.textContent = activeRebate
-                    ? `${activeRebate.pointsRequired.toFixed(2)} pts = ${peso.format(activeRebate.rebateValue)}`
+                pointConversion.textContent = hasValidRebate()
+                    ? `${rebatePointsRequired().toFixed(2)} pts = ${peso.format(rebateValue())}`
                     : "No active rebate";
                 requiredPointsLabel.textContent = `${requiredPointsForPurchase().toFixed(2)} pts`;
+                if (!isPointsPayment()) {
+                    paymentAmountInput.disabled = due <= 0;
+                    paymentAmountInput.placeholder = due <= 0 ? "No cash required" : "0.00";
+                    if (due <= 0) {
+                        paymentAmountInput.value = "";
+                    }
+                }
                 if (cartButtonTotal) {
-                    cartButtonTotal.textContent = peso.format(amountToPay());
+                    cartButtonTotal.textContent = peso.format(due);
                 }
                 if (cartItemCount) {
                     cartItemCount.textContent = itemCount.toString();
@@ -988,7 +1071,6 @@
                     memberDiscountAmount = 0;
                     memberPoints = 0;
                     memberFound = false;
-                    voucherDiscountAmount = 0;
                     updateTotal();
                     queueVoucherDiscountLookup();
                     return;
@@ -1015,12 +1097,10 @@
                     memberDiscountAmount = memberFound && !isPointsPayment()
                         ? Math.max(0, Number.parseFloat(result.discountAmount) || 0)
                         : 0;
-                    voucherDiscountAmount = 0;
                     queueVoucherDiscountLookup();
                 } catch {
                     if (lookupToken === memberDiscountLookupToken) {
                         memberDiscountAmount = 0;
-                        voucherDiscountAmount = 0;
                         memberPoints = 0;
                         memberFound = false;
                     }
@@ -1078,6 +1158,14 @@
                 voucherDiscountLookupTimer = window.setTimeout(loadVoucherDiscount, 250);
             }
 
+            async function refreshCheckoutDiscounts() {
+                window.clearTimeout(memberDiscountLookupTimer);
+                window.clearTimeout(voucherDiscountLookupTimer);
+                await loadMemberDiscount();
+                window.clearTimeout(voucherDiscountLookupTimer);
+                await loadVoucherDiscount();
+            }
+
             function updatePaymentFields() {
                 const pointsPayment = isPointsPayment();
                 cashPaymentField.hidden = pointsPayment;
@@ -1105,6 +1193,7 @@
                 const memberDiscount = currentMemberDiscountAmount();
                 const voucherDiscount = currentVoucherDiscountAmount();
                 const due = completedReceiptTotals?.netTotal ?? amountToPay();
+                const tax = completedReceiptTotals?.taxAmount ?? taxAmount();
                 const amountTendered = completedReceiptTotals?.amountTendered ?? cashAmount();
                 const change = completedReceiptTotals?.change ?? Math.max(0, amountTendered - due);
                 const pointsEarned = completedReceiptTotals?.pointsEarned ?? 0;
@@ -1120,6 +1209,7 @@
                 receiptMemberDiscountAmount.textContent = peso.format(memberDiscount);
                 receiptVoucherDiscountAmount.textContent = peso.format(voucherDiscount);
                 receiptDiscountAmount.textContent = peso.format(totalDiscount);
+                receiptTaxAmount.textContent = peso.format(tax);
                 receiptTotalAmount.textContent = peso.format(due);
                 receiptChangeAmount.textContent = peso.format(change);
                 receiptPointsEarned.textContent = `${pointsEarned.toFixed(2)} pts`;
@@ -1195,7 +1285,7 @@
                     return;
                 }
 
-                await loadMemberDiscount();
+                await refreshCheckoutDiscounts();
                 payload = buildSalePayload();
 
                 if (!validateCheckout()) {
@@ -1234,7 +1324,6 @@
                     return {
                         fuelId: fuel.fuelId,
                         tankId: fuel.tankId,
-                        nozzleId: fuel.nozzleId,
                         liters: fuel.liters,
                         price: fuel.price,
                         subtotal: fuel.subtotal
@@ -1245,7 +1334,7 @@
                     products,
                     fuels,
                     paymentMethod: selectedPaymentMethod(),
-                    cashAmount: isPointsPayment() ? 0 : Math.max(0, numericValue(paymentAmountInput)),
+                    cashAmount: cashAmount(),
                     membershipCardNo: membershipCardNoInput.value.trim(),
                     voucherCode: voucherCode()
                 };
@@ -1260,7 +1349,7 @@
                     return;
                 }
 
-                await loadMemberDiscount();
+                await refreshCheckoutDiscounts();
                 payload = buildSalePayload();
 
                 if (!validateCheckout()) {
@@ -1294,6 +1383,7 @@
                         memberDiscountAmount: Math.max(0, Number.parseFloat(result.memberDiscountAmount) || 0),
                         voucherDiscountAmount: Math.max(0, Number.parseFloat(result.voucherDiscountAmount) || 0),
                         totalDiscount: Math.max(0, (Number.parseFloat(result.discountAmount) || 0) + (Number.parseFloat(result.rebateAmount) || 0)),
+                        taxAmount: Math.max(0, Number.parseFloat(result.taxAmount) || 0),
                         netTotal: Math.max(0, Number.parseFloat(result.netTotal) || 0),
                         amountTendered: Math.max(0, Number.parseFloat(result.amountTendered) || payload.cashAmount || 0),
                         change: Math.max(0, Number.parseFloat(result.change) || 0),

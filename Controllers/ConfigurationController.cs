@@ -1042,14 +1042,6 @@ namespace gpos.Controllers
                 return View("Pumps", await BuildPumpsPageAsync(search, form, activeModalId: "pumpModal"));
             }
 
-            var tankExists = await _db.Tanks.AnyAsync(tank => tank.Id == form.TankId && tank.Status == 1 && tank.IsActive);
-
-            if (!tankExists)
-            {
-                ModelState.AddModelError("PumpForm.TankId", "Pump tank is required.");
-                return View("Pumps", await BuildPumpsPageAsync(search, form, activeModalId: "pumpModal"));
-            }
-
             var now = DateTime.UtcNow;
             var pump = form.Id > 0 ? await _db.Pumps.FindAsync(form.Id) : new Pump { CreatedAt = now };
 
@@ -1058,7 +1050,6 @@ namespace gpos.Controllers
                 return NotFound();
             }
 
-            pump.TankId = form.TankId;
             pump.Name = form.Name.Trim();
             pump.PumpNo = form.Name.Trim();
             pump.Status = form.Status;
@@ -1084,7 +1075,7 @@ namespace gpos.Controllers
                 pump.Status = 0;
                 pump.UpdatedAt = DateTime.UtcNow;
                 await _db.SaveChangesAsync();
-                TempData["FuelSetupFeedback"] = "Pump disabled.";
+                TempData["FuelSetupFeedback"] = "Dispenser deactivated.";
             }
 
             return RedirectToAction(nameof(Pumps), new { search });
@@ -1099,7 +1090,7 @@ namespace gpos.Controllers
             {
                 pump.Status = 1;
                 pump.UpdatedAt = DateTime.UtcNow;
-                TempData["FuelSetupFeedback"] = "Pump activated.";
+                TempData["FuelSetupFeedback"] = "Dispenser activated.";
                 await _db.SaveChangesAsync();
             }
             return RedirectToAction(nameof(Pumps), new { search });
@@ -1111,14 +1102,18 @@ namespace gpos.Controllers
             IQueryable<DisplayStock> query = _db.DisplayStocks.AsNoTracking()
                 .Include(stock => stock.Product)
                 .ThenInclude(product => product!.Category)
-                .Include(stock => stock.Batch);
+                .Include(stock => stock.Batch)
+                .ThenInclude(batch => batch!.Supplier)
+                .Include(stock => stock.Branch);
             var searchText = (search ?? string.Empty).Trim();
 
             if (!string.IsNullOrWhiteSpace(searchText))
             {
                 query = query.Where(stock => (stock.Product != null && stock.Product.Name.Contains(searchText))
                     || (stock.Product != null && stock.Product.Category != null && stock.Product.Category.Name.Contains(searchText))
-                    || (stock.Batch != null && stock.Batch.BatchNo.Contains(searchText)));
+                    || (stock.Batch != null && stock.Batch.BatchNo.Contains(searchText))
+                    || (stock.Batch != null && stock.Batch.Supplier != null && stock.Batch.Supplier.Name.Contains(searchText))
+                    || (stock.Branch != null && stock.Branch.Name.Contains(searchText)));
             }
 
             return new ProductStockPageViewModel
@@ -1143,14 +1138,18 @@ namespace gpos.Controllers
             IQueryable<WarehouseStock> query = _db.WarehouseStocks.AsNoTracking()
                 .Include(stock => stock.Product)
                 .ThenInclude(product => product!.Category)
-                .Include(stock => stock.Batch);
+                .Include(stock => stock.Batch)
+                .ThenInclude(batch => batch!.Supplier)
+                .Include(stock => stock.Branch);
             var searchText = (search ?? string.Empty).Trim();
 
             if (!string.IsNullOrWhiteSpace(searchText))
             {
                 query = query.Where(stock => (stock.Product != null && stock.Product.Name.Contains(searchText))
                     || (stock.Product != null && stock.Product.Category != null && stock.Product.Category.Name.Contains(searchText))
-                    || (stock.Batch != null && stock.Batch.BatchNo.Contains(searchText)));
+                    || (stock.Batch != null && stock.Batch.BatchNo.Contains(searchText))
+                    || (stock.Batch != null && stock.Batch.Supplier != null && stock.Batch.Supplier.Name.Contains(searchText))
+                    || (stock.Branch != null && stock.Branch.Name.Contains(searchText)));
             }
 
             return new ProductStockPageViewModel
@@ -1293,14 +1292,12 @@ namespace gpos.Controllers
 
         private async Task<FuelSetupPageViewModel> BuildPumpsPageAsync(string? search, PumpForm? form = null, int? editId = null, string activeModalId = "")
         {
-            IQueryable<Pump> query = _db.Pumps.AsNoTracking().Include(pump => pump.Tank).ThenInclude(tank => tank!.Fuel);
+            IQueryable<Pump> query = _db.Pumps.AsNoTracking();
             var searchText = (search ?? string.Empty).Trim();
 
             if (!string.IsNullOrWhiteSpace(searchText))
             {
-                query = query.Where(pump => pump.Name.Contains(searchText)
-                    || (pump.Tank != null && pump.Tank.TankNo.Contains(searchText))
-                    || (pump.Tank != null && pump.Tank.Fuel != null && pump.Tank.Fuel.Name.Contains(searchText)));
+                query = query.Where(pump => pump.Name.Contains(searchText));
             }
 
             return new FuelSetupPageViewModel
@@ -1308,7 +1305,6 @@ namespace gpos.Controllers
                 Search = searchText,
                 ActiveModalId = activeModalId,
                 PumpForm = form ?? await BuildPumpFormAsync(editId),
-                TankOptions = await BuildTankOptionsAsync(),
                 Pumps = await query.OrderBy(pump => pump.Id).ToListAsync()
             };
         }
@@ -1362,7 +1358,6 @@ namespace gpos.Controllers
             return pump is null ? new PumpForm() : new PumpForm
             {
                 Id = pump.Id,
-                TankId = pump.TankId,
                 Name = pump.Name,
                 Status = pump.Status
             };
@@ -1396,6 +1391,15 @@ namespace gpos.Controllers
             }
 
             return options;
+        }
+
+        private async Task<List<Tank>> BuildActiveTankListAsync()
+        {
+            return await _db.Tanks.AsNoTracking()
+                .Include(tank => tank.Fuel)
+                .Where(tank => tank.Status == 1 && tank.IsActive && tank.Fuel != null && tank.Fuel.Status == 1 && tank.Fuel.IsActive)
+                .OrderBy(tank => tank.TankNo)
+                .ToListAsync();
         }
 
         private async Task<DiscountSetupPageViewModel> BuildDiscountsPageAsync(string? search, DiscountForm? form = null, int? editId = null, string activeModalId = "")

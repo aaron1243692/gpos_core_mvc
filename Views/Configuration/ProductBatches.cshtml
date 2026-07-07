@@ -37,6 +37,9 @@
                 <col class="col-supplier" />
                 <col class="col-cost-price" />
                 <col class="col-selling-price" />
+                <col class="col-normal" />
+                <col class="col-normal" />
+                <col class="col-normal" />
                 <col class="col-expiry-date" />
                 <col class="col-status" />
                 <col class="col-action" />
@@ -50,6 +53,9 @@
                     <th class="col-supplier text-nowrap" scope="col">Supplier</th>
                     <th class="col-cost-price text-nowrap" scope="col">Cost Price</th>
                     <th class="col-selling-price text-nowrap" scope="col">Selling Price</th>
+                    <th class="text-nowrap" scope="col">Warehouse Qty</th>
+                    <th class="text-nowrap" scope="col">Display Qty</th>
+                    <th class="text-nowrap" scope="col">Total Qty</th>
                     <th class="col-expiry-date text-nowrap" scope="col">Expiry Date</th>
                     <th class="col-status text-nowrap" scope="col">Status</th>
                     <th class="col-action text-nowrap" scope="col">Action</th>
@@ -59,7 +65,7 @@
                 @if (Model.ProductBatches.Count == 0)
                 {
                     <tr>
-                        <td class="text-center text-muted fw-bold" colspan="10">No product batches yet.</td>
+                        <td class="text-center text-muted fw-bold" colspan="13">No product batches found.</td>
                     </tr>
                 }
                 @for (var index = 0; index < Model.ProductBatches.Count; index += 1)
@@ -72,6 +78,9 @@
                         <td class="col-supplier text-truncate">@(Model.ProductBatches[index].Supplier?.Name ?? "-")</td>
                         <td class="col-cost-price text-nowrap">&#8369;@Model.ProductBatches[index].CostPrice.ToString("N2", CultureInfo.InvariantCulture)</td>
                         <td class="col-selling-price text-nowrap">&#8369;@Model.ProductBatches[index].SellingPrice.ToString("N2", CultureInfo.InvariantCulture)</td>
+                        <td class="text-nowrap">@Model.ProductBatches[index].WarehouseStocks.Sum(stock => stock.Quantity).ToString("N2", CultureInfo.InvariantCulture)</td>
+                        <td class="text-nowrap">@Model.ProductBatches[index].DisplayStocks.Sum(stock => stock.Quantity).ToString("N2", CultureInfo.InvariantCulture)</td>
+                        <td class="text-nowrap">@((Model.ProductBatches[index].WarehouseStocks.Sum(stock => stock.Quantity) + Model.ProductBatches[index].DisplayStocks.Sum(stock => stock.Quantity)).ToString("N2", CultureInfo.InvariantCulture))</td>
                         <td class="col-expiry-date text-nowrap">@(Model.ProductBatches[index].ExpiryDate.HasValue ? Model.ProductBatches[index].ExpiryDate.GetValueOrDefault().ToString("MMM dd, yyyy", CultureInfo.InvariantCulture) : "-")</td>
                         <td class="col-status">
                             @if (Model.ProductBatches[index].Status == 1)

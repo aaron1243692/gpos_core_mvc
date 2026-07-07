@@ -28,6 +28,7 @@ namespace gpos.Models.ViewModels
         public List<PosProductCardViewModel> Products { get; set; } = new();
         public List<PosFuelOptionViewModel> Fuels { get; set; } = new();
         public PosRebateViewModel? ActiveRebate { get; set; }
+        public PosVatViewModel? ActiveVat { get; set; }
     }
 
     public class PosCategoryCardViewModel
@@ -53,8 +54,9 @@ namespace gpos.Models.ViewModels
     {
         public int FuelId { get; set; }
         public int TankId { get; set; }
-        public int NozzleId { get; set; }
+        public string TankNo { get; set; } = "-";
         public string Name { get; set; } = string.Empty;
+        public decimal AvailableLiters { get; set; }
         public decimal Price { get; set; }
         public bool IsChecked { get; set; }
     }
@@ -64,6 +66,13 @@ namespace gpos.Models.ViewModels
         public string Name { get; set; } = string.Empty;
         public decimal PointsRequired { get; set; }
         public decimal RebateValue { get; set; }
+    }
+
+    public class PosVatViewModel
+    {
+        public string Name { get; set; } = string.Empty;
+        public decimal Rate { get; set; }
+        public string Type { get; set; } = "Inclusive";
     }
 
     public class ProductSaleRowViewModel

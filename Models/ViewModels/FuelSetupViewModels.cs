@@ -59,11 +59,7 @@ namespace gpos.Models.ViewModels
     {
         public int Id { get; set; }
 
-        [Required(ErrorMessage = "Pump tank is required.")]
-        [Range(1, int.MaxValue, ErrorMessage = "Pump tank is required.")]
-        public int TankId { get; set; }
-
-        [Required(ErrorMessage = "Pump name is required.")]
+        [Required(ErrorMessage = "Dispenser name is required.")]
         public string Name { get; set; } = string.Empty;
 
         public int Status { get; set; } = 1;

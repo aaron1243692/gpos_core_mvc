@@ -52,7 +52,7 @@
                 @if (Model.WarehouseStocks.Count == 0)
                 {
                     <tr>
-                        <td class="text-center text-muted fw-bold" colspan="9">No warehouse products yet.</td>
+                        <td class="text-center text-muted fw-bold" colspan="9">No warehouse product batches found.</td>
                     </tr>
                 }
                 @for (var index = 0; index < Model.WarehouseStocks.Count; index += 1)
@@ -65,7 +65,7 @@
                         <td>₱@(Model.WarehouseStocks[index].Batch?.SellingPrice.ToString("N2") ?? "0.00")</td>
                         <td class="col-qty">@Model.WarehouseStocks[index].Quantity.ToString("N2")</td>
                         <td>@(Model.WarehouseStocks[index].Batch?.ExpiryDate?.ToString("yyyy-MM-dd") ?? "-")</td>
-                        <td><span class="badge @((Model.WarehouseStocks[index].Product?.IsActive ?? false) && (Model.WarehouseStocks[index].Product?.Status == 1) ? "text-bg-success" : "text-bg-secondary")">@((Model.WarehouseStocks[index].Product?.IsActive ?? false) && (Model.WarehouseStocks[index].Product?.Status == 1) ? "Active" : "Inactive")</span></td>
+                        <td><span class="badge @((Model.WarehouseStocks[index].Product?.IsActive ?? false) && (Model.WarehouseStocks[index].Product?.Status == 1) && (Model.WarehouseStocks[index].Batch?.IsActive ?? false) && (Model.WarehouseStocks[index].Batch?.Status == 1) ? "text-bg-success" : "text-bg-secondary")">@((Model.WarehouseStocks[index].Product?.IsActive ?? false) && (Model.WarehouseStocks[index].Product?.Status == 1) && (Model.WarehouseStocks[index].Batch?.IsActive ?? false) && (Model.WarehouseStocks[index].Batch?.Status == 1) ? "Active" : "Inactive")</span></td>
                         <td class="col-action">
                             <div class="setup-row-actions">
                                 @if ((Model.WarehouseStocks[index].Product?.IsActive ?? false) && Model.WarehouseStocks[index].Product?.Status == 1)

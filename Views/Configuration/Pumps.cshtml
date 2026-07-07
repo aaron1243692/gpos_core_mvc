@@ -6,12 +6,12 @@
             <ol class="breadcrumb">
                 <li class="breadcrumb-item">GPOS</li>
                 <li class="breadcrumb-item">Setup</li>
-                <li class="breadcrumb-item">Fuel</li>
-                <li class="breadcrumb-item active" aria-current="page">Pumps</li>
+                <li class="breadcrumb-item">Config</li>
+                <li class="breadcrumb-item active" aria-current="page">Dispensers</li>
             </ol>
         </nav>
-        <h1>Pumps</h1>
-        <p class="page-subtitle">Connect each pump to the tank it dispenses from.</p>
+        <h1>Dispensers</h1>
+        <p class="page-subtitle">Manage dispenser names used by nozzles and meter readings.</p>
     </div>
 </div>
 
@@ -22,9 +22,9 @@
     }
     <div class="table-actions fuel-toolbar">
         <form asp-action="Pumps" method="get" class="setup-search-form fuel-toolbar-search">
-            <input class="form-control" name="search" value="@Model.Search" placeholder="Search by name or tank" />
+            <input class="form-control" name="search" value="@Model.Search" placeholder="Search dispensers" />
         </form>
-        <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#pumpModal">Add Pump</button>
+        <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#pumpModal">Add Dispenser</button>
     </div>
     <div class="setup-table-scroll">
         <table class="table app-table table-sm align-middle admin-table mb-0">
@@ -32,8 +32,6 @@
                 <col class="col-no" />
                 <col class="col-id" />
                 <col class="col-name" />
-                <col class="col-normal" />
-                <col class="col-normal" />
                 <col class="col-status" />
                 <col class="col-action" />
             </colgroup>
@@ -41,9 +39,7 @@
                 <tr>
                     <th class="col-no">No</th>
                     <th class="col-id">ID</th>
-                    <th class="col-name">Name</th>
-                    <th>Tank</th>
-                    <th>Fuel</th>
+                    <th class="col-name">Dispenser</th>
                     <th class="col-status">Status</th>
                     <th class="col-action">Action</th>
                 </tr>
@@ -51,7 +47,7 @@
             <tbody>
                 @if (Model.Pumps.Count == 0)
                 {
-                    <tr><td class="text-center text-muted fw-bold" colspan="7">No records yet.</td></tr>
+                    <tr><td class="text-center text-muted fw-bold" colspan="5">No dispensers yet.</td></tr>
                 }
                 @for (var i = 0; i < Model.Pumps.Count; i++)
                 {
@@ -59,8 +55,6 @@
                         <td class="col-no">@(i + 1)</td>
                         <td class="col-id">@Model.Pumps[i].Id</td>
                         <td>@Model.Pumps[i].Name</td>
-                        <td>@Model.Pumps[i].Tank?.TankNo</td>
-                        <td>@Model.Pumps[i].Tank?.Fuel?.Name</td>
                         <td><span class="badge @(Model.Pumps[i].Status == 1 ? "text-bg-success" : "text-bg-secondary")">@(Model.Pumps[i].Status == 1 ? "Active" : "Inactive")</span></td>
                         <td class="col-action">
                             <div class="setup-row-actions">
@@ -68,20 +62,20 @@
                                 @if (Model.Pumps[i].Status == 1)
                                 {
                                     <form asp-action="DeletePump" method="post" data-deactivate-form>
-                                    @Html.AntiForgeryToken()
-                                    <input name="id" type="hidden" value="@Model.Pumps[i].Id" />
-                                    <input name="search" type="hidden" value="@Model.Search" />
-                                    <button class="btn btn-sm btn-outline-danger" type="submit">Deactivate</button>
-                                </form>
+                                        @Html.AntiForgeryToken()
+                                        <input name="id" type="hidden" value="@Model.Pumps[i].Id" />
+                                        <input name="search" type="hidden" value="@Model.Search" />
+                                        <button class="btn btn-sm btn-outline-danger" type="submit">Deactivate</button>
+                                    </form>
                                 }
-                                @if (!(Model.Pumps[i].Status == 1))
+                                @if (Model.Pumps[i].Status != 1)
                                 {
                                     <form asp-action="ActivatePump" method="post">
-                                    @Html.AntiForgeryToken()
-                                    <input name="id" type="hidden" value="@Model.Pumps[i].Id" />
-                                    <input name="search" type="hidden" value="@Model.Search" />
-                                    <button class="btn btn-sm btn-outline-success" type="submit">Activate</button>
-                                </form>
+                                        @Html.AntiForgeryToken()
+                                        <input name="id" type="hidden" value="@Model.Pumps[i].Id" />
+                                        <input name="search" type="hidden" value="@Model.Search" />
+                                        <button class="btn btn-sm btn-outline-success" type="submit">Activate</button>
+                                    </form>
                                 }
                             </div>
                         </td>
@@ -100,21 +94,14 @@
                 <input asp-for="PumpForm.Id" type="hidden" />
                 <input name="search" type="hidden" value="@Model.Search" />
                 <div class="modal-header">
-                    <h2 class="modal-title fs-5" id="pumpModalLabel">Add Pump</h2>
+                    <h2 class="modal-title fs-5" id="pumpModalLabel">Dispenser</h2>
                     <button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
                     <div class="mb-3">
-                        <label asp-for="PumpForm.Name" class="form-label">Name</label>
-                        <input asp-for="PumpForm.Name" class="form-control" placeholder="Pump A" />
+                        <label asp-for="PumpForm.Name" class="form-label">Dispenser Name</label>
+                        <input asp-for="PumpForm.Name" class="form-control" placeholder="Enter dispenser name" />
                         <span asp-validation-for="PumpForm.Name" class="text-danger"></span>
-                    </div>
-                    <div class="mb-3">
-                        <label asp-for="PumpForm.TankId" class="form-label">Tank</label>
-                        <select asp-for="PumpForm.TankId" asp-items="Model.TankOptions" class="form-select">
-                            <option value="0">Select tank</option>
-                        </select>
-                        <span asp-validation-for="PumpForm.TankId" class="text-danger"></span>
                     </div>
                     <input asp-for="PumpForm.Status" type="hidden" />
                 </div>
@@ -137,6 +124,7 @@
             if (modalElement && window.bootstrap) {
                 bootstrap.Modal.getOrCreateInstance(modalElement).show();
             }
+
         });
     </script>
 }

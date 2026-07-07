@@ -17413,4 +17413,4 @@ C:\project\gpos_core_mvc\artifacts\buildcheck\Views\Vouchers\Index.cshtml
 C:\project\gpos_core_mvc\artifacts\buildcheck\Views\Vouchers\Rules.cshtml
 C:\project\gpos_core_mvc\artifacts\buildcheck\Views\_ViewImports.cshtml
 C:\project\gpos_core_mvc\artifacts\buildcheck\Views\_ViewStart.cshtml
-C:\project\gpos_core_mvc\obj\Debug\net10.0\compressed\ios0330fcj-{0}-7odhg99e0z-7odhg99e0z.gz
+C:\project\gpos_core_mvc\obj\Debug\net10.0\compressed\ios0330fcj-{0}-w3gyfxru0l-w3gyfxru0l.gz

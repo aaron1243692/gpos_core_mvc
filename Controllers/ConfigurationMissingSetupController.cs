@@ -439,10 +439,35 @@ namespace gpos.Controllers
                 return View("Nozzles", await BuildNozzlesPageAsync(search, form, activeModalId: "nozzleModal"));
             }
 
+            var pumpExists = await _db.Pumps.AsNoTracking()
+                .AnyAsync(pump => pump.Id == form.PumpId && pump.Status == 1);
+
+            if (!pumpExists)
+            {
+                ModelState.AddModelError("NozzleForm.PumpId", "Select an active dispenser.");
+                return View("Nozzles", await BuildNozzlesPageAsync(search, form, activeModalId: "nozzleModal"));
+            }
+
+            var tankExists = await _db.Tanks.AsNoTracking()
+                .Include(tank => tank.Fuel)
+                .AnyAsync(tank => tank.Id == form.TankId
+                    && tank.Status == 1
+                    && tank.IsActive
+                    && tank.Fuel != null
+                    && tank.Fuel.Status == 1
+                    && tank.Fuel.IsActive);
+
+            if (!tankExists)
+            {
+                ModelState.AddModelError("NozzleForm.TankId", "Select an active tank with fuel.");
+                return View("Nozzles", await BuildNozzlesPageAsync(search, form, activeModalId: "nozzleModal"));
+            }
+
             var now = DateTime.UtcNow;
             var nozzle = form.Id > 0 ? await _db.Nozzles.FindAsync(form.Id) : new Nozzle { CreatedAt = now };
             if (nozzle is null) return NotFound();
             nozzle.PumpId = form.PumpId;
+            nozzle.TankId = form.TankId;
             nozzle.NozzleNo = form.NozzleNo.Trim();
             nozzle.Status = form.Status;
             nozzle.UpdatedAt = now;
@@ -568,9 +593,13 @@ namespace gpos.Controllers
                 .Include(item => item.Pump)
                 .ThenInclude(pump => pump!.Tank)
                 .ThenInclude(tank => tank!.Fuel)
+                .Include(item => item.Tank)
+                .ThenInclude(tank => tank!.Fuel)
                 .FirstOrDefaultAsync(item => item.Id == form.NozzleId && item.Status == 1);
 
-            if (nozzle is null || nozzle.Pump is null || nozzle.Pump.Status != 1 || nozzle.Pump.Tank is null || nozzle.Pump.Tank.Status != 1 || !nozzle.Pump.Tank.IsActive || nozzle.Pump.Tank.Fuel is null || nozzle.Pump.Tank.Fuel.Status != 1 || !nozzle.Pump.Tank.Fuel.IsActive)
+            var nozzleTank = nozzle?.Tank ?? nozzle?.Pump?.Tank;
+
+            if (nozzle is null || nozzle.Pump is null || nozzle.Pump.Status != 1 || nozzleTank is null || nozzleTank.Status != 1 || !nozzleTank.IsActive || nozzleTank.Fuel is null || nozzleTank.Fuel.Status != 1 || !nozzleTank.Fuel.IsActive)
             {
                 ModelState.AddModelError("PumpMeterReadingForm.NozzleId", "Select an active nozzle.");
                 return View("PumpMeterReadings", await BuildPumpMeterReadingsPageAsync(search, form, activeModalId: "pumpMeterReadingModal"));
@@ -579,11 +608,13 @@ namespace gpos.Controllers
             var now = DateTime.UtcNow;
             var reading = form.Id > 0 ? await _db.PumpMeterReadings.FindAsync(form.Id) : new PumpMeterReading { CreatedAt = now };
             if (reading is null) return NotFound();
+            reading.Name = form.Name.Trim();
             reading.PumpId = nozzle.PumpId;
             reading.NozzleId = form.NozzleId;
             reading.OpeningMeter = form.OpeningMeter!.Value;
-            reading.ClosingMeter = form.ClosingMeter;
-            reading.LitersSold = form.ClosingMeter.HasValue ? form.ClosingMeter.Value - form.OpeningMeter.Value : null;
+            reading.ClosingMeter = form.ClosingMeter!.Value;
+            reading.LitersSold = form.ClosingMeter.Value - form.OpeningMeter.Value;
+            reading.Remarks = CleanOptional(form.Remarks);
             reading.ReadingDate = form.ReadingDate!.Value;
             reading.Status = form.Status;
             reading.UpdatedAt = now;
@@ -1180,7 +1211,7 @@ namespace gpos.Controllers
 
         private async Task<SetupModulesPageViewModel> BuildProductBatchesPageAsync(string? search, ProductBatchForm? form = null, int? editId = null, string activeModalId = "")
         {
-            IQueryable<ProductBatch> query = _db.ProductBatches.AsNoTracking().Include(batch => batch.Product).Include(batch => batch.Supplier);
+            IQueryable<ProductBatch> query = _db.ProductBatches.AsNoTracking().Include(batch => batch.Product).Include(batch => batch.Supplier).Include(batch => batch.WarehouseStocks).Include(batch => batch.DisplayStocks);
             var searchText = (search ?? string.Empty).Trim();
             if (!string.IsNullOrWhiteSpace(searchText)) query = query.Where(batch => batch.BatchNo.Contains(searchText) || (batch.Product != null && batch.Product.Name.Contains(searchText)) || (batch.Supplier != null && batch.Supplier.Name.Contains(searchText)));
             return new SetupModulesPageViewModel { Search = searchText, ActiveModalId = activeModalId, ProductBatchForm = form ?? await BuildProductBatchFormAsync(editId), ProductOptions = await BuildProductOptionsAsync(), SupplierOptions = await BuildSupplierOptionsAsync(), ProductBatches = await query.OrderBy(batch => batch.Product!.Name).ThenBy(batch => batch.CreatedAt ?? DateTime.MinValue).ThenBy(batch => batch.Id).ToListAsync() };
@@ -1190,7 +1221,7 @@ namespace gpos.Controllers
         {
             IQueryable<FuelBatch> query = _db.FuelBatches.AsNoTracking().Include(batch => batch.Fuel).Include(batch => batch.Supplier).Include(batch => batch.Tank).ThenInclude(tank => tank!.Branch);
             var searchText = (search ?? string.Empty).Trim();
-            if (!string.IsNullOrWhiteSpace(searchText)) query = query.Where(batch => batch.BatchNo.Contains(searchText) || (batch.Fuel != null && batch.Fuel.Name.Contains(searchText)) || (batch.Supplier != null && batch.Supplier.Name.Contains(searchText)));
+            if (!string.IsNullOrWhiteSpace(searchText)) query = query.Where(batch => batch.BatchNo.Contains(searchText) || (batch.Fuel != null && batch.Fuel.Name.Contains(searchText)) || (batch.Supplier != null && batch.Supplier.Name.Contains(searchText)) || (batch.Tank != null && batch.Tank.TankNo.Contains(searchText)) || (batch.Tank != null && batch.Tank.Branch != null && batch.Tank.Branch.Name.Contains(searchText)));
             return new SetupModulesPageViewModel { Search = searchText, ActiveModalId = activeModalId, FuelBatchForm = form ?? await BuildFuelBatchFormAsync(editId), SupplierOptions = await BuildSupplierOptionsAsync(), FuelBatches = await query.OrderBy(batch => batch.Fuel!.Name).ThenBy(batch => batch.ReceivedDate).ThenBy(batch => batch.Id).ToListAsync() };
         }
 
@@ -1212,10 +1243,15 @@ namespace gpos.Controllers
 
         private async Task<SetupModulesPageViewModel> BuildNozzlesPageAsync(string? search, NozzleForm? form = null, int? editId = null, string activeModalId = "")
         {
-            IQueryable<Nozzle> query = _db.Nozzles.AsNoTracking().Include(nozzle => nozzle.Pump).ThenInclude(pump => pump!.Tank).ThenInclude(tank => tank!.Fuel);
+            IQueryable<Nozzle> query = _db.Nozzles.AsNoTracking()
+                .Include(nozzle => nozzle.Pump)
+                .ThenInclude(pump => pump!.Tank)
+                .ThenInclude(tank => tank!.Fuel)
+                .Include(nozzle => nozzle.Tank)
+                .ThenInclude(tank => tank!.Fuel);
             var searchText = (search ?? string.Empty).Trim();
-            if (!string.IsNullOrWhiteSpace(searchText)) query = query.Where(nozzle => nozzle.NozzleNo.Contains(searchText) || (nozzle.Pump != null && nozzle.Pump.Name.Contains(searchText)));
-            return new SetupModulesPageViewModel { Search = searchText, ActiveModalId = activeModalId, NozzleForm = form ?? await BuildNozzleFormAsync(editId), PumpOptions = await BuildPumpOptionsAsync(), Nozzles = await query.OrderBy(item => item.Id).ToListAsync() };
+            if (!string.IsNullOrWhiteSpace(searchText)) query = query.Where(nozzle => nozzle.NozzleNo.Contains(searchText) || (nozzle.Pump != null && nozzle.Pump.Name.Contains(searchText)) || (nozzle.Tank != null && nozzle.Tank.TankNo.Contains(searchText)) || (nozzle.Tank != null && nozzle.Tank.Fuel != null && nozzle.Tank.Fuel.Name.Contains(searchText)) || (nozzle.Pump != null && nozzle.Pump.Tank != null && nozzle.Pump.Tank.TankNo.Contains(searchText)) || (nozzle.Pump != null && nozzle.Pump.Tank != null && nozzle.Pump.Tank.Fuel != null && nozzle.Pump.Tank.Fuel.Name.Contains(searchText)));
+            return new SetupModulesPageViewModel { Search = searchText, ActiveModalId = activeModalId, NozzleForm = form ?? await BuildNozzleFormAsync(editId), Pumps = await BuildActivePumpsAsync(), Tanks = await BuildActiveTanksAsync(), Nozzles = await query.OrderBy(item => item.Id).ToListAsync() };
         }
 
         private async Task<SetupModulesPageViewModel> BuildFuelDeliveriesPageAsync(string? search, FuelDeliveryForm? form = null, int? editId = null, string activeModalId = "")
@@ -1233,11 +1269,17 @@ namespace gpos.Controllers
                 .ThenInclude(nozzle => nozzle!.Pump)
                 .ThenInclude(pump => pump!.Tank)
                 .ThenInclude(tank => tank!.Fuel)
+                .Include(reading => reading.Nozzle)
+                .ThenInclude(nozzle => nozzle!.Tank)
+                .ThenInclude(tank => tank!.Fuel)
                 .Include(reading => reading.Pump)
                 .ThenInclude(pump => pump!.Tank)
                 .ThenInclude(tank => tank!.Fuel);
             var searchText = (search ?? string.Empty).Trim();
-            if (!string.IsNullOrWhiteSpace(searchText)) query = query.Where(reading => (reading.Nozzle != null && reading.Nozzle.NozzleNo.Contains(searchText)) || (reading.Nozzle != null && reading.Nozzle.Pump != null && reading.Nozzle.Pump.Name.Contains(searchText)) || (reading.Nozzle != null && reading.Nozzle.Pump != null && reading.Nozzle.Pump.Tank != null && reading.Nozzle.Pump.Tank.TankNo.Contains(searchText)) || (reading.Nozzle != null && reading.Nozzle.Pump != null && reading.Nozzle.Pump.Tank != null && reading.Nozzle.Pump.Tank.Fuel != null && reading.Nozzle.Pump.Tank.Fuel.Name.Contains(searchText)));
+            var hasSearchDate = DateTime.TryParse(searchText, out var parsedSearchDate);
+            var searchDate = parsedSearchDate.Date;
+            var nextSearchDate = searchDate.AddDays(1);
+            if (!string.IsNullOrWhiteSpace(searchText)) query = query.Where(reading => reading.Name.Contains(searchText) || (reading.Remarks != null && reading.Remarks.Contains(searchText)) || (reading.Nozzle != null && reading.Nozzle.NozzleNo.Contains(searchText)) || (reading.Nozzle != null && reading.Nozzle.Pump != null && reading.Nozzle.Pump.Name.Contains(searchText)) || (reading.Nozzle != null && reading.Nozzle.Tank != null && reading.Nozzle.Tank.TankNo.Contains(searchText)) || (reading.Nozzle != null && reading.Nozzle.Tank != null && reading.Nozzle.Tank.Fuel != null && reading.Nozzle.Tank.Fuel.Name.Contains(searchText)) || (reading.Nozzle != null && reading.Nozzle.Pump != null && reading.Nozzle.Pump.Tank != null && reading.Nozzle.Pump.Tank.TankNo.Contains(searchText)) || (reading.Nozzle != null && reading.Nozzle.Pump != null && reading.Nozzle.Pump.Tank != null && reading.Nozzle.Pump.Tank.Fuel != null && reading.Nozzle.Pump.Tank.Fuel.Name.Contains(searchText)) || (hasSearchDate && reading.ReadingDate >= searchDate && reading.ReadingDate < nextSearchDate));
             return new SetupModulesPageViewModel { Search = searchText, ActiveModalId = activeModalId, PumpMeterReadingForm = form ?? await BuildPumpMeterReadingFormAsync(editId), Nozzles = await BuildActiveNozzlesAsync(), PumpMeterReadings = await query.OrderByDescending(item => item.ReadingDate).ToListAsync() };
         }
 
@@ -1569,8 +1611,8 @@ namespace gpos.Controllers
 
         private async Task<NozzleForm> BuildNozzleFormAsync(int? editId)
         {
-            var item = editId.HasValue ? await _db.Nozzles.AsNoTracking().FirstOrDefaultAsync(nozzle => nozzle.Id == editId.Value) : null;
-            return item is null ? new NozzleForm() : new NozzleForm { Id = item.Id, PumpId = item.PumpId, NozzleNo = item.NozzleNo, Status = item.Status };
+            var item = editId.HasValue ? await _db.Nozzles.AsNoTracking().Include(nozzle => nozzle.Pump).FirstOrDefaultAsync(nozzle => nozzle.Id == editId.Value) : null;
+            return item is null ? new NozzleForm() : new NozzleForm { Id = item.Id, PumpId = item.PumpId, TankId = item.TankId ?? item.Pump?.TankId ?? 0, NozzleNo = item.NozzleNo, Status = item.Status };
         }
 
         private async Task<FuelDeliveryForm> BuildFuelDeliveryFormAsync(int? editId)
@@ -1582,7 +1624,7 @@ namespace gpos.Controllers
         private async Task<PumpMeterReadingForm> BuildPumpMeterReadingFormAsync(int? editId)
         {
             var item = editId.HasValue ? await _db.PumpMeterReadings.AsNoTracking().FirstOrDefaultAsync(reading => reading.Id == editId.Value) : null;
-            return item is null ? new PumpMeterReadingForm() : new PumpMeterReadingForm { Id = item.Id, NozzleId = item.NozzleId ?? 0, OpeningMeter = item.OpeningMeter, ClosingMeter = item.ClosingMeter, ReadingDate = item.ReadingDate, Status = item.Status };
+            return item is null ? new PumpMeterReadingForm() : new PumpMeterReadingForm { Id = item.Id, Name = item.Name, NozzleId = item.NozzleId ?? 0, OpeningMeter = item.OpeningMeter, ClosingMeter = item.ClosingMeter, Remarks = item.Remarks, ReadingDate = item.ReadingDate, Status = item.Status };
         }
 
         private async Task<DiscountRuleForm> BuildDiscountRuleFormAsync(int? editId)
@@ -1763,6 +1805,27 @@ namespace gpos.Controllers
             return await _db.Pumps.AsNoTracking().Where(pump => pump.Status == 1).OrderBy(pump => pump.Name).Select(pump => new SelectListItem { Value = pump.Id.ToString(), Text = pump.Name }).ToListAsync();
         }
 
+        private async Task<List<Pump>> BuildActivePumpsAsync()
+        {
+            return await _db.Pumps.AsNoTracking()
+                .Where(pump => pump.Status == 1)
+                .OrderBy(pump => pump.Name)
+                .ToListAsync();
+        }
+
+        private async Task<List<Tank>> BuildActiveTanksAsync()
+        {
+            return await _db.Tanks.AsNoTracking()
+                .Include(tank => tank.Fuel)
+                .Where(tank => tank.Status == 1
+                    && tank.IsActive
+                    && tank.Fuel != null
+                    && tank.Fuel.Status == 1
+                    && tank.Fuel.IsActive)
+                .OrderBy(tank => tank.TankNo)
+                .ToListAsync();
+        }
+
         private async Task<List<SelectListItem>> BuildNozzleOptionsAsync()
         {
             return await _db.Nozzles.AsNoTracking().Where(nozzle => nozzle.Status == 1).OrderBy(nozzle => nozzle.NozzleNo).Select(nozzle => new SelectListItem { Value = nozzle.Id.ToString(), Text = nozzle.NozzleNo }).ToListAsync();
@@ -1774,15 +1837,24 @@ namespace gpos.Controllers
                 .Include(nozzle => nozzle.Pump)
                 .ThenInclude(pump => pump!.Tank)
                 .ThenInclude(tank => tank!.Fuel)
+                .Include(nozzle => nozzle.Tank)
+                .ThenInclude(tank => tank!.Fuel)
                 .Where(nozzle => nozzle.Status == 1
                     && nozzle.Pump != null
                     && nozzle.Pump.Status == 1
-                    && nozzle.Pump.Tank != null
-                    && nozzle.Pump.Tank.Status == 1
-                    && nozzle.Pump.Tank.IsActive
-                    && nozzle.Pump.Tank.Fuel != null
-                    && nozzle.Pump.Tank.Fuel.Status == 1
-                    && nozzle.Pump.Tank.Fuel.IsActive)
+                    && ((nozzle.Tank != null
+                            && nozzle.Tank.Status == 1
+                            && nozzle.Tank.IsActive
+                            && nozzle.Tank.Fuel != null
+                            && nozzle.Tank.Fuel.Status == 1
+                            && nozzle.Tank.Fuel.IsActive)
+                        || (nozzle.Tank == null
+                            && nozzle.Pump.Tank != null
+                            && nozzle.Pump.Tank.Status == 1
+                            && nozzle.Pump.Tank.IsActive
+                            && nozzle.Pump.Tank.Fuel != null
+                            && nozzle.Pump.Tank.Fuel.Status == 1
+                            && nozzle.Pump.Tank.Fuel.IsActive)))
                 .OrderBy(nozzle => nozzle.NozzleNo)
                 .ToListAsync();
         }

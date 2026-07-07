@@ -1226,6 +1226,10 @@ namespace gpos.Migrations
                         .HasDefaultValue(1)
                         .HasColumnName("status");
 
+                    b.Property<int?>("TankId")
+                        .HasColumnType("int")
+                        .HasColumnName("tank_id");
+
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime(6)")
                         .HasColumnName("updated_at");
@@ -1233,6 +1237,8 @@ namespace gpos.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("PumpId");
+
+                    b.HasIndex("TankId");
 
                     b.ToTable("nozzles", (string)null);
                 });
@@ -1895,7 +1901,7 @@ namespace gpos.Migrations
                         .HasDefaultValue(1)
                         .HasColumnName("status");
 
-                    b.Property<int>("TankId")
+                    b.Property<int?>("TankId")
                         .HasColumnType("int")
                         .HasColumnName("tank_id");
 
@@ -1933,6 +1939,14 @@ namespace gpos.Migrations
                         .HasColumnType("decimal(18,2)")
                         .HasColumnName("liters_sold");
 
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(100)
+                        .HasColumnType("varchar(100)")
+                        .HasDefaultValue("Meter Reading")
+                        .HasColumnName("name");
+
                     b.Property<int?>("NozzleId")
                         .HasColumnType("int")
                         .HasColumnName("nozzle_id");
@@ -1949,6 +1963,10 @@ namespace gpos.Migrations
                     b.Property<DateTime>("ReadingDate")
                         .HasColumnType("datetime(6)")
                         .HasColumnName("reading_date");
+
+                    b.Property<string>("Remarks")
+                        .HasColumnType("text")
+                        .HasColumnName("remarks");
 
                     b.Property<int?>("ShiftId")
                         .HasColumnType("int")
@@ -3716,7 +3734,14 @@ namespace gpos.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("gpos.Models.Tank", "Tank")
+                        .WithMany()
+                        .HasForeignKey("TankId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.Navigation("Pump");
+
+                    b.Navigation("Tank");
                 });
 
             modelBuilder.Entity("gpos.Models.Payment", b =>
@@ -3861,8 +3886,7 @@ namespace gpos.Migrations
                     b.HasOne("gpos.Models.Tank", "Tank")
                         .WithMany("Pumps")
                         .HasForeignKey("TankId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("Tank");
                 });
