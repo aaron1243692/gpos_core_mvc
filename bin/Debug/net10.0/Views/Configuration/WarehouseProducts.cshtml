@@ -9,7 +9,7 @@
                 <li class="breadcrumb-item active" aria-current="page">Warehouse</li>
             </ol>
         </nav>
-        <h1>Warehouse Products</h1>
+        <h1>Warehouse Batches</h1>
         <p class="page-subtitle">View warehouse stock by product batch.</p>
     </div>
 </div>
@@ -17,8 +17,8 @@
 <section class="card content-card table-card full-height-card mb-0">
     <div class="table-toolbar d-flex justify-content-between align-items-center gap-2 flex-wrap mb-3">
         <form class="products-search-wrap" asp-action="WarehouseProducts" method="get">
-            <label class="visually-hidden" for="warehouse-product-search">Search warehouse products</label>
-            <input class="form-control form-control-sm products-search" id="warehouse-product-search" name="search" value="@Model.Search" type="search" placeholder="Search warehouse products" autocomplete="off" />
+            <label class="visually-hidden" for="warehouse-product-search">Search warehouse batches</label>
+            <input class="form-control form-control-sm products-search" id="warehouse-product-search" name="search" value="@Model.Search" type="search" placeholder="Search warehouse batches" autocomplete="off" />
         </form>
     </div>
 
@@ -32,17 +32,19 @@
                 <col class="col-normal" />
                 <col class="col-normal" />
                 <col class="col-normal" />
+                <col class="col-normal" />
                 <col class="col-status" />
                 <col class="col-action" />
             </colgroup>
             <thead>
                 <tr>
                     <th class="col-no" scope="col">No</th>
-                    <th class="col-batch" scope="col">Batch</th>
+                    <th class="col-batch" scope="col">Batch Number</th>
                     <th class="col-name" scope="col">Product</th>
+                    <th scope="col">Supplier</th>
                     <th class="col-money" scope="col">Cost Price</th>
                     <th class="col-money" scope="col">Selling Price</th>
-                    <th class="col-qty" scope="col">Quantity</th>
+                    <th class="col-qty" scope="col">Warehouse Quantity</th>
                     <th scope="col">Expiry Date</th>
                     <th class="col-status" scope="col">Status</th>
                     <th class="col-action" scope="col">Action</th>
@@ -52,7 +54,7 @@
                 @if (Model.WarehouseStocks.Count == 0)
                 {
                     <tr>
-                        <td class="text-center text-muted fw-bold" colspan="9">No warehouse products yet.</td>
+                        <td class="text-center text-muted fw-bold" colspan="10">No warehouse batches found.</td>
                     </tr>
                 }
                 @for (var index = 0; index < Model.WarehouseStocks.Count; index += 1)
@@ -61,11 +63,12 @@
                         <td class="col-no">@(index + 1)</td>
                         <td class="col-batch">@(Model.WarehouseStocks[index].Batch?.BatchNo ?? "-")</td>
                         <td class="col-name">@(Model.WarehouseStocks[index].Product?.Name ?? "-")</td>
-                        <td>₱@(Model.WarehouseStocks[index].Batch?.CostPrice.ToString("N2") ?? "0.00")</td>
-                        <td>₱@(Model.WarehouseStocks[index].Batch?.SellingPrice.ToString("N2") ?? "0.00")</td>
+                        <td>@(Model.WarehouseStocks[index].Batch?.Supplier?.Name ?? "-")</td>
+                        <td>&#8369;@(Model.WarehouseStocks[index].Batch?.CostPrice.ToString("N2") ?? "0.00")</td>
+                        <td>&#8369;@(Model.WarehouseStocks[index].Batch?.SellingPrice.ToString("N2") ?? "0.00")</td>
                         <td class="col-qty">@Model.WarehouseStocks[index].Quantity.ToString("N2")</td>
                         <td>@(Model.WarehouseStocks[index].Batch?.ExpiryDate?.ToString("yyyy-MM-dd") ?? "-")</td>
-                        <td><span class="badge @((Model.WarehouseStocks[index].Product?.IsActive ?? false) && (Model.WarehouseStocks[index].Product?.Status == 1) ? "text-bg-success" : "text-bg-secondary")">@((Model.WarehouseStocks[index].Product?.IsActive ?? false) && (Model.WarehouseStocks[index].Product?.Status == 1) ? "Active" : "Inactive")</span></td>
+                        <td><span class="badge @((Model.WarehouseStocks[index].Product?.IsActive ?? false) && (Model.WarehouseStocks[index].Product?.Status == 1) && (Model.WarehouseStocks[index].Batch?.IsActive ?? false) && (Model.WarehouseStocks[index].Batch?.Status == 1) ? "text-bg-success" : "text-bg-secondary")">@((Model.WarehouseStocks[index].Product?.IsActive ?? false) && (Model.WarehouseStocks[index].Product?.Status == 1) && (Model.WarehouseStocks[index].Batch?.IsActive ?? false) && (Model.WarehouseStocks[index].Batch?.Status == 1) ? "Active" : "Inactive")</span></td>
                         <td class="col-action">
                             <div class="setup-row-actions">
                                 @if ((Model.WarehouseStocks[index].Product?.IsActive ?? false) && Model.WarehouseStocks[index].Product?.Status == 1)
