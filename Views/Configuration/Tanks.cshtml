@@ -1,5 +1,8 @@
 @using System.Globalization
 @model gpos.Models.ViewModels.FuelSetupPageViewModel
+@{
+    var tankFormBranchName = Model.TankForm.BranchId > 0 ? Model.FormBranchName : string.Empty;
+}
 
 <div class="page-header">
     <div class="page-heading">
@@ -22,8 +25,16 @@
         <div class="alert alert-info mb-0" role="alert">@feedback</div>
     }
     <div class="table-actions fuel-toolbar">
-        <form asp-action="Tanks" method="get" class="setup-search-form fuel-toolbar-search">
+        <form asp-action="Tanks" method="get" class="setup-search-form fuel-toolbar-search flex-wrap">
             <input class="form-control" name="search" value="@Model.Search" placeholder="Search by tank or fuel" />
+            <select class="form-select" name="branchId">
+                @foreach (var branch in Model.BranchOptions)
+                {
+                    <option value="@branch.Value" selected="@((Model.BranchId?.ToString() ?? string.Empty) == branch.Value ? "selected" : null)">@branch.Text</option>
+                }
+            </select>
+            <button class="btn btn-outline-primary" type="submit">Search</button>
+            <a class="btn btn-outline-secondary" asp-action="Tanks">Clear</a>
         </form>
         <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#tankModal">Add Tank</button>
     </div>
@@ -37,6 +48,7 @@
                 <col class="col-normal" />
                 <col class="col-normal" />
                 <col class="col-normal" />
+                <col class="col-normal" />
                 <col class="col-action" />
             </colgroup>
             <thead>
@@ -44,6 +56,7 @@
                     <th class="col-no">No</th>
                     <th class="col-id">ID</th>
                     <th class="col-name">Tank No</th>
+                    <th>Branch</th>
                     <th>Fuel</th>
                     <th>Capacity Liters</th>
                     <th>Current Liters</th>
@@ -54,7 +67,7 @@
             <tbody>
                 @if (Model.Tanks.Count == 0)
                 {
-                    <tr><td class="text-center text-muted fw-bold" colspan="8">No records yet.</td></tr>
+                    <tr><td class="text-center text-muted fw-bold" colspan="9">No records yet.</td></tr>
                 }
                 @for (var i = 0; i < Model.Tanks.Count; i++)
                 {
@@ -62,13 +75,14 @@
                         <td class="col-no">@(i + 1)</td>
                         <td class="col-id">@Model.Tanks[i].Id</td>
                         <td>@Model.Tanks[i].TankNo</td>
+                        <td>@(Model.Tanks[i].Branch?.Name ?? "-")</td>
                         <td>@Model.Tanks[i].Fuel?.Name</td>
                         <td>@Model.Tanks[i].CapacityLiters.ToString("N2", CultureInfo.InvariantCulture) L</td>
                         <td>@Model.Tanks[i].CurrentLiters.ToString("N2", CultureInfo.InvariantCulture) L</td>
                         <td><span class="badge @(Model.Tanks[i].Status == 1 ? "text-bg-success" : "text-bg-secondary")">@(Model.Tanks[i].Status == 1 ? "Active" : "Inactive")</span></td>
                         <td class="col-action">
                             <div class="setup-row-actions">
-                                <a class="btn btn-sm btn-outline-primary" asp-action="Tanks" asp-route-editId="@Model.Tanks[i].Id" asp-route-search="@Model.Search">Edit</a>
+                                <a class="btn btn-sm btn-outline-primary" asp-action="Tanks" asp-route-editId="@Model.Tanks[i].Id" asp-route-search="@Model.Search" asp-route-branchId="@Model.BranchId">Edit</a>
                                 @if (Model.Tanks[i].Status == 1 && Model.Tanks[i].IsActive)
                                 {
                                     <form asp-action="DeleteTank" method="post" data-deactivate-form>
@@ -108,6 +122,17 @@
                     <button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
+                    <div class="mb-3">
+                        <label asp-for="TankForm.BranchId" class="form-label">Branch</label>
+                        <input asp-for="TankForm.BranchId" id="tankBranchId" type="hidden" />
+                        <div class="input-group" data-branch-selector data-branch-hidden="#tankBranchId" data-branch-display="#tankBranchDisplay" data-branch-empty-text="Select branch">
+                            <input id="tankBranchDisplay" class="form-control" type="text" value="@tankFormBranchName" placeholder="Select branch" readonly />
+                            <button type="button" class="btn btn-outline-secondary branch-select-btn" data-branch-open>
+                                <img src="/icons/search.png" alt="Search" style="width:16px;height:16px;" />
+                            </button>
+                        </div>
+                        <span asp-validation-for="TankForm.BranchId" class="text-danger"></span>
+                    </div>
                     <div class="mb-3">
                         <label asp-for="TankForm.FuelId" class="form-label">Fuel</label>
                         <select asp-for="TankForm.FuelId" asp-items="Model.FuelOptions" class="form-select">

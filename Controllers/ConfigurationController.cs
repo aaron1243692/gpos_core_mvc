@@ -23,14 +23,46 @@ namespace gpos.Controllers
         }
 
         public IActionResult Products() => View();
-        public async Task<IActionResult> DisplayProducts(string? search)
+
+        public async Task<IActionResult> SearchBranches(string? search, int take = 20)
         {
-            return View(await BuildDisplayProductsPageAsync(search));
+            var searchText = (search ?? string.Empty).Trim();
+            var resultLimit = Math.Clamp(take, 1, 50);
+            var query = _db.Branches.AsNoTracking();
+
+            if (!string.IsNullOrWhiteSpace(searchText))
+            {
+                query = query.Where(branch => branch.Name.Contains(searchText)
+                    || (branch.Address != null && branch.Address.Contains(searchText))
+                    || branch.Id.ToString().Contains(searchText));
+            }
+
+            var branches = await query
+                .OrderByDescending(branch => branch.Status == 1)
+                .ThenBy(branch => branch.Name)
+                .Take(resultLimit)
+                .Select(branch => new
+                {
+                    id = branch.Id,
+                    name = branch.Name,
+                    code = branch.Id.ToString(),
+                    address = branch.Address,
+                    status = branch.Status == 1 ? "Active" : "Inactive",
+                    isActive = branch.Status == 1
+                })
+                .ToListAsync();
+
+            return Json(branches);
         }
 
-        public async Task<IActionResult> WarehouseProducts(string? search)
+        public async Task<IActionResult> DisplayProducts(string? search, int? branchId)
         {
-            return View(await BuildWarehouseProductsPageAsync(search));
+            return View(await BuildDisplayProductsPageAsync(search, branchId: branchId));
+        }
+
+        public async Task<IActionResult> WarehouseProducts(string? search, int? branchId)
+        {
+            return View(await BuildWarehouseProductsPageAsync(search, branchId: branchId));
         }
 
         public async Task<IActionResult> ProductCategories(string? search)
@@ -945,9 +977,9 @@ namespace gpos.Controllers
         }
 
 
-        public async Task<IActionResult> Tanks(string? search, int? editId)
+        public async Task<IActionResult> Tanks(string? search, int? editId, int? branchId)
         {
-            return View(await BuildTanksPageAsync(search, editId: editId, activeModalId: editId.HasValue ? "tankModal" : ""));
+            return View(await BuildTanksPageAsync(search, branchId, editId: editId, activeModalId: editId.HasValue ? "tankModal" : ""));
         }
 
         [HttpPost]
@@ -956,7 +988,7 @@ namespace gpos.Controllers
         {
             if (!ModelState.IsValid)
             {
-                return View("Tanks", await BuildTanksPageAsync(search, form, activeModalId: "tankModal"));
+                return View("Tanks", await BuildTanksPageAsync(search, form.BranchId, form, activeModalId: "tankModal"));
             }
 
             var fuelExists = await _db.Fuels.AnyAsync(fuel => fuel.Id == form.FuelId && fuel.Status == 1 && fuel.IsActive);
@@ -964,7 +996,13 @@ namespace gpos.Controllers
             if (!fuelExists)
             {
                 ModelState.AddModelError("TankForm.FuelId", "Tank fuel is required.");
-                return View("Tanks", await BuildTanksPageAsync(search, form, activeModalId: "tankModal"));
+                return View("Tanks", await BuildTanksPageAsync(search, form.BranchId, form, activeModalId: "tankModal"));
+            }
+
+            if (!await _db.Branches.AnyAsync(branch => branch.Id == form.BranchId && branch.Status == 1))
+            {
+                ModelState.AddModelError("TankForm.BranchId", "Branch is required.");
+                return View("Tanks", await BuildTanksPageAsync(search, form.BranchId, form, activeModalId: "tankModal"));
             }
 
             var now = DateTime.UtcNow;
@@ -976,6 +1014,7 @@ namespace gpos.Controllers
             }
 
             tank.FuelId = form.FuelId;
+            tank.BranchId = form.BranchId;
             tank.TankNo = form.TankNo.Trim();
             tank.CapacityLiters = form.CapacityLiters!.Value;
             tank.CurrentLiters = form.CurrentLiters!.Value;
@@ -989,7 +1028,7 @@ namespace gpos.Controllers
             }
 
             await _db.SaveChangesAsync();
-            return RedirectToAction(nameof(Tanks), new { search });
+            return RedirectToAction(nameof(Tanks), new { search, branchId = form.BranchId });
         }
 
         [HttpPost]
@@ -1028,9 +1067,9 @@ namespace gpos.Controllers
         }
 
 
-        public async Task<IActionResult> Pumps(string? search, int? editId)
+        public async Task<IActionResult> Pumps(string? search, int? editId, int? branchId)
         {
-            return View(await BuildPumpsPageAsync(search, editId: editId, activeModalId: editId.HasValue ? "pumpModal" : ""));
+            return View(await BuildPumpsPageAsync(search, branchId, editId: editId, activeModalId: editId.HasValue ? "pumpModal" : ""));
         }
 
         [HttpPost]
@@ -1039,7 +1078,13 @@ namespace gpos.Controllers
         {
             if (!ModelState.IsValid)
             {
-                return View("Pumps", await BuildPumpsPageAsync(search, form, activeModalId: "pumpModal"));
+                return View("Pumps", await BuildPumpsPageAsync(search, form.BranchId, form, activeModalId: "pumpModal"));
+            }
+
+            if (!await _db.Branches.AnyAsync(branch => branch.Id == form.BranchId && branch.Status == 1))
+            {
+                ModelState.AddModelError("PumpForm.BranchId", "Branch is required.");
+                return View("Pumps", await BuildPumpsPageAsync(search, form.BranchId, form, activeModalId: "pumpModal"));
             }
 
             var now = DateTime.UtcNow;
@@ -1050,6 +1095,7 @@ namespace gpos.Controllers
                 return NotFound();
             }
 
+            pump.BranchId = form.BranchId;
             pump.Name = form.Name.Trim();
             pump.PumpNo = form.Name.Trim();
             pump.Status = form.Status;
@@ -1061,7 +1107,7 @@ namespace gpos.Controllers
             }
 
             await _db.SaveChangesAsync();
-            return RedirectToAction(nameof(Pumps), new { search });
+            return RedirectToAction(nameof(Pumps), new { search, branchId = form.BranchId });
         }
 
         [HttpPost]
@@ -1097,7 +1143,7 @@ namespace gpos.Controllers
         }
 
 
-        private async Task<ProductStockPageViewModel> BuildDisplayProductsPageAsync(string? search, ProductStockForm? form = null, string activeModalId = "")
+        private async Task<ProductStockPageViewModel> BuildDisplayProductsPageAsync(string? search, ProductStockForm? form = null, string activeModalId = "", int? branchId = null)
         {
             IQueryable<DisplayStock> query = _db.DisplayStocks.AsNoTracking()
                 .Include(stock => stock.Product)
@@ -1116,11 +1162,19 @@ namespace gpos.Controllers
                     || (stock.Branch != null && stock.Branch.Name.Contains(searchText)));
             }
 
+            if (branchId.HasValue && branchId.Value > 0)
+            {
+                query = query.Where(stock => stock.BranchId == branchId.Value);
+            }
+
             return new ProductStockPageViewModel
             {
                 Search = searchText,
+                BranchId = branchId,
+                BranchName = await BranchNameAsync(branchId),
                 ActiveModalId = activeModalId,
                 StockForm = form ?? new ProductStockForm(),
+                BranchOptions = await BuildBranchFilterOptionsAsync(),
                 CategoryOptions = await BuildCategoryOptionsAsync(),
                 DisplayStocks = await query
                     .Where(stock => stock.Quantity > 0)
@@ -1133,7 +1187,7 @@ namespace gpos.Controllers
             };
         }
 
-        private async Task<ProductStockPageViewModel> BuildWarehouseProductsPageAsync(string? search, ProductStockForm? form = null, string activeModalId = "")
+        private async Task<ProductStockPageViewModel> BuildWarehouseProductsPageAsync(string? search, ProductStockForm? form = null, string activeModalId = "", int? branchId = null)
         {
             IQueryable<WarehouseStock> query = _db.WarehouseStocks.AsNoTracking()
                 .Include(stock => stock.Product)
@@ -1152,11 +1206,19 @@ namespace gpos.Controllers
                     || (stock.Branch != null && stock.Branch.Name.Contains(searchText)));
             }
 
+            if (branchId.HasValue && branchId.Value > 0)
+            {
+                query = query.Where(stock => stock.BranchId == branchId.Value);
+            }
+
             return new ProductStockPageViewModel
             {
                 Search = searchText,
+                BranchId = branchId,
+                BranchName = await BranchNameAsync(branchId),
                 ActiveModalId = activeModalId,
                 StockForm = form ?? new ProductStockForm(),
+                BranchOptions = await BuildBranchFilterOptionsAsync(),
                 CategoryOptions = await BuildCategoryOptionsAsync(),
                 WarehouseStocks = await query
                     .Where(stock => stock.Quantity > 0)
@@ -1270,41 +1332,74 @@ namespace gpos.Controllers
             };
         }
 
-        private async Task<FuelSetupPageViewModel> BuildTanksPageAsync(string? search, TankForm? form = null, int? editId = null, string activeModalId = "")
+        private async Task<FuelSetupPageViewModel> BuildTanksPageAsync(string? search, int? branchId = null, TankForm? form = null, int? editId = null, string activeModalId = "")
         {
-            IQueryable<Tank> query = _db.Tanks.AsNoTracking().Include(tank => tank.Fuel);
+            IQueryable<Tank> query = _db.Tanks.AsNoTracking().Include(tank => tank.Fuel).Include(tank => tank.Branch);
             var searchText = (search ?? string.Empty).Trim();
 
             if (!string.IsNullOrWhiteSpace(searchText))
             {
-                query = query.Where(tank => tank.TankNo.Contains(searchText) || (tank.Fuel != null && tank.Fuel.Name.Contains(searchText)));
+                query = query.Where(tank => tank.TankNo.Contains(searchText)
+                    || (tank.Fuel != null && tank.Fuel.Name.Contains(searchText))
+                    || (tank.Branch != null && tank.Branch.Name.Contains(searchText)));
+            }
+
+            if (branchId.HasValue && branchId.Value > 0)
+            {
+                query = query.Where(tank => tank.BranchId == branchId.Value);
+            }
+
+            var tankForm = form ?? await BuildTankFormAsync(editId);
+            if (tankForm.Id == 0 && tankForm.BranchId <= 0 && branchId.HasValue && branchId.Value > 0)
+            {
+                tankForm.BranchId = branchId.Value;
             }
 
             return new FuelSetupPageViewModel
             {
                 Search = searchText,
+                BranchId = branchId,
+                BranchName = await BranchNameAsync(branchId),
+                FormBranchName = await BranchNameAsync(tankForm.BranchId),
                 ActiveModalId = activeModalId,
-                TankForm = form ?? await BuildTankFormAsync(editId),
+                TankForm = tankForm,
+                BranchOptions = await BuildBranchFilterOptionsAsync(),
                 FuelOptions = await BuildFuelOptionsAsync(),
                 Tanks = await query.OrderBy(tank => tank.Id).ToListAsync()
             };
         }
 
-        private async Task<FuelSetupPageViewModel> BuildPumpsPageAsync(string? search, PumpForm? form = null, int? editId = null, string activeModalId = "")
+        private async Task<FuelSetupPageViewModel> BuildPumpsPageAsync(string? search, int? branchId = null, PumpForm? form = null, int? editId = null, string activeModalId = "")
         {
-            IQueryable<Pump> query = _db.Pumps.AsNoTracking();
+            IQueryable<Pump> query = _db.Pumps.AsNoTracking().Include(pump => pump.Branch);
             var searchText = (search ?? string.Empty).Trim();
 
             if (!string.IsNullOrWhiteSpace(searchText))
             {
-                query = query.Where(pump => pump.Name.Contains(searchText));
+                query = query.Where(pump => pump.Name.Contains(searchText)
+                    || (pump.Branch != null && pump.Branch.Name.Contains(searchText)));
+            }
+
+            if (branchId.HasValue && branchId.Value > 0)
+            {
+                query = query.Where(pump => pump.BranchId == branchId.Value);
+            }
+
+            var pumpForm = form ?? await BuildPumpFormAsync(editId);
+            if (pumpForm.Id == 0 && pumpForm.BranchId <= 0 && branchId.HasValue && branchId.Value > 0)
+            {
+                pumpForm.BranchId = branchId.Value;
             }
 
             return new FuelSetupPageViewModel
             {
                 Search = searchText,
+                BranchId = branchId,
+                BranchName = await BranchNameAsync(branchId),
+                PumpFormBranchName = await BranchNameAsync(pumpForm.BranchId),
                 ActiveModalId = activeModalId,
-                PumpForm = form ?? await BuildPumpFormAsync(editId),
+                PumpForm = pumpForm,
+                BranchOptions = await BuildBranchFilterOptionsAsync(),
                 Pumps = await query.OrderBy(pump => pump.Id).ToListAsync()
             };
         }
@@ -1344,6 +1439,7 @@ namespace gpos.Controllers
             {
                 Id = tank.Id,
                 FuelId = tank.FuelId,
+                BranchId = tank.BranchId ?? 0,
                 TankNo = tank.TankNo,
                 CapacityLiters = tank.CapacityLiters,
                 CurrentLiters = tank.CurrentLiters,
@@ -1358,6 +1454,7 @@ namespace gpos.Controllers
             return pump is null ? new PumpForm() : new PumpForm
             {
                 Id = pump.Id,
+                BranchId = pump.BranchId ?? 0,
                 Name = pump.Name,
                 Status = pump.Status
             };
@@ -1757,10 +1854,31 @@ namespace gpos.Controllers
                 .ToListAsync();
         }
 
+        private async Task<List<SelectListItem>> BuildBranchFilterOptionsAsync()
+        {
+            var options = await BuildBranchOptionsAsync();
+            options.Insert(0, new SelectListItem { Value = "", Text = "All Branches" });
+            return options;
+        }
+
         private static string? CleanOptional(string? value)
         {
             var trimmed = (value ?? string.Empty).Trim();
             return string.IsNullOrWhiteSpace(trimmed) ? null : trimmed;
+        }
+
+        private async Task<string> BranchNameAsync(int? branchId)
+        {
+            if (!branchId.HasValue || branchId.Value <= 0)
+            {
+                return string.Empty;
+            }
+
+            return await _db.Branches
+                .AsNoTracking()
+                .Where(branch => branch.Id == branchId.Value)
+                .Select(branch => branch.Name)
+                .FirstOrDefaultAsync() ?? string.Empty;
         }
     }
 }

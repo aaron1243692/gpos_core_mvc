@@ -4,6 +4,7 @@ namespace gpos.Models
     {
         public int Id { get; set; }
         public string DeliveryNo { get; set; } = string.Empty;
+        public int? BranchId { get; set; }
         public int? SupplierId { get; set; }
         public int FuelId { get; set; }
         public int TankId { get; set; }
@@ -16,6 +17,7 @@ namespace gpos.Models
         public DateTime? CreatedAt { get; set; }
         public DateTime? UpdatedAt { get; set; }
 
+        public Branch? Branch { get; set; }
         public Supplier? Supplier { get; set; }
         public Fuel? Fuel { get; set; }
         public Tank? Tank { get; set; }

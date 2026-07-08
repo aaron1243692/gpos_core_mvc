@@ -6,8 +6,11 @@ namespace gpos.Models.ViewModels
     public class ProductReceivingPageViewModel
     {
         public string Search { get; set; } = string.Empty;
+        public int? BranchId { get; set; }
+        public string FormBranchName { get; set; } = string.Empty;
         public ProductReceivingForm Form { get; set; } = new();
         public List<ProductReceivingRowViewModel> Receivings { get; set; } = new();
+        public List<SelectListItem> BranchOptions { get; set; } = new();
         public List<SelectListItem> SupplierOptions { get; set; } = new();
         public List<SelectListItem> ProductOptions { get; set; } = new();
         public List<SelectListItem> CategoryOptions { get; set; } = new();
@@ -17,6 +20,9 @@ namespace gpos.Models.ViewModels
     public class ProductReceivingForm
     {
         public int Id { get; set; }
+
+        [Range(1, int.MaxValue, ErrorMessage = "Branch is required.")]
+        public int BranchId { get; set; }
 
         [Range(1, int.MaxValue, ErrorMessage = "Supplier is required.")]
         public int SupplierId { get; set; }
@@ -56,6 +62,7 @@ namespace gpos.Models.ViewModels
     {
         public int Id { get; set; }
         public string ReceivingNo { get; set; } = "-";
+        public string BranchName { get; set; } = "-";
         public string Supplier { get; set; } = "-";
         public string Product { get; set; } = "-";
         public string Batch { get; set; } = "-";
@@ -73,8 +80,11 @@ namespace gpos.Models.ViewModels
     public class FuelReceivingPageViewModel
     {
         public string Search { get; set; } = string.Empty;
+        public int? BranchId { get; set; }
+        public string FormBranchName { get; set; } = string.Empty;
         public FuelReceivingForm Form { get; set; } = new();
         public List<FuelReceivingRowViewModel> Receivings { get; set; } = new();
+        public List<SelectListItem> BranchOptions { get; set; } = new();
         public List<SelectListItem> SupplierOptions { get; set; } = new();
         public List<SelectListItem> FuelOptions { get; set; } = new();
         public List<SelectListItem> TankOptions { get; set; } = new();
@@ -83,6 +93,9 @@ namespace gpos.Models.ViewModels
     public class FuelReceivingForm
     {
         public int Id { get; set; }
+
+        [Range(1, int.MaxValue, ErrorMessage = "Branch is required.")]
+        public int BranchId { get; set; }
 
         [Range(1, int.MaxValue, ErrorMessage = "Supplier is required.")]
         public int SupplierId { get; set; }
@@ -112,6 +125,7 @@ namespace gpos.Models.ViewModels
     {
         public int Id { get; set; }
         public string ReceivingNo { get; set; } = "-";
+        public string BranchName { get; set; } = "-";
         public string Supplier { get; set; } = "-";
         public string Fuel { get; set; } = "-";
         public string Tank { get; set; } = "-";

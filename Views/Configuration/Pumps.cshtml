@@ -1,4 +1,7 @@
 @model gpos.Models.ViewModels.FuelSetupPageViewModel
+@{
+    var pumpFormBranchName = Model.PumpForm.BranchId > 0 ? Model.PumpFormBranchName : string.Empty;
+}
 
 <div class="page-header">
     <div class="page-heading">
@@ -21,8 +24,16 @@
         <div class="alert alert-info mb-0" role="alert">@feedback</div>
     }
     <div class="table-actions fuel-toolbar">
-        <form asp-action="Pumps" method="get" class="setup-search-form fuel-toolbar-search">
+        <form asp-action="Pumps" method="get" class="setup-search-form fuel-toolbar-search flex-wrap">
             <input class="form-control" name="search" value="@Model.Search" placeholder="Search dispensers" />
+            <select class="form-select" name="branchId">
+                @foreach (var branch in Model.BranchOptions)
+                {
+                    <option value="@branch.Value" selected="@((Model.BranchId?.ToString() ?? string.Empty) == branch.Value ? "selected" : null)">@branch.Text</option>
+                }
+            </select>
+            <button class="btn btn-outline-primary" type="submit">Search</button>
+            <a class="btn btn-outline-secondary" asp-action="Pumps">Clear</a>
         </form>
         <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#pumpModal">Add Dispenser</button>
     </div>
@@ -32,6 +43,7 @@
                 <col class="col-no" />
                 <col class="col-id" />
                 <col class="col-name" />
+                <col class="col-normal" />
                 <col class="col-status" />
                 <col class="col-action" />
             </colgroup>
@@ -40,6 +52,7 @@
                     <th class="col-no">No</th>
                     <th class="col-id">ID</th>
                     <th class="col-name">Dispenser</th>
+                    <th>Branch</th>
                     <th class="col-status">Status</th>
                     <th class="col-action">Action</th>
                 </tr>
@@ -47,7 +60,7 @@
             <tbody>
                 @if (Model.Pumps.Count == 0)
                 {
-                    <tr><td class="text-center text-muted fw-bold" colspan="5">No dispensers yet.</td></tr>
+                    <tr><td class="text-center text-muted fw-bold" colspan="6">No dispensers yet.</td></tr>
                 }
                 @for (var i = 0; i < Model.Pumps.Count; i++)
                 {
@@ -55,10 +68,11 @@
                         <td class="col-no">@(i + 1)</td>
                         <td class="col-id">@Model.Pumps[i].Id</td>
                         <td>@Model.Pumps[i].Name</td>
+                        <td>@(Model.Pumps[i].Branch?.Name ?? "Unassigned")</td>
                         <td><span class="badge @(Model.Pumps[i].Status == 1 ? "text-bg-success" : "text-bg-secondary")">@(Model.Pumps[i].Status == 1 ? "Active" : "Inactive")</span></td>
                         <td class="col-action">
                             <div class="setup-row-actions">
-                                <a class="btn btn-sm btn-outline-primary" asp-action="Pumps" asp-route-editId="@Model.Pumps[i].Id" asp-route-search="@Model.Search">Edit</a>
+                                <a class="btn btn-sm btn-outline-primary" asp-action="Pumps" asp-route-editId="@Model.Pumps[i].Id" asp-route-search="@Model.Search" asp-route-branchId="@Model.BranchId">Edit</a>
                                 @if (Model.Pumps[i].Status == 1)
                                 {
                                     <form asp-action="DeletePump" method="post" data-deactivate-form>
@@ -98,6 +112,17 @@
                     <button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
+                    <div class="mb-3">
+                        <label asp-for="PumpForm.BranchId" class="form-label">Branch</label>
+                        <input asp-for="PumpForm.BranchId" id="pumpBranchId" type="hidden" />
+                        <div class="input-group" data-branch-selector data-branch-hidden="#pumpBranchId" data-branch-display="#pumpBranchDisplay" data-branch-empty-text="Select branch">
+                            <input id="pumpBranchDisplay" class="form-control" type="text" value="@pumpFormBranchName" placeholder="Select branch" readonly />
+                            <button type="button" class="btn btn-outline-secondary branch-select-btn" data-branch-open>
+                                <img src="/icons/search.png" alt="Search" style="width:16px;height:16px;" />
+                            </button>
+                        </div>
+                        <span asp-validation-for="PumpForm.BranchId" class="text-danger"></span>
+                    </div>
                     <div class="mb-3">
                         <label asp-for="PumpForm.Name" class="form-label">Dispenser Name</label>
                         <input asp-for="PumpForm.Name" class="form-control" placeholder="Enter dispenser name" />

@@ -150,7 +150,6 @@ namespace gpos.ViewComponents
                     "DiscountRules" => "Configuration.DiscountRules",
                     "Position" => "Configuration.Position",
                     "Branch" => "Configuration.Branch",
-                    "Department" => "Configuration.Department",
                     "Users" => "Users.Index",
                     "Suppliers" => "Suppliers.Index",
                     "Operations" => "Operations.Index",
@@ -186,7 +185,7 @@ namespace gpos.ViewComponents
 
         private static bool IsLegacyInventoryConfiguration(string action) => action is "Products" or "Categories" or "ItemUnits" or "FuelTanks";
 
-        private static bool IsLegacySetupConfiguration(string action) => action is "Fuels" or "FuelTypes" or "Pumps" or "Nozzles" or "FuelDeliveries" or "PumpMeterReadings" or "PumpUnits" or "Discounts" or "Members" or "Rebate" or "PointsLedger" or "DiscountRules" or "Position" or "Branch" or "Department" or "RolePermissions" or "ActivityLogs";
+        private static bool IsLegacySetupConfiguration(string action) => action is "Fuels" or "FuelTypes" or "Pumps" or "Nozzles" or "FuelDeliveries" or "PumpMeterReadings" or "PumpUnits" or "Discounts" or "Members" or "Rebate" or "PointsLedger" or "DiscountRules" or "Position" or "Branch" or "RolePermissions" or "ActivityLogs";
 
         private static bool IsLegacySetupUsers(string action) => action is "Users" or "Suppliers" or "Operations" or "Branches" or "Departments" or "Roles" or "Permissions";
 

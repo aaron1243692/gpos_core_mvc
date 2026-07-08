@@ -6,6 +6,10 @@ namespace gpos.Models.ViewModels
     public class StockTransferPageViewModel
     {
         public string Search { get; set; } = string.Empty;
+        public int? SourceFilterBranchId { get; set; }
+        public string SourceFilterBranchName { get; set; } = string.Empty;
+        public int? DestinationFilterBranchId { get; set; }
+        public string DestinationFilterBranchName { get; set; } = string.Empty;
         public string TransferType { get; set; } = string.Empty;
         public string Title { get; set; } = string.Empty;
         public string SaveAction { get; set; } = string.Empty;

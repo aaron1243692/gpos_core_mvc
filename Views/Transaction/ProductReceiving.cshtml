@@ -21,8 +21,24 @@
             }
 
             <form asp-action="ProductReceiving" method="get" class="transaction-ui-toolbar product-receiving-toolbar toolbar">
-                <input class="form-control transaction-ui-search" name="search" value="@Model.Search" type="search" placeholder="Search receiving, supplier, product, batch, status..." />
+                <input class="form-control transaction-ui-search" name="search" value="@Model.Search" type="search" placeholder="Search receiving, supplier, product, batch, branch, status..." />
+                <select class="form-select" name="branchId" style="max-width: 220px;">
+                    @for (var i = 0; i < Model.BranchOptions.Count; i += 1)
+                    {
+                        var option = Model.BranchOptions[i];
+                        var selected = option.Value == (Model.BranchId?.ToString() ?? string.Empty);
+                        if (selected)
+                        {
+                            <option value="@option.Value" selected>@option.Text</option>
+                        }
+                        else
+                        {
+                            <option value="@option.Value">@option.Text</option>
+                        }
+                    }
+                </select>
                 <button class="btn btn-outline-primary" type="submit">Search</button>
+                <a class="btn btn-outline-secondary" asp-action="ProductReceiving">Clear</a>
             </form>
 
             <div class="table-responsive transaction-ui-table-wrap product-receiving-table-wrapper">
@@ -31,6 +47,7 @@
                         <tr>
                             <th>No</th>
                             <th>Receiving No</th>
+                            <th>Branch</th>
                             <th>Supplier</th>
                             <th>Product</th>
                             <th>Batch</th>
@@ -48,13 +65,14 @@
                     <tbody>
                         @if (Model.Receivings.Count == 0)
                         {
-                            <tr><td class="text-center text-muted fw-bold" colspan="14">No product receiving records found.</td></tr>
+                            <tr><td class="text-center text-muted fw-bold" colspan="15">No product receiving records found.</td></tr>
                         }
                         @for (var i = 0; i < Model.Receivings.Count; i += 1)
                         {
                             <tr>
                                 <td class="text-nowrap">@(i + 1)</td>
                                 <td class="text-nowrap">@Model.Receivings[i].ReceivingNo</td>
+                                <td class="text-nowrap">@Model.Receivings[i].BranchName</td>
                                 <td>@Model.Receivings[i].Supplier</td>
                                 <td>@Model.Receivings[i].Product</td>
                                 <td class="text-nowrap">@Model.Receivings[i].Batch</td>
@@ -106,6 +124,17 @@
                 <div class="modal-body">
                     <div asp-validation-summary="ModelOnly" class="text-danger"></div>
                     <div class="row g-3">
+                        <div class="col-md-6">
+                            <label asp-for="Form.BranchId" class="form-label">Branch</label>
+                            <input asp-for="Form.BranchId" type="hidden" id="productReceivingBranchId" />
+                            <div class="input-group" data-branch-selector data-branch-hidden="#productReceivingBranchId" data-branch-display="#productReceivingBranchDisplay">
+                                <input class="form-control" id="productReceivingBranchDisplay" value="@Model.FormBranchName" readonly />
+                                <button type="button" class="btn btn-outline-secondary branch-select-btn">
+                                    <img src="/icons/search.png" alt="Search" style="width:16px;height:16px;" />
+                                </button>
+                            </div>
+                            <span asp-validation-for="Form.BranchId" class="text-danger"></span>
+                        </div>
                         <div class="col-md-6">
                             <label asp-for="Form.SupplierId" class="form-label">Supplier</label>
                             <select asp-for="Form.SupplierId" asp-items="Model.SupplierOptions" class="form-select"></select>

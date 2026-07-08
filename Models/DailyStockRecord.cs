@@ -4,6 +4,7 @@ namespace gpos.Models
     {
         public int Id { get; set; }
         public string StockType { get; set; } = string.Empty;
+        public int? BranchId { get; set; }
         public DateTime StockDate { get; set; }
         public int? ProductId { get; set; }
         public int? BatchId { get; set; }
@@ -19,6 +20,7 @@ namespace gpos.Models
         public DateTime? CreatedAt { get; set; }
         public DateTime? UpdatedAt { get; set; }
 
+        public Branch? Branch { get; set; }
         public Product? Product { get; set; }
         public ProductBatch? Batch { get; set; }
         public Tank? Tank { get; set; }

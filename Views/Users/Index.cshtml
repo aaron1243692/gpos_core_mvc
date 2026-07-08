@@ -1,4 +1,7 @@
 @model gpos.Models.ViewModels.UsersPageViewModel
+@{
+    var userFormBranchName = Model.BranchOptions.FirstOrDefault(item => item.Value == Model.UserForm.BranchId.ToString())?.Text ?? string.Empty;
+}
 
 <div class="page-header">
     <div class="page-heading">
@@ -21,8 +24,17 @@
         <div class="alert alert-info mb-0" role="alert">@feedback</div>
     }
     <div class="table-actions fuel-toolbar">
-        <form asp-action="Index" method="get" class="setup-search-form fuel-toolbar-search">
+        <form asp-action="Index" method="get" class="setup-search-form fuel-toolbar-search flex-wrap">
             <input class="form-control" name="search" value="@Model.Search" placeholder="Search users" />
+            <select class="form-select" name="branchId">
+                <option value="">All Branches</option>
+                @foreach (var branch in Model.BranchOptions)
+                {
+                    <option value="@branch.Value" selected="@(Model.BranchId?.ToString() == branch.Value ? "selected" : null)">@branch.Text</option>
+                }
+            </select>
+            <button class="btn btn-outline-primary" type="submit">Search</button>
+            <a class="btn btn-outline-secondary" asp-action="Index">Clear</a>
         </form>
         <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#userModal">Add User</button>
     </div>
@@ -32,7 +44,6 @@
                 <col class="col-no" />
                 <col class="col-id" />
                 <col class="col-username" />
-                <col class="col-normal" />
                 <col class="col-normal" />
                 <col class="col-normal" />
                 <col class="col-role" />
@@ -47,7 +58,6 @@
                     <th class="col-normal">Email</th>
                     <th class="col-normal">Full Name</th>
                     <th class="col-normal">Branch</th>
-                    <th class="col-normal">Department</th>
                     <th class="col-role">Role</th>
                     <th class="col-status">Status</th>
                     <th class="col-action-wide">Action</th>
@@ -56,7 +66,7 @@
             <tbody>
                 @if (Model.Users.Count == 0)
                 {
-                    <tr><td class="text-center text-muted fw-bold" colspan="10">No users found.</td></tr>
+                    <tr><td class="text-center text-muted fw-bold" colspan="9">No users found.</td></tr>
                 }
                 @for (var i = 0; i < Model.Users.Count; i++)
                 {
@@ -67,12 +77,11 @@
                         <td>@Model.Users[i].Email</td>
                         <td>@(Model.Users[i].FullName ?? "-")</td>
                         <td>@(Model.Users[i].Branch?.Name ?? "-")</td>
-                        <td>@(Model.Users[i].Department?.Name ?? "-")</td>
                         <td>@(Model.Users[i].UserRoles.FirstOrDefault()?.Role?.Name ?? "-")</td>
                         <td><span class="badge @(Model.Users[i].Status == 1 ? "text-bg-success" : "text-bg-secondary")">@(Model.Users[i].Status == 1 ? "Active" : "Inactive")</span></td>
                         <td class="col-action-wide">
                             <div class="setup-row-actions employee-action-buttons">
-                                <a class="btn btn-sm btn-outline-primary" asp-action="Index" asp-route-editId="@Model.Users[i].Id" asp-route-search="@Model.Search">Edit</a>
+                                <a class="btn btn-sm btn-outline-primary" asp-action="Index" asp-route-editId="@Model.Users[i].Id" asp-route-search="@Model.Search" asp-route-branchId="@Model.BranchId">Edit</a>
                                 <button class="btn btn-sm btn-outline-secondary user-password-button" type="button" data-user-id="@Model.Users[i].Id" data-user-name="@Model.Users[i].Username" data-bs-toggle="modal" data-bs-target="#passwordModal">Reset Password</button>
                                 @if (Model.Users[i].Status == 1)
                                 {
@@ -84,6 +93,7 @@
                                         @Html.AntiForgeryToken()
                                         <input name="id" type="hidden" value="@Model.Users[i].Id" />
                                         <input name="search" type="hidden" value="@Model.Search" />
+                                        <input name="branchId" type="hidden" value="@Model.BranchId" />
                                         <button class="btn btn-sm btn-outline-success" type="submit">Activate</button>
                                     </form>
                                 }
@@ -148,17 +158,14 @@
                     </div>
                     <div class="mb-3">
                         <label asp-for="UserForm.BranchId" class="form-label">Branch</label>
-                        <select asp-for="UserForm.BranchId" asp-items="Model.BranchOptions" class="form-select" id="userBranchSelect">
-                            <option value="0">Select branch</option>
-                        </select>
+                        <input asp-for="UserForm.BranchId" id="userBranchId" type="hidden" />
+                        <div class="input-group" data-branch-selector data-branch-hidden="#userBranchId" data-branch-display="#userBranchDisplay" data-branch-empty-text="Select branch">
+                            <input id="userBranchDisplay" class="form-control" type="text" value="@userFormBranchName" placeholder="Select branch" readonly />
+                            <button type="button" class="btn btn-outline-secondary branch-select-btn" data-branch-open>
+                                <img src="/icons/search.png" alt="Search" style="width:16px;height:16px;" />
+                            </button>
+                        </div>
                         <span asp-validation-for="UserForm.BranchId" class="text-danger"></span>
-                    </div>
-                    <div class="mb-3">
-                        <label asp-for="UserForm.DepartmentId" class="form-label">Department</label>
-                        <select asp-for="UserForm.DepartmentId" asp-items="Model.DepartmentOptions" class="form-select" id="userDepartmentSelect" data-selected-department-id="@Model.UserForm.DepartmentId">
-                            <option value="0">Select department</option>
-                        </select>
-                        <span asp-validation-for="UserForm.DepartmentId" class="text-danger"></span>
                     </div>
                     <div class="mb-3">
                         <label asp-for="UserForm.RoleId" class="form-label">Role</label>
@@ -243,74 +250,6 @@
 
             if (modalElement && window.bootstrap) {
                 bootstrap.Modal.getOrCreateInstance(modalElement).show();
-            }
-
-            const branchSelect = document.getElementById("userBranchSelect");
-            const departmentSelect = document.getElementById("userDepartmentSelect");
-
-            const resetDepartmentSelect = () => {
-                if (!departmentSelect) {
-                    return;
-                }
-
-                departmentSelect.innerHTML = '<option value="0">Select department</option>';
-                departmentSelect.value = "0";
-                departmentSelect.disabled = true;
-            };
-
-            const loadDepartments = async (branchId, selectedDepartmentId = "0") => {
-                resetDepartmentSelect();
-
-                if (!branchId || branchId === "0" || !departmentSelect) {
-                    return;
-                }
-
-                departmentSelect.innerHTML = '<option value="0">Loading departments...</option>';
-
-                try {
-                    const response = await fetch(`/Users/DepartmentsByBranch?branchId=${encodeURIComponent(branchId)}`, {
-                        headers: {
-                            "Accept": "application/json"
-                        }
-                    });
-
-                    if (!response.ok) {
-                        throw new Error("Unable to load departments.");
-                    }
-
-                    const departments = await response.json();
-                    departmentSelect.innerHTML = '<option value="0">Select department</option>';
-
-                    departments.forEach((department) => {
-                        const option = document.createElement("option");
-                        option.value = department.id;
-                        option.textContent = department.name;
-                        departmentSelect.appendChild(option);
-                    });
-
-                    departmentSelect.disabled = departments.length === 0;
-
-                    if (selectedDepartmentId && selectedDepartmentId !== "0") {
-                        departmentSelect.value = selectedDepartmentId;
-                    }
-                } catch {
-                    departmentSelect.innerHTML = '<option value="0">Unable to load departments</option>';
-                    departmentSelect.disabled = true;
-                }
-            };
-
-            if (branchSelect && departmentSelect) {
-                const selectedDepartmentId = departmentSelect.dataset.selectedDepartmentId || "0";
-
-                if (branchSelect.value && branchSelect.value !== "0") {
-                    loadDepartments(branchSelect.value, selectedDepartmentId);
-                } else {
-                    resetDepartmentSelect();
-                }
-
-                branchSelect.addEventListener("change", () => {
-                    loadDepartments(branchSelect.value, "0");
-                });
             }
 
             document.querySelectorAll(".user-password-button").forEach((button) => {

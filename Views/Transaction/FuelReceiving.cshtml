@@ -16,8 +16,24 @@
         }
 
         <form asp-action="FuelReceiving" method="get" class="transaction-ui-toolbar">
-            <input class="form-control transaction-ui-search" name="search" value="@Model.Search" type="search" placeholder="Search receiving, supplier, fuel, tank, status..." />
+            <input class="form-control transaction-ui-search" name="search" value="@Model.Search" type="search" placeholder="Search receiving, supplier, fuel, tank, branch, status..." />
+            <select class="form-select" name="branchId" style="max-width: 220px;">
+                @for (var i = 0; i < Model.BranchOptions.Count; i += 1)
+                {
+                    var option = Model.BranchOptions[i];
+                    var selected = option.Value == (Model.BranchId?.ToString() ?? string.Empty);
+                    if (selected)
+                    {
+                        <option value="@option.Value" selected>@option.Text</option>
+                    }
+                    else
+                    {
+                        <option value="@option.Value">@option.Text</option>
+                    }
+                }
+            </select>
             <button class="btn btn-outline-primary" type="submit">Search</button>
+            <a class="btn btn-outline-secondary" asp-action="FuelReceiving">Clear</a>
         </form>
 
         <div class="table-responsive transaction-ui-table-wrap">
@@ -26,6 +42,7 @@
                     <tr>
                         <th>No</th>
                         <th>Receiving No</th>
+                        <th>Branch</th>
                         <th>Supplier</th>
                         <th>Fuel</th>
                         <th>Tank</th>
@@ -43,13 +60,14 @@
                 <tbody>
                     @if (Model.Receivings.Count == 0)
                     {
-                        <tr><td class="text-center text-muted fw-bold" colspan="14">No fuel receiving records found.</td></tr>
+                        <tr><td class="text-center text-muted fw-bold" colspan="15">No fuel receiving records found.</td></tr>
                     }
                     @for (var i = 0; i < Model.Receivings.Count; i += 1)
                     {
                         <tr>
                             <td class="text-nowrap">@(i + 1)</td>
                             <td class="text-nowrap">@Model.Receivings[i].ReceivingNo</td>
+                            <td class="text-nowrap">@Model.Receivings[i].BranchName</td>
                             <td>@Model.Receivings[i].Supplier</td>
                             <td>@Model.Receivings[i].Fuel</td>
                             <td>@Model.Receivings[i].Tank</td>
@@ -101,6 +119,17 @@
                     <div asp-validation-summary="ModelOnly" class="text-danger"></div>
                     <div class="row g-3">
                         <div class="col-md-6">
+                            <label asp-for="Form.BranchId" class="form-label">Branch</label>
+                            <input asp-for="Form.BranchId" type="hidden" id="fuelReceivingBranchId" />
+                            <div class="input-group" data-branch-selector data-branch-hidden="#fuelReceivingBranchId" data-branch-display="#fuelReceivingBranchDisplay" data-branch-empty-text="Select branch">
+                                <input class="form-control" id="fuelReceivingBranchDisplay" value="@Model.FormBranchName" placeholder="Select branch" readonly />
+                                <button type="button" class="btn btn-outline-secondary branch-select-btn">
+                                    <img src="/icons/search.png" alt="Search" style="width:16px;height:16px;" />
+                                </button>
+                            </div>
+                            <span asp-validation-for="Form.BranchId" class="text-danger"></span>
+                        </div>
+                        <div class="col-md-6">
                             <label asp-for="Form.SupplierId" class="form-label">Supplier</label>
                             <select asp-for="Form.SupplierId" asp-items="Model.SupplierOptions" class="form-select"></select>
                             <span asp-validation-for="Form.SupplierId" class="text-danger"></span>
@@ -112,7 +141,7 @@
                         </div>
                         <div class="col-md-6">
                             <label asp-for="Form.TankId" class="form-label">Tank</label>
-                            <select asp-for="Form.TankId" asp-items="Model.TankOptions" class="form-select"></select>
+                            <select asp-for="Form.TankId" asp-items="Model.TankOptions" class="form-select" data-fuel-receiving-tank></select>
                             <span asp-validation-for="Form.TankId" class="text-danger"></span>
                         </div>
                         <div class="col-md-6">
@@ -178,3 +207,51 @@
         </div>
     </div>
 }
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const branchInput = document.getElementById("fuelReceivingBranchId");
+        const tankSelect = document.querySelector("[data-fuel-receiving-tank]");
+        const fuelSelect = document.querySelector("[name='Form.FuelId']");
+
+        async function refreshTanks() {
+            if (!branchInput || !tankSelect) {
+                return;
+            }
+
+            tankSelect.innerHTML = '<option value="0">Select tank</option>';
+            if (!branchInput.value) {
+                return;
+            }
+
+            const response = await fetch(`/Transaction/TankOptionsByBranch?branchId=${encodeURIComponent(branchInput.value)}`, {
+                headers: { "Accept": "application/json" }
+            });
+            if (!response.ok) {
+                return;
+            }
+
+            const tanks = await response.json();
+            tanks.forEach(function (tank) {
+                const option = document.createElement("option");
+                option.value = tank.id;
+                option.textContent = tank.text;
+                option.dataset.fuelId = tank.fuelId || "";
+                tankSelect.appendChild(option);
+            });
+        }
+
+        branchInput?.addEventListener("change", function () {
+            refreshTanks();
+            if (fuelSelect) {
+                fuelSelect.value = "0";
+            }
+        });
+        tankSelect?.addEventListener("change", function () {
+            const fuelId = tankSelect.selectedOptions[0]?.dataset.fuelId;
+            if (fuelSelect && fuelId) {
+                fuelSelect.value = fuelId;
+            }
+        });
+    });
+</script>

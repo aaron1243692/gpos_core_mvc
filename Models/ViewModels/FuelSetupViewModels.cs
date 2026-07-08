@@ -25,6 +25,10 @@ namespace gpos.Models.ViewModels
     {
         public int Id { get; set; }
 
+        [Required(ErrorMessage = "Branch is required.")]
+        [Range(1, int.MaxValue, ErrorMessage = "Branch is required.")]
+        public int BranchId { get; set; }
+
         [Required(ErrorMessage = "Tank fuel is required.")]
         [Range(1, int.MaxValue, ErrorMessage = "Tank fuel is required.")]
         public int FuelId { get; set; }
@@ -59,6 +63,10 @@ namespace gpos.Models.ViewModels
     {
         public int Id { get; set; }
 
+        [Required(ErrorMessage = "Branch is required.")]
+        [Range(1, int.MaxValue, ErrorMessage = "Branch is required.")]
+        public int BranchId { get; set; }
+
         [Required(ErrorMessage = "Dispenser name is required.")]
         public string Name { get; set; } = string.Empty;
 
@@ -68,6 +76,10 @@ namespace gpos.Models.ViewModels
     public class FuelSetupPageViewModel
     {
         public string Search { get; set; } = string.Empty;
+        public int? BranchId { get; set; }
+        public string BranchName { get; set; } = string.Empty;
+        public string FormBranchName { get; set; } = string.Empty;
+        public string PumpFormBranchName { get; set; } = string.Empty;
         public string ActiveModalId { get; set; } = string.Empty;
         public FuelForm FuelForm { get; set; } = new();
         public TankForm TankForm { get; set; } = new();
@@ -75,6 +87,7 @@ namespace gpos.Models.ViewModels
         public List<Fuel> Fuels { get; set; } = new();
         public List<Tank> Tanks { get; set; } = new();
         public List<Pump> Pumps { get; set; } = new();
+        public List<SelectListItem> BranchOptions { get; set; } = new();
         public List<SelectListItem> SupplierOptions { get; set; } = new();
         public List<SelectListItem> FuelOptions { get; set; } = new();
         public List<SelectListItem> TankOptions { get; set; } = new();

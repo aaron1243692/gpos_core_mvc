@@ -8,7 +8,9 @@ namespace gpos.Models.ViewModels
         public string Search { get; set; } = string.Empty;
         public DateTime? DateFrom { get; set; }
         public DateTime? DateTo { get; set; }
+        public int? BranchId { get; set; }
         public string Status { get; set; } = string.Empty;
+        public List<SelectListItem> BranchOptions { get; set; } = new();
         public List<SelectListItem> StatusOptions { get; set; } = new();
     }
 
@@ -80,6 +82,7 @@ namespace gpos.Models.ViewModels
         public int SaleItemId { get; set; }
         public int SaleId { get; set; }
         public string ReceiptNo { get; set; } = string.Empty;
+        public string BranchName { get; set; } = "-";
         public string ProductName { get; set; } = "-";
         public string BatchNo { get; set; } = "-";
         public decimal Quantity { get; set; }
@@ -117,6 +120,7 @@ namespace gpos.Models.ViewModels
         public int SaleItemId { get; set; }
         public int SaleId { get; set; }
         public string ReceiptNo { get; set; } = string.Empty;
+        public string BranchName { get; set; } = "-";
         public string FuelName { get; set; } = "-";
         public string TankNo { get; set; } = "-";
         public string NozzleNo { get; set; } = "-";

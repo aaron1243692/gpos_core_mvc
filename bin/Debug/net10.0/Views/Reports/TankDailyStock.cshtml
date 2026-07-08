@@ -21,8 +21,16 @@
 
 <section class="content-card setup-crud-card setup-table-card">
     <div class="table-actions fuel-toolbar">
-        <form asp-action="@Model.PageAction" method="get" class="setup-search-form fuel-toolbar-search">
+        <form asp-action="@Model.PageAction" method="get" class="setup-search-form fuel-toolbar-search flex-wrap">
             <input class="form-control" name="search" value="@Model.Search" placeholder="Search tank daily stock" />
+            <select class="form-select" name="branchId">
+                @foreach (var branch in Model.BranchOptions)
+                {
+                    <option value="@branch.Value" selected="@((Model.BranchId?.ToString() ?? string.Empty) == branch.Value ? "selected" : null)">@branch.Text</option>
+                }
+            </select>
+            <button class="btn btn-outline-primary" type="submit">Search</button>
+            <a class="btn btn-outline-secondary" asp-action="@Model.PageAction">Clear</a>
         </form>
         <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#dailyStockModal">Add Record</button>
     </div>
@@ -32,6 +40,7 @@
             <thead>
                 <tr>
                     <th>No</th>
+                    <th>Branch</th>
                     <th>Date</th>
                     <th>Tank</th>
                     <th>Fuel</th>
@@ -47,13 +56,14 @@
             <tbody>
                 @if (Model.Records.Count == 0)
                 {
-                    <tr><td class="text-center text-muted fw-bold" colspan="11">No records yet.</td></tr>
+                    <tr><td class="text-center text-muted fw-bold" colspan="12">No records yet.</td></tr>
                 }
                 @for (var i = 0; i < Model.Records.Count; i += 1)
                 {
                     var record = Model.Records[i];
                     <tr>
                         <td>@(i + 1)</td>
+                        <td>@(record.Branch?.Name ?? "Unassigned")</td>
                         <td>@record.StockDate.ToString("yyyy-MM-dd")</td>
                         <td>@(record.Tank?.TankNo ?? "-")</td>
                         <td>@(record.Tank?.Fuel?.Name ?? "-")</td>
@@ -63,7 +73,7 @@
                         <td>@record.Ending.ToString("N2")</td>
                         <td>@record.Loss.ToString("N2")</td>
                         <td>@(record.Remarks ?? "-")</td>
-                        <td class="col-action"><a class="btn btn-sm btn-outline-primary" asp-action="@Model.PageAction" asp-route-editId="@record.Id" asp-route-search="@Model.Search">Edit</a></td>
+                        <td class="col-action"><a class="btn btn-sm btn-outline-primary" asp-action="@Model.PageAction" asp-route-editId="@record.Id" asp-route-search="@Model.Search" asp-route-branchId="@Model.BranchId">Edit</a></td>
                     </tr>
                 }
             </tbody>
@@ -85,6 +95,17 @@
                 </div>
                 <div class="modal-body">
                     <div class="row g-3">
+                        <div class="col-md-6">
+                            <label asp-for="Form.BranchId" class="form-label">Branch</label>
+                            <input asp-for="Form.BranchId" type="hidden" id="dailyStockTankBranchId" data-daily-stock-branch />
+                            <div class="input-group" data-branch-selector data-branch-hidden="#dailyStockTankBranchId" data-branch-display="#dailyStockTankBranchDisplay" data-branch-empty-text="Select branch">
+                                <input class="form-control" id="dailyStockTankBranchDisplay" value="@Model.FormBranchName" placeholder="Select branch" readonly />
+                                <button type="button" class="btn btn-outline-secondary branch-select-btn">
+                                    <img src="/icons/search.png" alt="Search" style="width:16px;height:16px;" />
+                                </button>
+                            </div>
+                            <span asp-validation-for="Form.BranchId" class="text-danger"></span>
+                        </div>
                         <div class="col-md-6">
                             <label asp-for="Form.StockDate" class="form-label">Date</label>
                             <input asp-for="Form.StockDate" class="form-control" type="date" />

@@ -4,6 +4,7 @@ namespace gpos.Models
     {
         public int Id { get; set; }
         public string ReceivingNo { get; set; } = string.Empty;
+        public int? BranchId { get; set; }
         public int? SupplierId { get; set; }
         public DateTime ReceivedDate { get; set; }
         public decimal TotalAmount { get; set; }
@@ -12,6 +13,7 @@ namespace gpos.Models
         public DateTime? CreatedAt { get; set; }
         public DateTime? UpdatedAt { get; set; }
 
+        public Branch? Branch { get; set; }
         public Supplier? Supplier { get; set; }
         public ICollection<StockReceivingItem> Items { get; set; } = new List<StockReceivingItem>();
     }

@@ -40,9 +40,12 @@ namespace gpos.Models.ViewModels
     public class ProductStockPageViewModel
     {
         public string Search { get; set; } = string.Empty;
+        public int? BranchId { get; set; }
+        public string BranchName { get; set; } = string.Empty;
         public string ActiveModalId { get; set; } = string.Empty;
         public ProductStockForm StockForm { get; set; } = new();
         public ProductCategoryForm CategoryForm { get; set; } = new();
+        public List<SelectListItem> BranchOptions { get; set; } = new();
         public List<SelectListItem> CategoryOptions { get; set; } = new();
         public List<DisplayStock> DisplayStocks { get; set; } = new();
         public List<WarehouseStock> WarehouseStocks { get; set; } = new();

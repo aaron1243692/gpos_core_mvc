@@ -297,6 +297,7 @@ namespace gpos.Controllers
                     rebateAmount = 0m;
                 }
 
+                var saleBranchId = await CurrentUserBranchIdAsync(userId.Value);
                 var vatSetting = await FindCurrentVatSetting();
                 var taxableAmount = Math.Max(0m, grossTotal - discountAmount - rebateAmount);
                 var taxAmount = CalculateVatAmount(taxableAmount, vatSetting);
@@ -316,6 +317,7 @@ namespace gpos.Controllers
                 {
                     ReceiptNo = await GenerateReceiptNo(now),
                     UserId = userId.Value,
+                    BranchId = saleBranchId,
                     MemberId = member?.Id,
                     GrossTotal = grossTotal,
                     DiscountAmount = discountAmount,
@@ -387,10 +389,10 @@ namespace gpos.Controllers
             }
         }
 
-        public async Task<IActionResult> ProductSales(string? search, DateTime? dateFrom, DateTime? dateTo, string? status)
+        public async Task<IActionResult> ProductSales(string? search, DateTime? dateFrom, DateTime? dateTo, string? status, int? branchId)
         {
             var normalizedStatus = NormalizeStatus(status);
-            var query = BuildProductSalesQuery(search, dateFrom, dateTo, normalizedStatus);
+            var query = BuildProductSalesQuery(search, dateFrom, dateTo, normalizedStatus, branchId);
             var items = await query
                 .OrderByDescending(item => item.Sale!.CreatedAt ?? item.CreatedAt)
                 .ThenByDescending(item => item.Id)
@@ -403,7 +405,9 @@ namespace gpos.Controllers
                 Search = (search ?? string.Empty).Trim(),
                 DateFrom = dateFrom,
                 DateTo = dateTo,
+                BranchId = branchId,
                 Status = normalizedStatus ?? string.Empty,
+                BranchOptions = await BuildBranchFilterOptionsAsync(),
                 StatusOptions = BuildStatusOptions(normalizedStatus),
                 Sales = items
                     .Select(item =>
@@ -416,10 +420,10 @@ namespace gpos.Controllers
             });
         }
 
-        public async Task<IActionResult> FuelSales(string? search, DateTime? dateFrom, DateTime? dateTo, string? status)
+        public async Task<IActionResult> FuelSales(string? search, DateTime? dateFrom, DateTime? dateTo, string? status, int? branchId)
         {
             var normalizedStatus = NormalizeStatus(status);
-            var query = BuildFuelSalesQuery(search, dateFrom, dateTo, normalizedStatus);
+            var query = BuildFuelSalesQuery(search, dateFrom, dateTo, normalizedStatus, branchId);
             var items = await query
                 .OrderByDescending(item => item.Sale!.CreatedAt ?? item.CreatedAt)
                 .ThenByDescending(item => item.Id)
@@ -432,7 +436,9 @@ namespace gpos.Controllers
                 Search = (search ?? string.Empty).Trim(),
                 DateFrom = dateFrom,
                 DateTo = dateTo,
+                BranchId = branchId,
                 Status = normalizedStatus ?? string.Empty,
+                BranchOptions = await BuildBranchFilterOptionsAsync(),
                 StatusOptions = BuildStatusOptions(normalizedStatus),
                 Sales = items
                     .DistinctBy(item => item.SaleId)
@@ -449,14 +455,33 @@ namespace gpos.Controllers
         public IActionResult DailyCash() => View();
         public IActionResult CashIn() => View();
         public IActionResult CashOut() => View();
-        public async Task<IActionResult> ProductReceiving(string? search)
+        public async Task<IActionResult> ProductReceiving(string? search, int? branchId)
         {
-            return View(await BuildProductReceivingPage(search));
+            return View(await BuildProductReceivingPage(search, branchId));
         }
 
-        public async Task<IActionResult> FuelReceiving(string? search)
+        public async Task<IActionResult> FuelReceiving(string? search, int? branchId)
         {
-            return View(await BuildFuelReceivingPage(search));
+            return View(await BuildFuelReceivingPage(search, branchId));
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> TankOptionsByBranch(int branchId)
+        {
+            var tanks = await _db.Tanks
+                .AsNoTracking()
+                .Include(tank => tank.Fuel)
+                .Where(tank => tank.BranchId == branchId && tank.Status == 1 && tank.IsActive)
+                .OrderBy(tank => tank.TankNo)
+                .Select(tank => new
+                {
+                    id = tank.Id,
+                    text = tank.Fuel != null ? $"{tank.TankNo} ({tank.Fuel.Name})" : tank.TankNo,
+                    fuelId = tank.FuelId
+                })
+                .ToListAsync();
+
+            return Json(tanks);
         }
 
         [HttpPost]
@@ -475,12 +500,14 @@ namespace gpos.Controllers
             {
                 var now = DateTime.Now;
                 ValidateProductReceivingForm(form);
+                await ValidateBranchAsync(form.BranchId);
                 var product = await ResolveReceivingProduct(form, now);
                 form.ProductId = product.Id;
                 var batch = await CreateGeneratedProductBatch(form, now);
                 var receiving = new StockReceiving
                 {
                     ReceivingNo = await GenerateProductReceivingNoAsync(),
+                    BranchId = form.BranchId,
                     SupplierId = form.SupplierId,
                     ReceivedDate = now,
                     TotalAmount = form.Quantity * form.CostPrice,
@@ -528,14 +555,14 @@ namespace gpos.Controllers
 
             if (!ModelState.IsValid)
             {
-                return View("ProductReceiving", await BuildProductReceivingPage(search, form));
+                return View("ProductReceiving", await BuildProductReceivingPage(search, form.BranchId, form));
             }
 
             var userId = CurrentUserId();
             if (!userId.HasValue)
             {
                 ModelState.AddModelError(string.Empty, "Please sign in before saving receiving.");
-                return View("ProductReceiving", await BuildProductReceivingPage(search, form));
+                return View("ProductReceiving", await BuildProductReceivingPage(search, form.BranchId, form));
             }
 
             await using var transaction = await _db.Database.BeginTransactionAsync();
@@ -549,7 +576,7 @@ namespace gpos.Controllers
                 if (receiving is null)
                 {
                     ModelState.AddModelError(string.Empty, "Receiving record was not found.");
-                    return View("ProductReceiving", await BuildProductReceivingPage(search, form));
+                    return View("ProductReceiving", await BuildProductReceivingPage(search, form.BranchId, form));
                 }
 
                 if (form.Id > 0 && receiving.Status == 1)
@@ -559,9 +586,11 @@ namespace gpos.Controllers
                 }
 
                 var product = await ResolveReceivingProduct(form, now);
+                await ValidateBranchAsync(form.BranchId);
                 form.ProductId = product.Id;
                 var batch = await CreateGeneratedProductBatch(form, now);
                 var item = receiving.Items.FirstOrDefault();
+                receiving.BranchId = form.BranchId;
                 receiving.SupplierId = form.SupplierId;
                 receiving.ReceivedDate = receiving.ReceivedDate == default ? now : receiving.ReceivedDate;
                 receiving.TotalAmount = form.Quantity * form.CostPrice;
@@ -604,7 +633,7 @@ namespace gpos.Controllers
             {
                 await transaction.RollbackAsync();
                 ModelState.AddModelError(string.Empty, ex.Message);
-                return View("ProductReceiving", await BuildProductReceivingPage(search, form));
+                return View("ProductReceiving", await BuildProductReceivingPage(search, form.BranchId, form));
             }
         }
 
@@ -673,14 +702,20 @@ namespace gpos.Controllers
         {
             if (!ModelState.IsValid)
             {
-                return View("FuelReceiving", await BuildFuelReceivingPage(search, form));
+                return View("FuelReceiving", await BuildFuelReceivingPage(search, form.BranchId, form));
             }
 
             var tank = await _db.Tanks.Include(item => item.Fuel).FirstOrDefaultAsync(item => item.Id == form.TankId && item.Status == 1 && item.IsActive);
-            if (tank is null || tank.FuelId != form.FuelId)
+            if (tank is null || tank.FuelId != form.FuelId || tank.BranchId != form.BranchId)
             {
-                ModelState.AddModelError(nameof(form.TankId), "Tank must belong to the selected fuel.");
-                return View("FuelReceiving", await BuildFuelReceivingPage(search, form));
+                ModelState.AddModelError(nameof(form.TankId), "Tank must belong to the selected branch and fuel.");
+                return View("FuelReceiving", await BuildFuelReceivingPage(search, form.BranchId, form));
+            }
+
+            if (!await _db.Branches.AsNoTracking().AnyAsync(branch => branch.Id == form.BranchId && branch.Status == 1))
+            {
+                ModelState.AddModelError("Form.BranchId", "Branch is required.");
+                return View("FuelReceiving", await BuildFuelReceivingPage(search, form.BranchId, form));
             }
 
             var now = DateTime.Now;
@@ -688,7 +723,7 @@ namespace gpos.Controllers
             if (delivery is null)
             {
                 ModelState.AddModelError(string.Empty, "Fuel receiving record was not found.");
-                return View("FuelReceiving", await BuildFuelReceivingPage(search, form));
+                return View("FuelReceiving", await BuildFuelReceivingPage(search, form.BranchId, form));
             }
 
             if (form.Id > 0 && delivery.Status == 1)
@@ -698,6 +733,7 @@ namespace gpos.Controllers
             }
 
             await using var transaction = await _db.Database.BeginTransactionAsync();
+            delivery.BranchId = form.BranchId;
             delivery.SupplierId = form.SupplierId;
             delivery.FuelId = form.FuelId;
             delivery.TankId = form.TankId;
@@ -732,7 +768,7 @@ namespace gpos.Controllers
             }
 
             await transaction.CommitAsync();
-            return RedirectToAction(nameof(FuelReceiving), new { search });
+            return RedirectToAction(nameof(FuelReceiving), new { search, branchId = form.BranchId });
         }
 
         [HttpPost]
@@ -799,7 +835,7 @@ namespace gpos.Controllers
         }
         public async Task<IActionResult> WarehouseToDisplayProduct(string? search) => View(await BuildStockTransferPage("WarehouseToDisplayProduct", "Warehouse to Display Product", nameof(SaveWarehouseToDisplayProduct), nameof(CompleteWarehouseToDisplayProduct), nameof(CancelWarehouseToDisplayProduct), search));
         public async Task<IActionResult> DisplayToWarehouseProduct(string? search) => View(await BuildStockTransferPage("DisplayToWarehouseProduct", "Display to Warehouse Product", nameof(SaveDisplayToWarehouseProduct), nameof(CompleteDisplayToWarehouseProduct), nameof(CancelDisplayToWarehouseProduct), search));
-        public async Task<IActionResult> BranchToBranchProduct(string? search) => View(await BuildStockTransferPage("BranchToBranchProduct", "Branch to Branch Product", nameof(SaveBranchToBranchProduct), nameof(CompleteBranchToBranchProduct), nameof(CancelBranchToBranchProduct), search));
+        public async Task<IActionResult> BranchToBranchProduct(string? search, int? sourceBranchId, int? destinationBranchId) => View(await BuildStockTransferPage("BranchToBranchProduct", "Branch to Branch Product", nameof(SaveBranchToBranchProduct), nameof(CompleteBranchToBranchProduct), nameof(CancelBranchToBranchProduct), search, sourceBranchId, destinationBranchId));
         public async Task<IActionResult> BranchToBranchFuel(string? search) => View(await BuildStockTransferPage("BranchToBranchFuel", "Branch to Branch Fuel", nameof(SaveBranchToBranchFuel), nameof(CompleteBranchToBranchFuel), nameof(CancelBranchToBranchFuel), search));
 
         public IActionResult WarehouseToDisplay() => RedirectToAction(nameof(WarehouseToDisplayProduct));
@@ -976,10 +1012,12 @@ namespace gpos.Controllers
             return RedirectToAction(nameof(FuelPriceAdjustment), new { search });
         }
 
-        private IQueryable<ProductSale> BuildProductSalesQuery(string? search, DateTime? dateFrom, DateTime? dateTo, string? status)
+        private IQueryable<ProductSale> BuildProductSalesQuery(string? search, DateTime? dateFrom, DateTime? dateTo, string? status, int? branchId)
         {
             var query = _db.ProductSales
                 .AsNoTracking()
+                .Include(item => item.Sale)
+                    .ThenInclude(sale => sale!.Branch)
                 .Include(item => item.Sale)
                     .ThenInclude(sale => sale!.User)
                 .Include(item => item.Sale)
@@ -1011,10 +1049,16 @@ namespace gpos.Controllers
                 query = query.Where(item => item.Status == status || item.Sale!.Status == status);
             }
 
+            if (branchId.HasValue && branchId.Value > 0)
+            {
+                query = query.Where(item => item.Sale!.BranchId == branchId.Value);
+            }
+
             var searchText = (search ?? string.Empty).Trim();
             if (!string.IsNullOrWhiteSpace(searchText))
             {
                 query = query.Where(item => item.Sale!.ReceiptNo.Contains(searchText)
+                    || (item.Sale.Branch != null && item.Sale.Branch.Name.Contains(searchText))
                     || (item.Product != null && item.Product.Name.Contains(searchText))
                     || (item.Batch != null && item.Batch.BatchNo.Contains(searchText))
                     || (item.Sale.User != null && ((item.Sale.User.FullName != null && item.Sale.User.FullName.Contains(searchText)) || item.Sale.User.Username.Contains(searchText)))
@@ -1024,10 +1068,12 @@ namespace gpos.Controllers
             return query;
         }
 
-        private IQueryable<FuelSale> BuildFuelSalesQuery(string? search, DateTime? dateFrom, DateTime? dateTo, string? status)
+        private IQueryable<FuelSale> BuildFuelSalesQuery(string? search, DateTime? dateFrom, DateTime? dateTo, string? status, int? branchId)
         {
             var query = _db.FuelSales
                 .AsNoTracking()
+                .Include(item => item.Sale)
+                    .ThenInclude(sale => sale!.Branch)
                 .Include(item => item.Sale)
                     .ThenInclude(sale => sale!.User)
                 .Include(item => item.Sale)
@@ -1059,10 +1105,16 @@ namespace gpos.Controllers
                 query = query.Where(item => item.Status == status || item.Sale!.Status == status);
             }
 
+            if (branchId.HasValue && branchId.Value > 0)
+            {
+                query = query.Where(item => item.Sale!.BranchId == branchId.Value);
+            }
+
             var searchText = (search ?? string.Empty).Trim();
             if (!string.IsNullOrWhiteSpace(searchText))
             {
                 query = query.Where(item => item.Sale!.ReceiptNo.Contains(searchText)
+                    || (item.Sale.Branch != null && item.Sale.Branch.Name.Contains(searchText))
                     || (item.Fuel != null && item.Fuel.Name.Contains(searchText))
                     || (item.Tank != null && item.Tank.TankNo.Contains(searchText))
                     || (item.Sale.User != null && ((item.Sale.User.FullName != null && item.Sale.User.FullName.Contains(searchText)) || item.Sale.User.Username.Contains(searchText)))
@@ -1087,6 +1139,7 @@ namespace gpos.Controllers
                 SaleItemId = item.Id,
                 SaleId = item.SaleId,
                 ReceiptNo = sale?.ReceiptNo ?? "-",
+                BranchName = sale?.Branch?.Name ?? "Unassigned",
                 ProductName = item.Product?.Name ?? "-",
                 BatchNo = item.Batch?.BatchNo ?? "-",
                 Quantity = item.Quantity,
@@ -1127,6 +1180,7 @@ namespace gpos.Controllers
                 SaleItemId = item.Id,
                 SaleId = item.SaleId,
                 ReceiptNo = sale?.ReceiptNo ?? "-",
+                BranchName = sale?.Branch?.Name ?? "Unassigned",
                 FuelName = item.Fuel?.Name ?? "-",
                 TankNo = item.Tank?.TankNo ?? "-",
                 Liters = item.Liters,
@@ -1319,11 +1373,12 @@ namespace gpos.Controllers
                 .Distinct());
         }
 
-        private async Task<ProductReceivingPageViewModel> BuildProductReceivingPage(string? search, ProductReceivingForm? form = null)
+        private async Task<ProductReceivingPageViewModel> BuildProductReceivingPage(string? search, int? branchId = null, ProductReceivingForm? form = null)
         {
             var searchText = (search ?? string.Empty).Trim();
             var query = _db.StockReceivings
                 .AsNoTracking()
+                .Include(item => item.Branch)
                 .Include(item => item.Supplier)
                 .Include(item => item.Items)
                     .ThenInclude(item => item.Product)
@@ -1335,10 +1390,16 @@ namespace gpos.Controllers
             {
                 query = query.Where(item =>
                     item.ReceivingNo.Contains(searchText)
+                    || (item.Branch != null && item.Branch.Name.Contains(searchText))
                     || (item.Supplier != null && item.Supplier.Name.Contains(searchText))
                     || item.Items.Any(line => line.Product != null && line.Product.Name.Contains(searchText))
                     || item.Items.Any(line => line.ProductBatch != null && line.ProductBatch.BatchNo.Contains(searchText))
                     || (item.Remarks != null && item.Remarks.Contains(searchText)));
+            }
+
+            if (branchId.HasValue && branchId.Value > 0)
+            {
+                query = query.Where(item => item.BranchId == branchId.Value);
             }
 
             var receivings = await query.OrderByDescending(item => item.ReceivedDate).ThenByDescending(item => item.Id).Take(100).ToListAsync();
@@ -1351,10 +1412,19 @@ namespace gpos.Controllers
             var userIds = movementLookup.Values.Where(id => id.HasValue).Select(id => id!.Value).Distinct().ToList();
             var userLookup = await _db.Users.AsNoTracking().Where(user => userIds.Contains(user.Id)).ToDictionaryAsync(user => user.Id, user => string.IsNullOrWhiteSpace(user.FullName) ? user.Username : user.FullName!);
 
+            var receivingForm = form ?? new ProductReceivingForm();
+            if (receivingForm.Id == 0 && receivingForm.BranchId <= 0 && branchId.HasValue)
+            {
+                receivingForm.BranchId = branchId.Value;
+            }
+
             return new ProductReceivingPageViewModel
             {
                 Search = searchText,
-                Form = form ?? new ProductReceivingForm(),
+                BranchId = branchId,
+                FormBranchName = await BranchNameAsync(receivingForm.BranchId),
+                Form = receivingForm,
+                BranchOptions = await BuildBranchFilterOptionsAsync(),
                 SupplierOptions = await BuildSupplierOptionsAsync(),
                 ProductOptions = await BuildProductOptionsAsync(),
                 CategoryOptions = await BuildProductCategoryOptionsAsync(),
@@ -1363,7 +1433,7 @@ namespace gpos.Controllers
                 {
                     var line = item.Items.FirstOrDefault();
                     var after = item.Status == 1 && line?.ProductBatchId is not null
-                        ? _db.WarehouseStocks.AsNoTracking().Where(stock => stock.ProductId == line.ProductId && stock.BatchId == line.ProductBatchId.Value).Select(stock => (decimal?)stock.Quantity).FirstOrDefault()
+                        ? _db.WarehouseStocks.AsNoTracking().Where(stock => stock.ProductId == line.ProductId && stock.BatchId == line.ProductBatchId.Value && stock.BranchId == item.BranchId).Select(stock => (decimal?)stock.Quantity).FirstOrDefault()
                         : null;
                     var before = after.HasValue && line is not null ? after.Value - line.Quantity : (decimal?)null;
                     var receivedBy = movementLookup.TryGetValue(item.Id, out var movementUserId) && movementUserId.HasValue && userLookup.TryGetValue(movementUserId.Value, out var userName) ? userName : "-";
@@ -1371,6 +1441,7 @@ namespace gpos.Controllers
                     {
                         Id = item.Id,
                         ReceivingNo = item.ReceivingNo,
+                        BranchName = item.Branch?.Name ?? "Unassigned",
                         Supplier = item.Supplier?.Name ?? "-",
                         Product = line?.Product?.Name ?? "-",
                         Batch = line?.ProductBatch?.BatchNo ?? "-",
@@ -1388,28 +1459,43 @@ namespace gpos.Controllers
             };
         }
 
-        private async Task<FuelReceivingPageViewModel> BuildFuelReceivingPage(string? search, FuelReceivingForm? form = null)
+        private async Task<FuelReceivingPageViewModel> BuildFuelReceivingPage(string? search, int? branchId = null, FuelReceivingForm? form = null)
         {
             var searchText = (search ?? string.Empty).Trim();
-            var query = _db.FuelDeliveries.AsNoTracking().Include(item => item.Supplier).Include(item => item.Fuel).Include(item => item.Tank).AsQueryable();
+            var query = _db.FuelDeliveries.AsNoTracking().Include(item => item.Branch).Include(item => item.Supplier).Include(item => item.Fuel).Include(item => item.Tank).ThenInclude(tank => tank!.Branch).AsQueryable();
             if (!string.IsNullOrWhiteSpace(searchText))
             {
                 query = query.Where(item =>
                     item.DeliveryNo.Contains(searchText)
+                    || (item.Branch != null && item.Branch.Name.Contains(searchText))
                     || (item.Supplier != null && item.Supplier.Name.Contains(searchText))
                     || (item.Fuel != null && item.Fuel.Name.Contains(searchText))
                     || (item.Tank != null && item.Tank.TankNo.Contains(searchText))
                     || (item.Remarks != null && item.Remarks.Contains(searchText)));
             }
 
+            if (branchId.HasValue && branchId.Value > 0)
+            {
+                query = query.Where(item => item.BranchId == branchId.Value);
+            }
+
             var deliveries = await query.OrderByDescending(item => item.DeliveryDate).ThenByDescending(item => item.Id).Take(100).ToListAsync();
+            var receivingForm = form ?? new FuelReceivingForm();
+            if (receivingForm.Id == 0 && receivingForm.BranchId <= 0 && branchId.HasValue && branchId.Value > 0)
+            {
+                receivingForm.BranchId = branchId.Value;
+            }
+
             return new FuelReceivingPageViewModel
             {
                 Search = searchText,
-                Form = form ?? new FuelReceivingForm(),
+                BranchId = branchId,
+                FormBranchName = await BranchNameAsync(receivingForm.BranchId),
+                Form = receivingForm,
+                BranchOptions = await BuildBranchFilterOptionsAsync(),
                 SupplierOptions = await BuildSupplierOptionsAsync(),
                 FuelOptions = await BuildFuelOptionsAsync(),
-                TankOptions = await BuildTankOptionsAsync(),
+                TankOptions = await BuildTankOptionsAsync(receivingForm.BranchId),
                 Receivings = deliveries.Select(item =>
                 {
                     var after = item.Status == 1 && item.Tank is not null ? (decimal?)item.Tank.CurrentLiters : null;
@@ -1418,6 +1504,7 @@ namespace gpos.Controllers
                     {
                         Id = item.Id,
                         ReceivingNo = item.DeliveryNo,
+                        BranchName = item.Branch?.Name ?? item.Tank?.Branch?.Name ?? "Unassigned",
                         Supplier = item.Supplier?.Name ?? "-",
                         Fuel = item.Fuel?.Name ?? "-",
                         Tank = item.Tank?.TankNo ?? "-",
@@ -1715,11 +1802,12 @@ namespace gpos.Controllers
                 return;
             }
 
-            var stock = await _db.WarehouseStocks.FirstOrDefaultAsync(row => row.ProductId == item.ProductId && row.BatchId == item.ProductBatchId.Value);
+            var stock = await _db.WarehouseStocks.FirstOrDefaultAsync(row => row.ProductId == item.ProductId && row.BatchId == item.ProductBatchId.Value && row.BranchId == receiving.BranchId);
             if (stock is null)
             {
                 stock = new WarehouseStock
                 {
+                    BranchId = receiving.BranchId,
                     ProductId = item.ProductId,
                     BatchId = item.ProductBatchId.Value,
                     Quantity = 0m,
@@ -1781,9 +1869,15 @@ namespace gpos.Controllers
             return options;
         }
 
-        private async Task<List<SelectListItem>> BuildTankOptionsAsync()
+        private async Task<List<SelectListItem>> BuildTankOptionsAsync(int? branchId = null)
         {
-            var options = await _db.Tanks.AsNoTracking().Include(item => item.Fuel).Where(item => item.Status == 1 && item.IsActive).OrderBy(item => item.TankNo).Select(item => new SelectListItem { Value = item.Id.ToString(), Text = $"{item.TankNo} ({item.Fuel!.Name})" }).ToListAsync();
+            var query = _db.Tanks.AsNoTracking().Include(item => item.Fuel).Where(item => item.Status == 1 && item.IsActive);
+            if (branchId.HasValue && branchId.Value > 0)
+            {
+                query = query.Where(item => item.BranchId == branchId.Value);
+            }
+
+            var options = await query.OrderBy(item => item.TankNo).Select(item => new SelectListItem { Value = item.Id.ToString(), Text = $"{item.TankNo} ({item.Fuel!.Name})" }).ToListAsync();
             options.Insert(0, new SelectListItem { Value = "0", Text = "Select tank" });
             return options;
         }
@@ -1798,7 +1892,7 @@ namespace gpos.Controllers
             return $"FR-{DateTime.Now:yyyyMMdd}-{await _db.FuelDeliveries.CountAsync() + 1:0000}";
         }
 
-        private async Task<StockTransferPageViewModel> BuildStockTransferPage(string transferType, string title, string saveAction, string completeAction, string cancelAction, string? search)
+        private async Task<StockTransferPageViewModel> BuildStockTransferPage(string transferType, string title, string saveAction, string completeAction, string cancelAction, string? search, int? sourceBranchId = null, int? destinationBranchId = null)
         {
             var searchText = (search ?? string.Empty).Trim();
             var query = _db.StockTransfers
@@ -1831,10 +1925,24 @@ namespace gpos.Controllers
                     || item.Items.Any(line => line.Fuel != null && line.Fuel.Name.Contains(searchText)));
             }
 
+            if (sourceBranchId.HasValue && sourceBranchId.Value > 0)
+            {
+                query = query.Where(item => item.SourceBranchId == sourceBranchId.Value);
+            }
+
+            if (destinationBranchId.HasValue && destinationBranchId.Value > 0)
+            {
+                query = query.Where(item => item.DestinationBranchId == destinationBranchId.Value);
+            }
+
             var transfers = await query.OrderByDescending(item => item.CreatedAt).ThenByDescending(item => item.Id).Take(100).ToListAsync();
             return new StockTransferPageViewModel
             {
                 Search = searchText,
+                SourceFilterBranchId = sourceBranchId,
+                SourceFilterBranchName = await BranchNameAsync(sourceBranchId),
+                DestinationFilterBranchId = destinationBranchId,
+                DestinationFilterBranchName = await BranchNameAsync(destinationBranchId),
                 TransferType = transferType,
                 Title = title,
                 SaveAction = saveAction,
@@ -2381,6 +2489,17 @@ namespace gpos.Controllers
         {
             var options = await _db.Branches.AsNoTracking().Where(item => item.Status == 1).OrderBy(item => item.Name).Select(item => new SelectListItem { Value = item.Id.ToString(), Text = item.Name }).ToListAsync();
             options.Insert(0, new SelectListItem { Value = "", Text = "Select branch" });
+            return options;
+        }
+
+        private async Task<List<SelectListItem>> BuildBranchFilterOptionsAsync()
+        {
+            var options = await _db.Branches.AsNoTracking()
+                .Where(item => item.Status == 1)
+                .OrderBy(item => item.Name)
+                .Select(item => new SelectListItem { Value = item.Id.ToString(), Text = item.Name })
+                .ToListAsync();
+            options.Insert(0, new SelectListItem { Value = "", Text = "All Branches" });
             return options;
         }
 
@@ -3278,6 +3397,37 @@ namespace gpos.Controllers
             return string.Equals((paymentMethod ?? string.Empty).Trim(), "Points", StringComparison.OrdinalIgnoreCase)
                 ? "Points"
                 : "Cash";
+        }
+
+        private async Task<string> BranchNameAsync(int? branchId)
+        {
+            if (!branchId.HasValue || branchId.Value <= 0)
+            {
+                return string.Empty;
+            }
+
+            return await _db.Branches
+                .AsNoTracking()
+                .Where(branch => branch.Id == branchId.Value)
+                .Select(branch => branch.Name)
+                .FirstOrDefaultAsync() ?? string.Empty;
+        }
+
+        private async Task ValidateBranchAsync(int branchId)
+        {
+            if (branchId <= 0 || !await _db.Branches.AsNoTracking().AnyAsync(branch => branch.Id == branchId && branch.Status == 1))
+            {
+                throw new InvalidOperationException("Branch is required.");
+            }
+        }
+
+        private async Task<int?> CurrentUserBranchIdAsync(int userId)
+        {
+            return await _db.Users
+                .AsNoTracking()
+                .Where(user => user.Id == userId)
+                .Select(user => user.BranchId)
+                .FirstOrDefaultAsync();
         }
 
         private void AddPaymentRecords(int saleId, string paymentMethod, decimal cashAmount, decimal rebateAmount, DateTime now)

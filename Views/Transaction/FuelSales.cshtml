@@ -11,14 +11,31 @@
         </div>
 
         <form asp-action="FuelSales" method="get" class="row g-2 mb-3">
-            <div class="col-12 col-lg-4">
-                <input class="form-control" name="search" value="@Model.Search" type="search" placeholder="Search receipt, fuel, tank, nozzle, cashier, member..." />
+            <div class="col-12 col-lg-3">
+                <input class="form-control" name="search" value="@Model.Search" type="search" placeholder="Search receipt, fuel, tank, nozzle, cashier, member, branch..." />
             </div>
             <div class="col-6 col-lg-2">
                 <input class="form-control" name="dateFrom" value="@Model.DateFrom?.ToString("yyyy-MM-dd")" type="date" />
             </div>
             <div class="col-6 col-lg-2">
                 <input class="form-control" name="dateTo" value="@Model.DateTo?.ToString("yyyy-MM-dd")" type="date" />
+            </div>
+            <div class="col-6 col-lg-2">
+                <select class="form-select" name="branchId">
+                    @for (var i = 0; i < Model.BranchOptions.Count; i += 1)
+                    {
+                        var option = Model.BranchOptions[i];
+                        var selected = option.Value == (Model.BranchId?.ToString() ?? string.Empty);
+                        if (selected)
+                        {
+                            <option value="@option.Value" selected>@option.Text</option>
+                        }
+                        else
+                        {
+                            <option value="@option.Value">@option.Text</option>
+                        }
+                    }
+                </select>
             </div>
             <div class="col-6 col-lg-2">
                 <select class="form-select" name="status">
@@ -35,8 +52,11 @@
                     }
                 </select>
             </div>
-            <div class="col-6 col-lg-2 d-grid">
+            <div class="col-6 col-lg-1 d-grid">
                 <button class="btn btn-primary" type="submit">Filter</button>
+            </div>
+            <div class="col-6 col-lg-1 d-grid">
+                <a class="btn btn-outline-secondary" asp-action="FuelSales">Clear</a>
             </div>
         </form>
 
@@ -45,6 +65,7 @@
                 <thead>
                     <tr>
                         <th>Receipt No.</th>
+                        <th>Branch</th>
                         <th>Date &amp; Time</th>
                         <th>Customer</th>
                         <th>Name (Quantity / Liters)</th>
@@ -64,7 +85,7 @@
                 <tbody>
                     @if (Model.Sales.Count == 0)
                     {
-                        <tr><td class="text-center text-muted fw-bold" colspan="15">No sales found.</td></tr>
+                        <tr><td class="text-center text-muted fw-bold" colspan="16">No sales found.</td></tr>
                     }
                     @for (var i = 0; i < Model.Sales.Count; i += 1)
                     {
@@ -74,6 +95,7 @@
 
                         <tr>
                             <td class="text-nowrap">@sale.ReceiptNo</td>
+                            <td class="text-nowrap">@sale.BranchName</td>
                             <td class="text-nowrap">@sale.SaleDate?.ToString("yyyy-MM-dd HH:mm")</td>
                             <td>@sale.MemberName</td>
                             <td style="min-width: 16rem;" title="@sale.ItemSummaryTitle">@sale.ItemSummary</td>

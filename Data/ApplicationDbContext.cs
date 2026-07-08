@@ -257,6 +257,7 @@ namespace gpos.Data
 
                 entity.Property(pump => pump.Id).HasColumnName("id");
                 entity.Property(pump => pump.TankId).HasColumnName("tank_id");
+                entity.Property(pump => pump.BranchId).HasColumnName("branch_id");
                 entity.Property(pump => pump.PumpNo).HasColumnName("pump_no").IsRequired();
                 entity.Property(pump => pump.Name).HasColumnName("name");
                 entity.Property(pump => pump.Status).HasColumnName("status").HasDefaultValue(1);
@@ -264,9 +265,14 @@ namespace gpos.Data
                 entity.Property(pump => pump.UpdatedAt).HasColumnName("updated_at");
 
                 entity.HasIndex(pump => pump.TankId);
+                entity.HasIndex(pump => pump.BranchId);
                 entity.HasOne(pump => pump.Tank)
                     .WithMany(tank => tank.Pumps)
                     .HasForeignKey(pump => pump.TankId)
+                    .OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne(pump => pump.Branch)
+                    .WithMany()
+                    .HasForeignKey(pump => pump.BranchId)
                     .OnDelete(DeleteBehavior.Restrict);
             });
 
@@ -302,6 +308,7 @@ namespace gpos.Data
 
                 entity.Property(delivery => delivery.Id).HasColumnName("id");
                 entity.Property(delivery => delivery.DeliveryNo).HasColumnName("delivery_no").HasMaxLength(100).IsRequired();
+                entity.Property(delivery => delivery.BranchId).HasColumnName("branch_id");
                 entity.Property(delivery => delivery.SupplierId).HasColumnName("supplier_id");
                 entity.Property(delivery => delivery.FuelId).HasColumnName("fuel_id");
                 entity.Property(delivery => delivery.TankId).HasColumnName("tank_id");
@@ -315,9 +322,14 @@ namespace gpos.Data
                 entity.Property(delivery => delivery.UpdatedAt).HasColumnName("updated_at");
 
                 entity.HasIndex(delivery => delivery.DeliveryNo).IsUnique();
+                entity.HasIndex(delivery => delivery.BranchId);
                 entity.HasIndex(delivery => delivery.SupplierId);
                 entity.HasIndex(delivery => delivery.FuelId);
                 entity.HasIndex(delivery => delivery.TankId);
+                entity.HasOne(delivery => delivery.Branch)
+                    .WithMany()
+                    .HasForeignKey(delivery => delivery.BranchId)
+                    .OnDelete(DeleteBehavior.Restrict);
                 entity.HasOne(delivery => delivery.Supplier)
                     .WithMany(supplier => supplier.FuelDeliveries)
                     .HasForeignKey(delivery => delivery.SupplierId)
@@ -575,6 +587,7 @@ namespace gpos.Data
 
                 entity.Property(receiving => receiving.Id).HasColumnName("id");
                 entity.Property(receiving => receiving.ReceivingNo).HasColumnName("receiving_no").HasMaxLength(100).IsRequired();
+                entity.Property(receiving => receiving.BranchId).HasColumnName("branch_id");
                 entity.Property(receiving => receiving.SupplierId).HasColumnName("supplier_id");
                 entity.Property(receiving => receiving.ReceivedDate).HasColumnName("received_date");
                 entity.Property(receiving => receiving.TotalAmount).HasColumnName("total_amount").HasPrecision(18, 2).HasDefaultValue(0m);
@@ -584,7 +597,12 @@ namespace gpos.Data
                 entity.Property(receiving => receiving.UpdatedAt).HasColumnName("updated_at");
 
                 entity.HasIndex(receiving => receiving.ReceivingNo).IsUnique();
+                entity.HasIndex(receiving => receiving.BranchId);
                 entity.HasIndex(receiving => receiving.SupplierId);
+                entity.HasOne(receiving => receiving.Branch)
+                    .WithMany()
+                    .HasForeignKey(receiving => receiving.BranchId)
+                    .OnDelete(DeleteBehavior.Restrict);
                 entity.HasOne(receiving => receiving.Supplier)
                     .WithMany(supplier => supplier.StockReceivings)
                     .HasForeignKey(receiving => receiving.SupplierId)
@@ -1229,6 +1247,7 @@ namespace gpos.Data
                 entity.Property(sale => sale.Id).HasColumnName("id");
                 entity.Property(sale => sale.ReceiptNo).HasColumnName("receipt_no").HasMaxLength(100).IsRequired();
                 entity.Property(sale => sale.UserId).HasColumnName("user_id");
+                entity.Property(sale => sale.BranchId).HasColumnName("branch_id");
                 entity.Property(sale => sale.MemberId).HasColumnName("member_id");
                 entity.Property(sale => sale.GrossTotal).HasColumnName("gross_total").HasPrecision(18, 2);
                 entity.Property(sale => sale.DiscountAmount).HasColumnName("discount_amount").HasPrecision(18, 2).HasDefaultValue(0m);
@@ -1241,10 +1260,15 @@ namespace gpos.Data
 
                 entity.HasIndex(sale => sale.ReceiptNo).IsUnique();
                 entity.HasIndex(sale => sale.UserId);
+                entity.HasIndex(sale => sale.BranchId);
                 entity.HasIndex(sale => sale.MemberId);
                 entity.HasOne(sale => sale.User)
                     .WithMany()
                     .HasForeignKey(sale => sale.UserId)
+                    .OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne(sale => sale.Branch)
+                    .WithMany()
+                    .HasForeignKey(sale => sale.BranchId)
                     .OnDelete(DeleteBehavior.Restrict);
                 entity.HasOne(sale => sale.Member)
                     .WithMany()
@@ -1581,6 +1605,7 @@ namespace gpos.Data
 
                 entity.Property(record => record.Id).HasColumnName("id");
                 entity.Property(record => record.StockType).HasColumnName("stock_type").HasMaxLength(50).IsRequired();
+                entity.Property(record => record.BranchId).HasColumnName("branch_id");
                 entity.Property(record => record.StockDate).HasColumnName("record_date").HasColumnType("date");
                 entity.Property(record => record.ProductId).HasColumnName("product_id");
                 entity.Property(record => record.BatchId).HasColumnName("batch_id");
@@ -1598,10 +1623,12 @@ namespace gpos.Data
 
                 entity.HasIndex(record => record.StockDate);
                 entity.HasIndex(record => record.StockType);
+                entity.HasIndex(record => record.BranchId);
                 entity.HasIndex(record => record.ProductId);
                 entity.HasIndex(record => record.BatchId);
                 entity.HasIndex(record => record.TankId);
                 entity.HasIndex(record => record.FuelId);
+                entity.HasOne(record => record.Branch).WithMany().HasForeignKey(record => record.BranchId).OnDelete(DeleteBehavior.Restrict);
                 entity.HasOne(record => record.Product).WithMany().HasForeignKey(record => record.ProductId).OnDelete(DeleteBehavior.Restrict);
                 entity.HasOne(record => record.Batch).WithMany().HasForeignKey(record => record.BatchId).OnDelete(DeleteBehavior.Restrict);
                 entity.HasOne(record => record.Tank).WithMany().HasForeignKey(record => record.TankId).OnDelete(DeleteBehavior.Restrict);

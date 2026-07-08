@@ -16,9 +16,17 @@
 
 <section class="card content-card table-card full-height-card mb-0">
     <div class="table-toolbar d-flex justify-content-between align-items-center gap-2 flex-wrap mb-3">
-        <form class="products-search-wrap" asp-action="DisplayProducts" method="get">
+        <form class="products-search-wrap d-flex gap-2 flex-wrap" asp-action="DisplayProducts" method="get">
             <label class="visually-hidden" for="display-product-search">Search display batches</label>
             <input class="form-control form-control-sm products-search" id="display-product-search" name="search" value="@Model.Search" type="search" placeholder="Search display batches" autocomplete="off" />
+            <select class="form-select form-select-sm" name="branchId">
+                @foreach (var branch in Model.BranchOptions)
+                {
+                    <option value="@branch.Value" selected="@((Model.BranchId?.ToString() ?? string.Empty) == branch.Value ? "selected" : null)">@branch.Text</option>
+                }
+            </select>
+            <button class="btn btn-sm btn-outline-primary" type="submit">Search</button>
+            <a class="btn btn-sm btn-outline-secondary" asp-action="DisplayProducts">Clear</a>
         </form>
     </div>
 
@@ -33,6 +41,7 @@
                 <col class="col-normal" />
                 <col class="col-normal" />
                 <col class="col-normal" />
+                <col class="col-normal" />
                 <col class="col-status" />
                 <col class="col-action" />
             </colgroup>
@@ -41,6 +50,7 @@
                     <th class="col-no" scope="col">No</th>
                     <th class="col-batch" scope="col">Batch Number</th>
                     <th class="col-name" scope="col">Product</th>
+                    <th scope="col">Branch</th>
                     <th scope="col">Supplier</th>
                     <th class="col-money" scope="col">Cost Price</th>
                     <th class="col-money" scope="col">Selling Price</th>
@@ -54,7 +64,7 @@
                 @if (Model.DisplayStocks.Count == 0)
                 {
                     <tr>
-                        <td class="text-center text-muted fw-bold" colspan="10">No display batches found.</td>
+                        <td class="text-center text-muted fw-bold" colspan="11">No display batches found.</td>
                     </tr>
                 }
                 @for (var index = 0; index < Model.DisplayStocks.Count; index += 1)
@@ -63,6 +73,7 @@
                         <td class="col-no">@(index + 1)</td>
                         <td class="col-batch">@(Model.DisplayStocks[index].Batch?.BatchNo ?? "-")</td>
                         <td class="col-name">@(Model.DisplayStocks[index].Product?.Name ?? "-")</td>
+                        <td>@(Model.DisplayStocks[index].Branch?.Name ?? "-")</td>
                         <td>@(Model.DisplayStocks[index].Batch?.Supplier?.Name ?? "-")</td>
                         <td>&#8369;@(Model.DisplayStocks[index].Batch?.CostPrice.ToString("N2") ?? "0.00")</td>
                         <td>&#8369;@(Model.DisplayStocks[index].Batch?.SellingPrice.ToString("N2") ?? "0.00")</td>
@@ -82,6 +93,7 @@
                                         <input name="id" type="hidden" value="@Model.DisplayStocks[index].ProductId" />
                                         <input name="source" type="hidden" value="Display" />
                                         <input name="search" type="hidden" value="@Model.Search" />
+                                        <input name="branchId" type="hidden" value="@Model.BranchId" />
                                         <button class="btn btn-sm btn-outline-success" type="submit">Activate</button>
                                     </form>
                                 }
@@ -102,6 +114,7 @@
                 <input id="productStatusId" name="id" type="hidden" />
                 <input name="source" type="hidden" value="Display" />
                 <input name="search" type="hidden" value="@Model.Search" />
+                <input name="branchId" type="hidden" value="@Model.BranchId" />
                 <div class="modal-header">
                     <h2 class="modal-title fs-5" id="productStatusModalLabel">Deactivate Record</h2>
                     <button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button>

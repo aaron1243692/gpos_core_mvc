@@ -17758,3 +17758,7 @@ C:\project\gpos_core_mvc\artifacts\buildcheck\Views\Reports\_DailyStockScripts.c
 C:\project\gpos_core_mvc\artifacts\buildcheck\Views\Reports\_ProductDailyStockModal.cshtml
 C:\project\gpos_core_mvc\bin\Debug\net10.0\Views\Reports\_DailyStockScripts.cshtml
 C:\project\gpos_core_mvc\bin\Debug\net10.0\Views\Reports\_ProductDailyStockModal.cshtml
+C:\project\gpos_core_mvc\bin\Debug\net10.0\wwwroot\js\branch-selector.js
+C:\project\gpos_core_mvc\bin\Debug\net10.0\wwwroot\js\branch-selector.js.gz
+C:\project\gpos_core_mvc\bin\Debug\net10.0\Views\Shared\_BranchSelectorModal.cshtml
+C:\project\gpos_core_mvc\obj\Debug\net10.0\compressed\h2od2lg7jc-{0}-dtc9i6ynxx-dtc9i6ynxx.gz

@@ -8,6 +8,9 @@ namespace gpos.Models.ViewModels
         public int Id { get; set; }
         public string StockType { get; set; } = string.Empty;
 
+        [Range(1, int.MaxValue, ErrorMessage = "Branch is required.")]
+        public int BranchId { get; set; }
+
         [Required(ErrorMessage = "Date is required.")]
         public DateTime? StockDate { get; set; } = DateTime.Today;
 
@@ -44,6 +47,8 @@ namespace gpos.Models.ViewModels
         public string BatchNo { get; set; } = string.Empty;
         public string TankNo { get; set; } = string.Empty;
         public string FuelName { get; set; } = string.Empty;
+        public int? BranchId { get; set; }
+        public string BranchName { get; set; } = string.Empty;
         public decimal CurrentQuantity { get; set; }
     }
 
@@ -56,12 +61,15 @@ namespace gpos.Models.ViewModels
         public string SaveAction { get; set; } = string.Empty;
         public string DefaultAction { get; set; } = string.Empty;
         public string Search { get; set; } = string.Empty;
+        public int? BranchId { get; set; }
+        public string FormBranchName { get; set; } = string.Empty;
         public string ActiveModalId { get; set; } = string.Empty;
         public DailyStockForm Form { get; set; } = new();
         public List<DailyStockRecord> Records { get; set; } = new();
         public List<SelectListItem> ProductOptions { get; set; } = new();
         public List<SelectListItem> BatchOptions { get; set; } = new();
         public List<SelectListItem> TankOptions { get; set; } = new();
+        public List<SelectListItem> BranchOptions { get; set; } = new();
         public List<DailyStockOption> StockOptions { get; set; } = new();
     }
 }

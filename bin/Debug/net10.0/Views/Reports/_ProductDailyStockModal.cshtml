@@ -20,6 +20,17 @@
                 <div class="modal-body">
                     <div class="row g-3">
                         <div class="col-md-6">
+                            <label asp-for="Form.BranchId" class="form-label">Branch</label>
+                            <input asp-for="Form.BranchId" type="hidden" id="dailyStockProductBranchId" data-daily-stock-branch />
+                            <div class="input-group" data-branch-selector data-branch-hidden="#dailyStockProductBranchId" data-branch-display="#dailyStockProductBranchDisplay" data-branch-empty-text="Select branch">
+                                <input class="form-control" id="dailyStockProductBranchDisplay" value="@Model.FormBranchName" placeholder="Select branch" readonly />
+                                <button type="button" class="btn btn-outline-secondary branch-select-btn">
+                                    <img src="/icons/search.png" alt="Search" style="width:16px;height:16px;" />
+                                </button>
+                            </div>
+                            <span asp-validation-for="Form.BranchId" class="text-danger"></span>
+                        </div>
+                        <div class="col-md-6">
                             <label asp-for="Form.StockDate" class="form-label">Date</label>
                             <input asp-for="Form.StockDate" class="form-control" type="date" />
                             <span asp-validation-for="Form.StockDate" class="text-danger"></span>

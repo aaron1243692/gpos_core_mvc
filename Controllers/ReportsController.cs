@@ -45,19 +45,19 @@ namespace gpos.Controllers
         public IActionResult CashDifferenceReport() => View();
         public IActionResult VoidTransactionReport() => View();
 
-        public async Task<IActionResult> WarehouseDailyStock(string? search, int? editId)
+        public async Task<IActionResult> WarehouseDailyStock(string? search, int? editId, int? branchId)
         {
-            return View(await BuildDailyStockPageAsync(WarehouseStockType, search, editId: editId, activeModalId: editId.HasValue ? DailyStockModalId : string.Empty));
+            return View(await BuildDailyStockPageAsync(WarehouseStockType, search, branchId, editId: editId, activeModalId: editId.HasValue ? DailyStockModalId : string.Empty));
         }
 
-        public async Task<IActionResult> DisplayDailyStock(string? search, int? editId)
+        public async Task<IActionResult> DisplayDailyStock(string? search, int? editId, int? branchId)
         {
-            return View(await BuildDailyStockPageAsync(DisplayStockType, search, editId: editId, activeModalId: editId.HasValue ? DailyStockModalId : string.Empty));
+            return View(await BuildDailyStockPageAsync(DisplayStockType, search, branchId, editId: editId, activeModalId: editId.HasValue ? DailyStockModalId : string.Empty));
         }
 
-        public async Task<IActionResult> TankDailyStock(string? search, int? editId)
+        public async Task<IActionResult> TankDailyStock(string? search, int? editId, int? branchId)
         {
-            return View(await BuildDailyStockPageAsync(TankStockType, search, editId: editId, activeModalId: editId.HasValue ? DailyStockModalId : string.Empty));
+            return View(await BuildDailyStockPageAsync(TankStockType, search, branchId, editId: editId, activeModalId: editId.HasValue ? DailyStockModalId : string.Empty));
         }
 
         [HttpPost]
@@ -82,25 +82,26 @@ namespace gpos.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> WarehouseDailyStockDefaults(int batchId, DateTime? stockDate)
+        public async Task<IActionResult> WarehouseDailyStockDefaults(int batchId, DateTime? stockDate, int? branchId)
         {
-            return Json(await BuildProductDailyStockDefaultAsync(WarehouseStockType, batchId, stockDate ?? DateTime.Today));
+            return Json(await BuildProductDailyStockDefaultAsync(WarehouseStockType, batchId, stockDate ?? DateTime.Today, branchId));
         }
 
         [HttpGet]
-        public async Task<IActionResult> DisplayDailyStockDefaults(int batchId, DateTime? stockDate)
+        public async Task<IActionResult> DisplayDailyStockDefaults(int batchId, DateTime? stockDate, int? branchId)
         {
-            return Json(await BuildProductDailyStockDefaultAsync(DisplayStockType, batchId, stockDate ?? DateTime.Today));
+            return Json(await BuildProductDailyStockDefaultAsync(DisplayStockType, batchId, stockDate ?? DateTime.Today, branchId));
         }
 
         [HttpGet]
-        public async Task<IActionResult> TankDailyStockDefaults(int tankId, DateTime? stockDate)
+        public async Task<IActionResult> TankDailyStockDefaults(int tankId, DateTime? stockDate, int? branchId)
         {
             var date = (stockDate ?? DateTime.Today).Date;
             var tank = await _db.Tanks.AsNoTracking().Include(item => item.Fuel).FirstOrDefaultAsync(item => item.Id == tankId);
-            var sold = await ComputeSoldAsync(TankStockType, date, null, tankId);
+            var effectiveBranchId = branchId ?? tank?.BranchId;
+            var sold = await ComputeSoldAsync(TankStockType, date, null, tankId, effectiveBranchId);
             var previousEnding = await _db.DailyStockRecords.AsNoTracking()
-                .Where(record => record.StockType == TankStockType && record.TankId == tankId && record.StockDate < date)
+                .Where(record => record.StockType == TankStockType && record.TankId == tankId && record.BranchId == effectiveBranchId && record.StockDate < date)
                 .OrderByDescending(record => record.StockDate)
                 .ThenByDescending(record => record.Id)
                 .Select(record => (decimal?)record.Ending)
@@ -122,11 +123,16 @@ namespace gpos.Controllers
 
             if (!ModelState.IsValid)
             {
-                return View(ActionViewFor(stockType), await BuildDailyStockPageAsync(stockType, search, form, activeModalId: DailyStockModalId));
+                return View(ActionViewFor(stockType), await BuildDailyStockPageAsync(stockType, search, form.BranchId, form, activeModalId: DailyStockModalId));
             }
 
             var now = DateTime.UtcNow;
-            var sold = await ComputeSoldAsync(stockType, form.StockDate!.Value.Date, form.BatchId, form.TankId);
+            if (!await BranchExistsAsync(form.BranchId))
+            {
+                ModelState.AddModelError("Form.BranchId", "Branch is required.");
+                return View(ActionViewFor(stockType), await BuildDailyStockPageAsync(stockType, search, form.BranchId, form, activeModalId: DailyStockModalId));
+            }
+            var sold = await ComputeSoldAsync(stockType, form.StockDate!.Value.Date, form.BatchId, form.TankId, form.BranchId);
             var record = form.Id > 0
                 ? await _db.DailyStockRecords.FirstOrDefaultAsync(item => item.Id == form.Id && item.StockType == stockType)
                 : new DailyStockRecord { CreatedAt = now };
@@ -137,6 +143,7 @@ namespace gpos.Controllers
             }
 
             record.StockType = stockType;
+            record.BranchId = form.BranchId;
             record.StockDate = form.StockDate!.Value.Date;
             record.ProductId = stockType == TankStockType ? null : form.ProductId;
             record.BatchId = stockType == TankStockType ? null : form.BatchId;
@@ -163,7 +170,7 @@ namespace gpos.Controllers
             }
 
             await _db.SaveChangesAsync();
-            return RedirectToAction(redirectAction, new { search });
+            return RedirectToAction(redirectAction, new { search, branchId = form.BranchId });
         }
 
         private void NormalizeDailyStockForm(string stockType, DailyStockForm form)
@@ -186,6 +193,11 @@ namespace gpos.Controllers
                     ModelState.AddModelError("Form.TankId", "Tank is required.");
                 }
 
+                if (form.BranchId <= 0)
+                {
+                    ModelState.AddModelError("Form.BranchId", "Branch is required.");
+                }
+
                 return;
             }
 
@@ -194,6 +206,12 @@ namespace gpos.Controllers
             if (!form.BatchId.HasValue || form.BatchId.Value <= 0)
             {
                 ModelState.AddModelError("Form.BatchId", "Batch is required.");
+                return;
+            }
+
+            if (form.BranchId <= 0)
+            {
+                ModelState.AddModelError("Form.BranchId", "Branch is required.");
                 return;
             }
 
@@ -207,11 +225,12 @@ namespace gpos.Controllers
             form.ProductId = batch.ProductId;
         }
 
-        private async Task<DailyStockPageViewModel> BuildDailyStockPageAsync(string stockType, string? search, DailyStockForm? form = null, int? editId = null, string activeModalId = "")
+        private async Task<DailyStockPageViewModel> BuildDailyStockPageAsync(string stockType, string? search, int? branchId = null, DailyStockForm? form = null, int? editId = null, string activeModalId = "")
         {
             var searchText = (search ?? string.Empty).Trim();
             var recordsQuery = _db.DailyStockRecords
                 .AsNoTracking()
+                .Include(record => record.Branch)
                 .Include(record => record.Product)
                 .Include(record => record.Batch)
                 .Include(record => record.Tank)
@@ -221,11 +240,23 @@ namespace gpos.Controllers
             if (!string.IsNullOrWhiteSpace(searchText))
             {
                 recordsQuery = recordsQuery.Where(record =>
-                    (record.Product != null && record.Product.Name.Contains(searchText))
+                    (record.Branch != null && record.Branch.Name.Contains(searchText))
+                    || (record.Product != null && record.Product.Name.Contains(searchText))
                     || (record.Batch != null && record.Batch.BatchNo.Contains(searchText))
                     || (record.Tank != null && record.Tank.TankNo.Contains(searchText))
                     || (record.Tank != null && record.Tank.Fuel != null && record.Tank.Fuel.Name.Contains(searchText))
                     || (record.Remarks != null && record.Remarks.Contains(searchText)));
+            }
+
+            if (branchId.HasValue && branchId.Value > 0)
+            {
+                recordsQuery = recordsQuery.Where(record => record.BranchId == branchId.Value);
+            }
+
+            var dailyStockForm = form ?? await BuildDailyStockFormAsync(stockType, editId);
+            if (dailyStockForm.Id == 0 && dailyStockForm.BranchId <= 0 && branchId.HasValue && branchId.Value > 0)
+            {
+                dailyStockForm.BranchId = branchId.Value;
             }
 
             var stockOptions = stockType == TankStockType
@@ -241,12 +272,15 @@ namespace gpos.Controllers
                 SaveAction = SaveActionFor(stockType),
                 DefaultAction = DefaultActionFor(stockType),
                 Search = searchText,
+                BranchId = branchId,
+                FormBranchName = await BranchNameAsync(dailyStockForm.BranchId),
                 ActiveModalId = activeModalId,
-                Form = form ?? await BuildDailyStockFormAsync(stockType, editId),
+                Form = dailyStockForm,
                 Records = await recordsQuery.OrderByDescending(record => record.StockDate).ThenByDescending(record => record.Id).ToListAsync(),
                 ProductOptions = BuildProductSelectList(stockOptions),
                 BatchOptions = BuildBatchSelectList(stockOptions),
                 TankOptions = BuildTankSelectList(stockOptions),
+                BranchOptions = await BuildBranchFilterOptionsAsync(),
                 StockOptions = stockOptions
             };
         }
@@ -269,6 +303,7 @@ namespace gpos.Controllers
                 Id = record.Id,
                 StockType = stockType,
                 StockDate = record.StockDate,
+                BranchId = record.BranchId ?? 0,
                 ProductId = record.ProductId,
                 BatchId = record.BatchId,
                 TankId = record.TankId,
@@ -281,21 +316,21 @@ namespace gpos.Controllers
             };
         }
 
-        private async Task<object> BuildProductDailyStockDefaultAsync(string stockType, int batchId, DateTime stockDate)
+        private async Task<object> BuildProductDailyStockDefaultAsync(string stockType, int batchId, DateTime stockDate, int? branchId)
         {
             var date = stockDate.Date;
             var batch = await _db.ProductBatches.AsNoTracking().Include(item => item.Product).FirstOrDefaultAsync(item => item.Id == batchId);
-            var sold = await ComputeSoldAsync(stockType, date, batchId, null);
+            var sold = await ComputeSoldAsync(stockType, date, batchId, null, branchId);
             var previousEnding = await _db.DailyStockRecords.AsNoTracking()
-                .Where(record => record.StockType == stockType && record.BatchId == batchId && record.StockDate < date)
+                .Where(record => record.StockType == stockType && record.BatchId == batchId && record.BranchId == branchId && record.StockDate < date)
                 .OrderByDescending(record => record.StockDate)
                 .ThenByDescending(record => record.Id)
                 .Select(record => (decimal?)record.Ending)
                 .FirstOrDefaultAsync();
 
             var currentQuantity = stockType == WarehouseStockType
-                ? await _db.WarehouseStocks.AsNoTracking().Where(stock => stock.BatchId == batchId).SumAsync(stock => (decimal?)stock.Quantity) ?? 0m
-                : await _db.DisplayStocks.AsNoTracking().Where(stock => stock.BatchId == batchId).SumAsync(stock => (decimal?)stock.Quantity) ?? 0m;
+                ? await _db.WarehouseStocks.AsNoTracking().Where(stock => stock.BatchId == batchId && stock.BranchId == branchId).SumAsync(stock => (decimal?)stock.Quantity) ?? 0m
+                : await _db.DisplayStocks.AsNoTracking().Where(stock => stock.BatchId == batchId && stock.BranchId == branchId).SumAsync(stock => (decimal?)stock.Quantity) ?? 0m;
 
             return new
             {
@@ -307,7 +342,7 @@ namespace gpos.Controllers
             };
         }
 
-        private async Task<decimal> ComputeSoldAsync(string stockType, DateTime stockDate, int? batchId, int? tankId)
+        private async Task<decimal> ComputeSoldAsync(string stockType, DateTime stockDate, int? batchId, int? tankId, int? branchId)
         {
             var start = stockDate.Date;
             var end = start.AddDays(1);
@@ -318,6 +353,7 @@ namespace gpos.Controllers
                     .AsNoTracking()
                     .Where(item => item.BatchId == batchId.Value
                         && item.Sale != null
+                        && item.Sale.BranchId == branchId
                         && item.Status == "Completed"
                         && item.Sale.Status == "Completed"
                         && (item.Sale.CreatedAt ?? item.CreatedAt) >= start
@@ -331,6 +367,7 @@ namespace gpos.Controllers
                     .AsNoTracking()
                     .Where(item => item.TankId == tankId.Value
                         && item.Sale != null
+                        && item.Sale.BranchId == branchId
                         && item.Status == "Completed"
                         && item.Sale.Status == "Completed"
                         && (item.Sale.CreatedAt ?? item.CreatedAt) >= start
@@ -348,6 +385,7 @@ namespace gpos.Controllers
                         && item.MovementType == "Transfer"
                         && item.CreatedAt >= start
                         && item.CreatedAt < end)
+                    .Where(item => !branchId.HasValue || _db.StockTransfers.Any(transfer => transfer.Id == item.ReferenceId && transfer.SourceBranchId == branchId.Value))
                     .SumAsync(item => (decimal?)item.Quantity) ?? 0m;
             }
 
@@ -361,10 +399,13 @@ namespace gpos.Controllers
                 return await _db.WarehouseStocks.AsNoTracking()
                     .Include(stock => stock.Product)
                     .Include(stock => stock.Batch)
-                    .GroupBy(stock => new { stock.BatchId, stock.ProductId, ProductName = stock.Product!.Name, stock.Batch!.BatchNo })
+                    .Include(stock => stock.Branch)
+                    .GroupBy(stock => new { stock.BranchId, BranchName = stock.Branch != null ? stock.Branch.Name : "Unassigned", stock.BatchId, stock.ProductId, ProductName = stock.Product!.Name, stock.Batch!.BatchNo })
                     .Select(group => new DailyStockOption
                     {
                         Id = group.Key.BatchId,
+                        BranchId = group.Key.BranchId,
+                        BranchName = group.Key.BranchName,
                         ProductId = group.Key.ProductId,
                         ProductName = group.Key.ProductName,
                         BatchNo = group.Key.BatchNo,
@@ -378,10 +419,13 @@ namespace gpos.Controllers
             return await _db.DisplayStocks.AsNoTracking()
                 .Include(stock => stock.Product)
                 .Include(stock => stock.Batch)
-                .GroupBy(stock => new { stock.BatchId, stock.ProductId, ProductName = stock.Product!.Name, stock.Batch!.BatchNo })
+                .Include(stock => stock.Branch)
+                .GroupBy(stock => new { stock.BranchId, BranchName = stock.Branch != null ? stock.Branch.Name : "Unassigned", stock.BatchId, stock.ProductId, ProductName = stock.Product!.Name, stock.Batch!.BatchNo })
                 .Select(group => new DailyStockOption
                 {
                     Id = group.Key.BatchId,
+                    BranchId = group.Key.BranchId,
+                    BranchName = group.Key.BranchName,
                     ProductId = group.Key.ProductId,
                     ProductName = group.Key.ProductName,
                     BatchNo = group.Key.BatchNo,
@@ -396,11 +440,14 @@ namespace gpos.Controllers
         {
             return await _db.Tanks.AsNoTracking()
                 .Include(tank => tank.Fuel)
+                .Include(tank => tank.Branch)
                 .Where(tank => tank.Status == 1 && tank.IsActive)
                 .OrderBy(tank => tank.TankNo)
                 .Select(tank => new DailyStockOption
                 {
                     Id = tank.Id,
+                    BranchId = tank.BranchId,
+                    BranchName = tank.Branch != null ? tank.Branch.Name : "Unassigned",
                     TankNo = tank.TankNo,
                     FuelName = tank.Fuel != null ? tank.Fuel.Name : string.Empty,
                     CurrentQuantity = tank.CurrentLiters
@@ -431,6 +478,35 @@ namespace gpos.Controllers
                 .Where(option => !string.IsNullOrWhiteSpace(option.TankNo))
                 .Select(option => new SelectListItem { Value = option.Id.ToString(), Text = string.IsNullOrWhiteSpace(option.FuelName) ? option.TankNo : $"{option.TankNo} - {option.FuelName}" })
                 .ToList();
+        }
+
+        private async Task<List<SelectListItem>> BuildBranchFilterOptionsAsync()
+        {
+            var options = await _db.Branches.AsNoTracking()
+                .Where(branch => branch.Status == 1)
+                .OrderBy(branch => branch.Name)
+                .Select(branch => new SelectListItem { Value = branch.Id.ToString(), Text = branch.Name })
+                .ToListAsync();
+            options.Insert(0, new SelectListItem { Value = "", Text = "All Branches" });
+            return options;
+        }
+
+        private async Task<string> BranchNameAsync(int branchId)
+        {
+            if (branchId <= 0)
+            {
+                return string.Empty;
+            }
+
+            return await _db.Branches.AsNoTracking()
+                .Where(branch => branch.Id == branchId)
+                .Select(branch => branch.Name)
+                .FirstOrDefaultAsync() ?? string.Empty;
+        }
+
+        private async Task<bool> BranchExistsAsync(int branchId)
+        {
+            return branchId > 0 && await _db.Branches.AsNoTracking().AnyAsync(branch => branch.Id == branchId && branch.Status == 1);
         }
 
         private static string? CleanOptional(string? value)

@@ -1,4 +1,7 @@
 @model gpos.Models.ViewModels.EmployeeSetupPageViewModel
+@{
+    var employeeFormBranchName = Model.BranchOptions.FirstOrDefault(item => item.Value == Model.EmployeeForm.BranchId.ToString())?.Text ?? string.Empty;
+}
 
 <div class="page-header">
     <div class="page-heading">
@@ -147,9 +150,13 @@
                             </div>
                             <div class="col-12 col-md-6">
                                 <label asp-for="EmployeeForm.BranchId" class="form-label">Branch</label>
-                                <select asp-for="EmployeeForm.BranchId" asp-items="Model.BranchOptions" class="form-select" id="employeeBranchSelect">
-                                    <option value="0">Select branch</option>
-                                </select>
+                                <input asp-for="EmployeeForm.BranchId" id="employeeBranchSelect" type="hidden" />
+                                <div class="input-group" data-branch-selector data-branch-hidden="#employeeBranchSelect" data-branch-display="#employeeBranchDisplay" data-branch-empty-text="Select branch">
+                                    <input id="employeeBranchDisplay" class="form-control" type="text" value="@employeeFormBranchName" placeholder="Select branch" readonly />
+                                    <button type="button" class="btn btn-outline-secondary branch-select-btn" data-branch-open>
+                                        <img src="/icons/search.png" alt="Search" style="width:16px;height:16px;" />
+                                    </button>
+                                </div>
                                 <span asp-validation-for="EmployeeForm.BranchId" class="text-danger"></span>
                             </div>
                             <div class="col-12 col-md-6">
@@ -207,9 +214,13 @@
                             </div>
                             <div class="col-12 col-md-6">
                                 <label asp-for="EmployeeForm.BranchId" class="form-label">Branch</label>
-                                <select asp-for="EmployeeForm.BranchId" asp-items="Model.BranchOptions" class="form-select" id="employeeBranchSelect">
-                                    <option value="0">Select branch</option>
-                                </select>
+                                <input asp-for="EmployeeForm.BranchId" id="employeeBranchSelect" type="hidden" />
+                                <div class="input-group" data-branch-selector data-branch-hidden="#employeeBranchSelect" data-branch-display="#employeeBranchDisplay" data-branch-empty-text="Select branch">
+                                    <input id="employeeBranchDisplay" class="form-control" type="text" value="@employeeFormBranchName" placeholder="Select branch" readonly />
+                                    <button type="button" class="btn btn-outline-secondary branch-select-btn" data-branch-open>
+                                        <img src="/icons/search.png" alt="Search" style="width:16px;height:16px;" />
+                                    </button>
+                                </div>
                                 <span asp-validation-for="EmployeeForm.BranchId" class="text-danger"></span>
                             </div>
                             <div class="col-12 col-md-6">

@@ -41,9 +41,6 @@ namespace gpos.Models.ViewModels
         [Range(1, int.MaxValue, ErrorMessage = "Branch is required.")]
         public int BranchId { get; set; }
 
-        [Range(1, int.MaxValue, ErrorMessage = "Department is required.")]
-        public int DepartmentId { get; set; }
-
         [Range(1, int.MaxValue, ErrorMessage = "Role is required.")]
         public int RoleId { get; set; }
 
@@ -64,12 +61,13 @@ namespace gpos.Models.ViewModels
     public class UsersPageViewModel
     {
         public string Search { get; set; } = string.Empty;
+        public int? BranchId { get; set; }
+        public string BranchName { get; set; } = string.Empty;
         public string ActiveModalId { get; set; } = string.Empty;
         public UserForm UserForm { get; set; } = new();
         public ResetUserPasswordForm ResetPasswordForm { get; set; } = new();
         public List<User> Users { get; set; } = new();
         public List<SelectListItem> RoleOptions { get; set; } = new();
         public List<SelectListItem> BranchOptions { get; set; } = new();
-        public List<SelectListItem> DepartmentOptions { get; set; } = new();
     }
 }
