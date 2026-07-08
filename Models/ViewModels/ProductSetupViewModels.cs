@@ -9,17 +9,29 @@ namespace gpos.Models.ViewModels
 
         public int? CategoryId { get; set; }
 
-        [Required(ErrorMessage = "Product Name is required.")]
+        [Range(1, int.MaxValue, ErrorMessage = "Branch is required.")]
+        public int? BranchId { get; set; }
+
+        public string BranchName { get; set; } = string.Empty;
+
+        [Range(1, int.MaxValue, ErrorMessage = "Product is required.")]
+        public int? ProductId { get; set; }
+
+        public string ProductDisplayName { get; set; } = string.Empty;
+
+        [Range(1, int.MaxValue, ErrorMessage = "Batch is required.")]
+        public int? BatchId { get; set; }
+
+        public string BatchDisplayName { get; set; } = string.Empty;
+
         public string ProductName { get; set; } = string.Empty;
 
-        [Required(ErrorMessage = "Cost Price is required.")]
         [Range(0, double.MaxValue, ErrorMessage = "Cost Price cannot be negative.")]
         public decimal? CostPrice { get; set; }
 
         [Range(0, double.MaxValue, ErrorMessage = "Selling Price cannot be negative.")]
         public decimal? SellingPrice { get; set; }
 
-        [Required(ErrorMessage = "Quantity is required.")]
         [Range(0, double.MaxValue, ErrorMessage = "Quantity cannot be negative.")]
         public decimal? Quantity { get; set; }
 

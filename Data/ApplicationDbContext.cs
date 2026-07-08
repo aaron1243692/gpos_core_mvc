@@ -745,6 +745,7 @@ namespace gpos.Data
                 entity.Property(setting => setting.Id).HasColumnName("id");
                 entity.Property(setting => setting.ProductId).HasColumnName("product_id");
                 entity.Property(setting => setting.ProductBatchId).HasColumnName("product_batch_id");
+                entity.Property(setting => setting.BranchId).HasColumnName("branch_id");
                 entity.Property(setting => setting.TankId).HasColumnName("tank_id");
                 entity.Property(setting => setting.Location).HasColumnName("location").HasMaxLength(50).IsRequired();
                 entity.Property(setting => setting.MinimumQuantity).HasColumnName("minimum_quantity").HasPrecision(18, 2).HasDefaultValue(0m);
@@ -755,6 +756,7 @@ namespace gpos.Data
 
                 entity.HasIndex(setting => setting.ProductId);
                 entity.HasIndex(setting => setting.ProductBatchId);
+                entity.HasIndex(setting => setting.BranchId);
                 entity.HasIndex(setting => setting.TankId);
                 entity.HasOne(setting => setting.Product)
                     .WithMany(product => product.LowStockSettings)
@@ -763,6 +765,10 @@ namespace gpos.Data
                 entity.HasOne(setting => setting.ProductBatch)
                     .WithMany(batch => batch.LowStockSettings)
                     .HasForeignKey(setting => setting.ProductBatchId)
+                    .OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne(setting => setting.Branch)
+                    .WithMany()
+                    .HasForeignKey(setting => setting.BranchId)
                     .OnDelete(DeleteBehavior.Restrict);
                 entity.HasOne(setting => setting.Tank)
                     .WithMany()

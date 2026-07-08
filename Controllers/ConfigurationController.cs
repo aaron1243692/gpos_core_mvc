@@ -55,14 +55,91 @@ namespace gpos.Controllers
             return Json(branches);
         }
 
-        public async Task<IActionResult> DisplayProducts(string? search, int? branchId)
+        [HttpGet]
+        public async Task<IActionResult> SearchStockProducts(string? search, int take = 20)
         {
-            return View(await BuildDisplayProductsPageAsync(search, branchId: branchId));
+            var searchText = (search ?? string.Empty).Trim();
+            var resultLimit = Math.Clamp(take, 1, 50);
+            var query = _db.Products
+                .AsNoTracking()
+                .Include(product => product.Category)
+                .Include(product => product.ProductUnit)
+                .Where(product => product.Status == 1 && product.IsActive)
+                .AsQueryable();
+
+            if (!string.IsNullOrWhiteSpace(searchText))
+            {
+                query = query.Where(product => product.Name.Contains(searchText)
+                    || (product.Category != null && product.Category.Name.Contains(searchText))
+                    || (product.ProductUnit != null && product.ProductUnit.Name.Contains(searchText)));
+            }
+
+            var products = await query
+                .OrderBy(product => product.Name)
+                .Take(resultLimit)
+                .Select(product => new
+                {
+                    productId = product.Id,
+                    productName = product.Name,
+                    categoryName = product.Category != null ? product.Category.Name : "-",
+                    unitName = product.ProductUnit != null ? product.ProductUnit.Name : "-"
+                })
+                .ToListAsync();
+
+            return Json(products);
         }
 
-        public async Task<IActionResult> WarehouseProducts(string? search, int? branchId)
+        [HttpGet]
+        public async Task<IActionResult> SearchStockBatches(string? search, int? productId, int take = 20)
         {
-            return View(await BuildWarehouseProductsPageAsync(search, branchId: branchId));
+            var searchText = (search ?? string.Empty).Trim();
+            var resultLimit = Math.Clamp(take, 1, 50);
+            var query = _db.ProductBatches
+                .AsNoTracking()
+                .Include(batch => batch.Product)
+                .Include(batch => batch.Supplier)
+                .Where(batch => batch.Status == 1 && batch.IsActive)
+                .AsQueryable();
+
+            if (productId.HasValue && productId.Value > 0)
+            {
+                query = query.Where(batch => batch.ProductId == productId.Value);
+            }
+
+            if (!string.IsNullOrWhiteSpace(searchText))
+            {
+                query = query.Where(batch => batch.BatchNo.Contains(searchText)
+                    || (batch.Product != null && batch.Product.Name.Contains(searchText))
+                    || (batch.Supplier != null && batch.Supplier.Name.Contains(searchText)));
+            }
+
+            var batches = await query
+                .OrderBy(batch => batch.BatchNo)
+                .Take(resultLimit)
+                .Select(batch => new
+                {
+                    batchId = batch.Id,
+                    batchNumber = batch.BatchNo,
+                    productId = batch.ProductId,
+                    productName = batch.Product != null ? batch.Product.Name : "-",
+                    supplierName = batch.Supplier != null ? batch.Supplier.Name : "-",
+                    costPrice = batch.CostPrice,
+                    sellingPrice = batch.SellingPrice,
+                    expiryDate = batch.ExpiryDate.HasValue ? batch.ExpiryDate.Value.ToString("yyyy-MM-dd") : "-"
+                })
+                .ToListAsync();
+
+            return Json(batches);
+        }
+
+        public async Task<IActionResult> DisplayProducts(string? search, int? branchId, int? editId)
+        {
+            return View(await BuildDisplayProductsPageAsync(search, branchId: branchId, editId: editId, activeModalId: editId.HasValue ? "displayProductModal" : string.Empty));
+        }
+
+        public async Task<IActionResult> WarehouseProducts(string? search, int? branchId, int? editId)
+        {
+            return View(await BuildWarehouseProductsPageAsync(search, branchId: branchId, editId: editId, activeModalId: editId.HasValue ? "warehouseProductModal" : string.Empty));
         }
 
         public async Task<IActionResult> ProductCategories(string? search)
@@ -74,15 +151,11 @@ namespace gpos.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> SaveDisplayProduct([Bind(Prefix = "StockForm")] ProductStockForm form, string? search)
         {
+            await ValidateProductStockFormAsync(form, isEdit: form.Id.HasValue && form.Id.Value > 0, isDisplay: true);
+            await PopulateProductStockFormDisplayNamesAsync(form);
             if (!ModelState.IsValid)
             {
-                return View("DisplayProducts", await BuildDisplayProductsPageAsync(search, form, "displayProductModal"));
-            }
-
-            if (form.CategoryId.HasValue && !await ProductCategoryExistsAsync(form.CategoryId.Value))
-            {
-                ModelState.AddModelError("StockForm.CategoryId", "Select an active category.");
-                return View("DisplayProducts", await BuildDisplayProductsPageAsync(search, form, "displayProductModal"));
+                return View("DisplayProducts", await BuildDisplayProductsPageAsync(search, form, "displayProductModal", form.BranchId));
             }
 
             var now = DateTime.UtcNow;
@@ -97,80 +170,76 @@ namespace gpos.Controllers
                 if (displayStock is null)
                 {
                     ModelState.AddModelError(string.Empty, "Display product was not found.");
-                    return View("DisplayProducts", await BuildDisplayProductsPageAsync(search, form, "displayProductModal"));
+                    return View("DisplayProducts", await BuildDisplayProductsPageAsync(search, form, "displayProductModal", form.BranchId));
                 }
 
-                if (displayStock.Product is not null)
-                {
-                    displayStock.Product.CategoryId = form.CategoryId;
-                    displayStock.Product.Name = form.ProductName.Trim();
-                    displayStock.Product.IsActive = form.IsActive;
-                    displayStock.Product.Status = form.IsActive ? 1 : 0;
-                    displayStock.Product.UpdatedAt = now;
-                }
-
-                if (displayStock.Batch is not null)
-                {
-                    displayStock.Batch.CostPrice = form.CostPrice!.Value;
-                    displayStock.Batch.SellingPrice = form.SellingPrice ?? 0m;
-                    displayStock.Batch.IsActive = form.IsActive;
-                    displayStock.Batch.Status = form.IsActive ? 1 : 0;
-                    displayStock.Batch.UpdatedAt = now;
-                }
-
-                displayStock.Quantity = form.Quantity!.Value;
+                displayStock.BranchId = form.BranchId;
+                displayStock.ProductId = form.ProductId!.Value;
+                displayStock.BatchId = form.BatchId!.Value;
                 displayStock.UpdatedAt = now;
 
                 await _db.SaveChangesAsync();
-                return RedirectToAction(nameof(DisplayProducts), new { search });
+                return RedirectToAction(nameof(DisplayProducts), new { search, branchId = form.BranchId });
             }
-
-            var product = await CreateOrGetProductAsync(form, now);
-            var batch = await CreateProductBatchAsync(product, form, now);
 
             _db.DisplayStocks.Add(new DisplayStock
             {
-                Product = product,
-                Batch = batch,
+                BranchId = form.BranchId,
+                ProductId = form.ProductId!.Value,
+                BatchId = form.BatchId!.Value,
                 Quantity = form.Quantity!.Value,
                 CreatedAt = now,
                 UpdatedAt = now
             });
 
             await _db.SaveChangesAsync();
-            return RedirectToAction(nameof(DisplayProducts), new { search });
+            return RedirectToAction(nameof(DisplayProducts), new { search, branchId = form.BranchId });
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> SaveWarehouseProduct([Bind(Prefix = "StockForm")] ProductStockForm form, string? search)
         {
+            await ValidateProductStockFormAsync(form, isEdit: form.Id.HasValue && form.Id.Value > 0, isDisplay: false);
+            await PopulateProductStockFormDisplayNamesAsync(form);
             if (!ModelState.IsValid)
             {
-                return View("WarehouseProducts", await BuildWarehouseProductsPageAsync(search, form, "warehouseProductModal"));
-            }
-
-            if (form.CategoryId.HasValue && !await ProductCategoryExistsAsync(form.CategoryId.Value))
-            {
-                ModelState.AddModelError("StockForm.CategoryId", "Select an active category.");
-                return View("WarehouseProducts", await BuildWarehouseProductsPageAsync(search, form, "warehouseProductModal"));
+                return View("WarehouseProducts", await BuildWarehouseProductsPageAsync(search, form, "warehouseProductModal", form.BranchId));
             }
 
             var now = DateTime.UtcNow;
-            var product = await CreateOrGetProductAsync(form, now);
-            var batch = await CreateProductBatchAsync(product, form, now);
+
+            if (form.Id.HasValue && form.Id.Value > 0)
+            {
+                var warehouseStock = await _db.WarehouseStocks.FirstOrDefaultAsync(stock => stock.Id == form.Id.Value);
+
+                if (warehouseStock is null)
+                {
+                    ModelState.AddModelError(string.Empty, "Warehouse product was not found.");
+                    return View("WarehouseProducts", await BuildWarehouseProductsPageAsync(search, form, "warehouseProductModal", form.BranchId));
+                }
+
+                warehouseStock.BranchId = form.BranchId;
+                warehouseStock.ProductId = form.ProductId!.Value;
+                warehouseStock.BatchId = form.BatchId!.Value;
+                warehouseStock.UpdatedAt = now;
+
+                await _db.SaveChangesAsync();
+                return RedirectToAction(nameof(WarehouseProducts), new { search, branchId = form.BranchId });
+            }
 
             _db.WarehouseStocks.Add(new WarehouseStock
             {
-                Product = product,
-                Batch = batch,
+                BranchId = form.BranchId,
+                ProductId = form.ProductId!.Value,
+                BatchId = form.BatchId!.Value,
                 Quantity = form.Quantity!.Value,
                 CreatedAt = now,
                 UpdatedAt = now
             });
 
             await _db.SaveChangesAsync();
-            return RedirectToAction(nameof(WarehouseProducts), new { search });
+            return RedirectToAction(nameof(WarehouseProducts), new { search, branchId = form.BranchId });
         }
 
         [HttpPost]
@@ -887,10 +956,7 @@ namespace gpos.Controllers
             return RedirectToAction(nameof(Position), new { search });
         }
 
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-
-
+        [HttpGet]
         public async Task<IActionResult> Fuels(string? search, int? editId)
         {
             return View(await BuildFuelsPageAsync(search, editId: editId, activeModalId: editId.HasValue ? "fuelModal" : ""));
@@ -1143,7 +1209,7 @@ namespace gpos.Controllers
         }
 
 
-        private async Task<ProductStockPageViewModel> BuildDisplayProductsPageAsync(string? search, ProductStockForm? form = null, string activeModalId = "", int? branchId = null)
+        private async Task<ProductStockPageViewModel> BuildDisplayProductsPageAsync(string? search, ProductStockForm? form = null, string activeModalId = "", int? branchId = null, int? editId = null)
         {
             IQueryable<DisplayStock> query = _db.DisplayStocks.AsNoTracking()
                 .Include(stock => stock.Product)
@@ -1167,13 +1233,20 @@ namespace gpos.Controllers
                 query = query.Where(stock => stock.BranchId == branchId.Value);
             }
 
+            var stockForm = form ?? await BuildProductStockFormAsync(isDisplay: true, editId);
+            if (!stockForm.Id.HasValue && branchId.HasValue && branchId.Value > 0 && !stockForm.BranchId.HasValue)
+            {
+                stockForm.BranchId = branchId;
+                stockForm.BranchName = await BranchNameAsync(branchId);
+            }
+
             return new ProductStockPageViewModel
             {
                 Search = searchText,
                 BranchId = branchId,
                 BranchName = await BranchNameAsync(branchId),
                 ActiveModalId = activeModalId,
-                StockForm = form ?? new ProductStockForm(),
+                StockForm = stockForm,
                 BranchOptions = await BuildBranchFilterOptionsAsync(),
                 CategoryOptions = await BuildCategoryOptionsAsync(),
                 DisplayStocks = await query
@@ -1187,7 +1260,7 @@ namespace gpos.Controllers
             };
         }
 
-        private async Task<ProductStockPageViewModel> BuildWarehouseProductsPageAsync(string? search, ProductStockForm? form = null, string activeModalId = "", int? branchId = null)
+        private async Task<ProductStockPageViewModel> BuildWarehouseProductsPageAsync(string? search, ProductStockForm? form = null, string activeModalId = "", int? branchId = null, int? editId = null)
         {
             IQueryable<WarehouseStock> query = _db.WarehouseStocks.AsNoTracking()
                 .Include(stock => stock.Product)
@@ -1211,13 +1284,20 @@ namespace gpos.Controllers
                 query = query.Where(stock => stock.BranchId == branchId.Value);
             }
 
+            var stockForm = form ?? await BuildProductStockFormAsync(isDisplay: false, editId);
+            if (!stockForm.Id.HasValue && branchId.HasValue && branchId.Value > 0 && !stockForm.BranchId.HasValue)
+            {
+                stockForm.BranchId = branchId;
+                stockForm.BranchName = await BranchNameAsync(branchId);
+            }
+
             return new ProductStockPageViewModel
             {
                 Search = searchText,
                 BranchId = branchId,
                 BranchName = await BranchNameAsync(branchId),
                 ActiveModalId = activeModalId,
-                StockForm = form ?? new ProductStockForm(),
+                StockForm = stockForm,
                 BranchOptions = await BuildBranchFilterOptionsAsync(),
                 CategoryOptions = await BuildCategoryOptionsAsync(),
                 WarehouseStocks = await query
@@ -1248,6 +1328,135 @@ namespace gpos.Controllers
                 CategoryForm = form ?? new ProductCategoryForm(),
                 Categories = await query.OrderBy(category => category.Id).ToListAsync()
             };
+        }
+
+        private async Task<ProductStockForm> BuildProductStockFormAsync(bool isDisplay, int? editId)
+        {
+            if (!editId.HasValue)
+            {
+                return new ProductStockForm();
+            }
+
+            if (isDisplay)
+            {
+                var stock = await _db.DisplayStocks
+                    .AsNoTracking()
+                    .Include(item => item.Branch)
+                    .Include(item => item.Product)
+                    .Include(item => item.Batch)
+                    .FirstOrDefaultAsync(item => item.Id == editId.Value);
+
+                return stock is null ? new ProductStockForm() : ToProductStockForm(stock.Id, stock.BranchId, stock.Branch?.Name, stock.ProductId, stock.Product?.Name, stock.BatchId, stock.Batch?.BatchNo, stock.Quantity);
+            }
+
+            var warehouseStock = await _db.WarehouseStocks
+                .AsNoTracking()
+                .Include(item => item.Branch)
+                .Include(item => item.Product)
+                .Include(item => item.Batch)
+                .FirstOrDefaultAsync(item => item.Id == editId.Value);
+
+            return warehouseStock is null ? new ProductStockForm() : ToProductStockForm(warehouseStock.Id, warehouseStock.BranchId, warehouseStock.Branch?.Name, warehouseStock.ProductId, warehouseStock.Product?.Name, warehouseStock.BatchId, warehouseStock.Batch?.BatchNo, warehouseStock.Quantity);
+        }
+
+        private static ProductStockForm ToProductStockForm(int id, int? branchId, string? branchName, int productId, string? productName, int batchId, string? batchNo, decimal quantity)
+        {
+            return new ProductStockForm
+            {
+                Id = id,
+                BranchId = branchId,
+                BranchName = branchName ?? string.Empty,
+                ProductId = productId,
+                ProductDisplayName = productName ?? string.Empty,
+                BatchId = batchId,
+                BatchDisplayName = string.IsNullOrWhiteSpace(batchNo) ? string.Empty : $"{batchNo} - {productName}",
+                Quantity = quantity
+            };
+        }
+
+        private async Task ValidateProductStockFormAsync(ProductStockForm form, bool isEdit, bool isDisplay)
+        {
+            if (!form.BranchId.HasValue || form.BranchId.Value <= 0)
+            {
+                ModelState.AddModelError("StockForm.BranchId", "Branch is required.");
+            }
+
+            if (!form.ProductId.HasValue || form.ProductId.Value <= 0)
+            {
+                ModelState.AddModelError("StockForm.ProductId", "Product is required.");
+            }
+
+            if (!form.BatchId.HasValue || form.BatchId.Value <= 0)
+            {
+                ModelState.AddModelError("StockForm.BatchId", "Batch is required.");
+            }
+
+            if (!isEdit && (!form.Quantity.HasValue || form.Quantity.Value < 0))
+            {
+                ModelState.AddModelError("StockForm.Quantity", "Initial quantity is required and cannot be negative.");
+            }
+
+            if (!ModelState.IsValid)
+            {
+                return;
+            }
+
+            var branchExists = await _db.Branches.AnyAsync(branch => branch.Id == form.BranchId && branch.Status == 1);
+            if (!branchExists)
+            {
+                ModelState.AddModelError("StockForm.BranchId", "Select a valid branch.");
+            }
+
+            var productExists = await _db.Products.AnyAsync(product => product.Id == form.ProductId && product.Status == 1 && product.IsActive);
+            if (!productExists)
+            {
+                ModelState.AddModelError("StockForm.ProductId", "Select a valid product.");
+            }
+
+            var batchMatchesProduct = await _db.ProductBatches.AnyAsync(batch => batch.Id == form.BatchId && batch.ProductId == form.ProductId && batch.Status == 1 && batch.IsActive);
+            if (!batchMatchesProduct)
+            {
+                ModelState.AddModelError("StockForm.BatchId", "Select a valid batch for the selected product.");
+            }
+
+            var duplicateExists = isDisplay
+                ? await _db.DisplayStocks.AnyAsync(stock => stock.BranchId == form.BranchId
+                    && stock.ProductId == form.ProductId
+                    && stock.BatchId == form.BatchId
+                    && stock.Id != form.Id)
+                : await _db.WarehouseStocks.AnyAsync(stock => stock.BranchId == form.BranchId
+                    && stock.ProductId == form.ProductId
+                    && stock.BatchId == form.BatchId
+                    && stock.Id != form.Id);
+
+            if (duplicateExists)
+            {
+                ModelState.AddModelError("StockForm.BatchId", "A stock record already exists for this branch, product, and batch.");
+            }
+        }
+
+        private async Task PopulateProductStockFormDisplayNamesAsync(ProductStockForm form)
+        {
+            form.BranchName = await BranchNameAsync(form.BranchId);
+
+            if (form.ProductId.HasValue && form.ProductId.Value > 0)
+            {
+                form.ProductDisplayName = await _db.Products
+                    .AsNoTracking()
+                    .Where(product => product.Id == form.ProductId.Value)
+                    .Select(product => product.Name)
+                    .FirstOrDefaultAsync() ?? string.Empty;
+            }
+
+            if (form.BatchId.HasValue && form.BatchId.Value > 0)
+            {
+                form.BatchDisplayName = await _db.ProductBatches
+                    .AsNoTracking()
+                    .Include(batch => batch.Product)
+                    .Where(batch => batch.Id == form.BatchId.Value)
+                    .Select(batch => batch.BatchNo + " - " + (batch.Product != null ? batch.Product.Name : string.Empty))
+                    .FirstOrDefaultAsync() ?? string.Empty;
+            }
         }
 
         private async Task<Product> CreateOrGetProductAsync(ProductStockForm form, DateTime now)

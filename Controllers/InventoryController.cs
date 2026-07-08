@@ -28,19 +28,162 @@ namespace gpos.Controllers
         public IActionResult DisplayDailyStock() => RedirectToAction("DisplayDailyStock", "Reports");
         public IActionResult TankDailyStock() => RedirectToAction("TankDailyStock", "Reports");
 
-        public async Task<IActionResult> LowStockWarehouse(string? search, int? editId)
+        public async Task<IActionResult> LowStockWarehouse(string? search, int? editId, int? branchId)
         {
-            return View("LowStockSettings", await BuildLowStockSettingsPageAsync(WarehouseStockType, search, editId: editId, activeModalId: editId.HasValue ? LowStockModalId : string.Empty));
+            return View("LowStockSettings", await BuildLowStockSettingsPageAsync(WarehouseStockType, search, branchId, editId: editId, activeModalId: editId.HasValue ? LowStockModalId : string.Empty));
         }
 
-        public async Task<IActionResult> LowStockDisplay(string? search, int? editId)
+        public async Task<IActionResult> LowStockDisplay(string? search, int? editId, int? branchId)
         {
-            return View("LowStockSettings", await BuildLowStockSettingsPageAsync(DisplayStockType, search, editId: editId, activeModalId: editId.HasValue ? LowStockModalId : string.Empty));
+            return View("LowStockSettings", await BuildLowStockSettingsPageAsync(DisplayStockType, search, branchId, editId: editId, activeModalId: editId.HasValue ? LowStockModalId : string.Empty));
         }
 
-        public async Task<IActionResult> LowStockFuel(string? search, int? editId)
+        public async Task<IActionResult> LowStockFuel(string? search, int? editId, int? branchId)
         {
-            return View("LowStockSettings", await BuildLowStockSettingsPageAsync(FuelStockType, search, editId: editId, activeModalId: editId.HasValue ? LowStockModalId : string.Empty));
+            return View("LowStockSettings", await BuildLowStockSettingsPageAsync(FuelStockType, search, branchId, editId: editId, activeModalId: editId.HasValue ? LowStockModalId : string.Empty));
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> SearchWarehouseLowStockProducts(string? search, int? branchId, int take = 20)
+        {
+            var searchText = (search ?? string.Empty).Trim();
+            var resultLimit = Math.Clamp(take, 1, 50);
+            var query = _db.Products
+                .AsNoTracking()
+                .Include(product => product.Category)
+                .Include(product => product.ProductUnit)
+                .Where(product => product.Status == 1 && product.IsActive)
+                .AsQueryable();
+
+            if (!string.IsNullOrWhiteSpace(searchText))
+            {
+                query = query.Where(product =>
+                    product.Name.Contains(searchText)
+                    || (product.Category != null && product.Category.Name.Contains(searchText))
+                    || (product.ProductUnit != null && product.ProductUnit.Name.Contains(searchText)));
+            }
+
+            var products = await query
+                .OrderBy(product => product.Name)
+                .Take(resultLimit)
+                .Select(product => new
+                {
+                    productId = product.Id,
+                    productName = product.Name,
+                    categoryName = product.Category != null ? product.Category.Name : "-",
+                    unitName = product.ProductUnit != null ? product.ProductUnit.Name : "-",
+                    totalWarehouseQuantity = _db.WarehouseStocks
+                        .Where(stock => stock.ProductId == product.Id
+                            && (!branchId.HasValue || branchId.Value <= 0 || stock.BranchId == branchId.Value))
+                        .Sum(stock => (decimal?)stock.Quantity) ?? 0m,
+                    thresholdQuantity = _db.LowStockSettings
+                        .Where(setting => setting.Location == WarehouseStockType
+                            && setting.Status == 1
+                            && setting.ProductId == product.Id
+                            && setting.BranchId == branchId)
+                        .Select(setting => (decimal?)setting.MinimumQuantity)
+                        .FirstOrDefault()
+                })
+                .ToListAsync();
+
+            return Json(products);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> SearchDisplayLowStockProducts(string? search, int? branchId, int take = 20)
+        {
+            var searchText = (search ?? string.Empty).Trim();
+            var resultLimit = Math.Clamp(take, 1, 50);
+            var query = _db.Products
+                .AsNoTracking()
+                .Include(product => product.Category)
+                .Include(product => product.ProductUnit)
+                .Where(product => product.Status == 1 && product.IsActive)
+                .AsQueryable();
+
+            if (!string.IsNullOrWhiteSpace(searchText))
+            {
+                query = query.Where(product =>
+                    product.Name.Contains(searchText)
+                    || (product.Category != null && product.Category.Name.Contains(searchText))
+                    || (product.ProductUnit != null && product.ProductUnit.Name.Contains(searchText)));
+            }
+
+            var products = await query
+                .OrderBy(product => product.Name)
+                .Take(resultLimit)
+                .Select(product => new
+                {
+                    productId = product.Id,
+                    productName = product.Name,
+                    categoryName = product.Category != null ? product.Category.Name : "-",
+                    unitName = product.ProductUnit != null ? product.ProductUnit.Name : "-",
+                    totalDisplayQuantity = _db.DisplayStocks
+                        .Where(stock => stock.ProductId == product.Id
+                            && (!branchId.HasValue || branchId.Value <= 0 || stock.BranchId == branchId.Value))
+                        .Sum(stock => (decimal?)stock.Quantity) ?? 0m,
+                    thresholdQuantity = _db.LowStockSettings
+                        .Where(setting => setting.Location == DisplayStockType
+                            && setting.Status == 1
+                            && setting.ProductId == product.Id
+                            && setting.BranchId == branchId)
+                        .Select(setting => (decimal?)setting.MinimumQuantity)
+                        .FirstOrDefault()
+                })
+                .ToListAsync();
+
+            return Json(products);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> SearchLowStockTanks(string? search, int? branchId, int take = 20)
+        {
+            var searchText = (search ?? string.Empty).Trim();
+            var resultLimit = Math.Clamp(take, 1, 50);
+            var query = _db.Tanks
+                .AsNoTracking()
+                .Include(tank => tank.Branch)
+                .Include(tank => tank.Fuel)
+                .Where(tank => tank.Status == 1 && tank.IsActive)
+                .AsQueryable();
+
+            if (branchId.HasValue && branchId.Value > 0)
+            {
+                query = query.Where(tank => tank.BranchId == branchId.Value);
+            }
+
+            if (!string.IsNullOrWhiteSpace(searchText))
+            {
+                query = query.Where(tank =>
+                    tank.TankNo.Contains(searchText)
+                    || (tank.Fuel != null && tank.Fuel.Name.Contains(searchText))
+                    || (tank.Branch != null && tank.Branch.Name.Contains(searchText)));
+            }
+
+            var tanks = await query
+                .OrderBy(tank => tank.Branch != null ? tank.Branch.Name : string.Empty)
+                .ThenBy(tank => tank.TankNo)
+                .Take(resultLimit)
+                .Select(tank => new
+                {
+                    tankId = tank.Id,
+                    tankName = tank.TankNo,
+                    fuelId = tank.FuelId,
+                    fuelName = tank.Fuel != null ? tank.Fuel.Name : "-",
+                    branchId = tank.BranchId,
+                    branchName = tank.Branch != null ? tank.Branch.Name : "Unassigned",
+                    currentLiters = tank.CurrentLiters,
+                    thresholdLiters = _db.LowStockSettings
+                        .Where(setting => setting.Location == FuelStockType
+                            && setting.Status == 1
+                            && setting.TankId == tank.Id
+                            && setting.BranchId == tank.BranchId)
+                        .Select(setting => (decimal?)setting.MinimumQuantity)
+                        .FirstOrDefault()
+                })
+                .ToListAsync();
+
+            return Json(tanks);
         }
 
         [HttpPost]
@@ -72,7 +215,7 @@ namespace gpos.Controllers
 
             if (!ModelState.IsValid)
             {
-                return View("LowStockSettings", await BuildLowStockSettingsPageAsync(stockType, search, form, activeModalId: LowStockModalId));
+                return View("LowStockSettings", await BuildLowStockSettingsPageAsync(stockType, search, form.BranchId, form, activeModalId: LowStockModalId));
             }
 
             var now = DateTime.UtcNow;
@@ -101,12 +244,21 @@ namespace gpos.Controllers
             {
                 setting.ProductId = null;
                 setting.ProductBatchId = null;
-                setting.TankId = form.Id > 0 ? setting.TankId : form.TankId;
+                setting.BranchId = form.BranchId;
+                setting.TankId = form.TankId;
+            }
+            else if (stockType == WarehouseStockType)
+            {
+                setting.ProductId = form.ProductId;
+                setting.ProductBatchId = null;
+                setting.BranchId = form.BranchId;
+                setting.TankId = null;
             }
             else
             {
-                setting.ProductId = form.Id > 0 ? setting.ProductId : form.ProductId;
+                setting.ProductId = form.ProductId;
                 setting.ProductBatchId = null;
+                setting.BranchId = form.BranchId;
                 setting.TankId = null;
             }
 
@@ -117,22 +269,37 @@ namespace gpos.Controllers
             setting.UpdatedAt = now;
 
             await _db.SaveChangesAsync();
-            return RedirectToAction(redirectAction, new { search });
+            return RedirectToAction(redirectAction, new { search, branchId = stockType == WarehouseStockType || stockType == DisplayStockType || stockType == FuelStockType ? form.BranchId : null });
         }
 
         private void ValidateLowStockForm(string stockType, LowStockThresholdForm form)
         {
             if (stockType == FuelStockType)
             {
-                if (form.Id == 0 && (!form.TankId.HasValue || form.TankId.Value <= 0))
+                if (!form.BranchId.HasValue || form.BranchId.Value <= 0)
                 {
-                    ModelState.AddModelError("Form.TankId", "Tank is required.");
+                    ModelState.AddModelError("Form.BranchId", "Branch is required.");
+                    return;
                 }
 
-                if (form.Id == 0 && form.TankId.HasValue)
+                if (!form.TankId.HasValue || form.TankId.Value <= 0)
+                {
+                    ModelState.AddModelError("Form.TankId", "Tank is required.");
+                    return;
+                }
+
+                var tankExists = _db.Tanks.Any(tank => tank.Id == form.TankId && tank.BranchId == form.BranchId && tank.Status == 1 && tank.IsActive);
+                if (!tankExists)
+                {
+                    ModelState.AddModelError("Form.TankId", "Select a valid tank for the selected branch.");
+                    return;
+                }
+
+                if (form.TankId.HasValue)
                 {
                     var duplicateExists = _db.LowStockSettings.Any(setting => setting.Location == stockType
                         && setting.Status == 1
+                        && setting.BranchId == form.BranchId
                         && setting.TankId == form.TankId
                         && setting.Id != form.Id);
 
@@ -140,6 +307,48 @@ namespace gpos.Controllers
                     {
                         ModelState.AddModelError("Form.TankId", "An active low stock setting already exists for this tank.");
                     }
+                }
+
+                return;
+            }
+
+            if (stockType == WarehouseStockType || stockType == DisplayStockType)
+            {
+                if (!form.BranchId.HasValue || form.BranchId.Value <= 0)
+                {
+                    ModelState.AddModelError("Form.BranchId", "Branch is required.");
+                    return;
+                }
+
+                if (!form.ProductId.HasValue || form.ProductId.Value <= 0)
+                {
+                    ModelState.AddModelError("Form.ProductId", "Product is required.");
+                    return;
+                }
+
+                var branchExists = _db.Branches.Any(branch => branch.Id == form.BranchId && branch.Status == 1);
+                if (!branchExists)
+                {
+                    ModelState.AddModelError("Form.BranchId", "Select a valid branch.");
+                    return;
+                }
+
+                var productExists = _db.Products.Any(product => product.Id == form.ProductId && product.Status == 1 && product.IsActive);
+                if (!productExists)
+                {
+                    ModelState.AddModelError("Form.ProductId", "Select a valid product.");
+                    return;
+                }
+
+                var duplicateExists = _db.LowStockSettings.Any(setting => setting.Location == stockType
+                    && setting.Status == 1
+                    && setting.ProductId == form.ProductId
+                    && setting.BranchId == form.BranchId
+                    && setting.Id != form.Id);
+
+                if (duplicateExists)
+                {
+                    ModelState.AddModelError("Form.ProductId", $"An active low stock setting already exists for this branch and product.");
                 }
 
                 return;
@@ -164,15 +373,20 @@ namespace gpos.Controllers
             }
         }
 
-        private async Task<LowStockSettingsPageViewModel> BuildLowStockSettingsPageAsync(string stockType, string? search, LowStockThresholdForm? form = null, int? editId = null, string activeModalId = "")
+        private async Task<LowStockSettingsPageViewModel> BuildLowStockSettingsPageAsync(string stockType, string? search, int? branchId = null, LowStockThresholdForm? form = null, int? editId = null, string activeModalId = "")
         {
             var searchText = (search ?? string.Empty).Trim();
             var rows = await BuildSettingRowsAsync(stockType);
+            if ((stockType == WarehouseStockType || stockType == DisplayStockType || stockType == FuelStockType) && branchId.HasValue && branchId.Value > 0)
+            {
+                rows = rows.Where(row => row.BranchId == branchId.Value).ToList();
+            }
 
             if (!string.IsNullOrWhiteSpace(searchText))
             {
                 rows = rows
                     .Where(row => row.ProductName.Contains(searchText, StringComparison.OrdinalIgnoreCase)
+                        || row.BranchName.Contains(searchText, StringComparison.OrdinalIgnoreCase)
                         || row.TankName.Contains(searchText, StringComparison.OrdinalIgnoreCase)
                         || row.FuelName.Contains(searchText, StringComparison.OrdinalIgnoreCase)
                         || row.Status.Contains(searchText, StringComparison.OrdinalIgnoreCase))
@@ -190,8 +404,10 @@ namespace gpos.Controllers
                 PageAction = PageActionFor(stockType),
                 EmptyMessage = "No low stock settings found.",
                 Search = searchText,
+                BranchId = branchId,
                 ActiveModalId = activeModalId,
                 Form = form ?? await BuildLowStockFormAsync(stockType, editId),
+                BranchOptions = await BuildBranchFilterOptionsAsync(),
                 ProductOptions = await BuildProductOptionsAsync(),
                 TankOptions = await BuildTankOptionsAsync(),
                 Settings = rows
@@ -224,7 +440,12 @@ namespace gpos.Controllers
                 Id = setting.Id,
                 StockType = stockType,
                 ProductId = setting.ProductId,
+                BranchId = setting.BranchId,
+                BranchName = await BranchNameAsync(setting.BranchId),
+                SelectedProductName = await ProductNameAsync(setting.ProductId),
                 TankId = setting.TankId,
+                SelectedTankName = await TankNameAsync(setting.TankId),
+                SelectedFuelName = await TankFuelNameAsync(setting.TankId),
                 Threshold = setting.MinimumQuantity,
                 UnitLabel = setting.UnitLabel ?? UnitLabelFor(stockType)
             };
@@ -234,9 +455,12 @@ namespace gpos.Controllers
         {
             var settings = await _db.LowStockSettings
                 .AsNoTracking()
+                .Include(setting => setting.Branch)
                 .Include(setting => setting.Product)
                 .Include(setting => setting.Tank)
                 .ThenInclude(tank => tank!.Fuel)
+                .Include(setting => setting.Tank)
+                .ThenInclude(tank => tank!.Branch)
                 .Where(setting => setting.Location == stockType
                     && setting.Status == 1
                     && (stockType == FuelStockType ? setting.TankId != null : setting.ProductId != null))
@@ -248,16 +472,72 @@ namespace gpos.Controllers
                 return settings.Select(setting =>
                 {
                     var currentLiters = setting.Tank?.CurrentLiters ?? 0m;
+                    var difference = setting.MinimumQuantity - currentLiters;
                     return new LowStockSettingRow
                     {
                         Id = setting.Id,
+                        BranchId = setting.BranchId ?? setting.Tank?.BranchId,
+                        BranchName = setting.Branch?.Name ?? setting.Tank?.Branch?.Name ?? "Unassigned",
                         TankId = setting.TankId,
                         TankName = setting.Tank?.TankNo ?? "-",
                         FuelName = setting.Tank?.Fuel?.Name ?? "-",
                         UnitLabel = setting.UnitLabel ?? UnitLabelFor(stockType),
                         CurrentQuantity = currentLiters,
                         Threshold = setting.MinimumQuantity,
+                        Difference = difference,
                         Status = StatusFor(currentLiters, setting.MinimumQuantity),
+                        UpdatedAt = setting.UpdatedAt
+                    };
+                }).ToList();
+            }
+
+            if (stockType == WarehouseStockType)
+            {
+                return settings.Select(setting =>
+                {
+                    var currentQuantity = _db.WarehouseStocks.AsNoTracking()
+                        .Where(stock => stock.ProductId == setting.ProductId && stock.BranchId == setting.BranchId)
+                        .Sum(stock => (decimal?)stock.Quantity) ?? 0m;
+                    var difference = setting.MinimumQuantity - currentQuantity;
+
+                    return new LowStockSettingRow
+                    {
+                        Id = setting.Id,
+                        ProductId = setting.ProductId,
+                        BranchId = setting.BranchId,
+                        BranchName = setting.Branch?.Name ?? "Unassigned",
+                        ProductName = setting.Product?.Name ?? "-",
+                        UnitLabel = setting.UnitLabel ?? UnitLabelFor(stockType),
+                        CurrentQuantity = currentQuantity,
+                        Threshold = setting.MinimumQuantity,
+                        Difference = difference,
+                        Status = StatusFor(currentQuantity, setting.MinimumQuantity),
+                        UpdatedAt = setting.UpdatedAt
+                    };
+                }).ToList();
+            }
+
+            if (stockType == DisplayStockType)
+            {
+                return settings.Select(setting =>
+                {
+                    var currentQuantity = _db.DisplayStocks.AsNoTracking()
+                        .Where(stock => stock.ProductId == setting.ProductId && stock.BranchId == setting.BranchId)
+                        .Sum(stock => (decimal?)stock.Quantity) ?? 0m;
+                    var difference = setting.MinimumQuantity - currentQuantity;
+
+                    return new LowStockSettingRow
+                    {
+                        Id = setting.Id,
+                        ProductId = setting.ProductId,
+                        BranchId = setting.BranchId,
+                        BranchName = setting.Branch?.Name ?? "Unassigned",
+                        ProductName = setting.Product?.Name ?? "-",
+                        UnitLabel = setting.UnitLabel ?? UnitLabelFor(stockType),
+                        CurrentQuantity = currentQuantity,
+                        Threshold = setting.MinimumQuantity,
+                        Difference = difference,
+                        Status = StatusFor(currentQuantity, setting.MinimumQuantity),
                         UpdatedAt = setting.UpdatedAt
                     };
                 }).ToList();
@@ -284,6 +564,7 @@ namespace gpos.Controllers
             return settings.Select(setting =>
             {
                 var currentQuantity = setting.ProductId.HasValue && totals.TryGetValue(setting.ProductId.Value, out var total) ? total : 0m;
+                var difference = setting.MinimumQuantity - currentQuantity;
                 return new LowStockSettingRow
                 {
                     Id = setting.Id,
@@ -292,6 +573,7 @@ namespace gpos.Controllers
                     UnitLabel = setting.UnitLabel ?? UnitLabelFor(stockType),
                     CurrentQuantity = currentQuantity,
                     Threshold = setting.MinimumQuantity,
+                    Difference = difference,
                     Status = StatusFor(currentQuantity, setting.MinimumQuantity),
                     UpdatedAt = setting.UpdatedAt
                 };
@@ -317,6 +599,75 @@ namespace gpos.Controllers
                 .OrderBy(tank => tank.TankNo)
                 .Select(tank => new SelectListItem { Value = tank.Id.ToString(), Text = tank.Fuel == null ? tank.TankNo : $"{tank.TankNo} - {tank.Fuel.Name}" })
                 .ToListAsync();
+        }
+
+        private async Task<List<SelectListItem>> BuildBranchFilterOptionsAsync()
+        {
+            var options = await _db.Branches
+                .AsNoTracking()
+                .Where(branch => branch.Status == 1)
+                .OrderBy(branch => branch.Name)
+                .Select(branch => new SelectListItem { Value = branch.Id.ToString(), Text = branch.Name })
+                .ToListAsync();
+            options.Insert(0, new SelectListItem { Value = "", Text = "All Branches" });
+            return options;
+        }
+
+        private async Task<string> BranchNameAsync(int? branchId)
+        {
+            if (!branchId.HasValue || branchId.Value <= 0)
+            {
+                return string.Empty;
+            }
+
+            return await _db.Branches
+                .AsNoTracking()
+                .Where(branch => branch.Id == branchId.Value)
+                .Select(branch => branch.Name)
+                .FirstOrDefaultAsync() ?? string.Empty;
+        }
+
+        private async Task<string> ProductNameAsync(int? productId)
+        {
+            if (!productId.HasValue || productId.Value <= 0)
+            {
+                return string.Empty;
+            }
+
+            return await _db.Products
+                .AsNoTracking()
+                .Where(product => product.Id == productId.Value)
+                .Select(product => product.Name)
+                .FirstOrDefaultAsync() ?? string.Empty;
+        }
+
+        private async Task<string> TankNameAsync(int? tankId)
+        {
+            if (!tankId.HasValue || tankId.Value <= 0)
+            {
+                return string.Empty;
+            }
+
+            return await _db.Tanks
+                .AsNoTracking()
+                .Where(tank => tank.Id == tankId.Value)
+                .Select(tank => tank.TankNo)
+                .FirstOrDefaultAsync() ?? string.Empty;
+        }
+
+        private async Task<string> TankFuelNameAsync(int? tankId)
+        {
+            if (!tankId.HasValue || tankId.Value <= 0)
+            {
+                return string.Empty;
+            }
+
+            return await _db.Tanks
+                .AsNoTracking()
+                .Include(tank => tank.Fuel)
+                .Where(tank => tank.Id == tankId.Value)
+                .Select(tank => tank.Fuel != null ? tank.Fuel.Name : string.Empty)
+                .FirstOrDefaultAsync() ?? string.Empty;
         }
 
         private static string DescriptionFor(string stockType) => stockType switch

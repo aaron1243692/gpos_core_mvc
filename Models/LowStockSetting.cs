@@ -5,6 +5,7 @@ namespace gpos.Models
         public int Id { get; set; }
         public int? ProductId { get; set; }
         public int? ProductBatchId { get; set; }
+        public int? BranchId { get; set; }
         public int? TankId { get; set; }
         public string Location { get; set; } = string.Empty;
         public decimal MinimumQuantity { get; set; }
@@ -15,6 +16,7 @@ namespace gpos.Models
 
         public Product? Product { get; set; }
         public ProductBatch? ProductBatch { get; set; }
+        public Branch? Branch { get; set; }
         public Tank? Tank { get; set; }
     }
 }
