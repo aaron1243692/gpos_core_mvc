@@ -1,0 +1,6 @@
+Inventory / product, fuel 
+table display 
+
+
+inventory / batches
+table display

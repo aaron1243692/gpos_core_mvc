@@ -181,7 +181,7 @@ namespace gpos.ViewComponents
             _ => action
         };
 
-        private static bool IsInventoryConfiguration(string action) => action is "DisplayProducts" or "WarehouseProducts" or "ProductBatches" or "FuelBatches" or "LowStockSettings" or "Tanks";
+        private static bool IsInventoryConfiguration(string action) => action is "DisplayProducts" or "WarehouseProducts" or "WarehouseBatches" or "DisplayBatches" or "ProductBatches" or "FuelBatches" or "LowStockSettings" or "Tanks";
 
         private static bool IsLegacyInventoryConfiguration(string action) => action is "Products" or "Categories" or "ItemUnits" or "FuelTanks";
 

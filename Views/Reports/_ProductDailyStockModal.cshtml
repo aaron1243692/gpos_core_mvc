@@ -12,6 +12,9 @@
                 <input asp-for="Form.Id" type="hidden" />
                 <input asp-for="Form.StockType" type="hidden" />
                 <input asp-for="Form.ProductId" type="hidden" data-daily-stock-product-id />
+                <input asp-for="Form.BatchId" type="hidden" data-daily-stock-batch-id />
+                <input asp-for="Form.WarehouseStockId" type="hidden" data-daily-stock-warehouse-stock-id />
+                <input asp-for="Form.DisplayStockId" type="hidden" data-daily-stock-display-stock-id />
                 <input name="search" type="hidden" value="@Model.Search" />
                 <input name="filterBranchId" type="hidden" value="@Model.BranchId" />
                 <div class="modal-header">
@@ -23,12 +26,7 @@
                         <div class="col-md-6">
                             <label asp-for="Form.BranchId" class="form-label">Branch</label>
                             <input asp-for="Form.BranchId" type="hidden" id="dailyStockProductBranchId" data-daily-stock-branch />
-                            <div class="input-group" data-branch-selector data-branch-hidden="#dailyStockProductBranchId" data-branch-display="#dailyStockProductBranchDisplay" data-branch-empty-text="Select branch">
-                                <input class="form-control" id="dailyStockProductBranchDisplay" value="@Model.FormBranchName" placeholder="Select branch" readonly />
-                                <button type="button" class="btn btn-outline-secondary branch-select-btn">
-                                    <img src="/icons/search.png" alt="Search" style="width:16px;height:16px;" />
-                                </button>
-                            </div>
+                            <input class="form-control" id="dailyStockProductBranchDisplay" value="@Model.FormBranchName" placeholder="Selected with product" readonly data-daily-stock-branch-display />
                             <span asp-validation-for="Form.BranchId" class="text-danger"></span>
                         </div>
                         <div class="col-md-6">
@@ -36,18 +34,17 @@
                             <input asp-for="Form.StockDate" class="form-control" type="date" />
                             <span asp-validation-for="Form.StockDate" class="text-danger"></span>
                         </div>
-                        <div class="col-md-6">
-                            <label asp-for="Form.BatchId" class="form-label">Batch</label>
-                            <select asp-for="Form.BatchId" asp-items="Model.BatchOptions" class="form-select" data-daily-stock-batch>
-                                <option value="">Select batch</option>
-                            </select>
-                            <span asp-validation-for="Form.BatchId" class="text-danger"></span>
-                        </div>
-                        <div class="col-md-6">
+                        <div class="col-12">
                             <label class="form-label">Product</label>
-                            <select asp-for="Form.ProductId" asp-items="Model.ProductOptions" class="form-select" disabled data-daily-stock-product-select>
-                                <option value="">Select product</option>
-                            </select>
+                            <div class="input-group">
+                                <input class="form-control" value="" placeholder="Select product, batch, and branch" readonly data-daily-stock-product-display />
+                                <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#dailyStockItemSelectorModal">
+                                    <img src="/icons/search.png" alt="Search" style="width:16px;height:16px;" />
+                                </button>
+                            </div>
+                            <span asp-validation-for="Form.WarehouseStockId" class="text-danger"></span>
+                            <span asp-validation-for="Form.DisplayStockId" class="text-danger"></span>
+                            <span asp-validation-for="Form.BatchId" class="text-danger"></span>
                             <span asp-validation-for="Form.ProductId" class="text-danger"></span>
                         </div>
                         <div class="col-md-6">
@@ -83,6 +80,37 @@
                     <button class="btn btn-primary" type="submit">Save</button>
                 </div>
             </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="dailyStockItemSelectorModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title fs-5">Select @Model.StockType Stock</h2>
+                <button class="btn-close" type="button" data-bs-target="#dailyStockModal" data-bs-toggle="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <input class="form-control" placeholder="Search branch, product, or batch" data-daily-stock-selector-search />
+                </div>
+                <div class="setup-table-scroll">
+                    <table class="table app-table table-sm align-middle admin-table mb-0">
+                        <thead>
+                            <tr>
+                                <th>No</th>
+                                <th>Branch</th>
+                                <th>Product</th>
+                                <th>Batch No</th>
+                                <th>Current Quantity</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody data-daily-stock-selector-body></tbody>
+                    </table>
+                </div>
+            </div>
         </div>
     </div>
 </div>

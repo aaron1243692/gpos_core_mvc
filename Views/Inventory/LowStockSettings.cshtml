@@ -43,8 +43,8 @@
         <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#lowStockSettingModal">Settings</button>
     </div>
 
-    <div class="setup-table-scroll">
-        <table class="table app-table table-sm align-middle admin-table mb-0">
+    <div class="setup-table-scroll gpos-table-wrap">
+        <table class="table app-table table-sm align-middle admin-table gpos-table inventory-low-stock-table mb-0">
             <colgroup>
                 <col class="col-no" />
                 @if (isBranchScoped)
@@ -78,14 +78,14 @@
                     {
                         <th scope="col">Fuel</th>
                     }
-                    <th scope="col">@Model.QuantityLabel</th>
-                    <th scope="col">Threshold</th>
+                    <th class="number-cell" scope="col">@Model.QuantityLabel</th>
+                    <th class="number-cell" scope="col">Threshold</th>
                     @if (isProductStock || isFuel)
                     {
-                        <th scope="col">Difference</th>
+                        <th class="number-cell" scope="col">Difference</th>
                     }
-                    <th scope="col">Status</th>
-                    <th scope="col">Updated</th>
+                    <th class="status-cell" scope="col">Status</th>
+                    <th class="number-cell" scope="col">Updated</th>
                     <th scope="col">Action</th>
                 </tr>
             </thead>
@@ -103,24 +103,24 @@
                         <td>@(i + 1)</td>
                         @if (isBranchScoped)
                         {
-                            <td>@row.BranchName</td>
+                            <td class="text-cell">@row.BranchName</td>
                         }
-                        <td>@(isFuel ? row.TankName : row.ProductName)</td>
+                        <td class="text-cell">@(isFuel ? row.TankName : row.ProductName)</td>
                         @if (isFuel)
                         {
-                            <td>@row.FuelName</td>
+                            <td class="text-cell">@row.FuelName</td>
                         }
-                        <td>@row.CurrentQuantity.ToString("N2")</td>
-                        <td>@row.Threshold.ToString("N2")</td>
+                        <td class="number-cell">@row.CurrentQuantity.ToString("#,0.##")</td>
+                        <td class="number-cell">@row.Threshold.ToString("#,0.##")</td>
                         @if (isProductStock || isFuel)
                         {
-                            <td>@Math.Max(row.Difference, 0m).ToString("N2")</td>
+                            <td class="number-cell">@Math.Max(row.Difference, 0m).ToString("#,0.##")</td>
                         }
-                        <td>
+                        <td class="status-cell">
                             <span class="badge @(row.Status == "Low Stock" ? "text-bg-warning" : "text-bg-success")">@row.Status</span>
                         </td>
-                        <td>@(row.UpdatedAt?.ToString("yyyy-MM-dd HH:mm") ?? "-")</td>
-                        <td class="col-action">
+                        <td class="number-cell">@(row.UpdatedAt?.ToString("yyyy-MM-dd HH:mm") ?? "-")</td>
+                        <td class="col-action action-cell">
                             <a class="btn btn-sm btn-outline-primary" asp-action="@Model.PageAction" asp-route-editId="@row.Id" asp-route-search="@Model.Search" asp-route-filterBranchId="@Model.BranchId">Edit</a>
                         </td>
                     </tr>

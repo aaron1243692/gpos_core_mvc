@@ -1,3 +1,4 @@
+@using System.Globalization
 @model gpos.Models.ViewModels.ProductStockPageViewModel
 @{
     var isEdit = Model.StockForm.Id.HasValue && Model.StockForm.Id.Value > 0;
@@ -34,15 +35,16 @@
         <button class="btn btn-sm btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#warehouseProductModal">Add Warehouse Stock</button>
     </div>
 
-    <div class="table-responsive table-scroll-wrap flex-table-wrap">
-        <table class="table table-sm table-hover align-middle admin-table mb-0">
+    <div class="table-responsive table-scroll-wrap flex-table-wrap gpos-table-wrap">
+        <table class="table table-sm table-hover align-middle admin-table gpos-table inventory-summary-table mb-0">
             <colgroup>
                 <col class="col-no" />
+                <col class="col-normal" />
                 <col class="col-name" />
                 <col class="col-normal" />
                 <col class="col-normal" />
-                <col class="col-normal" />
-                <col class="col-normal" />
+                <col class="col-qty" />
+                <col class="col-money" />
                 <col class="col-status" />
                 <col class="col-action" />
             </colgroup>
@@ -53,9 +55,9 @@
                     <th class="col-name" scope="col">Product</th>
                     <th scope="col">Category</th>
                     <th scope="col">Unit</th>
-                    <th class="col-qty" scope="col">Total Quantity</th>
-                    <th class="col-money" scope="col">Total Cost Value</th>
-                    <th class="col-status" scope="col">Status</th>
+                    <th class="col-qty" scope="col">Total Qty</th>
+                    <th class="col-money" scope="col">Total Cost</th>
+                    <th class="col-status status-cell" scope="col">Status</th>
                     <th class="col-action" scope="col">Action</th>
                 </tr>
             </thead>
@@ -63,7 +65,7 @@
                 @if (Model.WarehouseStockSummaries.Count == 0)
                 {
                     <tr>
-                        <td class="text-center text-muted fw-bold" colspan="8">No warehouse products found.</td>
+                        <td class="text-center text-muted fw-bold" colspan="9">No warehouse products found.</td>
                     </tr>
                 }
                 @for (var index = 0; index < Model.WarehouseStockSummaries.Count; index += 1)
@@ -71,14 +73,14 @@
                     var summary = Model.WarehouseStockSummaries[index];
                     <tr>
                         <td class="col-no">@(index + 1)</td>
-                        <td>@summary.BranchName</td>
-                        <td class="col-name">@summary.ProductName</td>
-                        <td>@summary.CategoryName</td>
+                        <td class="text-cell">@summary.BranchName</td>
+                        <td class="col-name text-cell">@summary.ProductName</td>
+                        <td class="text-cell">@summary.CategoryName</td>
                         <td>@summary.UnitName</td>
-                        <td class="col-qty">@summary.TotalQuantity.ToString("N2")</td>
-                        <td>&#8369;@((summary.TotalCostValue ?? 0m).ToString("N2"))</td>
-                        <td><span class="badge @(summary.IsActive ? "text-bg-success" : "text-bg-secondary")">@summary.StatusText</span></td>
-                        <td class="col-action">
+                        <td class="col-qty number-cell">@summary.TotalQuantity.ToString("#,0.##", CultureInfo.InvariantCulture)</td>
+                        <td class="col-money number-cell">&#8369;@((summary.TotalCostValue ?? 0m).ToString("N2", CultureInfo.InvariantCulture))</td>
+                        <td class="status-cell"><span class="badge @(summary.IsActive ? "text-bg-success" : "text-bg-secondary")">@summary.StatusText</span></td>
+                        <td class="col-action action-cell">
                             <div class="setup-row-actions">
                                 <a class="btn btn-sm btn-outline-primary" asp-action="ProductBatches" asp-route-search="@summary.ProductName">View Batches</a>
                                 @if (summary.IsActive)

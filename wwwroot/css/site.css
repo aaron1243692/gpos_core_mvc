@@ -1432,6 +1432,112 @@ textarea.form-control {
   white-space: nowrap;
 }
 
+.gpos-table-wrap {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: visible;
+}
+
+.gpos-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: auto !important;
+}
+
+.gpos-table col {
+  display: table-column;
+}
+
+.gpos-table thead {
+  display: table-header-group !important;
+}
+
+.gpos-table tbody {
+  display: table-row-group !important;
+}
+
+.gpos-table tr {
+  display: table-row !important;
+}
+
+.gpos-table th,
+.gpos-table td {
+  display: table-cell !important;
+  vertical-align: middle;
+}
+
+.gpos-table th {
+  position: static !important;
+  white-space: nowrap !important;
+  word-break: normal;
+  overflow-wrap: normal;
+}
+
+.gpos-table td {
+  word-break: normal;
+  overflow-wrap: anywhere;
+}
+
+.gpos-table td.text-cell {
+  min-width: 8rem;
+  white-space: normal;
+}
+
+.gpos-table td.number-cell,
+.gpos-table th.number-cell,
+.gpos-table th.col-qty,
+.gpos-table th.col-money,
+.gpos-table th.col-cost-price,
+.gpos-table th.col-selling-price,
+.gpos-table th.col-received-liters,
+.gpos-table th.col-received-date,
+.gpos-table th.col-date {
+  text-align: right;
+  white-space: nowrap;
+  overflow-wrap: normal;
+}
+
+.gpos-table td.action-cell,
+.gpos-table th.action-cell,
+.gpos-table td.status-cell,
+.gpos-table th.status-cell,
+.gpos-table td.col-status,
+.gpos-table th.col-status,
+.gpos-table .col-action {
+  white-space: nowrap;
+}
+
+.gpos-table .setup-row-actions {
+  flex-wrap: nowrap;
+}
+
+.gpos-table .col-no {
+  width: 3.5rem;
+}
+
+.gpos-table .col-status {
+  width: 6.5rem;
+}
+
+.gpos-table .col-qty,
+.gpos-table .col-money {
+  width: 8.5rem;
+}
+
+.gpos-table .col-action {
+  width: 1%;
+}
+
+.inventory-summary-table .col-name {
+  min-width: 14rem;
+}
+
+.inventory-tanks-table .col-name,
+.inventory-low-stock-table .col-name {
+  min-width: 10rem;
+}
+
 .admin-table.pump-meter-readings-table {
   min-width: 1456px;
   table-layout: fixed;
@@ -1518,8 +1624,8 @@ textarea.form-control {
 }
 
 .admin-table.product-batches-table {
-  min-width: 1320px;
-  table-layout: fixed;
+  min-width: 1120px;
+  table-layout: auto;
 }
 
 .product-batches-table th,
@@ -1538,20 +1644,20 @@ textarea.form-control {
 }
 
 .product-batches-table .col-batch-number {
-  width: 180px;
+  width: 130px;
 }
 
 .product-batches-table .col-product {
-  width: 220px;
+  min-width: 180px;
 }
 
 .product-batches-table .col-supplier {
-  width: 180px;
+  min-width: 150px;
 }
 
 .product-batches-table .col-cost-price,
 .product-batches-table .col-selling-price,
-.product-batches-table .col-expiry-date {
+.product-batches-table .col-date {
   width: 120px;
 }
 
@@ -1572,8 +1678,8 @@ textarea.form-control {
 }
 
 .admin-table.fuel-batches-table {
-  min-width: 1640px;
-  table-layout: fixed;
+  min-width: 1120px;
+  table-layout: auto;
 }
 
 .fuel-batches-table th,
@@ -1592,26 +1698,24 @@ textarea.form-control {
 }
 
 .fuel-batches-table .col-batch-number {
-  width: 180px;
+  width: 130px;
 }
 
 .fuel-batches-table .col-fuel {
-  width: 220px;
+  min-width: 140px;
 }
 
 .fuel-batches-table .col-supplier {
-  width: 180px;
+  min-width: 150px;
 }
 
-.fuel-batches-table .col-cost-price,
-.fuel-batches-table .col-selling-price {
-  width: 150px;
+.fuel-batches-table .col-cost-price {
+  width: 125px;
 }
 
 .fuel-batches-table .col-received-liters,
-.fuel-batches-table .col-remaining-liters,
 .fuel-batches-table .col-received-date {
-  width: 135px;
+  width: 125px;
 }
 
 .fuel-batches-table .col-status {

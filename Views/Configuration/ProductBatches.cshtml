@@ -27,37 +27,35 @@
         </div>
     </div>
 
-    <div class="table-responsive table-scroll-wrap flex-table-wrap">
-        <table class="table table-sm table-hover align-middle admin-table product-batches-table mb-0">
+    <div class="table-responsive table-scroll-wrap flex-table-wrap gpos-table-wrap">
+        <table class="table table-sm table-hover align-middle admin-table gpos-table product-batches-table mb-0">
             <colgroup>
                 <col class="col-no" />
-                <col class="col-id" />
-                <col class="col-batch-number" />
                 <col class="col-product" />
+                <col class="col-batch-number" />
                 <col class="col-supplier" />
                 <col class="col-cost-price" />
                 <col class="col-selling-price" />
                 <col class="col-normal" />
                 <col class="col-normal" />
                 <col class="col-normal" />
-                <col class="col-expiry-date" />
+                <col class="col-date" />
                 <col class="col-status" />
                 <col class="col-action" />
             </colgroup>
             <thead>
                 <tr>
                     <th class="col-no text-nowrap" scope="col">No</th>
-                    <th class="col-id text-nowrap" scope="col">ID</th>
-                    <th class="col-batch-number text-nowrap" scope="col">Batch Number</th>
                     <th class="col-product text-nowrap" scope="col">Product</th>
+                    <th class="col-batch-number text-nowrap" scope="col">Batch No</th>
                     <th class="col-supplier text-nowrap" scope="col">Supplier</th>
                     <th class="col-cost-price text-nowrap" scope="col">Cost Price</th>
                     <th class="col-selling-price text-nowrap" scope="col">Selling Price</th>
-                    <th class="text-nowrap" scope="col">Warehouse Qty</th>
-                    <th class="text-nowrap" scope="col">Display Qty</th>
-                    <th class="text-nowrap" scope="col">Total Qty</th>
-                    <th class="col-expiry-date text-nowrap" scope="col">Expiry Date</th>
-                    <th class="col-status text-nowrap" scope="col">Status</th>
+                    <th class="number-cell text-nowrap" scope="col">Warehouse Qty</th>
+                    <th class="number-cell text-nowrap" scope="col">Display Qty</th>
+                    <th class="number-cell text-nowrap" scope="col">Total Qty</th>
+                    <th class="col-date text-nowrap" scope="col">Date Created</th>
+                    <th class="col-status status-cell text-nowrap" scope="col">Status</th>
                     <th class="col-action text-nowrap" scope="col">Action</th>
                 </tr>
             </thead>
@@ -65,24 +63,23 @@
                 @if (Model.ProductBatches.Count == 0)
                 {
                     <tr>
-                        <td class="text-center text-muted fw-bold" colspan="13">No product batches found.</td>
+                        <td class="text-center text-muted fw-bold" colspan="12">No product batches found.</td>
                     </tr>
                 }
                 @for (var index = 0; index < Model.ProductBatches.Count; index += 1)
                 {
                     <tr>
                         <td class="col-no">@(index + 1)</td>
-                        <td class="col-id">@Model.ProductBatches[index].Id</td>
+                        <td class="col-product text-cell text-truncate">@(Model.ProductBatches[index].Product?.Name ?? "-")</td>
                         <td class="col-batch-number text-nowrap">@Model.ProductBatches[index].BatchNo</td>
-                        <td class="col-product text-truncate">@(Model.ProductBatches[index].Product?.Name ?? "-")</td>
-                        <td class="col-supplier text-truncate">@(Model.ProductBatches[index].Supplier?.Name ?? "-")</td>
-                        <td class="col-cost-price text-nowrap">&#8369;@Model.ProductBatches[index].CostPrice.ToString("N2", CultureInfo.InvariantCulture)</td>
-                        <td class="col-selling-price text-nowrap">&#8369;@Model.ProductBatches[index].SellingPrice.ToString("N2", CultureInfo.InvariantCulture)</td>
-                        <td class="text-nowrap">@Model.ProductBatches[index].WarehouseStocks.Sum(stock => stock.Quantity).ToString("N2", CultureInfo.InvariantCulture)</td>
-                        <td class="text-nowrap">@Model.ProductBatches[index].DisplayStocks.Sum(stock => stock.Quantity).ToString("N2", CultureInfo.InvariantCulture)</td>
-                        <td class="text-nowrap">@((Model.ProductBatches[index].WarehouseStocks.Sum(stock => stock.Quantity) + Model.ProductBatches[index].DisplayStocks.Sum(stock => stock.Quantity)).ToString("N2", CultureInfo.InvariantCulture))</td>
-                        <td class="col-expiry-date text-nowrap">@(Model.ProductBatches[index].ExpiryDate.HasValue ? Model.ProductBatches[index].ExpiryDate.GetValueOrDefault().ToString("MMM dd, yyyy", CultureInfo.InvariantCulture) : "-")</td>
-                        <td class="col-status">
+                        <td class="col-supplier text-cell text-truncate">@(Model.ProductBatches[index].Supplier?.Name ?? "-")</td>
+                        <td class="col-cost-price number-cell">&#8369;@Model.ProductBatches[index].CostPrice.ToString("N2", CultureInfo.InvariantCulture)</td>
+                        <td class="col-selling-price number-cell">&#8369;@Model.ProductBatches[index].SellingPrice.ToString("N2", CultureInfo.InvariantCulture)</td>
+                        <td class="number-cell">@Model.ProductBatches[index].WarehouseStocks.Sum(stock => stock.Quantity).ToString("#,0.##", CultureInfo.InvariantCulture)</td>
+                        <td class="number-cell">@Model.ProductBatches[index].DisplayStocks.Sum(stock => stock.Quantity).ToString("#,0.##", CultureInfo.InvariantCulture)</td>
+                        <td class="number-cell">@((Model.ProductBatches[index].WarehouseStocks.Sum(stock => stock.Quantity) + Model.ProductBatches[index].DisplayStocks.Sum(stock => stock.Quantity)).ToString("#,0.##", CultureInfo.InvariantCulture))</td>
+                        <td class="col-date number-cell">@(Model.ProductBatches[index].CreatedAt.HasValue ? Model.ProductBatches[index].CreatedAt.GetValueOrDefault().ToString("MMM dd, yyyy", CultureInfo.InvariantCulture) : "-")</td>
+                        <td class="col-status status-cell">
                             @if (Model.ProductBatches[index].Status == 1)
                             {
                                 <span class="badge text-bg-success">Active</span>
@@ -92,7 +89,7 @@
                                 <span class="badge text-bg-secondary">Inactive</span>
                             }
                         </td>
-                        <td class="col-action">
+                        <td class="col-action action-cell">
                             <div class="setup-row-actions">
                                 <a class="btn btn-sm btn-outline-primary" asp-action="ProductBatches" asp-route-editId="@Model.ProductBatches[index].Id" asp-route-search="@Model.Search">Edit</a>
                                 @if (Model.ProductBatches[index].Status == 1 && Model.ProductBatches[index].IsActive)

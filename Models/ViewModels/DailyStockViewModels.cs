@@ -20,6 +20,10 @@ namespace gpos.Models.ViewModels
         [Range(1, int.MaxValue, ErrorMessage = "Batch is required.")]
         public int? BatchId { get; set; }
 
+        public int? WarehouseStockId { get; set; }
+
+        public int? DisplayStockId { get; set; }
+
         [Range(1, int.MaxValue, ErrorMessage = "Tank is required.")]
         public int? TankId { get; set; }
 
@@ -42,14 +46,19 @@ namespace gpos.Models.ViewModels
     public class DailyStockOption
     {
         public int Id { get; set; }
+        public int? WarehouseStockId { get; set; }
+        public int? DisplayStockId { get; set; }
         public int? ProductId { get; set; }
+        public int? BatchId { get; set; }
         public string ProductName { get; set; } = string.Empty;
         public string BatchNo { get; set; } = string.Empty;
         public string TankNo { get; set; } = string.Empty;
+        public int? FuelId { get; set; }
         public string FuelName { get; set; } = string.Empty;
         public int? BranchId { get; set; }
         public string BranchName { get; set; } = string.Empty;
         public decimal CurrentQuantity { get; set; }
+        public decimal? Capacity { get; set; }
     }
 
     public class DailyStockPageViewModel

@@ -144,6 +144,18 @@ namespace gpos.Controllers
             return View(await BuildWarehouseProductsPageAsync(search, branchId: branchId, editId: editId, activeModalId: editId.HasValue ? "warehouseProductModal" : string.Empty));
         }
 
+        public async Task<IActionResult> WarehouseBatches(string? search, int? branchId, int? filterBranchId)
+        {
+            branchId = filterBranchId ?? branchId;
+            return View(await BuildWarehouseBatchesPageAsync(search, branchId));
+        }
+
+        public async Task<IActionResult> DisplayBatches(string? search, int? branchId, int? filterBranchId)
+        {
+            branchId = filterBranchId ?? branchId;
+            return View(await BuildDisplayBatchesPageAsync(search, branchId));
+        }
+
         public async Task<IActionResult> ProductCategories(string? search)
         {
             return View(await BuildProductCategoriesPageAsync(search));
@@ -359,6 +371,52 @@ namespace gpos.Controllers
             }
 
             return RedirectToStockSource(source, search);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> DeactivateWarehouseBatch(int id, string? search, int? filterBranchId)
+        {
+            await SetProductBatchActiveStateAsync(id, isActive: false);
+            return RedirectToAction(nameof(WarehouseBatches), new { search, filterBranchId });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ActivateWarehouseBatch(int id, string? search, int? filterBranchId)
+        {
+            await SetProductBatchActiveStateAsync(id, isActive: true);
+            return RedirectToAction(nameof(WarehouseBatches), new { search, filterBranchId });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> DeactivateDisplayBatch(int id, string? search, int? filterBranchId)
+        {
+            await SetProductBatchActiveStateAsync(id, isActive: false);
+            return RedirectToAction(nameof(DisplayBatches), new { search, filterBranchId });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ActivateDisplayBatch(int id, string? search, int? filterBranchId)
+        {
+            await SetProductBatchActiveStateAsync(id, isActive: true);
+            return RedirectToAction(nameof(DisplayBatches), new { search, filterBranchId });
+        }
+
+        private async Task SetProductBatchActiveStateAsync(int id, bool isActive)
+        {
+            var batch = await _db.ProductBatches.FindAsync(id);
+            if (batch is null)
+            {
+                return;
+            }
+
+            batch.Status = isActive ? 1 : 0;
+            batch.IsActive = isActive;
+            batch.UpdatedAt = DateTime.UtcNow;
+            await _db.SaveChangesAsync();
         }
 
         private IActionResult RedirectToStockSource(string source, string? search)
@@ -1347,6 +1405,84 @@ namespace gpos.Controllers
                     })
                     .OrderBy(summary => summary.BranchName)
                     .ThenBy(summary => summary.ProductName)
+                    .ToListAsync()
+            };
+        }
+
+        private async Task<ProductStockPageViewModel> BuildWarehouseBatchesPageAsync(string? search, int? branchId = null)
+        {
+            IQueryable<WarehouseStock> query = _db.WarehouseStocks.AsNoTracking()
+                .Include(stock => stock.Branch)
+                .Include(stock => stock.Product)
+                .ThenInclude(product => product!.Category)
+                .Include(stock => stock.Batch)
+                .ThenInclude(batch => batch!.Supplier);
+            var searchText = (search ?? string.Empty).Trim();
+
+            if (!string.IsNullOrWhiteSpace(searchText))
+            {
+                query = query.Where(stock => (stock.Branch != null && stock.Branch.Name.Contains(searchText))
+                    || (stock.Product != null && stock.Product.Name.Contains(searchText))
+                    || (stock.Product != null && stock.Product.Category != null && stock.Product.Category.Name.Contains(searchText))
+                    || (stock.Batch != null && stock.Batch.BatchNo.Contains(searchText))
+                    || (stock.Batch != null && stock.Batch.Supplier != null && stock.Batch.Supplier.Name.Contains(searchText)));
+            }
+
+            if (branchId.HasValue && branchId.Value > 0)
+            {
+                query = query.Where(stock => stock.BranchId == branchId.Value);
+            }
+
+            return new ProductStockPageViewModel
+            {
+                Search = searchText,
+                BranchId = branchId,
+                BranchName = await BranchNameAsync(branchId),
+                BranchOptions = await BuildBranchFilterOptionsAsync(),
+                WarehouseStocks = await query
+                    .OrderBy(stock => stock.Branch != null ? stock.Branch.Name : string.Empty)
+                    .ThenBy(stock => stock.Product != null ? stock.Product.Name : string.Empty)
+                    .ThenBy(stock => stock.Batch != null ? stock.Batch.BatchNo : string.Empty)
+                    .ThenBy(stock => stock.Id)
+                    .ToListAsync()
+            };
+        }
+
+        private async Task<ProductStockPageViewModel> BuildDisplayBatchesPageAsync(string? search, int? branchId = null)
+        {
+            IQueryable<DisplayStock> query = _db.DisplayStocks.AsNoTracking()
+                .Include(stock => stock.Branch)
+                .Include(stock => stock.Product)
+                .ThenInclude(product => product!.Category)
+                .Include(stock => stock.Batch)
+                .ThenInclude(batch => batch!.Supplier);
+            var searchText = (search ?? string.Empty).Trim();
+
+            if (!string.IsNullOrWhiteSpace(searchText))
+            {
+                query = query.Where(stock => (stock.Branch != null && stock.Branch.Name.Contains(searchText))
+                    || (stock.Product != null && stock.Product.Name.Contains(searchText))
+                    || (stock.Product != null && stock.Product.Category != null && stock.Product.Category.Name.Contains(searchText))
+                    || (stock.Batch != null && stock.Batch.BatchNo.Contains(searchText))
+                    || (stock.Batch != null && stock.Batch.Supplier != null && stock.Batch.Supplier.Name.Contains(searchText)));
+            }
+
+            if (branchId.HasValue && branchId.Value > 0)
+            {
+                query = query.Where(stock => stock.BranchId == branchId.Value);
+            }
+
+            return new ProductStockPageViewModel
+            {
+                Search = searchText,
+                BranchId = branchId,
+                BranchName = await BranchNameAsync(branchId),
+                BranchOptions = await BuildBranchFilterOptionsAsync(),
+                DisplayStocks = await query
+                    .OrderBy(stock => stock.Branch != null ? stock.Branch.Name : string.Empty)
+                    .ThenBy(stock => stock.Product != null ? stock.Product.Name : string.Empty)
+                    .ThenBy(stock => stock.Batch != null ? stock.Batch.BatchNo : string.Empty)
+                    .ThenBy(stock => stock.Id)
                     .ToListAsync()
             };
         }

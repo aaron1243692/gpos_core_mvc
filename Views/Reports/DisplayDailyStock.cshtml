@@ -36,8 +36,8 @@
             <thead>
                 <tr>
                     <th>No</th>
-                    <th>Branch</th>
                     <th>Date</th>
+                    <th>Branch</th>
                     <th>Product</th>
                     <th>Batch</th>
                     <th>Beginning</th>
@@ -59,8 +59,8 @@
                     var record = Model.Records[i];
                     <tr>
                         <td>@(i + 1)</td>
-                        <td>@(record.Branch?.Name ?? "Unassigned")</td>
                         <td>@record.StockDate.ToString("yyyy-MM-dd")</td>
+                        <td>@(record.Branch?.Name ?? "Unassigned")</td>
                         <td>@(record.Product?.Name ?? "-")</td>
                         <td>@(record.Batch?.BatchNo ?? "-")</td>
                         <td>@record.Beginning.ToString("N2")</td>

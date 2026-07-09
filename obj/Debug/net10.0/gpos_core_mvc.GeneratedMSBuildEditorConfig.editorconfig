@@ -55,6 +55,10 @@ build_metadata.AdditionalFiles.CssScope =
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcQ29uZmlndXJhdGlvblxEaXNjb3VudHMuY3NodG1s
 build_metadata.AdditionalFiles.CssScope = 
 
+[C:/project/gpos_core_mvc/Views/Configuration/DisplayBatches.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcQ29uZmlndXJhdGlvblxEaXNwbGF5QmF0Y2hlcy5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
 [C:/project/gpos_core_mvc/Views/Configuration/DisplayProducts.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcQ29uZmlndXJhdGlvblxEaXNwbGF5UHJvZHVjdHMuY3NodG1s
 build_metadata.AdditionalFiles.CssScope = 
@@ -173,6 +177,10 @@ build_metadata.AdditionalFiles.CssScope =
 
 [C:/project/gpos_core_mvc/Views/Configuration/Vat.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcQ29uZmlndXJhdGlvblxWYXQuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/project/gpos_core_mvc/Views/Configuration/WarehouseBatches.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcQ29uZmlndXJhdGlvblxXYXJlaG91c2VCYXRjaGVzLmNzaHRtbA==
 build_metadata.AdditionalFiles.CssScope = 
 
 [C:/project/gpos_core_mvc/Views/Configuration/WarehouseProducts.cshtml]

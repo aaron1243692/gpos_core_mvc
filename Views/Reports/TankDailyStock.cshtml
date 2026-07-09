@@ -40,8 +40,8 @@
             <thead>
                 <tr>
                     <th>No</th>
-                    <th>Branch</th>
                     <th>Date</th>
+                    <th>Branch</th>
                     <th>Tank</th>
                     <th>Fuel</th>
                     <th>Beginning Liters</th>
@@ -63,8 +63,8 @@
                     var record = Model.Records[i];
                     <tr>
                         <td>@(i + 1)</td>
-                        <td>@(record.Branch?.Name ?? "Unassigned")</td>
                         <td>@record.StockDate.ToString("yyyy-MM-dd")</td>
+                        <td>@(record.Branch?.Name ?? "Unassigned")</td>
                         <td>@(record.Tank?.TankNo ?? "-")</td>
                         <td>@(record.Tank?.Fuel?.Name ?? "-")</td>
                         <td>@record.Beginning.ToString("N2")</td>
@@ -99,12 +99,7 @@
                         <div class="col-md-6">
                             <label asp-for="Form.BranchId" class="form-label">Branch</label>
                             <input asp-for="Form.BranchId" type="hidden" id="dailyStockTankBranchId" data-daily-stock-branch />
-                            <div class="input-group" data-branch-selector data-branch-hidden="#dailyStockTankBranchId" data-branch-display="#dailyStockTankBranchDisplay" data-branch-empty-text="Select branch">
-                                <input class="form-control" id="dailyStockTankBranchDisplay" value="@Model.FormBranchName" placeholder="Select branch" readonly />
-                                <button type="button" class="btn btn-outline-secondary branch-select-btn">
-                                    <img src="/icons/search.png" alt="Search" style="width:16px;height:16px;" />
-                                </button>
-                            </div>
+                            <input class="form-control" id="dailyStockTankBranchDisplay" value="@Model.FormBranchName" placeholder="Selected with tank" readonly data-daily-stock-branch-display />
                             <span asp-validation-for="Form.BranchId" class="text-danger"></span>
                         </div>
                         <div class="col-md-6">
@@ -114,9 +109,13 @@
                         </div>
                         <div class="col-md-6">
                             <label asp-for="Form.TankId" class="form-label">Tank</label>
-                            <select asp-for="Form.TankId" asp-items="Model.TankOptions" class="form-select" data-daily-stock-tank>
-                                <option value="">Select tank</option>
-                            </select>
+                            <input asp-for="Form.TankId" type="hidden" data-daily-stock-tank />
+                            <div class="input-group">
+                                <input class="form-control" value="" placeholder="Select tank, fuel, and branch" readonly data-daily-stock-tank-display />
+                                <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#dailyStockTankSelectorModal">
+                                    <img src="/icons/search.png" alt="Search" style="width:16px;height:16px;" />
+                                </button>
+                            </div>
                             <span asp-validation-for="Form.TankId" class="text-danger"></span>
                         </div>
                         <div class="col-md-6">
@@ -156,6 +155,38 @@
                     <button class="btn btn-primary" type="submit">Save</button>
                 </div>
             </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="dailyStockTankSelectorModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title fs-5">Select Tank</h2>
+                <button class="btn-close" type="button" data-bs-target="#dailyStockModal" data-bs-toggle="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <input class="form-control" placeholder="Search branch, tank, or fuel" data-daily-stock-selector-search />
+                </div>
+                <div class="setup-table-scroll">
+                    <table class="table app-table table-sm align-middle admin-table mb-0">
+                        <thead>
+                            <tr>
+                                <th>No</th>
+                                <th>Branch</th>
+                                <th>Tank</th>
+                                <th>Fuel</th>
+                                <th>Current Liters</th>
+                                <th>Capacity</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody data-daily-stock-selector-body></tbody>
+                    </table>
+                </div>
+            </div>
         </div>
     </div>
 </div>
