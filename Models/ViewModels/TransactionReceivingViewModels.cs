@@ -33,7 +33,7 @@ namespace gpos.Models.ViewModels
 
         public string ProductMode { get; set; } = "Existing";
 
-        public string NewProductName { get; set; } = string.Empty;
+        public string? NewProductName { get; set; }
 
         public int? NewProductCategoryId { get; set; }
 
@@ -41,7 +41,7 @@ namespace gpos.Models.ViewModels
 
         public string? NewProductDescription { get; set; }
 
-        public string BatchNo { get; set; } = string.Empty;
+        public string? BatchNo { get; set; }
 
         public DateTime? ExpiryDate { get; set; }
 
@@ -53,6 +53,9 @@ namespace gpos.Models.ViewModels
 
         [Range(typeof(decimal), "0", "999999999", ErrorMessage = "Selling Price must be greater than or equal to 0.")]
         public decimal SellingPrice { get; set; }
+
+        [Required(ErrorMessage = "Date is required.")]
+        public DateTime? ReceivedDate { get; set; }
 
         public string? Remarks { get; set; }
 
@@ -86,6 +89,7 @@ namespace gpos.Models.ViewModels
         public string FormBranchName { get; set; } = string.Empty;
         public string FormTankName { get; set; } = string.Empty;
         public string FormFuelName { get; set; } = string.Empty;
+        public string FormSupplierName { get; set; } = string.Empty;
         public FuelReceivingForm Form { get; set; } = new();
         public List<FuelReceivingRowViewModel> Receivings { get; set; } = new();
         public List<SelectListItem> BranchOptions { get; set; } = new();
@@ -116,8 +120,8 @@ namespace gpos.Models.ViewModels
         [Range(typeof(decimal), "0", "999999999", ErrorMessage = "Cost/Liter must be greater than or equal to 0.")]
         public decimal CostPerLiter { get; set; }
 
-        [Range(typeof(decimal), "0", "999999999", ErrorMessage = "Selling Price/Liter must be greater than or equal to 0.")]
-        public decimal SellingPricePerLiter { get; set; }
+        [Required(ErrorMessage = "Date is required.")]
+        public DateTime? ReceivedDate { get; set; }
 
         public string? Remarks { get; set; }
 
@@ -135,7 +139,6 @@ namespace gpos.Models.ViewModels
         public string Tank { get; set; } = "-";
         public decimal Liters { get; set; }
         public decimal CostPerLiter { get; set; }
-        public decimal SellingPricePerLiter { get; set; }
         public decimal? TankLitersBefore { get; set; }
         public decimal? TankLitersAfter { get; set; }
         public string ReceivedBy { get; set; } = "-";

@@ -1,0 +1,1579 @@
+﻿@model gpos.Models.ViewModels.PosPageViewModel
+@using System.Security.Claims
+
+<section class="salesman-pos-page">
+    <form id="posSaleForm" method="post" class="salesman-pos-card">
+        @Html.AntiForgeryToken()
+        <input name="CashierUserId" type="hidden" value="@(Context.Session.GetString("UserId") ?? User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "")" />
+        <div class="alert d-none" id="posSubmitMessage" role="alert"></div>
+        <div class="pos-order-layout">
+            <section class="pos-order-menu" aria-label="Order menu">
+                <div class="pos-order-toolbar">
+                    <h1>Product <span>Category</span></h1>
+                    <div class="pos-order-search">
+                        <input class="form-control" id="productSearch" type="search" placeholder="Search product or fuel" autocomplete="off" />
+                    </div>
+                </div>
+
+                <nav class="pos-category-row" aria-label="POS menu categories">
+                    <button class="pos-category-pill pos-category-btn" id="fuelModeButton" type="button" data-mode="fuel"><span>FUE</span><strong>Fuel</strong></button>
+                    <button class="pos-category-pill pos-category-btn is-active" id="hotModeButton" type="button" data-mode="hot"><span>HOT</span><strong>Hot</strong></button>
+                    @for (var index = 0; index < Model.Categories.Count; index++)
+                    {
+                        <button class="pos-category-pill pos-category-btn" type="button" data-mode="category" data-category-id="@Model.Categories[index].Id">
+                            <span>@Model.Categories[index].Code</span>
+                            <strong>@Model.Categories[index].Name</strong>
+                        </button>
+                    }
+                </nav>
+
+                <section id="productMenu">
+                    <div class="pos-menu-heading">
+                        <h2>Products</h2>
+                        <div>Sort By <strong>Popular</strong></div>
+                    </div>
+
+                    <div class="pos-product-grid">
+                        @for (var index = 0; index < Model.Products.Count; index++)
+                        {
+                            <article class="pos-menu-product-card" data-category-id="@Model.Products[index].CategoryId" data-product-name="@Model.Products[index].ProductName.ToLowerInvariant()" data-product-id="@Model.Products[index].ProductId" data-price="@Model.Products[index].Price" data-available="@Model.Products[index].AvailableQuantity" data-available-quantity="@Model.Products[index].AvailableQuantity">
+                                <div class="pos-product-visual">@Model.Products[index].VisualText</div>
+                                <h3>@Model.Products[index].ProductName</h3>
+                                <small>Available: @Model.Products[index].AvailableQuantity.ToString("N0")</small>
+                                <p>₱@Model.Products[index].Price.ToString("N2")</p>
+                                <label class="pos-quantity-control" for="productQuantity_@Model.Products[index].ProductId">
+                                    <span>Qty</span>
+                                    <input class="form-control product-quantity-input" id="productQuantity_@Model.Products[index].ProductId" name="Products[@index].Quantity" type="number" min="0" step="0.01" inputmode="decimal" max="@Model.Products[index].AvailableQuantity" value="0" data-product-id="@Model.Products[index].ProductId" data-price="@Model.Products[index].Price" data-unit-cost="@Model.Products[index].UnitCost" data-available="@Model.Products[index].AvailableQuantity" data-batch-no="-" data-no="@Model.Products[index].ProductCode" data-name="@Model.Products[index].ProductName" aria-label="@Model.Products[index].ProductName quantity" onfocus="this.select()" />
+                                </label>
+                                <input type="hidden" name="Products.Index" value="@index" />
+                                <input type="hidden" name="Products[@index].Code" value="@Model.Products[index].ProductCode" />
+                                <input type="hidden" name="Products[@index].Name" value="@Model.Products[index].ProductName" />
+                            </article>
+                        }
+                    </div>
+
+                    <div class="pos-empty-cart" id="productEmptyState" hidden>@(Model.Products.Count == 0 ? "No display products available." : "No products found for this category.")</div>
+                </section>
+
+                <section class="pos-fuel-menu" id="fuelMenu" hidden aria-label="Fuel order">
+                    <div class="pos-menu-heading">
+                        <h2>Fuel <span>Menu</span></h2>
+                        <div>Cash Sale</div>
+                    </div>
+
+                    <div class="fuel-type-grid">
+                        @for (var index = 0; index < Model.Fuels.Count; index++)
+                        {
+                            <label class="fuel-option">
+                                <input class="form-check-input fuel-choice" type="radio" name="FuelType" value="@Model.Fuels[index].Name" data-fuel-id="@Model.Fuels[index].FuelId" data-tank-id="@Model.Fuels[index].TankId" data-price="@Model.Fuels[index].Price" @(Model.Fuels[index].IsChecked ? "checked" : "") />
+                                <span>@Model.Fuels[index].Name <small>Tank @Model.Fuels[index].TankNo - @Model.Fuels[index].AvailableLiters.ToString("N2") L - ₱@Model.Fuels[index].Price.ToString("N2")/L</small></span>
+                            </label>
+                        }
+                    </div>
+                    @if (Model.Fuels.Count == 0)
+                    {
+                        <div class="pos-empty-cart">No fuel available for sale. Check active tanks.</div>
+                    }
+
+                    <div class="pos-fuel-fields">
+                        <div>
+                            <label class="form-label" for="fuelLiters">Liters</label>
+                            <input class="form-control" id="fuelLiters" name="FuelLiters" type="number" min="0" step="0.01" placeholder="0.00" />
+                        </div>
+                        <div>
+                            <label class="form-label" for="fuelCashAmount">Fuel cash amount</label>
+                            <div class="input-group">
+                                <span class="input-group-text">₱</span>
+                                <input class="form-control pos-total-input" id="fuelCashAmount" name="FuelCashAmount" type="number" min="0" step="0.01" placeholder="0.00" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <button class="btn btn-primary pos-fuel-add-button" id="addFuelButton" type="button" disabled="@(Model.Fuels.Count == 0 ? "disabled" : null)">Add Fuel</button>
+                </section>
+            </section>
+
+            <aside class="pos-order-summary" aria-label="Cart panel">
+                <div class="pos-summary-top">
+                    <h2>Items</h2>
+                    <button class="btn btn-sm btn-outline-primary" id="editCartButton" type="button">Edit</button>
+                </div>
+                <div class="d-flex justify-content-end mb-2">
+                    <span class="text-muted small fw-bold" id="modalCartCount">0 items</span>
+                </div>
+
+                <div class="pos-cart-list" id="orderCartItems">
+                    <div class="pos-empty-cart">No selected items yet.</div>
+                </div>
+
+                <div class="pos-summary-totals">
+                    <div><span>Products</span><strong id="cartSubTotal">₱0.00</strong></div>
+                    <div><span>Fuel</span><strong id="cartFuelLine">₱0.00</strong></div>
+                    <div><span>Member Discount</span><strong id="cartMemberDiscountLine">₱0.00</strong></div>
+                    <div><span>Voucher Discount</span><strong id="cartVoucherDiscountLine">₱0.00</strong></div>
+                    <div><span>Total Discount</span><strong id="cartDiscountLine">₱0.00</strong></div>
+                    <div><span>Tax</span><strong id="cartTaxLine">₱0.00</strong></div>
+                    <div><span>Total</span><strong id="posGrandTotal">₱0.00</strong></div>
+                </div>
+
+                <div class="pos-summary-fields">
+                    <div>
+                        <label class="form-label" for="paymentMethod">Payment Method</label>
+                        <select class="form-select" id="paymentMethod" name="PaymentMethod">
+                            <option value="Cash" selected>Cash</option>
+                            <option value="Points">Points</option>
+                        </select>
+                    </div>
+                    <div id="cashPaymentField">
+                        <label class="form-label" for="paymentAmount">Cash Amount</label>
+                        <div class="input-group">
+                            <span class="input-group-text">₱</span>
+                            <input class="form-control" id="paymentAmount" name="PaymentAmount" type="number" min="0" step="0.01" placeholder="0.00" />
+                        </div>
+                    </div>
+                    <div id="memberCardField">
+                        <label class="form-label" for="membershipCardNo">Member Card No <span class="text-muted">(Optional)</span></label>
+                        <input class="form-control" id="membershipCardNo" name="MembershipCardNo" placeholder="Optional member no or card no" autocomplete="off" />
+                    </div>
+                    <div id="voucherCodeField">
+                        <label class="form-label" for="voucherCode">Voucher Code <span class="text-muted">(Optional)</span></label>
+                        <input class="form-control text-uppercase" id="voucherCode" name="VoucherCode" maxlength="6" placeholder="Optional voucher code" autocomplete="off" />
+                    </div>
+                    <div id="pointsPaymentField" hidden>
+                        <div class="pos-summary-totals mb-0">
+                            <div><span>Available Points</span><strong id="memberAvailablePoints">0.00 pts</strong></div>
+                            <div><span>Point Conversion</span><strong id="pointConversion">No active rebate</strong></div>
+                            <div><span>Required Points</span><strong id="requiredPoints">0.00 pts</strong></div>
+                        </div>
+                    </div>
+                </div>
+
+                <button class="btn btn-primary btn-lg pos-charge-button" id="submitSaleButton" type="button">Checkout</button>
+                <button class="btn btn-outline-secondary" id="newSaleButton" type="button">New Sale</button>
+            </aside>
+        </div>
+
+        <div class="modal fade" id="cartEditModal" tabindex="-1" aria-labelledby="cartEditModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <div>
+                            <h2 class="modal-title fs-5" id="cartEditModalLabel">Edit Cart</h2>
+                            <p class="mb-0 text-muted">Update quantities or remove items before checkout.</p>
+                        </div>
+                        <button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="table-responsive">
+                            <table class="table app-table table-sm align-middle mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>Product Name</th>
+                                        <th class="text-end">Unit Price</th>
+                                        <th style="width: 180px;">Quantity</th>
+                                        <th class="text-end">Line Total</th>
+                                        <th class="text-end">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="cartEditRows">
+                                    <tr><td class="text-center text-muted fw-bold" colspan="5">No selected items yet.</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button>
+                        <button class="btn btn-primary" id="cartEditSaveButton" type="button">Save Changes</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal fade pos-receipt-modal" id="receiptModal" tabindex="-1" aria-labelledby="receiptModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <div>
+                            <h2 class="modal-title fs-5" id="receiptModalLabel">Checkout Receipt</h2>
+                            <p class="mb-0 text-muted">Receipt details for the completed transaction.</p>
+                        </div>
+                        <button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="pos-receipt-modal-grid">
+                            <section class="salesman-receipt-preview" id="receiptPreview" aria-live="polite">
+                                <div class="salesman-receipt-print" id="receiptPrintArea">
+                                    <div class="receipt-title">
+                                        <h2>GPOS Main Station</h2>
+                                        <p>Sales Receipt</p>
+                                    </div>
+
+                                    <div class="receipt-meta">
+                                        <div><span>Transaction No</span><strong id="receiptTransactionNo">Pending</strong></div>
+                                        <div><span>Date / Time</span><strong id="receiptDateTime"></strong></div>
+                                        <div><span>Cashier</span><strong id="receiptCashier">@(Context.Session.GetString("Username") ?? Context.Session.GetString("Name") ?? User.Identity?.Name ?? "User")</strong></div>
+                                        <div><span>Payment Method</span><strong id="receiptPaymentMethod">Cash</strong></div>
+                                        <div><span>Member Card No</span><strong id="receiptMemberCardNo"></strong></div>
+                                    </div>
+
+                                    <div class="receipt-block">
+                                        <h3>Gas / Fuel</h3>
+                                        <table class="receipt-product-table">
+                                            <thead>
+                                                <tr>
+                                                    <th>Fuel type</th>
+                                                    <th>Liters</th>
+                                                    <th>Cash amount</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="receiptFuelRows">
+                                                <tr><td colspan="3">No selected fuel.</td></tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+
+                                    <div class="receipt-block">
+                                        <h3>Products</h3>
+                                        <table class="receipt-product-table">
+                                            <thead>
+                                                <tr>
+                                                    <th>No</th>
+                                                    <th>Name</th>
+                                                    <th>Quantity</th>
+                                                    <th>Price</th>
+                                                    <th>Subtotal</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="receiptProductRows">
+                                                <tr><td colspan="5">No selected products.</td></tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+
+                                    <div class="receipt-total-line">
+                                        <span>Subtotal</span>
+                                        <strong id="receiptSubtotalAmount">₱0.00</strong>
+                                    </div>
+                                    <div class="receipt-total-line">
+                                        <span>Member Discount</span>
+                                        <strong id="receiptMemberDiscountAmount">₱0.00</strong>
+                                    </div>
+                                    <div class="receipt-total-line">
+                                        <span>Voucher Discount</span>
+                                        <strong id="receiptVoucherDiscountAmount">₱0.00</strong>
+                                    </div>
+                                    <div class="receipt-total-line">
+                                        <span>Total Discount</span>
+                                        <strong id="receiptDiscountAmount">₱0.00</strong>
+                                    </div>
+                                    <div class="receipt-total-line">
+                                        <span>Tax</span>
+                                        <strong id="receiptTaxAmount">₱0.00</strong>
+                                    </div>
+                                    <div class="receipt-total-line">
+                                        <span>Total</span>
+                                        <strong id="receiptTotalAmount">₱0.00</strong>
+                                    </div>
+                                    <div class="receipt-total-line">
+                                        <span>Cash Amount</span>
+                                        <strong id="receiptPaymentDetail">₱0.00</strong>
+                                    </div>
+                                    <div class="receipt-total-line">
+                                        <span>Change</span>
+                                        <strong id="receiptChangeAmount">₱0.00</strong>
+                                    </div>
+                                    <div class="receipt-total-line">
+                                        <span>Points Earned</span>
+                                        <strong id="receiptPointsEarned">0.00 pts</strong>
+                                    </div>
+                                </div>
+                            </section>
+                        </div>
+                    </div>
+                    <div class="modal-footer pos-receipt-modal-footer">
+                        <div class="salesman-receipt-actions">
+                            <button class="btn btn-outline-secondary" id="modalPrintReceiptButton" type="button" disabled>Print Receipt</button>
+                            <button class="btn btn-primary" id="modalConfirmSaleButton" type="button">Confirm Sale</button>
+                            <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Close</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal fade" id="insufficientCashModal" tabindex="-1" aria-labelledby="insufficientCashModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h2 class="modal-title fs-5" id="insufficientCashModalLabel">Insufficient Cash</h2>
+                        <button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p id="insufficientCashMessage">Cash amount is lower than the total amount to pay.</p>
+                        <dl class="row mb-0">
+                            <dt class="col-6">Amount To Pay</dt>
+                            <dd class="col-6 text-end" id="insufficientAmountToPay">₱0.00</dd>
+                            <dt class="col-6">Cash Amount</dt>
+                            <dd class="col-6 text-end" id="insufficientCashAmount">₱0.00</dd>
+                            <dt class="col-6">Missing Amount</dt>
+                            <dd class="col-6 text-end" id="insufficientMissingAmount">₱0.00</dd>
+                        </dl>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn btn-primary" type="button" data-bs-dismiss="modal">OK</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </form>
+</section>
+
+@section Scripts {
+    <script>
+        (() => {
+            const peso = new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP", currencyDisplay: "narrowSymbol" });
+            const activeRebate = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.ActiveRebate, new System.Text.Json.JsonSerializerOptions { PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase }));
+            const activeVat = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.ActiveVat, new System.Text.Json.JsonSerializerOptions { PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase }));
+            const form = document.getElementById("posSaleForm");
+            const submitMessage = document.getElementById("posSubmitMessage");
+            const antiForgeryToken = form.querySelector("input[name='__RequestVerificationToken']")?.value || "";
+            const categoryButtons = Array.from(document.querySelectorAll(".pos-category-btn"));
+            const fuelModeButton = document.getElementById("fuelModeButton");
+            const hotModeButton = document.getElementById("hotModeButton");
+            const productMenu = document.getElementById("productMenu");
+            const fuelMenu = document.getElementById("fuelMenu");
+            const productQuantityInputs = Array.from(document.querySelectorAll(".product-quantity-input"));
+            const productRows = Array.from(document.querySelectorAll(".pos-menu-product-card"));
+            const productEmptyState = document.getElementById("productEmptyState");
+            const productSearch = document.getElementById("productSearch");
+            const fuelChoices = Array.from(document.querySelectorAll(".fuel-choice"));
+            const fuelAmountInput = document.getElementById("fuelCashAmount");
+            const fuelLitersInput = document.getElementById("fuelLiters");
+            const addFuelButton = document.getElementById("addFuelButton");
+            const paymentMethodSelect = document.getElementById("paymentMethod");
+            const paymentAmountInput = document.getElementById("paymentAmount");
+            const membershipCardNoInput = document.getElementById("membershipCardNo");
+            const voucherCodeInput = document.getElementById("voucherCode");
+            const cashPaymentField = document.getElementById("cashPaymentField");
+            const voucherCodeField = document.getElementById("voucherCodeField");
+            const pointsPaymentField = document.getElementById("pointsPaymentField");
+            const memberAvailablePoints = document.getElementById("memberAvailablePoints");
+            const pointConversion = document.getElementById("pointConversion");
+            const requiredPointsLabel = document.getElementById("requiredPoints");
+            const grandTotal = document.getElementById("posGrandTotal");
+            const cartSubTotal = document.getElementById("cartSubTotal");
+            const cartFuelLine = document.getElementById("cartFuelLine");
+            const cartMemberDiscountLine = document.getElementById("cartMemberDiscountLine");
+            const cartVoucherDiscountLine = document.getElementById("cartVoucherDiscountLine");
+            const cartDiscountLine = document.getElementById("cartDiscountLine");
+            const cartTaxLine = document.getElementById("cartTaxLine");
+            const orderCartItems = document.getElementById("orderCartItems");
+            const cartItemCount = document.getElementById("cartItemCount");
+            const modalCartCount = document.getElementById("modalCartCount");
+            const cartButtonTotal = document.getElementById("cartButtonTotal");
+            const editCartButton = document.getElementById("editCartButton");
+            const cartEditModalElement = document.getElementById("cartEditModal");
+            const cartEditRows = document.getElementById("cartEditRows");
+            const cartEditSaveButton = document.getElementById("cartEditSaveButton");
+            const receiptModalElement = document.getElementById("receiptModal");
+            const receiptPrintArea = document.getElementById("receiptPrintArea");
+            const insufficientCashModalElement = document.getElementById("insufficientCashModal");
+            const insufficientCashModalLabel = document.getElementById("insufficientCashModalLabel");
+            const insufficientCashMessage = document.getElementById("insufficientCashMessage");
+            const insufficientAmountToPay = document.getElementById("insufficientAmountToPay");
+            const insufficientCashAmount = document.getElementById("insufficientCashAmount");
+            const insufficientMissingAmount = document.getElementById("insufficientMissingAmount");
+            const receiptPreview = document.getElementById("receiptPreview");
+            const receiptTransactionNo = document.getElementById("receiptTransactionNo");
+            const receiptDateTime = document.getElementById("receiptDateTime");
+            const receiptPaymentDetail = document.getElementById("receiptPaymentDetail");
+            const receiptPaymentMethod = document.getElementById("receiptPaymentMethod");
+            const receiptMemberCardNo = document.getElementById("receiptMemberCardNo");
+            const receiptFuelRows = document.getElementById("receiptFuelRows");
+            const receiptProductRows = document.getElementById("receiptProductRows");
+            const receiptSubtotalAmount = document.getElementById("receiptSubtotalAmount");
+            const receiptMemberDiscountAmount = document.getElementById("receiptMemberDiscountAmount");
+            const receiptVoucherDiscountAmount = document.getElementById("receiptVoucherDiscountAmount");
+            const receiptDiscountAmount = document.getElementById("receiptDiscountAmount");
+            const receiptTaxAmount = document.getElementById("receiptTaxAmount");
+            const receiptTotalAmount = document.getElementById("receiptTotalAmount");
+            const receiptChangeAmount = document.getElementById("receiptChangeAmount");
+            const receiptPointsEarned = document.getElementById("receiptPointsEarned");
+            const modalPrintReceiptButton = document.getElementById("modalPrintReceiptButton");
+            const modalConfirmSaleButton = document.getElementById("modalConfirmSaleButton");
+            const submitSaleButton = document.getElementById("submitSaleButton");
+            const newSaleButton = document.getElementById("newSaleButton");
+            const fuelCart = [];
+            let activeMode = "hot";
+            let activeCategoryId = "";
+            let activeFuelInput = "amount";
+            let completedReceiptNo = "";
+            let completedReceiptTotals = null;
+            let memberDiscountAmount = 0;
+            let voucherDiscountAmount = 0;
+            let memberPoints = 0;
+            let memberFound = false;
+            let memberDiscountLookupTimer = 0;
+            let memberDiscountLookupToken = 0;
+            let voucherDiscountLookupTimer = 0;
+            let voucherDiscountLookupToken = 0;
+            let saleCompleted = false;
+            let cartEditDraft = [];
+
+            function numericValue(input) {
+                return Number.parseFloat(input.value) || 0;
+            }
+
+            function rebateNumber(propertyName) {
+                const value = Number.parseFloat(activeRebate?.[propertyName]);
+                return Number.isFinite(value) ? value : 0;
+            }
+
+            function rebatePointsRequired() {
+                return rebateNumber("pointsRequired");
+            }
+
+            function rebateValue() {
+                return rebateNumber("rebateValue");
+            }
+
+            function hasValidRebate() {
+                return Boolean(activeRebate) && rebatePointsRequired() > 0 && rebateValue() > 0;
+            }
+
+            function vatRate() {
+                const value = Number.parseFloat(activeVat?.rate);
+                return Number.isFinite(value) ? Math.max(0, value) : 0;
+            }
+
+            function vatType() {
+                return (activeVat?.type || "").toString().toLowerCase();
+            }
+
+            function isVatInclusive() {
+                return vatType() === "inclusive";
+            }
+
+            function isVatExclusive() {
+                return vatType() === "exclusive";
+            }
+
+            function isVatExempt() {
+                const type = vatType();
+                return type === "exempt" || type === "zerorated";
+            }
+
+            function taxableAmount() {
+                return isPointsPayment() ? 0 : Math.max(0, totalAmount() - discountAmount());
+            }
+
+            function taxAmount() {
+                const taxable = taxableAmount();
+                const rate = vatRate();
+
+                if (taxable <= 0 || rate <= 0 || isVatExempt()) {
+                    return 0;
+                }
+
+                return isVatInclusive()
+                    ? (taxable * rate) / (100 + rate)
+                    : (taxable * rate) / 100;
+            }
+
+            function selectedFuel() {
+                return fuelChoices.find(choice => choice.checked) || fuelChoices[0] || null;
+            }
+
+            function selectedFuelType() {
+                return selectedFuel()?.value || "Fuel";
+            }
+
+            function selectedFuelPrice() {
+                const selected = selectedFuel();
+                return selected ? Number.parseFloat(selected.dataset.price) || 0 : 0;
+            }
+
+            function currentFuelLiters() {
+                const price = selectedFuelPrice();
+                const amount = Math.max(0, numericValue(fuelAmountInput));
+                return Number.isFinite(price) && price > 0 ? amount / price : 0;
+            }
+
+            function currentFuelAmount() {
+                const price = selectedFuelPrice();
+                const liters = Math.max(0, numericValue(fuelLitersInput));
+                return Number.isFinite(price) && price > 0 ? liters * price : 0;
+            }
+
+            function updateLiters() {
+                fuelLitersInput.value = fuelAmountInput.value.trim() ? currentFuelLiters().toFixed(2) : "";
+            }
+
+            function updateFuelAmount() {
+                fuelAmountInput.value = fuelLitersInput.value.trim() ? currentFuelAmount().toFixed(2) : "";
+            }
+
+            function updateFuelFieldsForPrice() {
+                if (activeFuelInput === "liters") {
+                    updateFuelAmount();
+                } else {
+                    updateLiters();
+                }
+            }
+
+            function availableDisplayQuantity(input) {
+                if (!input) {
+                    return 0;
+                }
+
+                const card = input.closest(".pos-menu-product-card");
+                return Math.max(0, Number.parseFloat(input.dataset.available) || Number.parseFloat(card?.dataset.available) || Number.parseFloat(card?.dataset.availableQuantity) || 0);
+            }
+
+            function showDisplayStockWarning() {
+                showSubmitMessage("Not enough display stock.", false);
+            }
+
+            function cartQuantity(value) {
+                return Math.max(0, Number.parseFloat(value) || 0);
+            }
+
+            function formatQuantity(value) {
+                const quantity = cartQuantity(value);
+                return Number.isInteger(quantity) ? quantity.toString() : quantity.toFixed(2).replace(/\.?0+$/, "");
+            }
+
+            function preventInvalidQuantityKey(event) {
+                if ([",", "e", "E", "+", "-"].includes(event.key)) {
+                    event.preventDefault();
+                }
+            }
+
+            function selectedProducts() {
+                return productQuantityInputs.reduce((products, input) => {
+                    const availableQuantity = cartQuantity(availableDisplayQuantity(input));
+                    let quantity = cartQuantity(input.value);
+
+                    if (numericValue(input) < 0) {
+                        input.value = 0;
+                    }
+
+                    if (quantity > availableQuantity) {
+                        quantity = availableQuantity;
+                        input.value = formatQuantity(availableQuantity);
+                        showDisplayStockWarning();
+                    }
+
+                    if (numericValue(input) !== quantity) {
+                        input.value = formatQuantity(quantity);
+                    }
+
+                    if (quantity > 0) {
+                        const card = input.closest(".pos-menu-product-card");
+                        const unitPrice = Number.parseFloat(input.dataset.price) || 0;
+                        const unitCost = Number.parseFloat(input.dataset.unitCost) || 0;
+                        products.push({
+                            displayStockId: 0,
+                            productId: Number.parseInt(input.dataset.productId, 10) || Number.parseInt(card.dataset.productId, 10) || 0,
+                            batchId: 0,
+                            no: input.dataset.no,
+                            name: input.dataset.name,
+                            batchNo: input.dataset.batchNo || "-",
+                            quantity,
+                            unitCost,
+                            unitPrice,
+                            price: unitPrice,
+                            subtotal: quantity * unitPrice,
+                            grossProfit: (unitPrice - unitCost) * quantity
+                        });
+                    }
+
+                    return products;
+                }, []);
+            }
+
+            function productTotalAmount() {
+                return selectedProducts().reduce((total, product) => total + (product.quantity * product.price), 0);
+            }
+
+            function fuelTotalAmount() {
+                return fuelCart.reduce((total, fuel) => total + fuel.amount, 0);
+            }
+
+            function totalAmount() {
+                return productTotalAmount() + fuelTotalAmount();
+            }
+
+            function selectedPaymentMethod() {
+                return paymentMethodSelect.value || "Cash";
+            }
+
+            function isPointsPayment() {
+                return selectedPaymentMethod() === "Points";
+            }
+
+            function voucherCode() {
+                return voucherCodeInput.value.trim().toUpperCase();
+            }
+
+            function discountAmount() {
+                if (isPointsPayment()) {
+                    return 0;
+                }
+
+                return completedReceiptTotals?.discountAmount ?? (memberDiscountAmount + voucherDiscountAmount);
+            }
+
+            function currentMemberDiscountAmount() {
+                return completedReceiptTotals?.memberDiscountAmount ?? memberDiscountAmount;
+            }
+
+            function currentVoucherDiscountAmount() {
+                return completedReceiptTotals?.voucherDiscountAmount ?? voucherDiscountAmount;
+            }
+
+            function requiredPointsForPurchase() {
+                if (!hasValidRebate() || totalAmount() <= 0) {
+                    return 0;
+                }
+
+                return Math.ceil((totalAmount() / rebateValue()) * rebatePointsRequired());
+            }
+
+            function amountToPay() {
+                const taxable = taxableAmount();
+                return Math.max(0, taxable + (isVatExclusive() ? taxAmount() : 0));
+            }
+
+            function hasAmountDue() {
+                return amountToPay() > 0;
+            }
+
+            function cashAmount() {
+                if (!hasAmountDue()) {
+                    return 0;
+                }
+
+                return Math.max(0, numericValue(paymentAmountInput));
+            }
+
+            function cartHasItems() {
+                return selectedProducts().length > 0 || fuelCart.length > 0;
+            }
+
+            function cartItemTotal() {
+                return selectedProducts().reduce((total, product) => total + product.quantity, 0) + fuelCart.length;
+            }
+
+            function canCheckout() {
+                if (!cartHasItems()) {
+                    return false;
+                }
+
+                if (isPointsPayment()) {
+                    return memberFound && hasValidRebate() && memberPoints >= requiredPointsForPurchase();
+                }
+
+                return !hasAmountDue() || (paymentAmountInput.value.trim().length > 0 && cashAmount() >= amountToPay());
+            }
+
+            function showCheckoutWarningModal(title, message) {
+                const due = amountToPay();
+                const cash = cashAmount();
+                insufficientCashModalLabel.textContent = title;
+                insufficientCashMessage.textContent = message;
+                insufficientAmountToPay.textContent = peso.format(due);
+                insufficientCashAmount.textContent = peso.format(cash);
+                insufficientMissingAmount.textContent = peso.format(Math.max(0, due - cash));
+
+                if (window.bootstrap) {
+                    bootstrap.Modal.getOrCreateInstance(insufficientCashModalElement).show();
+                } else {
+                    showSubmitMessage(message, false);
+                }
+            }
+
+            function validateCheckout() {
+                if (!cartHasItems()) {
+                    showCheckoutWarningModal("Checkout Warning", "Cart is empty. Please add product or fuel first.");
+                    return false;
+                }
+
+                if (isPointsPayment()) {
+                    if (!membershipCardNoInput.value.trim() || !memberFound) {
+                        showCheckoutWarningModal("Checkout Warning", "Select a valid member before using points payment.");
+                        return false;
+                    }
+
+                    if (!hasValidRebate()) {
+                        showCheckoutWarningModal("Checkout Warning", "No active rebate configuration is available for points payment.");
+                        return false;
+                    }
+
+                    if (memberPoints < requiredPointsForPurchase()) {
+                        showCheckoutWarningModal("Insufficient Points", "Member does not have enough points for this purchase.");
+                        return false;
+                    }
+
+                    return true;
+                }
+
+                if (hasAmountDue() && paymentAmountInput.value.trim().length === 0) {
+                    showCheckoutWarningModal("Checkout Warning", "Please enter cash amount.");
+                    return false;
+                }
+
+                if (hasAmountDue() && cashAmount() < amountToPay()) {
+                    showCheckoutWarningModal("Insufficient Cash", "Cash amount is not enough.");
+                    return false;
+                }
+
+                return true;
+            }
+
+            function setActiveButton(button) {
+                categoryButtons.forEach(categoryButton => categoryButton.classList.remove("is-active"));
+                button.classList.add("is-active");
+            }
+
+            function showProductCategory(categoryId, button) {
+                activeMode = "category";
+                activeCategoryId = categoryId;
+                setActiveButton(button);
+                productMenu.hidden = false;
+                fuelMenu.hidden = true;
+                filterProducts();
+            }
+
+            function showHotMode() {
+                activeMode = "hot";
+                activeCategoryId = "";
+                setActiveButton(hotModeButton);
+                productMenu.hidden = false;
+                fuelMenu.hidden = true;
+                filterProducts();
+            }
+
+            function showFuelMode() {
+                activeMode = "fuel";
+                setActiveButton(fuelModeButton);
+                productMenu.hidden = true;
+                fuelMenu.hidden = false;
+                filterProducts();
+            }
+
+            function filterProducts() {
+                const query = productSearch.value.trim().toLowerCase();
+                let visibleCount = 0;
+
+                productRows.forEach(row => {
+                    const categoryMatches = activeMode === "hot" || row.dataset.categoryId === activeCategoryId;
+                    const searchMatches = query.length === 0 || row.dataset.productName.includes(query);
+                    const shouldShow = !productMenu.hidden && categoryMatches && searchMatches;
+
+                    row.hidden = !shouldShow;
+
+                    if (shouldShow) {
+                        visibleCount += 1;
+                    }
+                });
+
+                productEmptyState.hidden = productMenu.hidden || visibleCount > 0;
+            }
+
+            function addProductFromCard(card) {
+                const input = card.querySelector(".product-quantity-input");
+
+                if (!input) {
+                    return;
+                }
+
+                const availableQuantity = availableDisplayQuantity(input);
+                const nextQuantity = Math.max(0, numericValue(input)) + 1;
+
+                if (nextQuantity > availableQuantity) {
+                    input.value = availableQuantity;
+                    showDisplayStockWarning();
+                    updateTotal();
+                    queueMemberDiscountLookup();
+                    queueVoucherDiscountLookup();
+                    return;
+                }
+
+                input.value = nextQuantity;
+                updateTotal();
+                queueMemberDiscountLookup();
+                queueVoucherDiscountLookup();
+            }
+
+            function productInputByProductId(productId) {
+                return productQuantityInputs.find(input => {
+                    const card = input.closest(".pos-menu-product-card");
+                    return card && card.dataset.productId === productId;
+                }) || null;
+            }
+
+            function addFuelToCart() {
+                const selected = selectedFuel();
+                const price = selectedFuelPrice();
+                const amount = Math.max(0, numericValue(fuelAmountInput));
+                const liters = Math.max(0, numericValue(fuelLitersInput));
+
+                if (!selected || price <= 0 || amount <= 0 || liters <= 0) {
+                    return;
+                }
+
+                fuelCart.push({
+                    id: Date.now().toString() + fuelCart.length.toString(),
+                    fuelId: Number.parseInt(selected.dataset.fuelId, 10) || 0,
+                    tankId: Number.parseInt(selected.dataset.tankId, 10) || 0,
+                    type: selectedFuelType(),
+                    price,
+                    liters,
+                    amount,
+                    subtotal: amount
+                });
+
+                fuelAmountInput.value = "";
+                fuelLitersInput.value = "";
+                updateTotal();
+                queueMemberDiscountLookup();
+                queueVoucherDiscountLookup();
+            }
+
+            function removeFuelFromCart(id) {
+                const index = fuelCart.findIndex(fuel => fuel.id === id);
+
+                if (index >= 0) {
+                    fuelCart.splice(index, 1);
+                    updateTotal();
+                    queueMemberDiscountLookup();
+                    queueVoucherDiscountLookup();
+                }
+            }
+
+            function renderCart() {
+                const products = selectedProducts();
+                const productMarkup = products.map(product => {
+                    return `<div class="pos-cart-item" data-cart-product="${product.productId}">
+                        <div class="pos-cart-thumb">${product.no.substring(0, 2)}</div>
+                        <div>
+                            <strong>${product.name}</strong>
+                            <span>${peso.format(product.unitPrice)} each - Qty ${formatQuantity(product.quantity)}</span>
+                        </div>
+                        <div class="text-end">
+                            <b>${peso.format(cartQuantity(product.quantity) * product.price)}</b>
+                        </div>
+                    </div>`;
+                }).join("");
+                const fuelMarkup = fuelCart.map(fuel => {
+                    return `<div class="pos-cart-item" data-cart-fuel="${fuel.id}">
+                        <div class="pos-cart-thumb">FU</div>
+                        <div>
+                            <strong>${fuel.type}</strong>
+                            <span>${peso.format(fuel.price)}/L - ${fuel.liters.toFixed(2)} L</span>
+                        </div>
+                        <div class="text-end">
+                            <b>${peso.format(fuel.amount)}</b>
+                        </div>
+                    </div>`;
+                }).join("");
+
+                orderCartItems.innerHTML = productMarkup || fuelMarkup
+                    ? `${productMarkup}${fuelMarkup}`
+                    : `<div class="pos-empty-cart">No selected items yet.</div>`;
+            }
+
+            function buildCartEditDraft() {
+                return [
+                    ...selectedProducts().map(product => {
+                        const productInput = productInputByProductId(product.productId.toString());
+
+                        return {
+                            type: "product",
+                            id: product.productId.toString(),
+                            name: product.name,
+                            unitPrice: product.unitPrice,
+                            quantity: cartQuantity(product.quantity),
+                            step: 0.01,
+                            max: cartQuantity(availableDisplayQuantity(productInput))
+                        };
+                    }),
+                    ...fuelCart.map(fuel => ({
+                        type: "fuel",
+                        id: fuel.id,
+                        name: fuel.type,
+                        unitPrice: fuel.price,
+                        quantity: cartQuantity(fuel.liters),
+                        step: 0.01,
+                        max: null
+                    }))
+                ];
+            }
+
+            function renderCartEditRows() {
+                const activeItems = cartEditDraft.filter(item => item.quantity > 0);
+
+                if (!activeItems.length) {
+                    cartEditRows.innerHTML = `<tr><td class="text-center text-muted fw-bold" colspan="5">No selected items yet.</td></tr>`;
+                    return;
+                }
+
+                cartEditRows.innerHTML = activeItems.map(item => {
+                    const quantityValue = formatQuantity(item.quantity);
+                    const unitLabel = item.type === "fuel" ? `${peso.format(item.unitPrice)}/L` : peso.format(item.unitPrice);
+                    const maxAttribute = item.max === null ? "" : `max="${item.max}"`;
+
+                    return `<tr data-edit-cart-item="${item.type}:${item.id}">
+                        <td><strong>${item.name}</strong></td>
+                        <td class="text-end">${unitLabel}</td>
+                        <td>
+                            <div class="input-group input-group-sm">
+                                <button class="btn btn-outline-secondary" type="button" data-edit-cart-step="${item.type}:${item.id}" data-step="-${item.step}" aria-label="Decrease ${item.name} quantity">-</button>
+                                <input class="form-control text-center" type="number" min="0" ${maxAttribute} step="0.01" inputmode="decimal" value="${quantityValue}" data-edit-cart-quantity="${item.type}:${item.id}" aria-label="${item.name} quantity" onfocus="this.select()" />
+                                <button class="btn btn-outline-secondary" type="button" data-edit-cart-step="${item.type}:${item.id}" data-step="${item.step}" aria-label="Increase ${item.name} quantity">+</button>
+                            </div>
+                        </td>
+                        <td class="text-end fw-bold" data-edit-cart-total="${item.type}:${item.id}">${peso.format(item.quantity * item.unitPrice)}</td>
+                        <td class="text-end"><button class="btn btn-sm btn-outline-danger" type="button" data-edit-cart-remove="${item.type}:${item.id}">Remove</button></td>
+                    </tr>`;
+                }).join("");
+            }
+
+            function openCartEditModal() {
+                cartEditDraft = buildCartEditDraft();
+                renderCartEditRows();
+
+                if (window.bootstrap) {
+                    bootstrap.Modal.getOrCreateInstance(cartEditModalElement).show();
+                }
+            }
+
+            function findCartEditDraftItem(key) {
+                const [type, id] = key.split(":");
+                return cartEditDraft.find(item => item.type === type && item.id === id) || null;
+            }
+
+            function updateCartEditDraftTotal(key) {
+                const item = findCartEditDraftItem(key);
+                const totalCell = cartEditRows.querySelector(`[data-edit-cart-total="${key}"]`);
+
+                if (item && totalCell) {
+                    totalCell.textContent = peso.format(item.quantity * item.unitPrice);
+                }
+            }
+
+            function setCartEditDraftQuantity(key, quantity, renderRows = true) {
+                const item = findCartEditDraftItem(key);
+
+                if (!item) {
+                    return;
+                }
+
+                const requestedQuantity = cartQuantity(quantity);
+                const nextQuantity = item.max === null
+                    ? requestedQuantity
+                    : Math.min(item.max, requestedQuantity);
+
+                if (item.max !== null && quantity > item.max) {
+                    showDisplayStockWarning();
+                }
+
+                item.quantity = nextQuantity;
+                if (renderRows) {
+                    renderCartEditRows();
+                } else {
+                    updateCartEditDraftTotal(key);
+                }
+            }
+
+            function saveCartEditDraft() {
+                const productDrafts = cartEditDraft.filter(item => item.type === "product");
+                const fuelDrafts = cartEditDraft.filter(item => item.type === "fuel");
+
+                productDrafts.forEach(item => {
+                    const input = productInputByProductId(item.id);
+
+                    if (input) {
+                        input.value = formatQuantity(item.quantity);
+                    }
+                });
+
+                fuelCart.splice(0, fuelCart.length, ...fuelDrafts
+                    .filter(item => item.quantity > 0)
+                    .map(item => {
+                        const existingFuel = fuelCart.find(fuel => fuel.id === item.id);
+                        return {
+                            ...existingFuel,
+                            liters: cartQuantity(item.quantity),
+                            amount: cartQuantity(item.quantity) * item.unitPrice,
+                            subtotal: cartQuantity(item.quantity) * item.unitPrice
+                        };
+                    })
+                    .filter(fuel => fuel.id));
+
+                updateTotal();
+                queueMemberDiscountLookup();
+                queueVoucherDiscountLookup();
+
+                if (window.bootstrap) {
+                    bootstrap.Modal.getInstance(cartEditModalElement)?.hide();
+                }
+            }
+
+            function updateSummaryAmounts() {
+                const itemCount = cartItemTotal();
+                const due = amountToPay();
+                const tax = taxAmount();
+                cartSubTotal.textContent = peso.format(productTotalAmount());
+                cartFuelLine.textContent = peso.format(fuelTotalAmount());
+                cartMemberDiscountLine.textContent = peso.format(currentMemberDiscountAmount());
+                cartVoucherDiscountLine.textContent = peso.format(currentVoucherDiscountAmount());
+                cartDiscountLine.textContent = peso.format(discountAmount());
+                cartTaxLine.textContent = peso.format(tax);
+                grandTotal.textContent = peso.format(due);
+                memberAvailablePoints.textContent = `${memberPoints.toFixed(2)} pts`;
+                pointConversion.textContent = hasValidRebate()
+                    ? `${rebatePointsRequired().toFixed(2)} pts = ${peso.format(rebateValue())}`
+                    : "No active rebate";
+                requiredPointsLabel.textContent = `${requiredPointsForPurchase().toFixed(2)} pts`;
+                if (!isPointsPayment()) {
+                    paymentAmountInput.disabled = due <= 0;
+                    paymentAmountInput.placeholder = due <= 0 ? "No cash required" : "0.00";
+                    if (due <= 0) {
+                        paymentAmountInput.value = "";
+                    }
+                }
+                if (cartButtonTotal) {
+                    cartButtonTotal.textContent = peso.format(due);
+                }
+                if (cartItemCount) {
+                    cartItemCount.textContent = itemCount.toString();
+                }
+                if (modalCartCount) {
+                    modalCartCount.textContent = `${itemCount} ${itemCount === 1 ? "item" : "items"}`;
+                }
+            }
+
+            function updateTotal() {
+                renderCart();
+                updateSummaryAmounts();
+                renderReceipt();
+            }
+
+            async function loadMemberDiscount() {
+                const membershipCardNo = membershipCardNoInput.value.trim();
+                const lookupToken = memberDiscountLookupToken + 1;
+                memberDiscountLookupToken = lookupToken;
+
+                if (!membershipCardNo) {
+                    memberDiscountAmount = 0;
+                    memberPoints = 0;
+                    memberFound = false;
+                    updateTotal();
+                    queueVoucherDiscountLookup();
+                    return;
+                }
+
+                const query = new URLSearchParams({
+                    membershipCardNo,
+                    productTotal: productTotalAmount().toString(),
+                    fuelTotal: fuelTotalAmount().toString()
+                });
+
+                try {
+                    const response = await fetch(`/Transaction/MemberDiscount?${query.toString()}`, {
+                        headers: { "Accept": "application/json" }
+                    });
+                    const result = await response.json();
+
+                    if (lookupToken !== memberDiscountLookupToken) {
+                        return;
+                    }
+
+                    memberFound = response.ok && result.success && result.memberFound;
+                    memberPoints = memberFound ? Math.max(0, Number.parseFloat(result.points) || 0) : 0;
+                    memberDiscountAmount = memberFound && !isPointsPayment()
+                        ? Math.max(0, Number.parseFloat(result.discountAmount) || 0)
+                        : 0;
+                    queueVoucherDiscountLookup();
+                } catch {
+                    if (lookupToken === memberDiscountLookupToken) {
+                        memberDiscountAmount = 0;
+                        memberPoints = 0;
+                        memberFound = false;
+                    }
+                }
+
+                updateTotal();
+            }
+
+            function queueMemberDiscountLookup() {
+                window.clearTimeout(memberDiscountLookupTimer);
+                memberDiscountLookupTimer = window.setTimeout(loadMemberDiscount, 250);
+            }
+
+            async function loadVoucherDiscount() {
+                const lookupToken = voucherDiscountLookupToken + 1;
+                voucherDiscountLookupToken = lookupToken;
+
+                if (isPointsPayment() || !voucherCode() || totalAmount() <= 0) {
+                    voucherDiscountAmount = 0;
+                    updateTotal();
+                    return;
+                }
+
+                const query = new URLSearchParams({
+                    voucherCode: voucherCode(),
+                    membershipCardNo: membershipCardNoInput.value.trim(),
+                    productTotal: productTotalAmount().toString(),
+                    fuelTotal: fuelTotalAmount().toString()
+                });
+
+                try {
+                    const response = await fetch(`/Transaction/VoucherDiscount?${query.toString()}`, {
+                        headers: { "Accept": "application/json" }
+                    });
+                    const result = await response.json();
+
+                    if (lookupToken !== voucherDiscountLookupToken) {
+                        return;
+                    }
+
+                    voucherDiscountAmount = response.ok && result.success
+                        ? Math.max(0, Number.parseFloat(result.discountAmount) || 0)
+                        : 0;
+                } catch {
+                    if (lookupToken === voucherDiscountLookupToken) {
+                        voucherDiscountAmount = 0;
+                    }
+                }
+
+                updateTotal();
+            }
+
+            function queueVoucherDiscountLookup() {
+                window.clearTimeout(voucherDiscountLookupTimer);
+                voucherDiscountLookupTimer = window.setTimeout(loadVoucherDiscount, 250);
+            }
+
+            async function refreshCheckoutDiscounts() {
+                window.clearTimeout(memberDiscountLookupTimer);
+                window.clearTimeout(voucherDiscountLookupTimer);
+                await loadMemberDiscount();
+                window.clearTimeout(voucherDiscountLookupTimer);
+                await loadVoucherDiscount();
+            }
+
+            function updatePaymentFields() {
+                const pointsPayment = isPointsPayment();
+                cashPaymentField.hidden = pointsPayment;
+                voucherCodeField.hidden = pointsPayment;
+                pointsPaymentField.hidden = !pointsPayment;
+                membershipCardNoInput.closest("#memberCardField").querySelector(".text-muted").textContent = pointsPayment ? "(Required)" : "(Optional)";
+
+                if (pointsPayment) {
+                    paymentAmountInput.value = "";
+                    voucherCodeInput.value = "";
+                    memberDiscountAmount = 0;
+                    voucherDiscountAmount = 0;
+                    voucherDiscountLookupToken += 1;
+                }
+
+                updateTotal();
+                queueMemberDiscountLookup();
+                queueVoucherDiscountLookup();
+            }
+
+            function renderReceipt() {
+                const products = selectedProducts();
+                const subtotal = completedReceiptTotals?.grossTotal ?? totalAmount();
+                const totalDiscount = completedReceiptTotals?.totalDiscount ?? discountAmount();
+                const memberDiscount = currentMemberDiscountAmount();
+                const voucherDiscount = currentVoucherDiscountAmount();
+                const due = completedReceiptTotals?.netTotal ?? amountToPay();
+                const tax = completedReceiptTotals?.taxAmount ?? taxAmount();
+                const amountTendered = completedReceiptTotals?.amountTendered ?? cashAmount();
+                const change = completedReceiptTotals?.change ?? Math.max(0, amountTendered - due);
+                const pointsEarned = completedReceiptTotals?.pointsEarned ?? 0;
+                const pointsRequired = completedReceiptTotals?.pointsRequired ?? requiredPointsForPurchase();
+                const paymentMethod = completedReceiptTotals?.paymentMethod ?? selectedPaymentMethod();
+
+                receiptTransactionNo.textContent = completedReceiptNo || "Pending";
+                receiptDateTime.textContent = new Date().toLocaleString();
+                receiptPaymentMethod.textContent = paymentMethod;
+                receiptPaymentDetail.textContent = paymentMethod === "Points" ? `${pointsRequired.toFixed(2)} pts` : peso.format(amountTendered);
+                receiptMemberCardNo.textContent = membershipCardNoInput.value.trim() || "None";
+                receiptSubtotalAmount.textContent = peso.format(subtotal);
+                receiptMemberDiscountAmount.textContent = peso.format(memberDiscount);
+                receiptVoucherDiscountAmount.textContent = peso.format(voucherDiscount);
+                receiptDiscountAmount.textContent = peso.format(totalDiscount);
+                receiptTaxAmount.textContent = peso.format(tax);
+                receiptTotalAmount.textContent = peso.format(due);
+                receiptChangeAmount.textContent = peso.format(change);
+                receiptPointsEarned.textContent = `${pointsEarned.toFixed(2)} pts`;
+                receiptFuelRows.innerHTML = fuelCart.length
+                    ? fuelCart.map(fuel => `<tr><td>${fuel.type}<br><small>${peso.format(fuel.price)}/L</small></td><td>${fuel.liters.toFixed(2)} L</td><td>${peso.format(fuel.amount)}</td></tr>`).join("")
+                    : `<tr><td colspan="3">No selected fuel.</td></tr>`;
+                receiptProductRows.innerHTML = products.length
+                    ? products.map(product => `<tr><td>${product.no}</td><td>${product.name}</td><td>${formatQuantity(product.quantity)}</td><td>${peso.format(product.price)}</td><td>${peso.format(product.subtotal)}</td></tr>`).join("")
+                    : `<tr><td colspan="5">No selected products.</td></tr>`;
+            }
+
+            function showReceipt() {
+                updateTotal();
+                renderReceipt();
+                if (window.bootstrap) {
+                    bootstrap.Modal.getOrCreateInstance(receiptModalElement).show();
+                }
+            }
+
+            function printModalReceipt() {
+                renderReceipt();
+
+                if (!receiptPrintArea) {
+                    return;
+                }
+
+                const printFrame = document.createElement("iframe");
+                printFrame.title = "Receipt Print";
+                printFrame.style.position = "fixed";
+                printFrame.style.right = "0";
+                printFrame.style.bottom = "0";
+                printFrame.style.width = "0";
+                printFrame.style.height = "0";
+                printFrame.style.border = "0";
+
+                const linkedStyles = Array.from(document.querySelectorAll("link[rel='stylesheet']"))
+                    .map(link => `<link rel="stylesheet" href="${link.href}">`)
+                    .join("");
+
+                document.body.appendChild(printFrame);
+                const printDocument = printFrame.contentWindow.document;
+                printDocument.open();
+                printDocument.write(`<!doctype html>
+<html>
+<head>
+    <title>Receipt</title>
+    ${linkedStyles}
+    <style>
+        @@page { margin: 12mm; }
+        body { margin: 0; background: #fff; color: #111827; }
+        .salesman-receipt-print { width: 100%; max-width: 520px; margin: 0 auto; padding: 0; border: 0; box-shadow: none; }
+    <\/style>
+<\/head>
+<body>
+    ${receiptPrintArea.outerHTML}
+<\/body>
+<\/html>`);
+                printDocument.close();
+
+                const printReceiptFrame = () => {
+                    printFrame.contentWindow.focus();
+                    printFrame.contentWindow.print();
+                    setTimeout(() => printFrame.remove(), 500);
+                };
+                setTimeout(printReceiptFrame, 100);
+            }
+
+            async function openCheckoutSummary() {
+                let payload = buildSalePayload();
+
+                if (!payload.products.length && !payload.fuels.length) {
+                    showSubmitMessage("Please select at least one item before checkout.", false);
+                    return;
+                }
+
+                await refreshCheckoutDiscounts();
+                payload = buildSalePayload();
+
+                if (!validateCheckout()) {
+                    return;
+                }
+
+                completedReceiptNo = "";
+                completedReceiptTotals = null;
+                saleCompleted = false;
+                modalConfirmSaleButton.disabled = false;
+                modalPrintReceiptButton.disabled = true;
+                submitSaleButton.disabled = false;
+                showSubmitMessage("Review the sale summary, then confirm sale.", true);
+                showReceipt();
+            }
+
+            function showSubmitMessage(message, isSuccess) {
+                submitMessage.textContent = message;
+                submitMessage.classList.remove("d-none", "alert-success", "alert-danger");
+                submitMessage.classList.add(isSuccess ? "alert-success" : "alert-danger");
+            }
+
+            function buildSalePayload() {
+                const products = selectedProducts().map(product => {
+                    return {
+                        productId: product.productId,
+                        quantity: product.quantity,
+                        price: product.unitPrice,
+                        unitCost: product.unitCost,
+                        unitPrice: product.unitPrice,
+                        subtotal: product.subtotal,
+                        grossProfit: product.grossProfit
+                    };
+                });
+                const fuels = fuelCart.map(fuel => {
+                    return {
+                        fuelId: fuel.fuelId,
+                        tankId: fuel.tankId,
+                        liters: fuel.liters,
+                        price: fuel.price,
+                        subtotal: fuel.subtotal
+                    };
+                });
+
+                return {
+                    products,
+                    fuels,
+                    paymentMethod: selectedPaymentMethod(),
+                    cashAmount: cashAmount(),
+                    membershipCardNo: membershipCardNoInput.value.trim(),
+                    voucherCode: voucherCode()
+                };
+            }
+
+            async function submitSale(event) {
+                event?.preventDefault();
+                let payload = buildSalePayload();
+
+                if (!payload.products.length && !payload.fuels.length) {
+                    showSubmitMessage("Cart is empty. Add at least one product or fuel item.", false);
+                    return;
+                }
+
+                await refreshCheckoutDiscounts();
+                payload = buildSalePayload();
+
+                if (!validateCheckout()) {
+                    return;
+                }
+
+                submitSaleButton.disabled = true;
+                modalConfirmSaleButton.disabled = true;
+                showSubmitMessage("Saving sale...", true);
+
+                try {
+                    const response = await fetch("/Transaction/SubmitSale", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                            "RequestVerificationToken": antiForgeryToken
+                        },
+                        body: JSON.stringify(payload)
+                    });
+                    const result = await response.json();
+
+                    if (!response.ok || !result.success) {
+                        showSubmitMessage(result.message || "Unable to save sale.", false);
+                        return;
+                    }
+
+                    completedReceiptNo = result.receiptNo || "";
+                    completedReceiptTotals = {
+                        grossTotal: Math.max(0, Number.parseFloat(result.grossTotal) || 0),
+                        discountAmount: Math.max(0, Number.parseFloat(result.discountAmount) || 0),
+                        memberDiscountAmount: Math.max(0, Number.parseFloat(result.memberDiscountAmount) || 0),
+                        voucherDiscountAmount: Math.max(0, Number.parseFloat(result.voucherDiscountAmount) || 0),
+                        totalDiscount: Math.max(0, (Number.parseFloat(result.discountAmount) || 0) + (Number.parseFloat(result.rebateAmount) || 0)),
+                        taxAmount: Math.max(0, Number.parseFloat(result.taxAmount) || 0),
+                        netTotal: Math.max(0, Number.parseFloat(result.netTotal) || 0),
+                        amountTendered: Math.max(0, Number.parseFloat(result.amountTendered) || payload.cashAmount || 0),
+                        change: Math.max(0, Number.parseFloat(result.change) || 0),
+                        pointsEarned: Math.max(0, Number.parseFloat(result.pointsEarned) || 0),
+                        pointsRequired: Math.max(0, Number.parseFloat(result.pointsRequired) || 0),
+                        paymentMethod: result.paymentMethod || payload.paymentMethod
+                    };
+                    saleCompleted = true;
+                    renderReceipt();
+                    showReceipt();
+                    modalPrintReceiptButton.disabled = false;
+                    showSubmitMessage(`${result.message} Receipt No: ${result.receiptNo}`, true);
+                } catch {
+                    showSubmitMessage("Unable to save sale. Please try again.", false);
+                    modalConfirmSaleButton.disabled = false;
+                } finally {
+                    submitSaleButton.disabled = saleCompleted;
+                    if (!saleCompleted) {
+                        modalConfirmSaleButton.disabled = false;
+                    }
+                }
+            }
+
+            function restoreProductSubmitFields() {
+                productRows.forEach(row => {
+                    Array.from(row.querySelectorAll("input[type='hidden'], .product-quantity-input")).forEach(input => {
+                        input.disabled = false;
+                    });
+                });
+            }
+
+            function disableZeroQuantityProducts() {
+                productQuantityInputs.forEach(input => {
+                    const rowInputs = Array.from(input.closest(".pos-menu-product-card").querySelectorAll("input[type='hidden'], .product-quantity-input"));
+                    const shouldSubmit = Math.max(0, numericValue(input)) > 0;
+
+                    rowInputs.forEach(rowInput => {
+                        rowInput.disabled = !shouldSubmit;
+                    });
+                });
+            }
+
+            function resetSale() {
+                form.reset();
+                restoreProductSubmitFields();
+                fuelCart.length = 0;
+                completedReceiptNo = "";
+                completedReceiptTotals = null;
+                saleCompleted = false;
+                submitSaleButton.disabled = false;
+                modalConfirmSaleButton.disabled = false;
+                modalPrintReceiptButton.disabled = true;
+                productSearch.value = "";
+                productQuantityInputs.forEach(input => {
+                    input.value = 0;
+                });
+                if (fuelChoices[0]) {
+                    fuelChoices[0].checked = true;
+                }
+                fuelLitersInput.value = "";
+                memberDiscountAmount = 0;
+                voucherDiscountAmount = 0;
+                memberPoints = 0;
+                memberFound = false;
+                memberDiscountLookupToken += 1;
+                paymentMethodSelect.value = "Cash";
+                if (window.bootstrap) {
+                    bootstrap.Modal.getInstance(receiptModalElement)?.hide();
+                }
+                showHotMode();
+                updatePaymentFields();
+                updateTotal();
+            }
+
+            categoryButtons.forEach(button => {
+                button.addEventListener("click", () => {
+                    if (button.dataset.mode === "fuel") {
+                        showFuelMode();
+                    } else if (button.dataset.mode === "hot") {
+                        showHotMode();
+                    } else {
+                        showProductCategory(button.dataset.categoryId, button);
+                    }
+                });
+            });
+            productRows.forEach(row => {
+                row.addEventListener("click", event => {
+                    if (event.target.closest("input, label")) {
+                        return;
+                    }
+
+                    addProductFromCard(row);
+                });
+            });
+            productQuantityInputs.forEach(input => {
+                input.addEventListener("keydown", preventInvalidQuantityKey);
+                const updateProductQuantity = () => {
+                    updateTotal();
+                    queueMemberDiscountLookup();
+                    queueVoucherDiscountLookup();
+                };
+                input.addEventListener("input", updateProductQuantity);
+                input.addEventListener("change", updateProductQuantity);
+            });
+            fuelAmountInput.addEventListener("input", () => {
+                activeFuelInput = "amount";
+                updateLiters();
+            });
+            fuelLitersInput.addEventListener("input", () => {
+                activeFuelInput = "liters";
+                updateFuelAmount();
+            });
+            fuelChoices.forEach(choice => choice.addEventListener("change", () => {
+                updateFuelFieldsForPrice();
+            }));
+            addFuelButton.addEventListener("click", addFuelToCart);
+            editCartButton.addEventListener("click", openCartEditModal);
+            cartEditRows.addEventListener("click", event => {
+                const stepButton = event.target.closest("[data-edit-cart-step]");
+                if (stepButton) {
+                    const key = stepButton.dataset.editCartStep;
+                    const item = findCartEditDraftItem(key);
+                    const step = Number.parseFloat(stepButton.dataset.step) || 0;
+
+                    if (item) {
+                        setCartEditDraftQuantity(key, item.quantity + step);
+                    }
+
+                    return;
+                }
+
+                const removeButton = event.target.closest("[data-edit-cart-remove]");
+                if (removeButton) {
+                    setCartEditDraftQuantity(removeButton.dataset.editCartRemove, 0);
+                }
+            });
+            cartEditRows.addEventListener("input", event => {
+                const quantityInput = event.target.closest("[data-edit-cart-quantity]");
+
+                if (quantityInput) {
+                    setCartEditDraftQuantity(quantityInput.dataset.editCartQuantity, numericValue(quantityInput), false);
+                }
+            });
+            cartEditRows.addEventListener("change", event => {
+                const quantityInput = event.target.closest("[data-edit-cart-quantity]");
+
+                if (quantityInput) {
+                    setCartEditDraftQuantity(quantityInput.dataset.editCartQuantity, numericValue(quantityInput));
+                }
+            });
+            cartEditRows.addEventListener("keydown", event => {
+                const quantityInput = event.target.closest("[data-edit-cart-quantity]");
+
+                if (quantityInput) {
+                    preventInvalidQuantityKey(event);
+                }
+            });
+            cartEditSaveButton.addEventListener("click", saveCartEditDraft);
+            paymentAmountInput.addEventListener("input", () => {
+                renderReceipt();
+            });
+            membershipCardNoInput.addEventListener("input", () => {
+                queueMemberDiscountLookup();
+                queueVoucherDiscountLookup();
+            });
+            voucherCodeInput.addEventListener("input", () => {
+                voucherCodeInput.value = voucherCodeInput.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 6);
+                voucherDiscountAmount = 0;
+                queueVoucherDiscountLookup();
+                updateTotal();
+            });
+            paymentMethodSelect.addEventListener("change", updatePaymentFields);
+            productSearch.addEventListener("input", filterProducts);
+            modalPrintReceiptButton.addEventListener("click", printModalReceipt);
+            modalConfirmSaleButton.addEventListener("click", submitSale);
+            submitSaleButton.addEventListener("click", openCheckoutSummary);
+            newSaleButton.addEventListener("click", resetSale);
+            receiptModalElement.addEventListener("hidden.bs.modal", () => {
+                if (saleCompleted) {
+                    resetSale();
+                }
+            });
+            form.addEventListener("submit", event => {
+                event.preventDefault();
+                openCheckoutSummary();
+            });
+            window.addEventListener("pageshow", restoreProductSubmitFields);
+            showHotMode();
+            updatePaymentFields();
+            updateTotal();
+        })();
+    </script>
+}

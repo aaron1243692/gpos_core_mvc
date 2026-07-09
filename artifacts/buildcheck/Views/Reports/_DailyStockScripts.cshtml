@@ -1,0 +1,165 @@
+@model gpos.Models.ViewModels.DailyStockPageViewModel
+
+<script>
+    document.addEventListener("DOMContentLoaded", () => {
+        const activeModalId = "@Model.ActiveModalId";
+        const modal = activeModalId ? document.getElementById(activeModalId) : null;
+        if (modal && window.bootstrap) {
+            bootstrap.Modal.getOrCreateInstance(modal).show();
+        }
+
+        const stockOptions = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.StockOptions));
+        const selectedBatchId = "@(Model.Form.BatchId?.ToString() ?? string.Empty)";
+        const selectedTankId = "@(Model.Form.TankId?.ToString() ?? string.Empty)";
+        const selectedProductId = "@(Model.Form.ProductId?.ToString() ?? string.Empty)";
+        const dateInput = document.querySelector("[name='Form.StockDate']");
+        const branchInput = document.querySelector("[data-daily-stock-branch]");
+        const batchSelect = document.querySelector("[data-daily-stock-batch]");
+        const tankSelect = document.querySelector("[data-daily-stock-tank]");
+        const productIdInput = document.querySelector("[data-daily-stock-product-id]");
+        const productSelect = document.querySelector("[data-daily-stock-product-select]");
+        const fuelInput = document.querySelector("[data-daily-stock-fuel]");
+        const beginningInput = document.querySelector("[data-daily-stock-beginning]");
+        const soldInput = document.querySelector("[data-daily-stock-sold]");
+        const actualInput = document.querySelector("[data-daily-stock-actual]");
+        const endingInput = document.querySelector("[data-daily-stock-ending]");
+        const lossInput = document.querySelector("[data-daily-stock-loss]");
+
+        const numberValue = input => Number.parseFloat(input?.value || "0") || 0;
+        const branchValue = () => branchInput?.value || "";
+        const optionMatchesBranch = option => !branchValue() || String(option.BranchId || "") === String(branchValue());
+        const setNumber = (input, value) => {
+            if (input) input.value = Number(value || 0).toFixed(2);
+        };
+        const createOption = (value, text) => {
+            const option = document.createElement("option");
+            option.value = value;
+            option.textContent = text;
+            return option;
+        };
+        const rebuildProductChoices = () => {
+            if (!productSelect) return;
+            const currentValue = productSelect.value || selectedProductId;
+            const products = new Map();
+            stockOptions.filter(optionMatchesBranch).forEach(option => {
+                if (option.ProductId) {
+                    products.set(String(option.ProductId), option.ProductName || "");
+                }
+            });
+
+            productSelect.innerHTML = "";
+            productSelect.appendChild(createOption("", "Select product"));
+            Array.from(products.entries())
+                .sort((left, right) => left[1].localeCompare(right[1]))
+                .forEach(([value, text]) => productSelect.appendChild(createOption(value, text)));
+            productSelect.value = currentValue;
+        };
+        const rebuildBatchChoices = (resetValue) => {
+            if (!batchSelect) return;
+            const currentValue = resetValue ? "" : batchSelect.value || selectedBatchId;
+            batchSelect.innerHTML = "";
+            batchSelect.appendChild(createOption("", "Select batch"));
+            stockOptions
+                .filter(option => option.ProductId && optionMatchesBranch(option))
+                .sort((left, right) => `${left.ProductName || ""} ${left.BatchNo || ""}`.localeCompare(`${right.ProductName || ""} ${right.BatchNo || ""}`))
+                .forEach(option => batchSelect.appendChild(createOption(String(option.Id), `${option.BatchNo || "-"} - ${option.ProductName || "-"}`)));
+            batchSelect.value = currentValue;
+        };
+        const rebuildTankChoices = (resetValue) => {
+            if (!tankSelect) return;
+            const currentValue = resetValue ? "" : tankSelect.value || selectedTankId;
+            tankSelect.innerHTML = "";
+            tankSelect.appendChild(createOption("", "Select tank"));
+            stockOptions
+                .filter(option => option.TankNo && optionMatchesBranch(option))
+                .sort((left, right) => (left.TankNo || "").localeCompare(right.TankNo || ""))
+                .forEach(option => {
+                    const text = option.FuelName ? `${option.TankNo} - ${option.FuelName}` : option.TankNo;
+                    tankSelect.appendChild(createOption(String(option.Id), text));
+                });
+            tankSelect.value = currentValue;
+        };
+        const compute = () => {
+            const actual = numberValue(beginningInput) - numberValue(soldInput);
+            const loss = actual - numberValue(endingInput);
+            setNumber(actualInput, actual);
+            setNumber(lossInput, loss);
+        };
+
+        const selectedDate = () => dateInput?.value || new Date().toISOString().slice(0, 10);
+        const loadDefault = async () => {
+            const batchId = batchSelect?.value;
+            const tankId = tankSelect?.value;
+            if (!batchId && !tankId) {
+                compute();
+                return;
+            }
+
+            const queryName = batchId ? "batchId" : "tankId";
+            const id = batchId || tankId;
+            const url = `@Url.Action(Model.DefaultAction, "Reports")?${queryName}=${encodeURIComponent(id)}&stockDate=${encodeURIComponent(selectedDate())}&branchId=${encodeURIComponent(branchValue())}`;
+            const response = await fetch(url, { headers: { "Accept": "application/json" } });
+            if (!response.ok) {
+                compute();
+                return;
+            }
+
+            const data = await response.json();
+            if (batchId) {
+                if (productIdInput) productIdInput.value = data.productId || "";
+                if (productSelect) productSelect.value = String(data.productId || "");
+            }
+            if (tankId && fuelInput) {
+                fuelInput.value = data.fuelName || "";
+            }
+            setNumber(beginningInput, data.beginning);
+            setNumber(soldInput, data.sold);
+            compute();
+        };
+
+        const syncProductFromBatch = () => {
+            if (!batchSelect) return;
+            const option = stockOptions.find(item => String(item.Id) === String(batchSelect.value));
+            if (option) {
+                if (productIdInput) productIdInput.value = option.ProductId || "";
+                if (productSelect) productSelect.value = String(option.ProductId || "");
+            }
+        };
+
+        const syncFuelFromTank = () => {
+            if (!tankSelect || !fuelInput) return;
+            const option = stockOptions.find(item => String(item.Id) === String(tankSelect.value));
+            fuelInput.value = option?.FuelName || "";
+        };
+
+        batchSelect?.addEventListener("change", () => {
+            syncProductFromBatch();
+            loadDefault();
+        });
+        tankSelect?.addEventListener("change", () => {
+            syncFuelFromTank();
+            loadDefault();
+        });
+        dateInput?.addEventListener("change", loadDefault);
+        branchInput?.addEventListener("change", () => {
+            rebuildProductChoices();
+            rebuildBatchChoices(true);
+            rebuildTankChoices(true);
+            if (productIdInput) productIdInput.value = "";
+            if (productSelect) productSelect.value = "";
+            if (fuelInput) fuelInput.value = "";
+            setNumber(beginningInput, 0);
+            setNumber(soldInput, 0);
+            compute();
+        });
+        beginningInput?.addEventListener("input", compute);
+        endingInput?.addEventListener("input", compute);
+
+        rebuildProductChoices();
+        rebuildBatchChoices(false);
+        rebuildTankChoices(false);
+        syncProductFromBatch();
+        syncFuelFromTank();
+        compute();
+    });
+</script>

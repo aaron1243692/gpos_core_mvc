@@ -1,0 +1,233 @@
+@model gpos.Models.ViewModels.StockTransferPageViewModel
+@{
+    var sourceBranchName = Model.BranchOptions.FirstOrDefault(item => item.Value == Model.Form.SourceBranchId?.ToString())?.Text ?? string.Empty;
+    var destinationBranchName = Model.BranchOptions.FirstOrDefault(item => item.Value == Model.Form.DestinationBranchId?.ToString())?.Text ?? string.Empty;
+}
+
+<section class="product-receiving-page">
+    <div class="content-card transaction-ui-card product-receiving-container">
+        <div class="card-title-row page-header">
+            <div><h1>@Model.Title</h1><p>Move product batch stock between branch warehouses.</p></div>
+            <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#transferFormModal">Add Transfer</button>
+        </div>
+        <div class="product-receiving-body">
+            @if (TempData["TransferMessage"] is not null)
+            {
+                <div class="alert alert-warning">@TempData["TransferMessage"]</div>
+            }
+            <form asp-action="BranchToBranchProduct" method="get" class="transaction-ui-toolbar product-receiving-toolbar toolbar flex-wrap">
+                <input class="form-control transaction-ui-search" name="search" value="@Model.Search" type="search" placeholder="Search transfer, branch, product, batch, status..." />
+                <select class="form-select" name="sourceBranchId">
+                    <option value="">All Source Branches</option>
+                    @foreach (var branch in Model.BranchOptions)
+                    {
+                        <option value="@branch.Value" selected="@(Model.SourceFilterBranchId?.ToString() == branch.Value ? "selected" : null)">@branch.Text</option>
+                    }
+                </select>
+                <select class="form-select" name="destinationBranchId">
+                    <option value="">All Destination Branches</option>
+                    @foreach (var branch in Model.BranchOptions)
+                    {
+                        <option value="@branch.Value" selected="@(Model.DestinationFilterBranchId?.ToString() == branch.Value ? "selected" : null)">@branch.Text</option>
+                    }
+                </select>
+                <button class="btn btn-outline-primary" type="submit">Search</button>
+                <a class="btn btn-outline-secondary" asp-action="BranchToBranchProduct">Clear</a>
+            </form>
+            <div class="table-responsive transaction-ui-table-wrap product-receiving-table-wrapper">
+                <table class="table app-table table-sm align-middle mb-0">
+                    <thead><tr><th>No</th><th>Transfer No</th><th>Source Branch</th><th>Destination Branch</th><th>Product</th><th>Batch</th><th>Quantity</th><th>Source Before</th><th>Source After</th><th>Destination Before</th><th>Destination After</th><th>Transferred By</th><th>Date</th><th>Status</th><th>Action</th></tr></thead>
+                    <tbody>
+                        @if (Model.Transfers.Count == 0)
+                        {
+                            <tr><td class="text-center text-muted fw-bold" colspan="15">No transfers found.</td></tr>
+                        }
+                        @for (var i = 0; i < Model.Transfers.Count; i += 1)
+                        {
+                            <tr>
+                                <td>@(i + 1)</td><td>@Model.Transfers[i].TransferNo</td><td>@Model.Transfers[i].SourceBranch</td><td>@Model.Transfers[i].DestinationBranch</td><td>@Model.Transfers[i].Product</td><td>@Model.Transfers[i].Batch</td><td>@Model.Transfers[i].Quantity.ToString("N2")</td><td>@(Model.Transfers[i].SourceBefore?.ToString("N2") ?? "-")</td><td>@(Model.Transfers[i].SourceAfter?.ToString("N2") ?? "-")</td><td>@(Model.Transfers[i].DestinationBefore?.ToString("N2") ?? "-")</td><td>@(Model.Transfers[i].DestinationAfter?.ToString("N2") ?? "-")</td><td>@Model.Transfers[i].TransferredBy</td><td>@Model.Transfers[i].Date?.ToString("yyyy-MM-dd HH:mm")</td><td><span class="badge @(Model.Transfers[i].Status == "Completed" ? "text-bg-success" : Model.Transfers[i].Status == "Cancelled" ? "text-bg-secondary" : "text-bg-warning")">@Model.Transfers[i].Status</span></td><td class="text-nowrap">-</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</section>
+
+<div class="modal fade" id="transferFormModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <form asp-action="SaveBranchToBranchProduct" method="post" data-transfer-form>
+                @Html.AntiForgeryToken()
+                <input name="search" type="hidden" value="@Model.Search" />
+                <input asp-for="Form.ProductId" type="hidden" data-selected-product-id />
+                <div class="modal-header"><h2 class="modal-title fs-5">Add Transfer</h2><button class="btn-close" type="button" data-bs-dismiss="modal"></button></div>
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label asp-for="Form.SourceBranchId" class="form-label">Source Branch</label>
+                            <input asp-for="Form.SourceBranchId" id="transferSourceBranchId" type="hidden" data-source-branch-select />
+                            <div class="input-group" data-branch-selector data-branch-hidden="#transferSourceBranchId" data-branch-display="#transferSourceBranchDisplay" data-branch-empty-text="Select source branch">
+                                <input id="transferSourceBranchDisplay" class="form-control" type="text" value="@sourceBranchName" placeholder="Select source branch" readonly />
+                                <button type="button" class="btn btn-outline-secondary branch-select-btn" data-branch-open>
+                                    <img src="/icons/search.png" alt="Search" style="width:16px;height:16px;" />
+                                </button>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label asp-for="Form.DestinationBranchId" class="form-label">Destination Branch</label>
+                            <input asp-for="Form.DestinationBranchId" id="transferDestinationBranchId" type="hidden" />
+                            <div class="input-group" data-branch-selector data-branch-hidden="#transferDestinationBranchId" data-branch-display="#transferDestinationBranchDisplay" data-branch-empty-text="Select destination branch">
+                                <input id="transferDestinationBranchDisplay" class="form-control" type="text" value="@destinationBranchName" placeholder="Select destination branch" readonly />
+                                <button type="button" class="btn btn-outline-secondary branch-select-btn" data-branch-open>
+                                    <img src="/icons/search.png" alt="Search" style="width:16px;height:16px;" />
+                                </button>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Product</label>
+                            <div class="input-group">
+                                <input class="form-control" type="text" placeholder="Search/select product..." readonly data-selected-product-name data-open-product-selector />
+                                <button class="btn btn-outline-secondary" type="button" data-open-product-selector><img src="/icons/search.png" alt="Search" class="transfer-search-icon" /></button>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label asp-for="Form.Quantity" class="form-label">Transfer Quantity</label>
+                            <input asp-for="Form.Quantity" class="form-control" type="number" step="0.01" min="0.01" onfocus="this.select();" data-transfer-quantity />
+                            <div class="form-text" data-available-text>Available: Select source branch and product first</div>
+                        </div>
+                        <div class="col-md-6"><label class="form-label">Batch</label><input class="form-control" value="Auto-selected by FIFO" readonly /></div>
+                        <div class="col-12"><label asp-for="Form.Remarks" class="form-label">Remarks</label><textarea asp-for="Form.Remarks" class="form-control" rows="3"></textarea></div>
+                    </div>
+                </div>
+                <div class="modal-footer"><button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button><button class="btn btn-primary" type="submit">Save Transfer</button></div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="productSelectorModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header"><h2 class="modal-title fs-5">Select Product</h2><button class="btn-close" type="button" data-bs-dismiss="modal"></button></div>
+            <div class="modal-body">
+                <input class="form-control mb-3" type="search" placeholder="Search product..." data-product-selector-search />
+                <div class="table-responsive">
+                    <table class="table app-table table-sm align-middle mb-0">
+                        <thead><tr><th>No</th><th>Product</th><th>Category</th><th>Unit</th><th>Available</th><th>Action</th></tr></thead>
+                        <tbody>
+                            @for (var i = 0; i < Model.ProductSelectorRows.Count; i += 1)
+                            {
+                                <tr data-product-selector-row data-branch-id="@Model.ProductSelectorRows[i].BranchId" data-search-text="@($"{Model.ProductSelectorRows[i].ProductName} {Model.ProductSelectorRows[i].CategoryName} {Model.ProductSelectorRows[i].UnitName}".ToLowerInvariant())">
+                                    <td>@(i + 1)</td><td>@Model.ProductSelectorRows[i].ProductName</td><td>@Model.ProductSelectorRows[i].CategoryName</td><td>@Model.ProductSelectorRows[i].UnitName</td><td>@Model.ProductSelectorRows[i].AvailableQuantity.ToString("N2")</td>
+                                    <td><button class="btn btn-sm btn-outline-primary" type="button" data-select-product-id="@Model.ProductSelectorRows[i].ProductId" data-select-product-name="@Model.ProductSelectorRows[i].ProductName" data-available="@Model.ProductSelectorRows[i].AvailableQuantity" data-available-quantity="@Model.ProductSelectorRows[i].AvailableQuantity">Select</button></td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+                <p class="text-muted small mt-2 mb-0">Select a source branch first to filter available products.</p>
+            </div>
+            <div class="modal-footer"><button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Close</button></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const productIdInput = document.querySelector("[data-selected-product-id]");
+        const productNameInput = document.querySelector("[data-selected-product-name]");
+        const sourceBranchSelect = document.querySelector("[data-source-branch-select]");
+        const quantityInput = document.querySelector("[data-transfer-quantity]");
+        const availableText = document.querySelector("[data-available-text]");
+        const transferForm = document.querySelector("[data-transfer-form]");
+        const selectorModalElement = document.getElementById("productSelectorModal");
+        const selectorModal = selectorModalElement && window.bootstrap ? new bootstrap.Modal(selectorModalElement) : null;
+        const selectorSearch = document.querySelector("[data-product-selector-search]");
+        const selectorRows = Array.from(document.querySelectorAll("[data-product-selector-row]"));
+        let selectedAvailable = 0;
+
+        function setAvailable(value, emptyText) {
+            selectedAvailable = Math.max(0, Number.parseFloat(value) || 0);
+            if (quantityInput) {
+                quantityInput.max = selectedAvailable > 0 ? selectedAvailable.toString() : "";
+            }
+            if (availableText) {
+                availableText.textContent = selectedAvailable > 0 ? `Available: ${selectedAvailable.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}` : `Available: ${emptyText || "0"}`;
+            }
+        }
+
+        function clearSelectedProduct() {
+            productIdInput.value = "";
+            productNameInput.value = "";
+            if (quantityInput) {
+                quantityInput.value = "";
+            }
+            setAvailable(0, "Select source branch and product first");
+        }
+
+        function filterSelectorRows() {
+            const query = selectorSearch ? selectorSearch.value.trim().toLowerCase() : "";
+            const sourceBranchId = sourceBranchSelect ? sourceBranchSelect.value : "";
+            selectorRows.forEach(function (row) {
+                const branchMatches = sourceBranchId && row.dataset.branchId === sourceBranchId;
+                const searchMatches = query.length === 0 || (row.dataset.searchText || "").includes(query);
+                row.hidden = !branchMatches || !searchMatches;
+            });
+        }
+
+        document.querySelectorAll("[data-open-product-selector]").forEach(function (trigger) {
+            trigger.addEventListener("click", function () {
+                filterSelectorRows();
+                if (selectorModal) {
+                    selectorModal.show();
+                }
+            });
+        });
+
+        document.querySelectorAll("[data-select-product-id]").forEach(function (button) {
+            button.addEventListener("click", function () {
+                productIdInput.value = button.dataset.selectProductId || "";
+                productNameInput.value = button.dataset.selectProductName || "";
+                setAvailable(button.dataset.available || button.dataset.availableQuantity, "0");
+                if (selectorModal) {
+                    selectorModal.hide();
+                }
+            });
+        });
+
+        if (sourceBranchSelect) {
+            sourceBranchSelect.addEventListener("change", function () {
+                clearSelectedProduct();
+                filterSelectorRows();
+            });
+        }
+
+        if (quantityInput) {
+            quantityInput.addEventListener("input", function () {
+                const quantity = Number.parseFloat(quantityInput.value) || 0;
+                if (selectedAvailable > 0 && quantity > selectedAvailable) {
+                    quantityInput.value = selectedAvailable;
+                }
+            });
+        }
+
+        if (transferForm) {
+            transferForm.addEventListener("submit", function (event) {
+                const quantity = Number.parseFloat(quantityInput?.value || "0") || 0;
+                if (selectedAvailable > 0 && quantity > selectedAvailable) {
+                    event.preventDefault();
+                    alert("Transfer quantity cannot exceed available quantity.");
+                }
+            });
+        }
+
+        if (selectorSearch) {
+            selectorSearch.addEventListener("input", filterSelectorRows);
+        }
+
+        clearSelectedProduct();
+        filterSelectorRows();
+    });
+</script>

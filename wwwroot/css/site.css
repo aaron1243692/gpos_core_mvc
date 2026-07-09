@@ -5411,6 +5411,26 @@ table tbody td {
     max-width: 28rem;
 }
 
+.product-receiving-filter-toolbar {
+    justify-content: flex-start;
+    flex-wrap: wrap;
+}
+
+.product-receiving-filter-toolbar .product-receiving-filter-search {
+    flex: 1 1 24rem;
+    max-width: 32rem;
+    min-width: 16rem;
+}
+
+.product-receiving-filter-toolbar .product-receiving-filter-branch {
+    flex: 0 0 14rem;
+    width: 14rem;
+}
+
+.product-receiving-filter-toolbar .btn {
+    flex: 0 0 auto;
+}
+
 .fuel-receiving-toolbar {
     justify-content: flex-start;
     flex-wrap: wrap;
@@ -5456,6 +5476,15 @@ table tbody td {
     .product-receiving-toolbar .transaction-ui-search {
         max-width: none;
         width: 100%;
+    }
+
+    .product-receiving-filter-toolbar .product-receiving-filter-search,
+    .product-receiving-filter-toolbar .product-receiving-filter-branch,
+    .product-receiving-filter-toolbar .btn {
+        flex: 1 1 auto;
+        width: 100%;
+        min-width: 0;
+        max-width: none;
     }
 }
 /* Product Receiving follows the Display Products full-height card pattern. */

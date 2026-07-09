@@ -1,0 +1,124 @@
+@model gpos.Models.ViewModels.EmployeeSetupPageViewModel
+
+<div class="page-header">
+    <div class="page-heading">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item">GPOS</li>
+                <li class="breadcrumb-item">Setup</li>
+                <li class="breadcrumb-item">Config</li>
+                <li class="breadcrumb-item active" aria-current="page">Position</li>
+            </ol>
+        </nav>
+        <h1>Position</h1>
+        <p class="page-subtitle">Manage staff position setup.</p>
+    </div>
+</div>
+
+<section class="content-card setup-crud-card setup-table-card">
+    @if (TempData["ConfigSetupFeedback"] is string feedback)
+    {
+        <div class="alert alert-info mb-0" role="alert">@feedback</div>
+    }
+    <div class="table-actions fuel-toolbar">
+        <form asp-action="Position" method="get" class="setup-search-form fuel-toolbar-search">
+            <input class="form-control" name="search" value="@Model.Search" placeholder="Search positions" />
+        </form>
+        <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#positionModal">Add Position</button>
+    </div>
+    <div class="setup-table-scroll">
+        <table class="table app-table table-sm align-middle admin-table mb-0">
+            <colgroup>
+                <col class="col-no" />
+                <col class="col-id" />
+                <col class="col-name" />
+                <col class="col-description" />
+                <col class="col-normal" />
+                <col class="col-action" />
+            </colgroup>
+            <thead>
+                <tr>
+                    <th>No</th>
+                    <th>ID</th>
+                    <th>Name</th>
+                    <th>Description</th>
+                    <th>Status</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model.Positions.Count == 0)
+                {
+                    <tr><td class="text-center text-muted fw-bold" colspan="6">No position records yet.</td></tr>
+                }
+                @for (var i = 0; i < Model.Positions.Count; i++)
+                {
+                    <tr>
+                        <td>@(i + 1)</td>
+                        <td>@Model.Positions[i].Id</td>
+                        <td>@Model.Positions[i].Name</td>
+                        <td>@Model.Positions[i].Description</td>
+                        <td>@(Model.Positions[i].Status == 1 ? "Active" : "Inactive")</td>
+                        <td>
+                            <div class="setup-row-actions">
+                                <a class="btn btn-sm btn-outline-primary" asp-action="Position" asp-route-editId="@Model.Positions[i].Id" asp-route-search="@Model.Search">Edit</a>
+                                <form asp-action="DeletePosition" method="post" data-deactivate-form>
+                                    @Html.AntiForgeryToken()
+                                    <input name="id" type="hidden" value="@Model.Positions[i].Id" />
+                                    <input name="search" type="hidden" value="@Model.Search" />
+                                    <button class="btn btn-sm btn-outline-danger" type="submit">Deactivate</button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<div class="modal fade" id="positionModal" tabindex="-1" aria-labelledby="positionModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <form asp-action="SavePosition" method="post">
+                @Html.AntiForgeryToken()
+                <input asp-for="PositionForm.Id" type="hidden" />
+                <input name="search" type="hidden" value="@Model.Search" />
+                <div class="modal-header">
+                    <h2 class="modal-title fs-5" id="positionModalLabel">Position</h2>
+                    <button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label asp-for="PositionForm.Name" class="form-label">Name</label>
+                        <input asp-for="PositionForm.Name" class="form-control" autocomplete="off" />
+                        <span asp-validation-for="PositionForm.Name" class="text-danger"></span>
+                    </div>
+                    <div class="mb-3">
+                        <label asp-for="PositionForm.Description" class="form-label">Description</label>
+                        <textarea asp-for="PositionForm.Description" class="form-control" rows="3"></textarea>
+                    </div>
+                    <input asp-for="PositionForm.Status" type="hidden" />
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button>
+                    <button class="btn btn-primary" type="submit">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            const modalId = "@Model.ActiveModalId";
+            const modalElement = modalId ? document.getElementById(modalId) : null;
+
+            if (modalElement && window.bootstrap) {
+                bootstrap.Modal.getOrCreateInstance(modalElement).show();
+            }
+        });
+    </script>
+}

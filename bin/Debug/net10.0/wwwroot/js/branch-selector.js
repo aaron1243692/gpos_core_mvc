@@ -21,6 +21,12 @@
     }
   }
 
+  function restoreModalOpenState() {
+    if (document.querySelector(".modal.show")) {
+      document.body.classList.add("modal-open");
+    }
+  }
+
   function renderRows(tbody, branches) {
     tbody.innerHTML = "";
 
@@ -42,7 +48,10 @@
         <td><button class="btn btn-sm btn-outline-primary" type="button" data-branch-select-row>Select</button></td>
       `;
 
-      row.querySelector("[data-branch-select-row]").addEventListener("click", () => {
+      row.querySelector("[data-branch-select-row]").addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+
         if (activeSelector) {
           setBranch(activeSelector, branch);
         }
@@ -50,6 +59,7 @@
         const modalElement = document.querySelector(modalSelector);
         if (modalElement && window.bootstrap) {
           bootstrap.Modal.getOrCreateInstance(modalElement).hide();
+          setTimeout(restoreModalOpenState, 150);
         }
       });
 
@@ -100,7 +110,10 @@
       const clearButton = selector.querySelector("[data-branch-clear]");
 
       if (button) {
-        button.addEventListener("click", () => {
+        button.addEventListener("click", (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+
           activeSelector = selector;
 
           if (modalElement && window.bootstrap) {
@@ -111,7 +124,11 @@
       }
 
       if (clearButton) {
-        clearButton.addEventListener("click", () => setBranch(selector, null));
+        clearButton.addEventListener("click", (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          setBranch(selector, null);
+        });
       }
     });
 
@@ -123,16 +140,23 @@
     const searchButton = modalElement.querySelector("[data-branch-search-button]");
 
     if (searchButton) {
-      searchButton.addEventListener("click", () => searchBranches(modalElement));
+      searchButton.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        searchBranches(modalElement);
+      });
     }
 
     if (searchInput) {
       searchInput.addEventListener("keydown", (event) => {
         if (event.key === "Enter") {
           event.preventDefault();
+          event.stopPropagation();
           searchBranches(modalElement);
         }
       });
     }
+
+    modalElement.addEventListener("hidden.bs.modal", restoreModalOpenState);
   });
 })();

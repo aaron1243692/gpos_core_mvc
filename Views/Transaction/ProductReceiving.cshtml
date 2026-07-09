@@ -20,9 +20,9 @@
                 <div class="alert alert-warning">@TempData["ReceivingWarning"]</div>
             }
 
-            <form asp-action="ProductReceiving" method="get" class="transaction-ui-toolbar product-receiving-toolbar toolbar">
-                <input class="form-control transaction-ui-search" name="search" value="@Model.Search" type="search" placeholder="Search receiving, supplier, product, batch, branch, status..." />
-                <select class="form-select" name="filterBranchId" style="max-width: 220px;">
+            <form asp-action="ProductReceiving" method="get" class="transaction-ui-toolbar product-receiving-toolbar product-receiving-filter-toolbar toolbar">
+                <input class="form-control transaction-ui-search product-receiving-filter-search" name="search" value="@Model.Search" type="search" placeholder="Search receiving, supplier, product, batch, branch, status..." />
+                <select class="form-select product-receiving-filter-branch" name="filterBranchId">
                     @for (var i = 0; i < Model.BranchOptions.Count; i += 1)
                     {
                         var option = Model.BranchOptions[i];
@@ -37,7 +37,7 @@
                         }
                     }
                 </select>
-                <button class="btn btn-outline-primary" type="submit">Search</button>
+                <button class="btn btn-primary" type="submit">Search</button>
                 <a class="btn btn-outline-secondary" asp-action="ProductReceiving">Clear</a>
             </form>
 
@@ -116,7 +116,7 @@
 <div class="modal fade" id="addProductReceivingModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content">
-            <form asp-action="SaveProductReceiving" method="post">
+            <form asp-action="SaveProductReceiving" method="post" id="productReceivingForm" class="needs-validation" novalidate>
                 @Html.AntiForgeryToken()
                 <input name="search" type="hidden" value="@Model.Search" />
                 <input name="filterBranchId" type="hidden" value="@Model.BranchId" />
@@ -125,7 +125,7 @@
                     <button class="btn-close" type="button" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+                    <div asp-validation-summary="All" class="text-danger"></div>
                     <div class="row g-3">
                         <div class="col-md-6">
                             <label asp-for="Form.BranchId" class="form-label">Branch</label>
@@ -143,7 +143,7 @@
                             <input asp-for="Form.SupplierId" type="hidden" id="productReceivingSupplierId" />
                             <div class="input-group">
                                 <input class="form-control" id="productReceivingSupplierDisplay" value="@Model.FormSupplierName" placeholder="Select supplier" readonly />
-                                <button type="button" class="btn btn-outline-secondary product-receiving-supplier-select-btn" data-bs-toggle="modal" data-bs-target="#productReceivingSupplierSelectorModal">
+                                <button type="button" class="btn btn-outline-secondary product-receiving-supplier-select-btn">
                                     <img src="/icons/search.png" alt="Search" style="width:16px;height:16px;" />
                                 </button>
                             </div>
@@ -161,7 +161,7 @@
                             <input asp-for="Form.ProductId" type="hidden" id="productReceivingProductId" />
                             <div class="input-group">
                                 <input class="form-control" id="productReceivingProductDisplay" value="@Model.FormProductName" placeholder="Select product" readonly />
-                                <button type="button" class="btn btn-outline-secondary product-receiving-product-select-btn" data-bs-toggle="modal" data-bs-target="#productReceivingProductSelectorModal">
+                                <button type="button" class="btn btn-outline-secondary product-receiving-product-select-btn">
                                     <img src="/icons/search.png" alt="Search" style="width:16px;height:16px;" />
                                 </button>
                             </div>
@@ -170,6 +170,7 @@
                         <div class="col-md-6 product-new-fields d-none">
                             <label asp-for="Form.NewProductName" class="form-label">Product Name</label>
                             <input asp-for="Form.NewProductName" class="form-control" />
+                            <span asp-validation-for="Form.NewProductName" class="text-danger"></span>
                         </div>
                         <div class="col-md-6 product-new-fields d-none">
                             <label asp-for="Form.NewProductCategoryId" class="form-label">Category</label>
@@ -193,18 +194,23 @@
                         </div>
                         <div class="col-md-4">
                             <label asp-for="Form.Quantity" class="form-label">Quantity</label>
-                            <input asp-for="Form.Quantity" class="form-control" type="number" step="0.01" min="0.01" />
+                            <input asp-for="Form.Quantity" class="form-control" type="number" step="0.01" min="0.01" required />
                             <span asp-validation-for="Form.Quantity" class="text-danger"></span>
                         </div>
                         <div class="col-md-4">
                             <label asp-for="Form.CostPrice" class="form-label">Cost Price</label>
-                            <input asp-for="Form.CostPrice" class="form-control" type="number" step="0.01" min="0" />
+                            <input asp-for="Form.CostPrice" class="form-control" type="number" step="0.01" min="0" required />
                             <span asp-validation-for="Form.CostPrice" class="text-danger"></span>
                         </div>
                         <div class="col-md-4">
                             <label asp-for="Form.SellingPrice" class="form-label">Selling Price</label>
-                            <input asp-for="Form.SellingPrice" class="form-control" type="number" step="0.01" min="0" />
+                            <input asp-for="Form.SellingPrice" class="form-control" type="number" step="0.01" min="0" required />
                             <span asp-validation-for="Form.SellingPrice" class="text-danger"></span>
+                        </div>
+                        <div class="col-md-4">
+                            <label asp-for="Form.ReceivedDate" class="form-label">Date</label>
+                            <input asp-for="Form.ReceivedDate" class="form-control" type="date" required />
+                            <span asp-validation-for="Form.ReceivedDate" class="text-danger"></span>
                         </div>
                         <div class="col-12">
                             <label asp-for="Form.Remarks" class="form-label">Remarks</label>
@@ -325,6 +331,8 @@
         const mode = document.querySelector("[data-product-mode]");
         const existingFields = Array.from(document.querySelectorAll(".product-existing-fields"));
         const newFields = Array.from(document.querySelectorAll(".product-new-fields"));
+        const existingFieldInputs = existingFields.flatMap(field => Array.from(field.querySelectorAll("input, select, textarea, button")));
+        const newFieldInputs = newFields.flatMap(field => Array.from(field.querySelectorAll("input, select, textarea, button")));
         const branchInput = document.getElementById("productReceivingBranchId");
         const productInput = document.getElementById("productReceivingProductId");
         const productDisplay = document.getElementById("productReceivingProductDisplay");
@@ -338,6 +346,14 @@
         const supplierSearchButton = document.getElementById("productReceivingSupplierSearchButton");
         const supplierResults = document.getElementById("productReceivingSupplierSelectorResults");
         const supplierSelectorModal = document.getElementById("productReceivingSupplierSelectorModal");
+        const addProductReceivingModal = document.getElementById("addProductReceivingModal");
+        const productReceivingForm = document.getElementById("productReceivingForm");
+        const newProductNameInput = document.getElementById("Form_NewProductName");
+        const quantityInput = document.getElementById("Form_Quantity");
+        const costInput = document.getElementById("Form_CostPrice");
+        const sellingInput = document.getElementById("Form_SellingPrice");
+        const receivedDateInput = document.getElementById("Form_ReceivedDate");
+        const shouldOpenProductReceivingModal = @((ViewData["OpenProductReceivingModal"] is true).ToString().ToLowerInvariant());
 
         const escapeHtml = value => String(value ?? "")
             .replaceAll("&", "&amp;")
@@ -346,21 +362,188 @@
             .replaceAll('"', "&quot;")
             .replaceAll("'", "&#039;");
 
-        function closeSelectorOnly(modalElement) {
-            if (modalElement && window.bootstrap) {
-                bootstrap.Modal.getOrCreateInstance(modalElement).hide();
-                setTimeout(function () {
-                    if (document.querySelector(".modal.show")) {
-                        document.body.classList.add("modal-open");
-                    }
-                }, 150);
+        function restoreParentModalState() {
+            if (addProductReceivingModal?.classList.contains("show")) {
+                document.body.classList.add("modal-open");
             }
         }
 
+        function showSelectorOnly(modalElement) {
+            if (modalElement && window.bootstrap) {
+                bootstrap.Modal.getOrCreateInstance(modalElement, {
+                    backdrop: true,
+                    keyboard: true
+                }).show();
+                restoreParentModalState();
+            }
+        }
+
+        function closeSelectorOnly(modalElement) {
+            if (modalElement && window.bootstrap) {
+                const modal = bootstrap.Modal.getInstance(modalElement) || bootstrap.Modal.getOrCreateInstance(modalElement);
+                modal.hide();
+                setTimeout(restoreParentModalState, 150);
+            }
+        }
+
+        function validationSpan(fieldName) {
+            return productReceivingForm?.querySelector(`[data-valmsg-for="${fieldName}"]`);
+        }
+
+        function setValidationError(input, fieldName, message) {
+            if (input) {
+                input.classList.add("is-invalid");
+                input.setCustomValidity(message);
+            }
+
+            const span = validationSpan(fieldName);
+            if (span) {
+                span.textContent = message;
+                span.classList.remove("field-validation-valid");
+                span.classList.add("field-validation-error");
+            }
+        }
+
+        function clearValidationError(input, fieldName) {
+            if (input) {
+                input.classList.remove("is-invalid");
+                input.setCustomValidity("");
+            }
+
+            const span = validationSpan(fieldName);
+            if (span) {
+                span.textContent = "";
+                span.classList.remove("field-validation-error");
+                span.classList.add("field-validation-valid");
+            }
+        }
+
+        function validateRequiredNumber(input, fieldName, label, minimumValue, minimumMessage) {
+            const value = input?.value?.trim() ?? "";
+            if (!value) {
+                setValidationError(input, fieldName, `${label} is required.`);
+                return false;
+            }
+
+            const numberValue = Number(value);
+            if (!Number.isFinite(numberValue) || numberValue < minimumValue) {
+                setValidationError(input, fieldName, minimumMessage);
+                return false;
+            }
+
+            clearValidationError(input, fieldName);
+            return true;
+        }
+
+        function validateProductReceivingForm() {
+            let isValid = true;
+            let firstInvalid = null;
+            const isNewProduct = mode && (mode.value === "New" || mode.value === "NewProduct");
+
+            const markInvalid = input => {
+                isValid = false;
+                firstInvalid ??= input;
+            };
+
+            if (!branchInput?.value || Number(branchInput.value) <= 0) {
+                setValidationError(document.getElementById("productReceivingBranchDisplay"), "Form.BranchId", "Branch is required.");
+                markInvalid(document.getElementById("productReceivingBranchDisplay"));
+            } else {
+                clearValidationError(document.getElementById("productReceivingBranchDisplay"), "Form.BranchId");
+            }
+
+            if (!supplierInput?.value || Number(supplierInput.value) <= 0) {
+                setValidationError(supplierDisplay, "Form.SupplierId", "Supplier is required.");
+                markInvalid(supplierDisplay);
+            } else {
+                clearValidationError(supplierDisplay, "Form.SupplierId");
+            }
+
+            if (isNewProduct) {
+                if (!newProductNameInput?.value?.trim()) {
+                    setValidationError(newProductNameInput, "Form.NewProductName", "Product Name is required.");
+                    markInvalid(newProductNameInput);
+                } else {
+                    clearValidationError(newProductNameInput, "Form.NewProductName");
+                }
+                clearValidationError(productDisplay, "Form.ProductId");
+            } else if (!productInput?.value || Number(productInput.value) <= 0) {
+                setValidationError(productDisplay, "Form.ProductId", "Product is required.");
+                markInvalid(productDisplay);
+            } else {
+                clearValidationError(productDisplay, "Form.ProductId");
+                clearValidationError(newProductNameInput, "Form.NewProductName");
+            }
+
+            if (!validateRequiredNumber(quantityInput, "Form.Quantity", "Quantity", 0.01, "Quantity must be greater than 0.")) {
+                markInvalid(quantityInput);
+            }
+
+            if (!validateRequiredNumber(costInput, "Form.CostPrice", "Cost Price", 0, "Cost Price must be greater than or equal to 0.")) {
+                markInvalid(costInput);
+            }
+
+            if (!validateRequiredNumber(sellingInput, "Form.SellingPrice", "Selling Price", 0, "Selling Price must be greater than or equal to 0.")) {
+                markInvalid(sellingInput);
+            }
+
+            if (!receivedDateInput?.value) {
+                setValidationError(receivedDateInput, "Form.ReceivedDate", "Date is required.");
+                markInvalid(receivedDateInput);
+            } else {
+                clearValidationError(receivedDateInput, "Form.ReceivedDate");
+            }
+
+            if (!isValid) {
+                productReceivingForm?.classList.add("was-validated");
+                firstInvalid?.focus();
+            }
+
+            return isValid;
+        }
+
+        function hasSelectedBranch() {
+            return !!branchInput?.value && Number(branchInput.value) > 0;
+        }
+
+        function clearSelectedProduct() {
+            if (productInput) productInput.value = "";
+            if (productDisplay) productDisplay.value = "";
+            clearValidationError(productDisplay, "Form.ProductId");
+            if (productResults) {
+                productResults.innerHTML = '<tr><td class="text-center text-muted fw-bold" colspan="6">Select a branch, then search for a product.</td></tr>';
+            }
+        }
+
+        function requireBranchBeforeProductSelector() {
+            if (hasSelectedBranch()) {
+                clearValidationError(document.getElementById("productReceivingBranchDisplay"), "Form.BranchId");
+                clearValidationError(productDisplay, "Form.ProductId");
+                return true;
+            }
+
+            setValidationError(productDisplay, "Form.ProductId", "Please select a Branch first.");
+            productReceivingForm?.classList.add("was-validated");
+            document.getElementById("productReceivingBranchDisplay")?.focus();
+            return false;
+        }
+
         function syncProductMode() {
-            const isNew = mode && mode.value === "New";
+            const isNew = mode && (mode.value === "New" || mode.value === "NewProduct");
             existingFields.forEach(function (field) { field.classList.toggle("d-none", isNew); });
             newFields.forEach(function (field) { field.classList.toggle("d-none", !isNew); });
+            existingFieldInputs.forEach(input => { input.disabled = isNew; });
+            newFieldInputs.forEach(input => { input.disabled = !isNew; });
+
+            if (isNew) {
+                clearValidationError(productDisplay, "Form.ProductId");
+            } else {
+                clearValidationError(newProductNameInput, "Form.NewProductName");
+            }
+
+            if (productReceivingForm?.classList.contains("was-validated")) {
+                validateProductReceivingForm();
+            }
         }
 
         if (mode) {
@@ -386,7 +569,9 @@
                     <td>${Number(product.currentWarehouseQuantity || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                     <td><button class="btn btn-sm btn-outline-primary" type="button">Select</button></td>
                 `;
-                tr.querySelector("button").addEventListener("click", () => {
+                tr.querySelector("button").addEventListener("click", event => {
+                    event.preventDefault();
+                    event.stopPropagation();
                     if (productInput) productInput.value = product.productId || "";
                     if (productDisplay) productDisplay.value = product.productName || "";
                     productInput?.dispatchEvent(new Event("change", { bubbles: true }));
@@ -396,8 +581,11 @@
             });
         }
 
-        async function searchProducts() {
+        async function searchProducts(event) {
+            event?.preventDefault();
+            event?.stopPropagation();
             if (!productResults) return;
+            if (!requireBranchBeforeProductSelector()) return;
             productResults.innerHTML = '<tr><td class="text-center text-muted fw-bold" colspan="6">Loading products...</td></tr>';
             const query = encodeURIComponent(productSearchInput?.value || "");
             const branch = encodeURIComponent(branchInput?.value || "");
@@ -429,7 +617,9 @@
                     <td>${escapeHtml(supplier.address || "-")}</td>
                     <td><button class="btn btn-sm btn-outline-primary" type="button">Select</button></td>
                 `;
-                tr.querySelector("button").addEventListener("click", () => {
+                tr.querySelector("button").addEventListener("click", event => {
+                    event.preventDefault();
+                    event.stopPropagation();
                     if (supplierInput) supplierInput.value = supplier.supplierId || "";
                     if (supplierDisplay) supplierDisplay.value = supplier.supplierName || "";
                     supplierInput?.dispatchEvent(new Event("change", { bubbles: true }));
@@ -439,7 +629,9 @@
             });
         }
 
-        async function searchSuppliers() {
+        async function searchSuppliers(event) {
+            event?.preventDefault();
+            event?.stopPropagation();
             if (!supplierResults) return;
             supplierResults.innerHTML = '<tr><td class="text-center text-muted fw-bold" colspan="5">Loading suppliers...</td></tr>';
             const query = encodeURIComponent(supplierSearchInput?.value || "");
@@ -454,22 +646,78 @@
             renderSuppliers(await response.json());
         }
 
-        document.querySelector(".product-receiving-product-select-btn")?.addEventListener("click", searchProducts);
+        branchInput?.addEventListener("change", function () {
+            clearSelectedProduct();
+            if (productReceivingForm?.classList.contains("was-validated")) {
+                validateProductReceivingForm();
+            }
+        });
+
+        document.querySelector(".product-receiving-product-select-btn")?.addEventListener("click", event => {
+            event.preventDefault();
+            event.stopPropagation();
+            if (!requireBranchBeforeProductSelector()) return;
+            showSelectorOnly(productSelectorModal);
+            searchProducts(event);
+        });
         productSearchButton?.addEventListener("click", searchProducts);
         productSearchInput?.addEventListener("keydown", event => {
             if (event.key === "Enter") {
                 event.preventDefault();
+                event.stopPropagation();
                 searchProducts();
             }
         });
+        productSelectorModal?.addEventListener("hidden.bs.modal", restoreParentModalState);
 
-        document.querySelector(".product-receiving-supplier-select-btn")?.addEventListener("click", searchSuppliers);
+        [branchInput, productInput, supplierInput].forEach(input => {
+            input?.addEventListener("change", function () {
+                if (productReceivingForm?.classList.contains("was-validated")) {
+                    validateProductReceivingForm();
+                }
+            });
+        });
+
+        [newProductNameInput, quantityInput, costInput, sellingInput, receivedDateInput].forEach(input => {
+            input?.addEventListener("input", function () {
+                if (productReceivingForm?.classList.contains("was-validated")) {
+                    validateProductReceivingForm();
+                }
+            });
+            input?.addEventListener("change", function () {
+                if (productReceivingForm?.classList.contains("was-validated")) {
+                    validateProductReceivingForm();
+                }
+            });
+        });
+
+        productReceivingForm?.addEventListener("submit", event => {
+            if (!validateProductReceivingForm()) {
+                event.preventDefault();
+                event.stopPropagation();
+                showSelectorOnly(addProductReceivingModal);
+            }
+        });
+
+        document.querySelector(".product-receiving-supplier-select-btn")?.addEventListener("click", event => {
+            event.preventDefault();
+            event.stopPropagation();
+            showSelectorOnly(supplierSelectorModal);
+            searchSuppliers(event);
+        });
         supplierSearchButton?.addEventListener("click", searchSuppliers);
         supplierSearchInput?.addEventListener("keydown", event => {
             if (event.key === "Enter") {
                 event.preventDefault();
+                event.stopPropagation();
                 searchSuppliers();
             }
         });
+        supplierSelectorModal?.addEventListener("hidden.bs.modal", restoreParentModalState);
+
+        if (shouldOpenProductReceivingModal) {
+            showSelectorOnly(addProductReceivingModal);
+            productReceivingForm?.classList.add("was-validated");
+        }
     });
 </script>

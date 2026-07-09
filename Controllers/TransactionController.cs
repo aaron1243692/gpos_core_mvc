@@ -491,17 +491,18 @@ namespace gpos.Controllers
         {
             var searchText = (search ?? string.Empty).Trim();
             var resultLimit = Math.Clamp(take, 1, 50);
+
+            if (!branchId.HasValue || branchId.Value <= 0)
+            {
+                return Json(Array.Empty<object>());
+            }
+
             var query = _db.Tanks
                 .AsNoTracking()
                 .Include(tank => tank.Branch)
                 .Include(tank => tank.Fuel)
-                .Where(tank => tank.Status == 1 && tank.IsActive)
+                .Where(tank => tank.Status == 1 && tank.IsActive && tank.BranchId == branchId.Value)
                 .AsQueryable();
-
-            if (branchId.HasValue && branchId.Value > 0)
-            {
-                query = query.Where(tank => tank.BranchId == branchId.Value);
-            }
 
             if (!string.IsNullOrWhiteSpace(searchText))
             {
@@ -532,10 +533,53 @@ namespace gpos.Controllers
         }
 
         [HttpGet]
+        public async Task<IActionResult> SearchFuelReceivingSuppliers(string? search, int take = 20)
+        {
+            var searchText = (search ?? string.Empty).Trim();
+            var resultLimit = Math.Clamp(take, 1, 50);
+            var query = _db.Suppliers
+                .AsNoTracking()
+                .Where(supplier => supplier.Status == 1)
+                .AsQueryable();
+
+            if (!string.IsNullOrWhiteSpace(searchText))
+            {
+                query = query.Where(supplier =>
+                    supplier.Name.Contains(searchText)
+                    || (supplier.ContactPerson != null && supplier.ContactPerson.Contains(searchText))
+                    || (supplier.ContactNumber != null && supplier.ContactNumber.Contains(searchText))
+                    || (supplier.Address != null && supplier.Address.Contains(searchText))
+                    || (searchText == "Active" && supplier.Status == 1)
+                    || (searchText == "Inactive" && supplier.Status == 0));
+            }
+
+            var suppliers = await query
+                .OrderBy(supplier => supplier.Name)
+                .Take(resultLimit)
+                .Select(supplier => new
+                {
+                    supplierId = supplier.Id,
+                    supplierName = supplier.Name,
+                    contact = !string.IsNullOrWhiteSpace(supplier.ContactPerson) ? supplier.ContactPerson : supplier.ContactNumber,
+                    address = supplier.Address,
+                    status = supplier.Status == 1 ? "Active" : "Inactive"
+                })
+                .ToListAsync();
+
+            return Json(suppliers);
+        }
+
+        [HttpGet]
         public async Task<IActionResult> SearchProductReceivingProducts(string? search, int? branchId, int take = 20)
         {
             var searchText = (search ?? string.Empty).Trim();
             var resultLimit = Math.Clamp(take, 1, 50);
+
+            if (!branchId.HasValue || branchId.Value <= 0)
+            {
+                return Json(Array.Empty<object>());
+            }
+
             var query = _db.Products
                 .AsNoTracking()
                 .Include(product => product.Category)
@@ -564,14 +608,12 @@ namespace gpos.Controllers
                 .ToListAsync();
 
             var productIds = products.Select(product => product.productId).ToList();
-            var quantityLookup = branchId.HasValue && branchId.Value > 0
-                ? await _db.WarehouseStocks
-                    .AsNoTracking()
-                    .Where(stock => stock.BranchId == branchId.Value && productIds.Contains(stock.ProductId))
-                    .GroupBy(stock => stock.ProductId)
-                    .Select(group => new { ProductId = group.Key, Quantity = group.Sum(stock => stock.Quantity) })
-                    .ToDictionaryAsync(item => item.ProductId, item => item.Quantity)
-                : new Dictionary<int, decimal>();
+            var quantityLookup = await _db.WarehouseStocks
+                .AsNoTracking()
+                .Where(stock => stock.BranchId == branchId.Value && productIds.Contains(stock.ProductId))
+                .GroupBy(stock => stock.ProductId)
+                .Select(group => new { ProductId = group.Key, Quantity = group.Sum(stock => stock.Quantity) })
+                .ToDictionaryAsync(item => item.ProductId, item => item.Quantity);
 
             return Json(products.Select(product => new
             {
@@ -621,6 +663,8 @@ namespace gpos.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> SaveProductReceiving([Bind(Prefix = "Form")] ProductReceivingForm form, string? search, int? filterBranchId)
         {
+            RemoveProductReceivingUiOnlyModelState(form);
+
             var userId = CurrentUserId();
             if (!userId.HasValue)
             {
@@ -628,29 +672,38 @@ namespace gpos.Controllers
                 return RedirectToAction(nameof(ProductReceiving), new { search, filterBranchId });
             }
 
+            ValidateProductReceivingForm(form);
+            await ValidateProductReceivingReferencesAsync(form);
+            if (!ModelState.IsValid)
+            {
+                return await ProductReceivingValidationView(search, filterBranchId, form);
+            }
+
             await using var transaction = await _db.Database.BeginTransactionAsync();
             try
             {
                 var now = DateTime.Now;
-                ValidateProductReceivingForm(form);
-                await ValidateBranchAsync(form.BranchId);
                 var product = await ResolveReceivingProduct(form, now);
                 form.ProductId = product.Id;
-                var batch = await CreateGeneratedProductBatch(form, now);
                 var receiving = new StockReceiving
                 {
                     ReceivingNo = await GenerateProductReceivingNoAsync(),
                     BranchId = form.BranchId,
                     SupplierId = form.SupplierId,
-                    ReceivedDate = now,
+                    ReceivedDate = form.ReceivedDate!.Value,
                     TotalAmount = form.Quantity * form.CostPrice,
                     Remarks = form.Remarks,
                     Status = 1,
                     CreatedAt = now,
                     UpdatedAt = now
                 };
+                _db.StockReceivings.Add(receiving);
+                await _db.SaveChangesAsync();
+
+                var batch = await CreateGeneratedProductBatch(form, now);
                 var item = new StockReceivingItem
                 {
+                    StockReceivingId = receiving.Id,
                     ProductId = form.ProductId,
                     ProductBatchId = batch.Id,
                     Quantity = form.Quantity,
@@ -663,7 +716,6 @@ namespace gpos.Controllers
                 };
 
                 receiving.Items.Add(item);
-                _db.StockReceivings.Add(receiving);
                 await _db.SaveChangesAsync();
                 await CompleteProductReceiving(receiving, item, userId.Value, now);
                 await _db.SaveChangesAsync();
@@ -677,6 +729,12 @@ namespace gpos.Controllers
             }
 
             return RedirectToAction(nameof(ProductReceiving), new { search, filterBranchId });
+        }
+
+        private async Task<IActionResult> ProductReceivingValidationView(string? search, int? filterBranchId, ProductReceivingForm form)
+        {
+            ViewData["OpenProductReceivingModal"] = true;
+            return View("ProductReceiving", await BuildProductReceivingPage(search, filterBranchId, form));
         }
 
         private async Task<IActionResult> SaveProductReceivingOld([Bind(Prefix = "Form")] ProductReceivingForm form, string? search, int? filterBranchId)
@@ -833,6 +891,8 @@ namespace gpos.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> SaveFuelReceiving([Bind(Prefix = "Form")] FuelReceivingForm form, string? search, int? filterBranchId)
         {
+            RemoveFuelReceivingUiOnlyModelState();
+
             var submittedFuelId = form.FuelId;
             var tank = await _db.Tanks.Include(item => item.Fuel).FirstOrDefaultAsync(item => item.Id == form.TankId && item.Status == 1 && item.IsActive);
             if (tank is not null)
@@ -847,53 +907,81 @@ namespace gpos.Controllers
                 ModelState.Remove("Form.BranchId");
             }
 
+            if (form.Liters <= 0)
+            {
+                ModelState.AddModelError("Form.Liters", "Liters must be greater than 0.");
+            }
+
+            if (form.CostPerLiter < 0)
+            {
+                ModelState.AddModelError("Form.CostPerLiter", "Cost/Liter must be greater than or equal to 0.");
+            }
+
+            if (!form.ReceivedDate.HasValue)
+            {
+                ModelState.AddModelError("Form.ReceivedDate", "Date is required.");
+            }
+
             if (!ModelState.IsValid)
             {
-                return View("FuelReceiving", await BuildFuelReceivingPage(search, filterBranchId, form));
+                return await FuelReceivingValidationView(search, filterBranchId, form);
             }
 
             if (tank is null)
             {
                 ModelState.AddModelError("Form.TankId", "Tank is required.");
-                return View("FuelReceiving", await BuildFuelReceivingPage(search, filterBranchId, form));
+                return await FuelReceivingValidationView(search, filterBranchId, form);
             }
 
             if (tank.Fuel is null || tank.FuelId <= 0)
             {
                 ModelState.AddModelError("Form.TankId", "Selected tank must have a fuel.");
-                return View("FuelReceiving", await BuildFuelReceivingPage(search, filterBranchId, form));
+                return await FuelReceivingValidationView(search, filterBranchId, form);
             }
 
             if (submittedFuelId > 0 && submittedFuelId != tank.FuelId)
             {
                 ModelState.AddModelError("Form.FuelId", "Fuel must match the selected tank.");
-                return View("FuelReceiving", await BuildFuelReceivingPage(search, filterBranchId, form));
+                return await FuelReceivingValidationView(search, filterBranchId, form);
             }
 
             if (!tank.BranchId.HasValue || tank.BranchId.Value <= 0)
             {
                 ModelState.AddModelError("Form.BranchId", "Selected tank must belong to a branch.");
-                return View("FuelReceiving", await BuildFuelReceivingPage(search, filterBranchId, form));
+                return await FuelReceivingValidationView(search, filterBranchId, form);
             }
 
             if (form.BranchId != tank.BranchId.Value)
             {
                 ModelState.AddModelError("Form.TankId", "Tank must belong to the selected branch.");
-                return View("FuelReceiving", await BuildFuelReceivingPage(search, filterBranchId, form));
+                return await FuelReceivingValidationView(search, filterBranchId, form);
             }
 
             if (!await _db.Branches.AsNoTracking().AnyAsync(branch => branch.Id == form.BranchId && branch.Status == 1))
             {
                 ModelState.AddModelError("Form.BranchId", "Branch is required.");
-                return View("FuelReceiving", await BuildFuelReceivingPage(search, filterBranchId, form));
+                return await FuelReceivingValidationView(search, filterBranchId, form);
+            }
+
+            if (!await _db.Suppliers.AsNoTracking().AnyAsync(supplier => supplier.Id == form.SupplierId && supplier.Status == 1))
+            {
+                ModelState.AddModelError("Form.SupplierId", "Supplier is required.");
+                return await FuelReceivingValidationView(search, filterBranchId, form);
+            }
+
+            var tankLitersAfter = tank.CurrentLiters + form.Liters;
+            if (tank.CapacityLiters > 0 && tankLitersAfter > tank.CapacityLiters)
+            {
+                ModelState.AddModelError("Form.Liters", "Receiving liters would exceed the selected tank capacity.");
+                return await FuelReceivingValidationView(search, filterBranchId, form);
             }
 
             var now = DateTime.Now;
-            var delivery = form.Id > 0 ? await _db.FuelDeliveries.FindAsync(form.Id) : new FuelDelivery { DeliveryNo = await GenerateFuelReceivingNoAsync(), DeliveryDate = now, CreatedAt = now };
+            var delivery = form.Id > 0 ? await _db.FuelDeliveries.FindAsync(form.Id) : new FuelDelivery { DeliveryNo = await GenerateFuelReceivingNoAsync(), CreatedAt = now };
             if (delivery is null)
             {
                 ModelState.AddModelError(string.Empty, "Fuel receiving record was not found.");
-                return View("FuelReceiving", await BuildFuelReceivingPage(search, filterBranchId, form));
+                return await FuelReceivingValidationView(search, filterBranchId, form);
             }
 
             if (form.Id > 0 && delivery.Status == 1)
@@ -910,11 +998,9 @@ namespace gpos.Controllers
             delivery.DeliveredLiters = form.Liters;
             delivery.CostPerLiter = form.CostPerLiter;
             delivery.TotalCost = form.Liters * form.CostPerLiter;
+            delivery.DeliveryDate = form.ReceivedDate!.Value;
             delivery.Remarks = form.Remarks;
-            if (form.Id == 0)
-            {
-                delivery.Status = 0;
-            }
+            delivery.Status = 1;
             delivery.UpdatedAt = now;
 
             if (form.Id == 0)
@@ -922,21 +1008,43 @@ namespace gpos.Controllers
                 _db.FuelDeliveries.Add(delivery);
             }
 
-            if (delivery.Status == 1)
-            {
-                tank.CurrentLiters += form.Liters;
-                tank.UpdatedAt = now;
-            }
+            tank.CurrentLiters = tankLitersAfter;
+            tank.UpdatedAt = now;
 
             await _db.SaveChangesAsync();
-            if (delivery.Status == 1)
-            {
-                await CreateFuelBatchForDelivery(delivery, tank, form.SellingPricePerLiter, now);
-                await _db.SaveChangesAsync();
-            }
+            await CreateFuelBatchForDelivery(delivery, tank, tank.Fuel?.CurrentPricePerLiter ?? 0m, now);
+            await _db.SaveChangesAsync();
 
             await transaction.CommitAsync();
             return RedirectToAction(nameof(FuelReceiving), new { search, filterBranchId });
+        }
+
+        private async Task<IActionResult> FuelReceivingValidationView(string? search, int? filterBranchId, FuelReceivingForm form)
+        {
+            ViewData["OpenFuelReceivingModal"] = true;
+            return View("FuelReceiving", await BuildFuelReceivingPage(search, filterBranchId, form));
+        }
+
+        private void RemoveProductReceivingUiOnlyModelState(ProductReceivingForm form)
+        {
+            ModelState.Remove("Form.BatchNo");
+            ModelState.Remove("Form.Status");
+
+            if (IsNewProductReceivingMode(form))
+            {
+                ModelState.Remove("Form.ProductId");
+            }
+            else
+            {
+                ModelState.Remove("Form.NewProductName");
+                ModelState.Remove("Form.Name");
+            }
+        }
+
+        private void RemoveFuelReceivingUiOnlyModelState()
+        {
+            ModelState.Remove("Form.Status");
+            ModelState.Remove("Form.SellingPricePerLiter");
         }
 
         [HttpPost]
@@ -966,7 +1074,15 @@ namespace gpos.Controllers
             var now = DateTime.Now;
             if (delivery.Tank is not null)
             {
-                delivery.Tank.CurrentLiters += delivery.DeliveredLiters;
+                var tankLitersAfter = delivery.Tank.CurrentLiters + delivery.DeliveredLiters;
+                if (delivery.Tank.CapacityLiters > 0 && tankLitersAfter > delivery.Tank.CapacityLiters)
+                {
+                    await transaction.RollbackAsync();
+                    TempData["ReceivingMessage"] = "Fuel receiving cannot be completed because it would exceed the selected tank capacity.";
+                    return RedirectToAction(nameof(FuelReceiving), new { search, filterBranchId });
+                }
+
+                delivery.Tank.CurrentLiters = tankLitersAfter;
                 delivery.Tank.UpdatedAt = now;
             }
 
@@ -1585,6 +1701,10 @@ namespace gpos.Controllers
             {
                 receivingForm.BranchId = branchId.Value;
             }
+            if (form is null && receivingForm.Id == 0 && !receivingForm.ReceivedDate.HasValue)
+            {
+                receivingForm.ReceivedDate = DateTime.Today;
+            }
 
             return new ProductReceivingPageViewModel
             {
@@ -1655,6 +1775,10 @@ namespace gpos.Controllers
             {
                 receivingForm.BranchId = branchId.Value;
             }
+            if (form is null && receivingForm.Id == 0 && !receivingForm.ReceivedDate.HasValue)
+            {
+                receivingForm.ReceivedDate = DateTime.Today;
+            }
 
             return new FuelReceivingPageViewModel
             {
@@ -1663,6 +1787,7 @@ namespace gpos.Controllers
                 FormBranchName = await BranchNameAsync(receivingForm.BranchId),
                 FormTankName = await FuelReceivingTankNameAsync(receivingForm.TankId),
                 FormFuelName = await FuelReceivingTankFuelNameAsync(receivingForm.TankId),
+                FormSupplierName = await ProductReceivingSupplierNameAsync(receivingForm.SupplierId),
                 Form = receivingForm,
                 BranchOptions = await BuildBranchFilterOptionsAsync(),
                 SupplierOptions = await BuildSupplierOptionsAsync(),
@@ -1682,7 +1807,6 @@ namespace gpos.Controllers
                         Tank = item.Tank?.TankNo ?? "-",
                         Liters = item.DeliveredLiters,
                         CostPerLiter = item.CostPerLiter ?? 0m,
-                        SellingPricePerLiter = item.Fuel?.CurrentPricePerLiter ?? 0m,
                         TankLitersBefore = before,
                         TankLitersAfter = after,
                         Date = item.DeliveryDate,
@@ -1951,7 +2075,7 @@ namespace gpos.Controllers
 
         private async Task<Product> ResolveReceivingProduct(ProductReceivingForm form, DateTime now)
         {
-            if (!string.Equals(form.ProductMode, "New", StringComparison.OrdinalIgnoreCase))
+            if (!IsNewProductReceivingMode(form))
             {
                 var existing = await _db.Products.FirstOrDefaultAsync(product => product.Id == form.ProductId && product.Status == 1 && product.IsActive);
                 if (existing is null)
@@ -1991,27 +2115,85 @@ namespace gpos.Controllers
             return product;
         }
 
-        private static void ValidateProductReceivingForm(ProductReceivingForm form)
+        private void ValidateProductReceivingForm(ProductReceivingForm form)
         {
+            if (form.BranchId <= 0)
+            {
+                ModelState.AddModelError("Form.BranchId", "Branch is required.");
+            }
+
             if (form.SupplierId <= 0)
             {
-                throw new InvalidOperationException("Supplier is required.");
+                ModelState.AddModelError("Form.SupplierId", "Supplier is required.");
+            }
+
+            if (IsNewProductReceivingMode(form))
+            {
+                if (string.IsNullOrWhiteSpace(form.NewProductName))
+                {
+                    ModelState.AddModelError("Form.NewProductName", "Product Name is required.");
+                }
+            }
+            else if (form.ProductId <= 0)
+            {
+                ModelState.AddModelError("Form.ProductId", "Product is required.");
             }
 
             if (form.Quantity <= 0)
             {
-                throw new InvalidOperationException("Quantity must be greater than 0.");
+                ModelState.AddModelError("Form.Quantity", "Quantity must be greater than 0.");
             }
 
             if (form.CostPrice < 0)
             {
-                throw new InvalidOperationException("Cost Price must be greater than or equal to 0.");
+                ModelState.AddModelError("Form.CostPrice", "Cost Price must be greater than or equal to 0.");
             }
 
             if (form.SellingPrice < 0)
             {
-                throw new InvalidOperationException("Selling Price must be greater than or equal to 0.");
+                ModelState.AddModelError("Form.SellingPrice", "Selling Price must be greater than or equal to 0.");
             }
+
+            if (!form.ReceivedDate.HasValue)
+            {
+                ModelState.AddModelError("Form.ReceivedDate", "Date is required.");
+            }
+        }
+
+        private async Task ValidateProductReceivingReferencesAsync(ProductReceivingForm form)
+        {
+            if (form.BranchId > 0 && !await _db.Branches.AsNoTracking().AnyAsync(branch => branch.Id == form.BranchId && branch.Status == 1))
+            {
+                ModelState.AddModelError("Form.BranchId", "Branch is required.");
+            }
+
+            if (form.SupplierId > 0 && !await _db.Suppliers.AsNoTracking().AnyAsync(supplier => supplier.Id == form.SupplierId && supplier.Status == 1))
+            {
+                ModelState.AddModelError("Form.SupplierId", "Supplier is required.");
+            }
+
+            if (!IsNewProductReceivingMode(form)
+                && form.ProductId > 0
+                && !await _db.Products.AsNoTracking().AnyAsync(product => product.Id == form.ProductId && product.Status == 1 && product.IsActive))
+            {
+                ModelState.AddModelError("Form.ProductId", "Product is required.");
+            }
+
+            if (IsNewProductReceivingMode(form))
+            {
+                var productName = (form.NewProductName ?? string.Empty).Trim();
+                if (!string.IsNullOrWhiteSpace(productName)
+                    && await _db.Products.AsNoTracking().AnyAsync(product => product.Status == 1 && product.IsActive && product.Name == productName))
+                {
+                    ModelState.AddModelError("Form.NewProductName", "Product already exists. Select it from Existing Product instead.");
+                }
+            }
+        }
+
+        private static bool IsNewProductReceivingMode(ProductReceivingForm form)
+        {
+            return string.Equals(form.ProductMode, "New", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(form.ProductMode, "NewProduct", StringComparison.OrdinalIgnoreCase);
         }
 
         private async Task CompleteProductReceiving(StockReceiving receiving, StockReceivingItem item, int userId, DateTime now)

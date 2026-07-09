@@ -1,0 +1,153 @@
+@model gpos.Models.ViewModels.RolesPageViewModel
+
+<div class="page-header">
+    <div class="page-heading">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item">GPOS</li>
+                <li class="breadcrumb-item">Setup</li>
+                <li class="breadcrumb-item">Access</li>
+                <li class="breadcrumb-item active" aria-current="page">Roles</li>
+            </ol>
+        </nav>
+        <h1>Roles</h1>
+        <p class="page-subtitle">Manage admin role records used by user accounts.</p>
+    </div>
+</div>
+
+<section class="content-card setup-crud-card setup-table-card">
+    @if (TempData["RolesFeedback"] is string feedback)
+    {
+        <div class="alert alert-info mb-0" role="alert">@feedback</div>
+    }
+    <div class="table-actions fuel-toolbar">
+        <form asp-action="Index" method="get" class="setup-search-form fuel-toolbar-search">
+            <input class="form-control" name="search" value="@Model.Search" placeholder="Search roles" />
+        </form>
+        <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#roleModal">Add Role</button>
+    </div>
+    <div class="setup-table-scroll">
+        <table class="table app-table table-sm align-middle admin-table mb-0">
+            <colgroup>
+                <col class="col-no" />
+                <col class="col-id" />
+                <col class="col-name" />
+                <col class="col-status" />
+                <col class="col-action" />
+            </colgroup>
+            <thead>
+                <tr>
+                    <th class="col-no">No</th>
+                    <th class="col-id">ID</th>
+                    <th class="col-name">Name</th>
+                    <th class="col-status">Status</th>
+                    <th class="col-action">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model.Roles.Count == 0)
+                {
+                    <tr><td class="text-center text-muted fw-bold" colspan="5">No roles found.</td></tr>
+                }
+                @for (var i = 0; i < Model.Roles.Count; i++)
+                {
+                    <tr>
+                        <td class="col-no">@(i + 1)</td>
+                        <td class="col-id">@Model.Roles[i].Id</td>
+                        <td>@Model.Roles[i].Name</td>
+                        <td><span class="badge @(Model.Roles[i].Status == 1 ? "text-bg-success" : "text-bg-secondary")">@(Model.Roles[i].Status == 1 ? "Active" : "Inactive")</span></td>
+                        <td class="col-action">
+                            <div class="setup-row-actions">
+                                <a class="btn btn-sm btn-outline-primary" asp-action="Index" asp-route-editId="@Model.Roles[i].Id" asp-route-search="@Model.Search">Edit</a>
+                                @if (Model.Roles[i].Status == 1)
+                                {
+                                    <button class="btn btn-sm btn-outline-danger role-delete-button" type="button" data-role-id="@Model.Roles[i].Id" data-role-name="@Model.Roles[i].Name" data-bs-toggle="modal" data-bs-target="#deleteRoleModal">Deactivate</button>
+                                }
+                                @if (Model.Roles[i].Status != 1)
+                                {
+                                    <form asp-action="Activate" method="post">
+                                        @Html.AntiForgeryToken()
+                                        <input name="id" type="hidden" value="@Model.Roles[i].Id" />
+                                        <input name="search" type="hidden" value="@Model.Search" />
+                                        <button class="btn btn-sm btn-outline-success" type="submit">Activate</button>
+                                    </form>
+                                }
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<div class="modal fade" id="roleModal" tabindex="-1" aria-labelledby="roleModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <form asp-action="Save" method="post">
+                @Html.AntiForgeryToken()
+                <input asp-for="RoleForm.Id" type="hidden" />
+                <input name="search" type="hidden" value="@Model.Search" />
+                <div class="modal-header">
+                    <h2 class="modal-title fs-5" id="roleModalLabel">@(Model.RoleForm.Id > 0 ? "Edit Role" : "Add Role")</h2>
+                    <button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label asp-for="RoleForm.Name" class="form-label">Name</label>
+                        <input asp-for="RoleForm.Name" class="form-control" placeholder="Role name" />
+                        <span asp-validation-for="RoleForm.Name" class="text-danger"></span>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button>
+                    <button class="btn btn-primary" type="submit">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="deleteRoleModal" tabindex="-1" aria-labelledby="deleteRoleModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <form asp-action="Delete" method="post">
+                @Html.AntiForgeryToken()
+                <input id="deleteRoleId" name="id" type="hidden" />
+                <input name="search" type="hidden" value="@Model.Search" />
+                <div class="modal-header">
+                    <h2 class="modal-title fs-5" id="deleteRoleModalLabel">Deactivate Record</h2>
+                    <button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="mb-0">Are you sure you want to deactivate this record?</p>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button>
+                    <button class="btn btn-danger" type="submit">Deactivate</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            const modalId = "@Model.ActiveModalId";
+            const modalElement = modalId ? document.getElementById(modalId) : null;
+
+            if (modalElement && window.bootstrap) {
+                bootstrap.Modal.getOrCreateInstance(modalElement).show();
+            }
+
+            document.querySelectorAll(".role-delete-button").forEach((button) => {
+                button.addEventListener("click", () => {
+                    document.getElementById("deleteRoleId").value = button.dataset.roleId || "";
+                    document.getElementById("deleteRoleName").textContent = button.dataset.roleName || "this role";
+                });
+            });
+        });
+    </script>
+}
