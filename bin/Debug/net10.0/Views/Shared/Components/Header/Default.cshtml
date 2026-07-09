@@ -82,14 +82,11 @@
                         </div>
                     </div>
                     <div class="dropend eg-rb-dropdown-group">
-                        <button class="dropdown-item eg-rb-dropdown-group-toggle nav-group-not-working" type="button">Daily Stock <span class="nav-status-pill">Not Working</span></button>
+                        <button class="dropdown-item eg-rb-dropdown-group-toggle " type="button">Daily Stock </button>
                         <div class="dropdown-menu eg-rb-submenu">
-                            @* Report/static page, shown here because it is inventory stock viewing *@
-                            <a class="dropdown-item eg-rb-dropdown-link nav-page-not-working @(Model.ActivePage == "Reports.WarehouseDailyStock" ? "active" : "")" asp-controller="Reports" asp-action="WarehouseDailyStock">Warehouse <span class="nav-status-pill">Not Working</span></a>
-                            @* Report/static page, shown here because it is inventory stock viewing *@
-                            <a class="dropdown-item eg-rb-dropdown-link nav-page-not-working @(Model.ActivePage == "Reports.DisplayDailyStock" ? "active" : "")" asp-controller="Reports" asp-action="DisplayDailyStock">Display <span class="nav-status-pill">Not Working</span></a>
-                            @* Report/static page, shown here because it is inventory stock viewing *@
-                            <a class="dropdown-item eg-rb-dropdown-link nav-page-not-working @(Model.ActivePage == "Reports.TankDailyStock" ? "active" : "")" asp-controller="Reports" asp-action="TankDailyStock">Tank <span class="nav-status-pill">Not Working</span></a>
+                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Reports.WarehouseDailyStock" ? "active" : "")" asp-controller="Reports" asp-action="WarehouseDailyStock">Warehouse </a>
+                            <a class="dropdown-item eg-rb-dropdown-link  @(Model.ActivePage == "Reports.DisplayDailyStock" ? "active" : "")" asp-controller="Reports" asp-action="DisplayDailyStock">Display </a>
+                            <a class="dropdown-item eg-rb-dropdown-link  @(Model.ActivePage == "Reports.TankDailyStock" ? "active" : "")" asp-controller="Reports" asp-action="TankDailyStock">Tank </a>
                         </div>
                     </div>
                     <div class="dropend eg-rb-dropdown-group">

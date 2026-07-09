@@ -99,7 +99,12 @@
                         <div class="col-md-6">
                             <label asp-for="Form.BranchId" class="form-label">Branch</label>
                             <input asp-for="Form.BranchId" type="hidden" id="dailyStockTankBranchId" data-daily-stock-branch />
-                            <input class="form-control" id="dailyStockTankBranchDisplay" value="@Model.FormBranchName" placeholder="Selected with tank" readonly data-daily-stock-branch-display />
+                            <div class="input-group" data-branch-selector data-branch-hidden="#dailyStockTankBranchId" data-branch-display="#dailyStockTankBranchDisplay" data-branch-empty-text="Select branch">
+                                <input class="form-control" id="dailyStockTankBranchDisplay" value="@Model.FormBranchName" placeholder="Select branch" readonly data-daily-stock-branch-display />
+                                <button type="button" class="btn btn-outline-secondary branch-select-btn" data-branch-open>
+                                    <img src="/icons/search.png" alt="Search" style="width:16px;height:16px;" />
+                                </button>
+                            </div>
                             <span asp-validation-for="Form.BranchId" class="text-danger"></span>
                         </div>
                         <div class="col-md-6">
@@ -111,11 +116,12 @@
                             <label asp-for="Form.TankId" class="form-label">Tank</label>
                             <input asp-for="Form.TankId" type="hidden" data-daily-stock-tank />
                             <div class="input-group">
-                                <input class="form-control" value="" placeholder="Select tank, fuel, and branch" readonly data-daily-stock-tank-display />
-                                <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#dailyStockTankSelectorModal">
+                                <input class="form-control" value="" placeholder="Select tank and fuel" readonly data-daily-stock-tank-display />
+                                <button type="button" class="btn btn-outline-secondary" data-daily-stock-open-tank-selector>
                                     <img src="/icons/search.png" alt="Search" style="width:16px;height:16px;" />
                                 </button>
                             </div>
+                            <div class="text-danger small mt-1 d-none" data-daily-stock-tank-message>Please select a Branch first.</div>
                             <span asp-validation-for="Form.TankId" class="text-danger"></span>
                         </div>
                         <div class="col-md-6">
@@ -164,18 +170,17 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h2 class="modal-title fs-5">Select Tank</h2>
-                <button class="btn-close" type="button" data-bs-target="#dailyStockModal" data-bs-toggle="modal" aria-label="Close"></button>
+                <button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
                 <div class="mb-3">
-                    <input class="form-control" placeholder="Search branch, tank, or fuel" data-daily-stock-selector-search />
+                    <input class="form-control" placeholder="Search tank or fuel" data-daily-stock-selector-search />
                 </div>
                 <div class="setup-table-scroll">
                     <table class="table app-table table-sm align-middle admin-table mb-0">
                         <thead>
                             <tr>
                                 <th>No</th>
-                                <th>Branch</th>
                                 <th>Tank</th>
                                 <th>Fuel</th>
                                 <th>Current Liters</th>

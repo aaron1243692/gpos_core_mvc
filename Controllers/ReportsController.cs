@@ -104,36 +104,35 @@ namespace gpos.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> SearchWarehouseDailyStockItems(string? search, int? branchId)
+        public async Task<IActionResult> SearchWarehouseDailyStockItems(string? search, string? term, int? branchId)
         {
-            return Json(await SearchProductDailyStockItemsAsync(WarehouseStockType, search, branchId));
+            return Json(await SearchProductDailyStockItemsAsync(WarehouseStockType, term ?? search, branchId));
         }
 
         [HttpGet]
-        public async Task<IActionResult> SearchDisplayDailyStockItems(string? search, int? branchId)
+        public async Task<IActionResult> SearchDisplayDailyStockItems(string? search, string? term, int? branchId)
         {
-            return Json(await SearchProductDailyStockItemsAsync(DisplayStockType, search, branchId));
+            return Json(await SearchProductDailyStockItemsAsync(DisplayStockType, term ?? search, branchId));
         }
 
         [HttpGet]
-        public async Task<IActionResult> SearchTankDailyStockItems(string? search, int? branchId)
+        public async Task<IActionResult> SearchTankDailyStockItems(string? search, string? term, int? branchId)
         {
+            if (!branchId.HasValue || branchId.Value <= 0)
+            {
+                return Json(Array.Empty<object>());
+            }
+
             var query = _db.Tanks.AsNoTracking()
                 .Include(tank => tank.Branch)
                 .Include(tank => tank.Fuel)
-                .Where(tank => tank.Status == 1 && tank.IsActive);
+                .Where(tank => tank.Status == 1 && tank.IsActive && tank.BranchId == branchId.Value);
 
-            if (branchId.HasValue && branchId.Value > 0)
-            {
-                query = query.Where(tank => tank.BranchId == branchId.Value);
-            }
-
-            var searchText = CleanOptional(search);
+            var searchText = CleanOptional(term ?? search);
             if (!string.IsNullOrWhiteSpace(searchText))
             {
                 query = query.Where(tank =>
                     tank.TankNo.Contains(searchText)
-                    || (tank.Branch != null && tank.Branch.Name.Contains(searchText))
                     || (tank.Fuel != null && tank.Fuel.Name.Contains(searchText)));
             }
 
@@ -669,6 +668,11 @@ namespace gpos.Controllers
 
         private async Task<List<object>> SearchProductDailyStockItemsAsync(string stockType, string? search, int? branchId)
         {
+            if (!branchId.HasValue || branchId.Value <= 0)
+            {
+                return new List<object>();
+            }
+
             var searchText = CleanOptional(search);
             if (stockType == WarehouseStockType)
             {
@@ -678,16 +682,12 @@ namespace gpos.Controllers
                     .Include(stock => stock.Batch)
                     .AsQueryable();
 
-                if (branchId.HasValue && branchId.Value > 0)
-                {
-                    query = query.Where(stock => stock.BranchId == branchId.Value);
-                }
+                query = query.Where(stock => stock.BranchId == branchId.Value);
 
                 if (!string.IsNullOrWhiteSpace(searchText))
                 {
                     query = query.Where(stock =>
-                        (stock.Branch != null && stock.Branch.Name.Contains(searchText))
-                        || (stock.Product != null && stock.Product.Name.Contains(searchText))
+                    (stock.Product != null && stock.Product.Name.Contains(searchText))
                         || (stock.Batch != null && stock.Batch.BatchNo.Contains(searchText)));
                 }
 
@@ -718,16 +718,12 @@ namespace gpos.Controllers
                 .Include(stock => stock.Batch)
                 .AsQueryable();
 
-            if (branchId.HasValue && branchId.Value > 0)
-            {
-                displayQuery = displayQuery.Where(stock => stock.BranchId == branchId.Value);
-            }
+            displayQuery = displayQuery.Where(stock => stock.BranchId == branchId.Value);
 
             if (!string.IsNullOrWhiteSpace(searchText))
             {
                 displayQuery = displayQuery.Where(stock =>
-                    (stock.Branch != null && stock.Branch.Name.Contains(searchText))
-                    || (stock.Product != null && stock.Product.Name.Contains(searchText))
+                    (stock.Product != null && stock.Product.Name.Contains(searchText))
                     || (stock.Batch != null && stock.Batch.BatchNo.Contains(searchText)));
             }
 

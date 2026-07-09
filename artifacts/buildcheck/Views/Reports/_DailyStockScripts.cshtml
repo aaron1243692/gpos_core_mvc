@@ -28,6 +28,10 @@
         const lossInput = document.querySelector("[data-daily-stock-loss]");
         const selectorSearch = document.querySelector("[data-daily-stock-selector-search]");
         const selectorBody = document.querySelector("[data-daily-stock-selector-body]");
+        const productSelectorButton = document.querySelector("[data-daily-stock-open-product-selector]");
+        const productMessage = document.querySelector("[data-daily-stock-product-message]");
+        const tankSelectorButton = document.querySelector("[data-daily-stock-open-tank-selector]");
+        const tankMessage = document.querySelector("[data-daily-stock-tank-message]");
 
         const valueOf = (option, name) => option[name] ?? option[name.charAt(0).toLowerCase() + name.slice(1)];
         const numberValue = input => Number.parseFloat(input?.value || "0") || 0;
@@ -45,9 +49,60 @@
             valueOf(option, "BranchName"),
             valueOf(option, "ProductName"),
             valueOf(option, "BatchNo"),
+            valueOf(option, "BatchNumber"),
             valueOf(option, "TankNo"),
             valueOf(option, "FuelName")
         ].filter(Boolean).join(" ").toLowerCase();
+        const normalizeProductOption = option => ({
+            Id: valueOf(option, "WarehouseStockId") || valueOf(option, "DisplayStockId") || valueOf(option, "Id"),
+            WarehouseStockId: valueOf(option, "WarehouseStockId"),
+            DisplayStockId: valueOf(option, "DisplayStockId"),
+            BranchId: valueOf(option, "BranchId"),
+            BranchName: valueOf(option, "BranchName"),
+            ProductId: valueOf(option, "ProductId"),
+            ProductName: valueOf(option, "ProductName"),
+            BatchId: valueOf(option, "BatchId"),
+            BatchNo: valueOf(option, "BatchNo") || valueOf(option, "BatchNumber"),
+            CurrentQuantity: valueOf(option, "CurrentQuantity")
+        });
+        const normalizeTankOption = option => ({
+            Id: valueOf(option, "TankId") || valueOf(option, "Id"),
+            BranchId: valueOf(option, "BranchId"),
+            BranchName: valueOf(option, "BranchName"),
+            FuelId: valueOf(option, "FuelId"),
+            FuelName: valueOf(option, "FuelName"),
+            TankNo: valueOf(option, "TankNo") || valueOf(option, "TankName"),
+            CurrentQuantity: valueOf(option, "CurrentQuantity") || valueOf(option, "CurrentLiters"),
+            Capacity: valueOf(option, "Capacity")
+        });
+        const clearProductSelection = () => {
+            if (productIdInput) productIdInput.value = "";
+            if (batchIdInput) batchIdInput.value = "";
+            if (warehouseStockIdInput) warehouseStockIdInput.value = "";
+            if (displayStockIdInput) displayStockIdInput.value = "";
+            if (productDisplay) productDisplay.value = "";
+            setNumber(beginningInput, 0);
+            setNumber(soldInput, 0);
+            setNumber(actualInput, 0);
+            if (endingInput) endingInput.value = "";
+            setNumber(lossInput, 0);
+        };
+        const showProductMessage = (visible) => {
+            productMessage?.classList.toggle("d-none", !visible);
+        };
+        const clearTankSelection = () => {
+            if (tankInput) tankInput.value = "";
+            if (tankDisplay) tankDisplay.value = "";
+            if (fuelInput) fuelInput.value = "";
+            setNumber(beginningInput, 0);
+            setNumber(soldInput, 0);
+            setNumber(actualInput, 0);
+            if (endingInput) endingInput.value = "";
+            setNumber(lossInput, 0);
+        };
+        const showTankMessage = (visible) => {
+            tankMessage?.classList.toggle("d-none", !visible);
+        };
 
         const closeSelector = selectorBody => {
             const selectorModal = selectorBody?.closest(".modal");
@@ -84,47 +139,69 @@
         };
 
         const selectProductOption = option => {
-            const branchId = valueOf(option, "BranchId") || "";
             const productId = valueOf(option, "ProductId") || "";
             const batchId = valueOf(option, "BatchId") || "";
-            const branchName = valueOf(option, "BranchName") || "";
             const productName = valueOf(option, "ProductName") || "";
             const batchNo = valueOf(option, "BatchNo") || "";
 
-            if (branchInput) branchInput.value = branchId;
-            if (branchDisplay) branchDisplay.value = branchName;
             if (productIdInput) productIdInput.value = productId;
             if (batchIdInput) batchIdInput.value = batchId;
             if (warehouseStockIdInput) warehouseStockIdInput.value = valueOf(option, "WarehouseStockId") || "";
             if (displayStockIdInput) displayStockIdInput.value = valueOf(option, "DisplayStockId") || "";
-            if (productDisplay) productDisplay.value = `${productName || "-"} - ${batchNo || "-"} - ${branchName || "-"}`;
+            if (productDisplay) productDisplay.value = `${productName || "-"} - ${batchNo || "-"}`;
+            showProductMessage(false);
             loadDefault();
             closeSelector(selectorBody);
         };
 
         const selectTankOption = option => {
-            const branchId = valueOf(option, "BranchId") || "";
-            const branchName = valueOf(option, "BranchName") || "";
             const tankNo = valueOf(option, "TankNo") || "";
             const fuelName = valueOf(option, "FuelName") || "";
 
-            if (branchInput) branchInput.value = branchId;
-            if (branchDisplay) branchDisplay.value = branchName;
             if (tankInput) tankInput.value = valueOf(option, "Id") || "";
-            if (tankDisplay) tankDisplay.value = `${tankNo || "-"} - ${fuelName || "-"} - ${branchName || "-"}`;
+            if (tankDisplay) tankDisplay.value = `${tankNo || "-"} - ${fuelName || "-"}`;
             if (fuelInput) fuelInput.value = fuelName;
+            showTankMessage(false);
             loadDefault();
             closeSelector(selectorBody);
         };
 
-        const renderSelector = () => {
+        const loadSelectorOptions = async () => {
+            if (!branchInput?.value) return [];
+
+            if (stockType === "Tank") {
+                const params = new URLSearchParams();
+                params.set("branchId", branchInput.value);
+                params.set("term", selectorSearch?.value || "");
+                const response = await fetch(`/Reports/SearchTankDailyStockItems?${params.toString()}`, { headers: { "Accept": "application/json" } });
+                if (!response.ok) return [];
+                const items = await response.json();
+                return items.map(normalizeTankOption);
+            }
+
+            if (!branchInput?.value) return [];
+
+            const action = stockType === "Warehouse" ? "SearchWarehouseDailyStockItems" : "SearchDisplayDailyStockItems";
+            const params = new URLSearchParams();
+            params.set("branchId", branchInput.value);
+            params.set("term", selectorSearch?.value || "");
+            const response = await fetch(`/Reports/${action}?${params.toString()}`, { headers: { "Accept": "application/json" } });
+            if (!response.ok) return [];
+            const items = await response.json();
+            return items.map(normalizeProductOption);
+        };
+
+        const renderSelector = async () => {
             if (!selectorBody) return;
             const term = (selectorSearch?.value || "").trim().toLowerCase();
-            const matches = stockOptions.filter(option => !term || optionText(option).includes(term));
+            const loadingColspan = stockType === "Tank" ? 6 : 5;
+            selectorBody.innerHTML = `<tr><td class="text-center text-muted fw-bold" colspan="${loadingColspan}">Loading stock...</td></tr>`;
+            const sourceOptions = await loadSelectorOptions();
+            const matches = sourceOptions;
             selectorBody.innerHTML = "";
 
             if (matches.length === 0) {
-                const colspan = stockType === "Tank" ? 7 : 6;
+                const colspan = stockType === "Tank" ? 6 : 5;
                 selectorBody.innerHTML = `<tr><td class="text-center text-muted fw-bold" colspan="${colspan}">No matching stock found.</td></tr>`;
                 return;
             }
@@ -143,7 +220,6 @@
                 if (stockType === "Tank") {
                     row.innerHTML = `
                         <td>${index + 1}</td>
-                        <td>${valueOf(option, "BranchName") || "-"}</td>
                         <td>${valueOf(option, "TankNo") || "-"}</td>
                         <td>${valueOf(option, "FuelName") || "-"}</td>
                         <td class="number-cell">${Number(valueOf(option, "CurrentQuantity") || 0).toFixed(2)}</td>
@@ -151,7 +227,6 @@
                 } else {
                     row.innerHTML = `
                         <td>${index + 1}</td>
-                        <td>${valueOf(option, "BranchName") || "-"}</td>
                         <td>${valueOf(option, "ProductName") || "-"}</td>
                         <td>${valueOf(option, "BatchNo") || "-"}</td>
                         <td class="number-cell">${Number(valueOf(option, "CurrentQuantity") || 0).toFixed(2)}</td>`;
@@ -179,21 +254,65 @@
                 const tankNo = valueOf(current, "TankNo") || "";
                 const fuelName = valueOf(current, "FuelName") || "";
                 if (branchDisplay) branchDisplay.value = branchName;
-                if (tankDisplay) tankDisplay.value = `${tankNo || "-"} - ${fuelName || "-"} - ${branchName || "-"}`;
+                if (tankDisplay) tankDisplay.value = `${tankNo || "-"} - ${fuelName || "-"}`;
                 if (fuelInput) fuelInput.value = fuelName;
             } else {
-                const branchName = valueOf(current, "BranchName") || "";
                 const productName = valueOf(current, "ProductName") || "";
                 const batchNo = valueOf(current, "BatchNo") || "";
-                if (branchDisplay) branchDisplay.value = branchName;
-                if (productDisplay) productDisplay.value = `${productName || "-"} - ${batchNo || "-"} - ${branchName || "-"}`;
+                if (branchDisplay) branchDisplay.value = valueOf(current, "BranchName") || branchDisplay.value;
+                if (productDisplay) productDisplay.value = `${productName || "-"} - ${batchNo || "-"}`;
             }
 
             compute();
             renderSelector();
         };
 
+        productSelectorButton?.addEventListener("click", (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+
+            if (!branchInput?.value) {
+                showProductMessage(true);
+                return;
+            }
+
+            showProductMessage(false);
+            const selectorModal = document.getElementById("dailyStockItemSelectorModal");
+            if (selectorModal && window.bootstrap) {
+                bootstrap.Modal.getOrCreateInstance(selectorModal).show();
+                renderSelector();
+            }
+        });
+        tankSelectorButton?.addEventListener("click", (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+
+            if (!branchInput?.value) {
+                showTankMessage(true);
+                return;
+            }
+
+            showTankMessage(false);
+            const selectorModal = document.getElementById("dailyStockTankSelectorModal");
+            if (selectorModal && window.bootstrap) {
+                bootstrap.Modal.getOrCreateInstance(selectorModal).show();
+                renderSelector();
+            }
+        });
         selectorSearch?.addEventListener("input", renderSelector);
+        branchInput?.addEventListener("change", () => {
+            clearProductSelection();
+            clearTankSelection();
+            showProductMessage(false);
+            showTankMessage(false);
+        });
+        document.querySelector("form[method='post']")?.addEventListener("submit", (event) => {
+            if (!branchInput?.value || (stockType === "Tank" ? !tankInput?.value : !productIdInput?.value)) {
+                event.preventDefault();
+                if (!branchInput?.value) showProductMessage(true);
+                if (!branchInput?.value && stockType === "Tank") showTankMessage(true);
+            }
+        });
         dateInput?.addEventListener("change", loadDefault);
         beginningInput?.addEventListener("input", compute);
         soldInput?.addEventListener("input", compute);
