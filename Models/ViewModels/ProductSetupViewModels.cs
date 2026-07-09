@@ -61,6 +61,22 @@ namespace gpos.Models.ViewModels
         public List<SelectListItem> CategoryOptions { get; set; } = new();
         public List<DisplayStock> DisplayStocks { get; set; } = new();
         public List<WarehouseStock> WarehouseStocks { get; set; } = new();
+        public List<ProductStockSummaryViewModel> DisplayStockSummaries { get; set; } = new();
+        public List<ProductStockSummaryViewModel> WarehouseStockSummaries { get; set; } = new();
         public List<ProductCategory> Categories { get; set; } = new();
+    }
+
+    public class ProductStockSummaryViewModel
+    {
+        public int ProductId { get; set; }
+        public int? BranchId { get; set; }
+        public string BranchName { get; set; } = string.Empty;
+        public string ProductName { get; set; } = string.Empty;
+        public string CategoryName { get; set; } = string.Empty;
+        public string UnitName { get; set; } = string.Empty;
+        public decimal TotalQuantity { get; set; }
+        public decimal? TotalCostValue { get; set; }
+        public bool IsActive { get; set; }
+        public string StatusText => IsActive ? "Active" : "Inactive";
     }
 }

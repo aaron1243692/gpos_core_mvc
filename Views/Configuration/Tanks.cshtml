@@ -26,7 +26,7 @@
     }
     <div class="table-actions fuel-toolbar">
         <form asp-action="Tanks" method="get" class="setup-search-form fuel-toolbar-search flex-wrap">
-            <input class="form-control" name="search" value="@Model.Search" placeholder="Search by tank or fuel" />
+            <input class="form-control" name="search" value="@Model.Search" placeholder="Search by tank, fuel, or branch" />
             <select class="form-select" name="filterBranchId">
                 @foreach (var branch in Model.BranchOptions)
                 {
@@ -49,6 +49,7 @@
                 <col class="col-normal" />
                 <col class="col-normal" />
                 <col class="col-normal" />
+                <col class="col-normal" />
                 <col class="col-action" />
             </colgroup>
             <thead>
@@ -60,6 +61,7 @@
                     <th>Fuel</th>
                     <th>Capacity Liters</th>
                     <th>Current Liters</th>
+                    <th>Available Space</th>
                     <th class="col-status">Status</th>
                     <th class="col-action">Action</th>
                 </tr>
@@ -67,7 +69,7 @@
             <tbody>
                 @if (Model.Tanks.Count == 0)
                 {
-                    <tr><td class="text-center text-muted fw-bold" colspan="9">No records yet.</td></tr>
+                    <tr><td class="text-center text-muted fw-bold" colspan="10">No records yet.</td></tr>
                 }
                 @for (var i = 0; i < Model.Tanks.Count; i++)
                 {
@@ -79,6 +81,7 @@
                         <td>@Model.Tanks[i].Fuel?.Name</td>
                         <td>@Model.Tanks[i].CapacityLiters.ToString("N2", CultureInfo.InvariantCulture) L</td>
                         <td>@Model.Tanks[i].CurrentLiters.ToString("N2", CultureInfo.InvariantCulture) L</td>
+                        <td>@((Model.Tanks[i].CapacityLiters - Model.Tanks[i].CurrentLiters).ToString("N2", CultureInfo.InvariantCulture)) L</td>
                         <td><span class="badge @(Model.Tanks[i].Status == 1 ? "text-bg-success" : "text-bg-secondary")">@(Model.Tanks[i].Status == 1 ? "Active" : "Inactive")</span></td>
                         <td class="col-action">
                             <div class="setup-row-actions">

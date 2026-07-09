@@ -12,15 +12,23 @@
             </ol>
         </nav>
         <h1>Fuel Batches</h1>
-        <p class="page-subtitle">Manage received fuel batch costs, prices, suppliers, and remaining liters.</p>
+        <p class="page-subtitle">View received fuel batches by tank, fuel, supplier, and remaining liters.</p>
     </div>
 </div>
 
 <section class="card content-card table-card full-height-card mb-0">
     <div class="table-toolbar d-flex justify-content-between align-items-center gap-2 flex-wrap mb-3">
-        <form class="products-search-wrap" asp-action="FuelBatches" method="get">
+        <form class="products-search-wrap d-flex gap-2 flex-wrap" asp-action="FuelBatches" method="get">
             <label class="visually-hidden" for="fuel-batch-search">Search fuel batches</label>
             <input class="form-control form-control-sm products-search" id="fuel-batch-search" name="search" value="@Model.Search" type="search" placeholder="Search fuel batches" autocomplete="off" />
+            <select class="form-select form-select-sm" name="filterBranchId">
+                @foreach (var branch in Model.BranchOptions)
+                {
+                    <option value="@branch.Value" selected="@((Model.BranchId?.ToString() ?? string.Empty) == branch.Value ? "selected" : null)">@branch.Text</option>
+                }
+            </select>
+            <button class="btn btn-sm btn-outline-primary" type="submit">Search</button>
+            <a class="btn btn-sm btn-outline-secondary" asp-action="FuelBatches">Clear</a>
         </form>
     </div>
 
@@ -30,6 +38,8 @@
                 <col class="col-no" />
                 <col class="col-id" />
                 <col class="col-batch-number" />
+                <col class="col-normal" />
+                <col class="col-normal" />
                 <col class="col-fuel" />
                 <col class="col-supplier" />
                 <col class="col-cost-price" />
@@ -45,6 +55,8 @@
                     <th class="col-no text-nowrap" scope="col">No</th>
                     <th class="col-id text-nowrap" scope="col">ID</th>
                     <th class="col-batch-number text-nowrap" scope="col">Batch Number</th>
+                    <th class="text-nowrap" scope="col">Branch</th>
+                    <th class="text-nowrap" scope="col">Tank</th>
                     <th class="col-fuel text-nowrap" scope="col">Fuel</th>
                     <th class="col-supplier text-nowrap" scope="col">Supplier</th>
                     <th class="col-cost-price text-nowrap" scope="col">Cost Price / Liter</th>
@@ -60,7 +72,7 @@
                 @if (Model.FuelBatches.Count == 0)
                 {
                     <tr>
-                        <td class="text-center text-muted fw-bold" colspan="12">No fuel batches yet.</td>
+                        <td class="text-center text-muted fw-bold" colspan="13">No fuel batches found.</td>
                     </tr>
                 }
                 @for (var index = 0; index < Model.FuelBatches.Count; index += 1)
@@ -69,7 +81,9 @@
                         <td class="col-no">@(index + 1)</td>
                         <td class="col-id">@Model.FuelBatches[index].Id</td>
                         <td class="col-batch-number text-nowrap">@Model.FuelBatches[index].BatchNo</td>
-                        <td class="col-fuel text-truncate">@(Model.FuelBatches[index].Fuel?.Name ?? "-")</td>
+                        <td class="text-nowrap">@(Model.FuelBatches[index].Branch?.Name ?? Model.FuelBatches[index].Tank?.Branch?.Name ?? "-")</td>
+                        <td class="text-nowrap">@(Model.FuelBatches[index].Tank?.TankNo ?? "-")</td>
+                        <td class="col-fuel text-truncate">@(Model.FuelBatches[index].Fuel?.Name ?? Model.FuelBatches[index].Tank?.Fuel?.Name ?? "-")</td>
                         <td class="col-supplier text-truncate">@(Model.FuelBatches[index].Supplier?.Name ?? "-")</td>
                         <td class="col-cost-price text-nowrap">&#8369;@Model.FuelBatches[index].CostPricePerLiter.ToString("N2", CultureInfo.InvariantCulture)</td>
                         <td class="col-selling-price text-nowrap">&#8369;@Model.FuelBatches[index].SellingPricePerLiter.ToString("N2", CultureInfo.InvariantCulture)</td>
@@ -88,7 +102,7 @@
                         </td>
                         <td class="col-action">
                             <div class="setup-row-actions">
-                                <a class="btn btn-sm btn-outline-primary" asp-action="FuelBatches" asp-route-editId="@Model.FuelBatches[index].Id" asp-route-search="@Model.Search">Edit</a>
+                                <a class="btn btn-sm btn-outline-primary" asp-action="FuelBatches" asp-route-editId="@Model.FuelBatches[index].Id" asp-route-search="@Model.Search" asp-route-filterBranchId="@Model.BranchId">Edit</a>
                                 @if (Model.FuelBatches[index].Status == 1 && Model.FuelBatches[index].IsActive)
                                 {
                                     <button class="btn btn-sm btn-outline-danger fuel-batch-deactivate-button" type="button" data-bs-toggle="modal" data-bs-target="#fuelBatchStatusModal" data-batch-id="@Model.FuelBatches[index].Id" data-batch-no="@Model.FuelBatches[index].BatchNo">Deactivate</button>
@@ -99,6 +113,7 @@
                                         @Html.AntiForgeryToken()
                                         <input name="id" type="hidden" value="@Model.FuelBatches[index].Id" />
                                         <input name="search" type="hidden" value="@Model.Search" />
+                                        <input name="filterBranchId" type="hidden" value="@Model.BranchId" />
                                         <button class="btn btn-sm btn-outline-success" type="submit">Activate</button>
                                     </form>
                                 }
@@ -118,6 +133,7 @@
                 @Html.AntiForgeryToken()
                 <input asp-for="FuelBatchForm.Id" type="hidden" />
                 <input name="search" type="hidden" value="@Model.Search" />
+                <input name="filterBranchId" type="hidden" value="@Model.BranchId" />
                 <div class="modal-header">
                     <h2 class="modal-title fs-5" id="fuelBatchModalLabel">Fuel Batch</h2>
                     <button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -164,6 +180,7 @@
                 @Html.AntiForgeryToken()
                 <input id="fuelBatchStatusId" name="id" type="hidden" />
                 <input name="search" type="hidden" value="@Model.Search" />
+                <input name="filterBranchId" type="hidden" value="@Model.BranchId" />
                 <div class="modal-header">
                     <h2 class="modal-title fs-5" id="fuelBatchStatusModalLabel">Deactivate Record</h2>
                     <button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button>

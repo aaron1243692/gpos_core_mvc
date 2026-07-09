@@ -1218,8 +1218,8 @@ namespace gpos.Controllers
             IQueryable<DisplayStock> query = _db.DisplayStocks.AsNoTracking()
                 .Include(stock => stock.Product)
                 .ThenInclude(product => product!.Category)
-                .Include(stock => stock.Batch)
-                .ThenInclude(batch => batch!.Supplier)
+                .Include(stock => stock.Product)
+                .ThenInclude(product => product!.ProductUnit)
                 .Include(stock => stock.Branch);
             var searchText = (search ?? string.Empty).Trim();
 
@@ -1227,8 +1227,7 @@ namespace gpos.Controllers
             {
                 query = query.Where(stock => (stock.Product != null && stock.Product.Name.Contains(searchText))
                     || (stock.Product != null && stock.Product.Category != null && stock.Product.Category.Name.Contains(searchText))
-                    || (stock.Batch != null && stock.Batch.BatchNo.Contains(searchText))
-                    || (stock.Batch != null && stock.Batch.Supplier != null && stock.Batch.Supplier.Name.Contains(searchText))
+                    || (stock.Product != null && stock.Product.ProductUnit != null && stock.Product.ProductUnit.Name.Contains(searchText))
                     || (stock.Branch != null && stock.Branch.Name.Contains(searchText)));
             }
 
@@ -1253,13 +1252,31 @@ namespace gpos.Controllers
                 StockForm = stockForm,
                 BranchOptions = await BuildBranchFilterOptionsAsync(),
                 CategoryOptions = await BuildCategoryOptionsAsync(),
-                DisplayStocks = await query
+                DisplayStockSummaries = await query
                     .Where(stock => stock.Quantity > 0)
-                    .OrderBy(stock => stock.Batch!.BatchNo)
-                    .ThenBy(stock => stock.Batch!.CreatedAt ?? DateTime.MinValue)
-                    .ThenBy(stock => stock.Batch!.Id)
-                    .ThenBy(stock => stock.Product!.Name)
-                    .ThenBy(stock => stock.Id)
+                    .GroupBy(stock => new
+                    {
+                        stock.BranchId,
+                        BranchName = stock.Branch != null ? stock.Branch.Name : "-",
+                        stock.ProductId,
+                        ProductName = stock.Product != null ? stock.Product.Name : "-",
+                        CategoryName = stock.Product != null && stock.Product.Category != null ? stock.Product.Category.Name : "-",
+                        UnitName = stock.Product != null && stock.Product.ProductUnit != null ? stock.Product.ProductUnit.Name : "-",
+                        ProductIsActive = stock.Product != null && stock.Product.IsActive && stock.Product.Status == 1
+                    })
+                    .Select(group => new ProductStockSummaryViewModel
+                    {
+                        BranchId = group.Key.BranchId,
+                        BranchName = group.Key.BranchName,
+                        ProductId = group.Key.ProductId,
+                        ProductName = group.Key.ProductName,
+                        CategoryName = group.Key.CategoryName,
+                        UnitName = group.Key.UnitName,
+                        TotalQuantity = group.Sum(stock => stock.Quantity),
+                        IsActive = group.Key.ProductIsActive
+                    })
+                    .OrderBy(summary => summary.BranchName)
+                    .ThenBy(summary => summary.ProductName)
                     .ToListAsync()
             };
         }
@@ -1269,8 +1286,9 @@ namespace gpos.Controllers
             IQueryable<WarehouseStock> query = _db.WarehouseStocks.AsNoTracking()
                 .Include(stock => stock.Product)
                 .ThenInclude(product => product!.Category)
+                .Include(stock => stock.Product)
+                .ThenInclude(product => product!.ProductUnit)
                 .Include(stock => stock.Batch)
-                .ThenInclude(batch => batch!.Supplier)
                 .Include(stock => stock.Branch);
             var searchText = (search ?? string.Empty).Trim();
 
@@ -1278,8 +1296,7 @@ namespace gpos.Controllers
             {
                 query = query.Where(stock => (stock.Product != null && stock.Product.Name.Contains(searchText))
                     || (stock.Product != null && stock.Product.Category != null && stock.Product.Category.Name.Contains(searchText))
-                    || (stock.Batch != null && stock.Batch.BatchNo.Contains(searchText))
-                    || (stock.Batch != null && stock.Batch.Supplier != null && stock.Batch.Supplier.Name.Contains(searchText))
+                    || (stock.Product != null && stock.Product.ProductUnit != null && stock.Product.ProductUnit.Name.Contains(searchText))
                     || (stock.Branch != null && stock.Branch.Name.Contains(searchText)));
             }
 
@@ -1304,13 +1321,32 @@ namespace gpos.Controllers
                 StockForm = stockForm,
                 BranchOptions = await BuildBranchFilterOptionsAsync(),
                 CategoryOptions = await BuildCategoryOptionsAsync(),
-                WarehouseStocks = await query
+                WarehouseStockSummaries = await query
                     .Where(stock => stock.Quantity > 0)
-                    .OrderBy(stock => stock.Batch!.BatchNo)
-                    .ThenBy(stock => stock.Batch!.CreatedAt ?? DateTime.MinValue)
-                    .ThenBy(stock => stock.Batch!.Id)
-                    .ThenBy(stock => stock.Product!.Name)
-                    .ThenBy(stock => stock.Id)
+                    .GroupBy(stock => new
+                    {
+                        stock.BranchId,
+                        BranchName = stock.Branch != null ? stock.Branch.Name : "-",
+                        stock.ProductId,
+                        ProductName = stock.Product != null ? stock.Product.Name : "-",
+                        CategoryName = stock.Product != null && stock.Product.Category != null ? stock.Product.Category.Name : "-",
+                        UnitName = stock.Product != null && stock.Product.ProductUnit != null ? stock.Product.ProductUnit.Name : "-",
+                        ProductIsActive = stock.Product != null && stock.Product.IsActive && stock.Product.Status == 1
+                    })
+                    .Select(group => new ProductStockSummaryViewModel
+                    {
+                        BranchId = group.Key.BranchId,
+                        BranchName = group.Key.BranchName,
+                        ProductId = group.Key.ProductId,
+                        ProductName = group.Key.ProductName,
+                        CategoryName = group.Key.CategoryName,
+                        UnitName = group.Key.UnitName,
+                        TotalQuantity = group.Sum(stock => stock.Quantity),
+                        TotalCostValue = group.Sum(stock => stock.Quantity * stock.Batch!.CostPrice),
+                        IsActive = group.Key.ProductIsActive
+                    })
+                    .OrderBy(summary => summary.BranchName)
+                    .ThenBy(summary => summary.ProductName)
                     .ToListAsync()
             };
         }

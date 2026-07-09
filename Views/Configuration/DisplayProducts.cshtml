@@ -12,16 +12,16 @@
                 <li class="breadcrumb-item active" aria-current="page">Display</li>
             </ol>
         </nav>
-        <h1>Display Batches</h1>
-        <p class="page-subtitle">View display stock by product batch.</p>
+        <h1>Display Products</h1>
+        <p class="page-subtitle">View current display stock totals by branch and product.</p>
     </div>
 </div>
 
 <section class="card content-card table-card full-height-card mb-0">
     <div class="table-toolbar d-flex justify-content-between align-items-center gap-2 flex-wrap mb-3">
         <form class="products-search-wrap d-flex gap-2 flex-wrap" asp-action="DisplayProducts" method="get">
-            <label class="visually-hidden" for="display-product-search">Search display batches</label>
-            <input class="form-control form-control-sm products-search" id="display-product-search" name="search" value="@Model.Search" type="search" placeholder="Search display batches" autocomplete="off" />
+            <label class="visually-hidden" for="display-product-search">Search display products</label>
+            <input class="form-control form-control-sm products-search" id="display-product-search" name="search" value="@Model.Search" type="search" placeholder="Search display products" autocomplete="off" />
             <select class="form-select form-select-sm" name="filterBranchId">
                 @foreach (var branch in Model.BranchOptions)
                 {
@@ -38,11 +38,7 @@
         <table class="table table-sm table-hover align-middle admin-table mb-0">
             <colgroup>
                 <col class="col-no" />
-                <col class="col-normal" />
                 <col class="col-name" />
-                <col class="col-normal" />
-                <col class="col-normal" />
-                <col class="col-normal" />
                 <col class="col-normal" />
                 <col class="col-normal" />
                 <col class="col-normal" />
@@ -52,50 +48,45 @@
             <thead>
                 <tr>
                     <th class="col-no" scope="col">No</th>
-                    <th class="col-batch" scope="col">Batch Number</th>
-                    <th class="col-name" scope="col">Product</th>
                     <th scope="col">Branch</th>
-                    <th scope="col">Supplier</th>
-                    <th class="col-money" scope="col">Cost Price</th>
-                    <th class="col-money" scope="col">Selling Price</th>
-                    <th class="col-qty" scope="col">Display Quantity</th>
-                    <th scope="col">Expiry Date</th>
+                    <th class="col-name" scope="col">Product</th>
+                    <th scope="col">Category</th>
+                    <th scope="col">Unit</th>
+                    <th class="col-qty" scope="col">Total Quantity</th>
                     <th class="col-status" scope="col">Status</th>
                     <th class="col-action" scope="col">Action</th>
                 </tr>
             </thead>
             <tbody>
-                @if (Model.DisplayStocks.Count == 0)
+                @if (Model.DisplayStockSummaries.Count == 0)
                 {
                     <tr>
-                        <td class="text-center text-muted fw-bold" colspan="11">No display batches found.</td>
+                        <td class="text-center text-muted fw-bold" colspan="7">No display products found.</td>
                     </tr>
                 }
-                @for (var index = 0; index < Model.DisplayStocks.Count; index += 1)
+                @for (var index = 0; index < Model.DisplayStockSummaries.Count; index += 1)
                 {
+                    var summary = Model.DisplayStockSummaries[index];
                     <tr>
                         <td class="col-no">@(index + 1)</td>
-                        <td class="col-batch">@(Model.DisplayStocks[index].Batch?.BatchNo ?? "-")</td>
-                        <td class="col-name">@(Model.DisplayStocks[index].Product?.Name ?? "-")</td>
-                        <td>@(Model.DisplayStocks[index].Branch?.Name ?? "-")</td>
-                        <td>@(Model.DisplayStocks[index].Batch?.Supplier?.Name ?? "-")</td>
-                        <td>&#8369;@(Model.DisplayStocks[index].Batch?.CostPrice.ToString("N2") ?? "0.00")</td>
-                        <td>&#8369;@(Model.DisplayStocks[index].Batch?.SellingPrice.ToString("N2") ?? "0.00")</td>
-                        <td class="col-qty">@Model.DisplayStocks[index].Quantity.ToString("N2")</td>
-                        <td>@(Model.DisplayStocks[index].Batch?.ExpiryDate?.ToString("yyyy-MM-dd") ?? "-")</td>
-                        <td><span class="badge @((Model.DisplayStocks[index].Product?.IsActive ?? false) && (Model.DisplayStocks[index].Product?.Status == 1) && (Model.DisplayStocks[index].Batch?.IsActive ?? false) && (Model.DisplayStocks[index].Batch?.Status == 1) ? "text-bg-success" : "text-bg-secondary")">@((Model.DisplayStocks[index].Product?.IsActive ?? false) && (Model.DisplayStocks[index].Product?.Status == 1) && (Model.DisplayStocks[index].Batch?.IsActive ?? false) && (Model.DisplayStocks[index].Batch?.Status == 1) ? "Active" : "Inactive")</span></td>
+                        <td>@summary.BranchName</td>
+                        <td class="col-name">@summary.ProductName</td>
+                        <td>@summary.CategoryName</td>
+                        <td>@summary.UnitName</td>
+                        <td class="col-qty">@summary.TotalQuantity.ToString("N2")</td>
+                        <td><span class="badge @(summary.IsActive ? "text-bg-success" : "text-bg-secondary")">@summary.StatusText</span></td>
                         <td class="col-action">
                             <div class="setup-row-actions">
-                                <a class="btn btn-sm btn-outline-primary" asp-action="DisplayProducts" asp-route-editId="@Model.DisplayStocks[index].Id" asp-route-search="@Model.Search" asp-route-filterBranchId="@Model.BranchId">Edit</a>
-                                @if ((Model.DisplayStocks[index].Product?.IsActive ?? false) && Model.DisplayStocks[index].Product?.Status == 1)
+                                <a class="btn btn-sm btn-outline-primary" asp-action="ProductBatches" asp-route-search="@summary.ProductName">View Batches</a>
+                                @if (summary.IsActive)
                                 {
-                                    <button class="btn btn-sm btn-outline-danger product-deactivate-button" type="button" data-bs-toggle="modal" data-bs-target="#productStatusModal" data-product-id="@Model.DisplayStocks[index].ProductId" data-product-name="@(Model.DisplayStocks[index].Product?.Name ?? "Product")" data-action-url="@Url.Action("DeactivateProductFromStock", "Configuration")">Deactivate</button>
+                                    <button class="btn btn-sm btn-outline-danger product-deactivate-button" type="button" data-bs-toggle="modal" data-bs-target="#productStatusModal" data-product-id="@summary.ProductId" data-product-name="@summary.ProductName" data-action-url="@Url.Action("DeactivateProductFromStock", "Configuration")">Deactivate</button>
                                 }
-                                @if (!((Model.DisplayStocks[index].Product?.IsActive ?? false) && Model.DisplayStocks[index].Product?.Status == 1))
+                                @if (!summary.IsActive)
                                 {
                                     <form asp-action="ActivateProductFromStock" method="post">
                                         @Html.AntiForgeryToken()
-                                        <input name="id" type="hidden" value="@Model.DisplayStocks[index].ProductId" />
+                                        <input name="id" type="hidden" value="@summary.ProductId" />
                                         <input name="source" type="hidden" value="Display" />
                                         <input name="search" type="hidden" value="@Model.Search" />
                                         <input name="filterBranchId" type="hidden" value="@Model.BranchId" />

@@ -331,6 +331,8 @@ namespace gpos.Models.ViewModels
     public class SetupModulesPageViewModel
     {
         public string Search { get; set; } = string.Empty;
+        public int? BranchId { get; set; }
+        public string BranchName { get; set; } = string.Empty;
         public string ActiveModalId { get; set; } = string.Empty;
         public ProductUnitForm ProductUnitForm { get; set; } = new();
         public ProductBatchForm ProductBatchForm { get; set; } = new();
