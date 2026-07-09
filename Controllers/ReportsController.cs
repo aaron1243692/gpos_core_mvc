@@ -45,40 +45,43 @@ namespace gpos.Controllers
         public IActionResult CashDifferenceReport() => View();
         public IActionResult VoidTransactionReport() => View();
 
-        public async Task<IActionResult> WarehouseDailyStock(string? search, int? editId, int? branchId)
+        public async Task<IActionResult> WarehouseDailyStock(string? search, int? editId, int? branchId, int? filterBranchId)
         {
+            branchId = filterBranchId ?? branchId;
             return View(await BuildDailyStockPageAsync(WarehouseStockType, search, branchId, editId: editId, activeModalId: editId.HasValue ? DailyStockModalId : string.Empty));
         }
 
-        public async Task<IActionResult> DisplayDailyStock(string? search, int? editId, int? branchId)
+        public async Task<IActionResult> DisplayDailyStock(string? search, int? editId, int? branchId, int? filterBranchId)
         {
+            branchId = filterBranchId ?? branchId;
             return View(await BuildDailyStockPageAsync(DisplayStockType, search, branchId, editId: editId, activeModalId: editId.HasValue ? DailyStockModalId : string.Empty));
         }
 
-        public async Task<IActionResult> TankDailyStock(string? search, int? editId, int? branchId)
+        public async Task<IActionResult> TankDailyStock(string? search, int? editId, int? branchId, int? filterBranchId)
         {
+            branchId = filterBranchId ?? branchId;
             return View(await BuildDailyStockPageAsync(TankStockType, search, branchId, editId: editId, activeModalId: editId.HasValue ? DailyStockModalId : string.Empty));
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> SaveWarehouseDailyStock([Bind(Prefix = "Form")] DailyStockForm form, string? search)
+        public async Task<IActionResult> SaveWarehouseDailyStock([Bind(Prefix = "Form")] DailyStockForm form, string? search, int? filterBranchId)
         {
-            return await SaveDailyStockAsync(WarehouseStockType, form, search, nameof(WarehouseDailyStock));
+            return await SaveDailyStockAsync(WarehouseStockType, form, search, filterBranchId, nameof(WarehouseDailyStock));
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> SaveDisplayDailyStock([Bind(Prefix = "Form")] DailyStockForm form, string? search)
+        public async Task<IActionResult> SaveDisplayDailyStock([Bind(Prefix = "Form")] DailyStockForm form, string? search, int? filterBranchId)
         {
-            return await SaveDailyStockAsync(DisplayStockType, form, search, nameof(DisplayDailyStock));
+            return await SaveDailyStockAsync(DisplayStockType, form, search, filterBranchId, nameof(DisplayDailyStock));
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> SaveTankDailyStock([Bind(Prefix = "Form")] DailyStockForm form, string? search)
+        public async Task<IActionResult> SaveTankDailyStock([Bind(Prefix = "Form")] DailyStockForm form, string? search, int? filterBranchId)
         {
-            return await SaveDailyStockAsync(TankStockType, form, search, nameof(TankDailyStock));
+            return await SaveDailyStockAsync(TankStockType, form, search, filterBranchId, nameof(TankDailyStock));
         }
 
         [HttpGet]
@@ -116,21 +119,21 @@ namespace gpos.Controllers
             });
         }
 
-        private async Task<IActionResult> SaveDailyStockAsync(string stockType, DailyStockForm form, string? search, string redirectAction)
+        private async Task<IActionResult> SaveDailyStockAsync(string stockType, DailyStockForm form, string? search, int? filterBranchId, string redirectAction)
         {
             form.StockType = stockType;
             NormalizeDailyStockForm(stockType, form);
 
             if (!ModelState.IsValid)
             {
-                return View(ActionViewFor(stockType), await BuildDailyStockPageAsync(stockType, search, form.BranchId, form, activeModalId: DailyStockModalId));
+                return View(ActionViewFor(stockType), await BuildDailyStockPageAsync(stockType, search, filterBranchId, form, activeModalId: DailyStockModalId));
             }
 
             var now = DateTime.UtcNow;
             if (!await BranchExistsAsync(form.BranchId))
             {
                 ModelState.AddModelError("Form.BranchId", "Branch is required.");
-                return View(ActionViewFor(stockType), await BuildDailyStockPageAsync(stockType, search, form.BranchId, form, activeModalId: DailyStockModalId));
+                return View(ActionViewFor(stockType), await BuildDailyStockPageAsync(stockType, search, filterBranchId, form, activeModalId: DailyStockModalId));
             }
             var sold = await ComputeSoldAsync(stockType, form.StockDate!.Value.Date, form.BatchId, form.TankId, form.BranchId);
             var record = form.Id > 0
@@ -170,7 +173,7 @@ namespace gpos.Controllers
             }
 
             await _db.SaveChangesAsync();
-            return RedirectToAction(redirectAction, new { search, branchId = form.BranchId });
+            return RedirectToAction(redirectAction, new { search, filterBranchId });
         }
 
         private void NormalizeDailyStockForm(string stockType, DailyStockForm form)

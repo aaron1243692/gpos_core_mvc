@@ -455,13 +455,15 @@ namespace gpos.Controllers
         public IActionResult DailyCash() => View();
         public IActionResult CashIn() => View();
         public IActionResult CashOut() => View();
-        public async Task<IActionResult> ProductReceiving(string? search, int? branchId)
+        public async Task<IActionResult> ProductReceiving(string? search, int? branchId, int? filterBranchId)
         {
+            branchId = filterBranchId ?? branchId;
             return View(await BuildProductReceivingPage(search, branchId));
         }
 
-        public async Task<IActionResult> FuelReceiving(string? search, int? branchId)
+        public async Task<IActionResult> FuelReceiving(string? search, int? branchId, int? filterBranchId)
         {
+            branchId = filterBranchId ?? branchId;
             return View(await BuildFuelReceivingPage(search, branchId));
         }
 
@@ -484,15 +486,146 @@ namespace gpos.Controllers
             return Json(tanks);
         }
 
+        [HttpGet]
+        public async Task<IActionResult> SearchFuelReceivingTanks(string? search, int? branchId, int take = 20)
+        {
+            var searchText = (search ?? string.Empty).Trim();
+            var resultLimit = Math.Clamp(take, 1, 50);
+            var query = _db.Tanks
+                .AsNoTracking()
+                .Include(tank => tank.Branch)
+                .Include(tank => tank.Fuel)
+                .Where(tank => tank.Status == 1 && tank.IsActive)
+                .AsQueryable();
+
+            if (branchId.HasValue && branchId.Value > 0)
+            {
+                query = query.Where(tank => tank.BranchId == branchId.Value);
+            }
+
+            if (!string.IsNullOrWhiteSpace(searchText))
+            {
+                query = query.Where(tank =>
+                    tank.TankNo.Contains(searchText)
+                    || (tank.Fuel != null && tank.Fuel.Name.Contains(searchText))
+                    || (tank.Branch != null && tank.Branch.Name.Contains(searchText)));
+            }
+
+            var tanks = await query
+                .OrderBy(tank => tank.Branch != null ? tank.Branch.Name : string.Empty)
+                .ThenBy(tank => tank.TankNo)
+                .Take(resultLimit)
+                .Select(tank => new
+                {
+                    tankId = tank.Id,
+                    tankName = tank.TankNo,
+                    branchId = tank.BranchId,
+                    branchName = tank.Branch != null ? tank.Branch.Name : "Unassigned",
+                    fuelId = tank.FuelId,
+                    fuelName = tank.Fuel != null ? tank.Fuel.Name : "-",
+                    currentLiters = tank.CurrentLiters,
+                    capacity = tank.CapacityLiters
+                })
+                .ToListAsync();
+
+            return Json(tanks);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> SearchProductReceivingProducts(string? search, int? branchId, int take = 20)
+        {
+            var searchText = (search ?? string.Empty).Trim();
+            var resultLimit = Math.Clamp(take, 1, 50);
+            var query = _db.Products
+                .AsNoTracking()
+                .Include(product => product.Category)
+                .Include(product => product.ProductUnit)
+                .Where(product => product.Status == 1 && product.IsActive)
+                .AsQueryable();
+
+            if (!string.IsNullOrWhiteSpace(searchText))
+            {
+                query = query.Where(product =>
+                    product.Name.Contains(searchText)
+                    || (product.Category != null && product.Category.Name.Contains(searchText))
+                    || (product.ProductUnit != null && product.ProductUnit.Name.Contains(searchText)));
+            }
+
+            var products = await query
+                .OrderBy(product => product.Name)
+                .Take(resultLimit)
+                .Select(product => new
+                {
+                    productId = product.Id,
+                    productName = product.Name,
+                    categoryName = product.Category != null ? product.Category.Name : "-",
+                    unitName = product.ProductUnit != null ? product.ProductUnit.Name : "-"
+                })
+                .ToListAsync();
+
+            var productIds = products.Select(product => product.productId).ToList();
+            var quantityLookup = branchId.HasValue && branchId.Value > 0
+                ? await _db.WarehouseStocks
+                    .AsNoTracking()
+                    .Where(stock => stock.BranchId == branchId.Value && productIds.Contains(stock.ProductId))
+                    .GroupBy(stock => stock.ProductId)
+                    .Select(group => new { ProductId = group.Key, Quantity = group.Sum(stock => stock.Quantity) })
+                    .ToDictionaryAsync(item => item.ProductId, item => item.Quantity)
+                : new Dictionary<int, decimal>();
+
+            return Json(products.Select(product => new
+            {
+                product.productId,
+                product.productName,
+                product.categoryName,
+                product.unitName,
+                currentWarehouseQuantity = quantityLookup.TryGetValue(product.productId, out var quantity) ? quantity : 0m
+            }));
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> SearchProductReceivingSuppliers(string? search, int take = 20)
+        {
+            var searchText = (search ?? string.Empty).Trim();
+            var resultLimit = Math.Clamp(take, 1, 50);
+            var query = _db.Suppliers
+                .AsNoTracking()
+                .Where(supplier => supplier.Status == 1)
+                .AsQueryable();
+
+            if (!string.IsNullOrWhiteSpace(searchText))
+            {
+                query = query.Where(supplier =>
+                    supplier.Name.Contains(searchText)
+                    || (supplier.ContactPerson != null && supplier.ContactPerson.Contains(searchText))
+                    || (supplier.ContactNumber != null && supplier.ContactNumber.Contains(searchText))
+                    || (supplier.Address != null && supplier.Address.Contains(searchText)));
+            }
+
+            var suppliers = await query
+                .OrderBy(supplier => supplier.Name)
+                .Take(resultLimit)
+                .Select(supplier => new
+                {
+                    supplierId = supplier.Id,
+                    supplierName = supplier.Name,
+                    contact = !string.IsNullOrWhiteSpace(supplier.ContactPerson) ? supplier.ContactPerson : supplier.ContactNumber,
+                    address = supplier.Address
+                })
+                .ToListAsync();
+
+            return Json(suppliers);
+        }
+
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> SaveProductReceiving([Bind(Prefix = "Form")] ProductReceivingForm form, string? search)
+        public async Task<IActionResult> SaveProductReceiving([Bind(Prefix = "Form")] ProductReceivingForm form, string? search, int? filterBranchId)
         {
             var userId = CurrentUserId();
             if (!userId.HasValue)
             {
                 TempData["ReceivingMessage"] = "Failed to save product receiving: Please sign in before saving receiving.";
-                return RedirectToAction(nameof(ProductReceiving), new { search });
+                return RedirectToAction(nameof(ProductReceiving), new { search, filterBranchId });
             }
 
             await using var transaction = await _db.Database.BeginTransactionAsync();
@@ -543,10 +676,10 @@ namespace gpos.Controllers
                 TempData["ReceivingMessage"] = $"Failed to save product receiving: {ex.Message}";
             }
 
-            return RedirectToAction(nameof(ProductReceiving), new { search });
+            return RedirectToAction(nameof(ProductReceiving), new { search, filterBranchId });
         }
 
-        private async Task<IActionResult> SaveProductReceivingOld([Bind(Prefix = "Form")] ProductReceivingForm form, string? search)
+        private async Task<IActionResult> SaveProductReceivingOld([Bind(Prefix = "Form")] ProductReceivingForm form, string? search, int? filterBranchId)
         {
             if (form.SellingPrice < form.CostPrice)
             {
@@ -555,14 +688,14 @@ namespace gpos.Controllers
 
             if (!ModelState.IsValid)
             {
-                return View("ProductReceiving", await BuildProductReceivingPage(search, form.BranchId, form));
+                return View("ProductReceiving", await BuildProductReceivingPage(search, filterBranchId, form));
             }
 
             var userId = CurrentUserId();
             if (!userId.HasValue)
             {
                 ModelState.AddModelError(string.Empty, "Please sign in before saving receiving.");
-                return View("ProductReceiving", await BuildProductReceivingPage(search, form.BranchId, form));
+                return View("ProductReceiving", await BuildProductReceivingPage(search, filterBranchId, form));
             }
 
             await using var transaction = await _db.Database.BeginTransactionAsync();
@@ -576,13 +709,13 @@ namespace gpos.Controllers
                 if (receiving is null)
                 {
                     ModelState.AddModelError(string.Empty, "Receiving record was not found.");
-                    return View("ProductReceiving", await BuildProductReceivingPage(search, form.BranchId, form));
+                    return View("ProductReceiving", await BuildProductReceivingPage(search, filterBranchId, form));
                 }
 
                 if (form.Id > 0 && receiving.Status == 1)
                 {
                     TempData["ReceivingMessage"] = "Completed receiving records cannot be edited. Create an adjustment instead.";
-                    return RedirectToAction(nameof(ProductReceiving), new { search });
+                    return RedirectToAction(nameof(ProductReceiving), new { search, filterBranchId });
                 }
 
                 var product = await ResolveReceivingProduct(form, now);
@@ -627,25 +760,25 @@ namespace gpos.Controllers
                 }
 
                 await transaction.CommitAsync();
-                return RedirectToAction(nameof(ProductReceiving), new { search });
+                return RedirectToAction(nameof(ProductReceiving), new { search, filterBranchId });
             }
             catch (InvalidOperationException ex)
             {
                 await transaction.RollbackAsync();
                 ModelState.AddModelError(string.Empty, ex.Message);
-                return View("ProductReceiving", await BuildProductReceivingPage(search, form.BranchId, form));
+                return View("ProductReceiving", await BuildProductReceivingPage(search, filterBranchId, form));
             }
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> CompleteProductReceiving(int id, string? search)
+        public async Task<IActionResult> CompleteProductReceiving(int id, string? search, int? filterBranchId)
         {
             var userId = CurrentUserId();
             if (!userId.HasValue)
             {
                 TempData["ReceivingMessage"] = "Please sign in before completing receiving.";
-                return RedirectToAction(nameof(ProductReceiving), new { search });
+                return RedirectToAction(nameof(ProductReceiving), new { search, filterBranchId });
             }
 
             var receiving = await _db.StockReceivings.Include(item => item.Items).ThenInclude(item => item.ProductBatch).FirstOrDefaultAsync(item => item.Id == id);
@@ -653,19 +786,19 @@ namespace gpos.Controllers
             if (receiving is null || item is null)
             {
                 TempData["ReceivingMessage"] = "Receiving record was not found.";
-                return RedirectToAction(nameof(ProductReceiving), new { search });
+                return RedirectToAction(nameof(ProductReceiving), new { search, filterBranchId });
             }
 
             if (receiving.Status == 1)
             {
                 TempData["ReceivingMessage"] = "Completed receiving records cannot be edited. Create an adjustment instead.";
-                return RedirectToAction(nameof(ProductReceiving), new { search });
+                return RedirectToAction(nameof(ProductReceiving), new { search, filterBranchId });
             }
 
             if (receiving.Status == 2)
             {
                 TempData["ReceivingMessage"] = "Cancelled receiving records cannot be completed.";
-                return RedirectToAction(nameof(ProductReceiving), new { search });
+                return RedirectToAction(nameof(ProductReceiving), new { search, filterBranchId });
             }
 
             await using var transaction = await _db.Database.BeginTransactionAsync();
@@ -674,12 +807,12 @@ namespace gpos.Controllers
             await CompleteProductReceiving(receiving, item, userId.Value, DateTime.Now);
             await _db.SaveChangesAsync();
             await transaction.CommitAsync();
-            return RedirectToAction(nameof(ProductReceiving), new { search });
+            return RedirectToAction(nameof(ProductReceiving), new { search, filterBranchId });
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> CancelProductReceiving(int id, string? search)
+        public async Task<IActionResult> CancelProductReceiving(int id, string? search, int? filterBranchId)
         {
             var receiving = await _db.StockReceivings.FindAsync(id);
             if (receiving is not null && receiving.Status == 0)
@@ -693,29 +826,66 @@ namespace gpos.Controllers
                 TempData["ReceivingMessage"] = "Completed receiving records cannot be edited. Create an adjustment instead.";
             }
 
-            return RedirectToAction(nameof(ProductReceiving), new { search });
+            return RedirectToAction(nameof(ProductReceiving), new { search, filterBranchId });
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> SaveFuelReceiving([Bind(Prefix = "Form")] FuelReceivingForm form, string? search)
+        public async Task<IActionResult> SaveFuelReceiving([Bind(Prefix = "Form")] FuelReceivingForm form, string? search, int? filterBranchId)
         {
-            if (!ModelState.IsValid)
+            var submittedFuelId = form.FuelId;
+            var tank = await _db.Tanks.Include(item => item.Fuel).FirstOrDefaultAsync(item => item.Id == form.TankId && item.Status == 1 && item.IsActive);
+            if (tank is not null)
             {
-                return View("FuelReceiving", await BuildFuelReceivingPage(search, form.BranchId, form));
+                form.FuelId = tank.FuelId;
+                if (form.BranchId <= 0 && tank.BranchId.HasValue)
+                {
+                    form.BranchId = tank.BranchId.Value;
+                }
+
+                ModelState.Remove("Form.FuelId");
+                ModelState.Remove("Form.BranchId");
             }
 
-            var tank = await _db.Tanks.Include(item => item.Fuel).FirstOrDefaultAsync(item => item.Id == form.TankId && item.Status == 1 && item.IsActive);
-            if (tank is null || tank.FuelId != form.FuelId || tank.BranchId != form.BranchId)
+            if (!ModelState.IsValid)
             {
-                ModelState.AddModelError(nameof(form.TankId), "Tank must belong to the selected branch and fuel.");
-                return View("FuelReceiving", await BuildFuelReceivingPage(search, form.BranchId, form));
+                return View("FuelReceiving", await BuildFuelReceivingPage(search, filterBranchId, form));
+            }
+
+            if (tank is null)
+            {
+                ModelState.AddModelError("Form.TankId", "Tank is required.");
+                return View("FuelReceiving", await BuildFuelReceivingPage(search, filterBranchId, form));
+            }
+
+            if (tank.Fuel is null || tank.FuelId <= 0)
+            {
+                ModelState.AddModelError("Form.TankId", "Selected tank must have a fuel.");
+                return View("FuelReceiving", await BuildFuelReceivingPage(search, filterBranchId, form));
+            }
+
+            if (submittedFuelId > 0 && submittedFuelId != tank.FuelId)
+            {
+                ModelState.AddModelError("Form.FuelId", "Fuel must match the selected tank.");
+                return View("FuelReceiving", await BuildFuelReceivingPage(search, filterBranchId, form));
+            }
+
+            if (!tank.BranchId.HasValue || tank.BranchId.Value <= 0)
+            {
+                ModelState.AddModelError("Form.BranchId", "Selected tank must belong to a branch.");
+                return View("FuelReceiving", await BuildFuelReceivingPage(search, filterBranchId, form));
+            }
+
+            if (form.BranchId != tank.BranchId.Value)
+            {
+                ModelState.AddModelError("Form.TankId", "Tank must belong to the selected branch.");
+                return View("FuelReceiving", await BuildFuelReceivingPage(search, filterBranchId, form));
             }
 
             if (!await _db.Branches.AsNoTracking().AnyAsync(branch => branch.Id == form.BranchId && branch.Status == 1))
             {
                 ModelState.AddModelError("Form.BranchId", "Branch is required.");
-                return View("FuelReceiving", await BuildFuelReceivingPage(search, form.BranchId, form));
+                return View("FuelReceiving", await BuildFuelReceivingPage(search, filterBranchId, form));
             }
 
             var now = DateTime.Now;
@@ -723,13 +893,13 @@ namespace gpos.Controllers
             if (delivery is null)
             {
                 ModelState.AddModelError(string.Empty, "Fuel receiving record was not found.");
-                return View("FuelReceiving", await BuildFuelReceivingPage(search, form.BranchId, form));
+                return View("FuelReceiving", await BuildFuelReceivingPage(search, filterBranchId, form));
             }
 
             if (form.Id > 0 && delivery.Status == 1)
             {
                 TempData["ReceivingMessage"] = "Completed receiving records cannot be edited. Create an adjustment instead.";
-                return RedirectToAction(nameof(FuelReceiving), new { search });
+                return RedirectToAction(nameof(FuelReceiving), new { search, filterBranchId });
             }
 
             await using var transaction = await _db.Database.BeginTransactionAsync();
@@ -741,7 +911,10 @@ namespace gpos.Controllers
             delivery.CostPerLiter = form.CostPerLiter;
             delivery.TotalCost = form.Liters * form.CostPerLiter;
             delivery.Remarks = form.Remarks;
-            delivery.Status = form.Status;
+            if (form.Id == 0)
+            {
+                delivery.Status = 0;
+            }
             delivery.UpdatedAt = now;
 
             if (form.Id == 0)
@@ -749,49 +922,44 @@ namespace gpos.Controllers
                 _db.FuelDeliveries.Add(delivery);
             }
 
-            if (form.Status == 1)
+            if (delivery.Status == 1)
             {
                 tank.CurrentLiters += form.Liters;
                 tank.UpdatedAt = now;
-                if (tank.Fuel is not null && tank.Fuel.CurrentPricePerLiter != form.SellingPricePerLiter)
-                {
-                    tank.Fuel.CurrentPricePerLiter = form.SellingPricePerLiter;
-                    tank.Fuel.UpdatedAt = now;
-                }
             }
 
             await _db.SaveChangesAsync();
-            if (form.Status == 1)
+            if (delivery.Status == 1)
             {
                 await CreateFuelBatchForDelivery(delivery, tank, form.SellingPricePerLiter, now);
                 await _db.SaveChangesAsync();
             }
 
             await transaction.CommitAsync();
-            return RedirectToAction(nameof(FuelReceiving), new { search, branchId = form.BranchId });
+            return RedirectToAction(nameof(FuelReceiving), new { search, filterBranchId });
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> CompleteFuelReceiving(int id, string? search)
+        public async Task<IActionResult> CompleteFuelReceiving(int id, string? search, int? filterBranchId)
         {
             var delivery = await _db.FuelDeliveries.Include(item => item.Tank).Include(item => item.Fuel).FirstOrDefaultAsync(item => item.Id == id);
             if (delivery is null)
             {
                 TempData["ReceivingMessage"] = "Fuel receiving record was not found.";
-                return RedirectToAction(nameof(FuelReceiving), new { search });
+                return RedirectToAction(nameof(FuelReceiving), new { search, filterBranchId });
             }
 
             if (delivery.Status == 1)
             {
                 TempData["ReceivingMessage"] = "Completed receiving records cannot be edited. Create an adjustment instead.";
-                return RedirectToAction(nameof(FuelReceiving), new { search });
+                return RedirectToAction(nameof(FuelReceiving), new { search, filterBranchId });
             }
 
             if (delivery.Status == 2)
             {
                 TempData["ReceivingMessage"] = "Cancelled receiving records cannot be completed.";
-                return RedirectToAction(nameof(FuelReceiving), new { search });
+                return RedirectToAction(nameof(FuelReceiving), new { search, filterBranchId });
             }
 
             await using var transaction = await _db.Database.BeginTransactionAsync();
@@ -812,12 +980,12 @@ namespace gpos.Controllers
             }
 
             await transaction.CommitAsync();
-            return RedirectToAction(nameof(FuelReceiving), new { search });
+            return RedirectToAction(nameof(FuelReceiving), new { search, filterBranchId });
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> CancelFuelReceiving(int id, string? search)
+        public async Task<IActionResult> CancelFuelReceiving(int id, string? search, int? filterBranchId)
         {
             var delivery = await _db.FuelDeliveries.FindAsync(id);
             if (delivery is not null && delivery.Status == 0)
@@ -831,7 +999,7 @@ namespace gpos.Controllers
                 TempData["ReceivingMessage"] = "Completed receiving records cannot be edited. Create an adjustment instead.";
             }
 
-            return RedirectToAction(nameof(FuelReceiving), new { search });
+            return RedirectToAction(nameof(FuelReceiving), new { search, filterBranchId });
         }
         public async Task<IActionResult> WarehouseToDisplayProduct(string? search) => View(await BuildStockTransferPage("WarehouseToDisplayProduct", "Warehouse to Display Product", nameof(SaveWarehouseToDisplayProduct), nameof(CompleteWarehouseToDisplayProduct), nameof(CancelWarehouseToDisplayProduct), search));
         public async Task<IActionResult> DisplayToWarehouseProduct(string? search) => View(await BuildStockTransferPage("DisplayToWarehouseProduct", "Display to Warehouse Product", nameof(SaveDisplayToWarehouseProduct), nameof(CompleteDisplayToWarehouseProduct), nameof(CancelDisplayToWarehouseProduct), search));
@@ -1423,6 +1591,8 @@ namespace gpos.Controllers
                 Search = searchText,
                 BranchId = branchId,
                 FormBranchName = await BranchNameAsync(receivingForm.BranchId),
+                FormSupplierName = await ProductReceivingSupplierNameAsync(receivingForm.SupplierId),
+                FormProductName = await ProductReceivingProductNameAsync(receivingForm.ProductId),
                 Form = receivingForm,
                 BranchOptions = await BuildBranchFilterOptionsAsync(),
                 SupplierOptions = await BuildSupplierOptionsAsync(),
@@ -1491,6 +1661,8 @@ namespace gpos.Controllers
                 Search = searchText,
                 BranchId = branchId,
                 FormBranchName = await BranchNameAsync(receivingForm.BranchId),
+                FormTankName = await FuelReceivingTankNameAsync(receivingForm.TankId),
+                FormFuelName = await FuelReceivingTankFuelNameAsync(receivingForm.TankId),
                 Form = receivingForm,
                 BranchOptions = await BuildBranchFilterOptionsAsync(),
                 SupplierOptions = await BuildSupplierOptionsAsync(),
@@ -1653,6 +1825,59 @@ namespace gpos.Controllers
                 FuelPriceHistoryCreatedBy = users,
                 CurrentFuelPriceHistoryIds = currentHistoryIds.ToHashSet()
             };
+        }
+
+        private async Task<string> FuelReceivingTankNameAsync(int tankId)
+        {
+            if (tankId <= 0)
+            {
+                return string.Empty;
+            }
+
+            return await _db.Tanks.AsNoTracking()
+                .Where(tank => tank.Id == tankId)
+                .Select(tank => tank.TankNo)
+                .FirstOrDefaultAsync() ?? string.Empty;
+        }
+
+        private async Task<string> FuelReceivingTankFuelNameAsync(int tankId)
+        {
+            if (tankId <= 0)
+            {
+                return string.Empty;
+            }
+
+            return await _db.Tanks.AsNoTracking()
+                .Include(tank => tank.Fuel)
+                .Where(tank => tank.Id == tankId)
+                .Select(tank => tank.Fuel != null ? tank.Fuel.Name : string.Empty)
+                .FirstOrDefaultAsync() ?? string.Empty;
+        }
+
+        private async Task<string> ProductReceivingSupplierNameAsync(int supplierId)
+        {
+            if (supplierId <= 0)
+            {
+                return string.Empty;
+            }
+
+            return await _db.Suppliers.AsNoTracking()
+                .Where(supplier => supplier.Id == supplierId)
+                .Select(supplier => supplier.Name)
+                .FirstOrDefaultAsync() ?? string.Empty;
+        }
+
+        private async Task<string> ProductReceivingProductNameAsync(int productId)
+        {
+            if (productId <= 0)
+            {
+                return string.Empty;
+            }
+
+            return await _db.Products.AsNoTracking()
+                .Where(product => product.Id == productId)
+                .Select(product => product.Name)
+                .FirstOrDefaultAsync() ?? string.Empty;
         }
 
         private async Task<ProductBatch> CreateGeneratedProductBatch(ProductReceivingForm form, DateTime now)

@@ -5411,6 +5411,15 @@ table tbody td {
     max-width: 28rem;
 }
 
+.fuel-receiving-toolbar {
+    justify-content: flex-start;
+    flex-wrap: wrap;
+}
+
+.fuel-receiving-toolbar .transaction-ui-search {
+    flex: 0 1 28rem;
+}
+
 .product-receiving-table-wrapper {
     flex: 1 1 auto;
     min-height: 0;

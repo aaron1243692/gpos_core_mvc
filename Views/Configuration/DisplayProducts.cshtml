@@ -22,7 +22,7 @@
         <form class="products-search-wrap d-flex gap-2 flex-wrap" asp-action="DisplayProducts" method="get">
             <label class="visually-hidden" for="display-product-search">Search display batches</label>
             <input class="form-control form-control-sm products-search" id="display-product-search" name="search" value="@Model.Search" type="search" placeholder="Search display batches" autocomplete="off" />
-            <select class="form-select form-select-sm" name="branchId">
+            <select class="form-select form-select-sm" name="filterBranchId">
                 @foreach (var branch in Model.BranchOptions)
                 {
                     <option value="@branch.Value" selected="@((Model.BranchId?.ToString() ?? string.Empty) == branch.Value ? "selected" : null)">@branch.Text</option>
@@ -86,7 +86,7 @@
                         <td><span class="badge @((Model.DisplayStocks[index].Product?.IsActive ?? false) && (Model.DisplayStocks[index].Product?.Status == 1) && (Model.DisplayStocks[index].Batch?.IsActive ?? false) && (Model.DisplayStocks[index].Batch?.Status == 1) ? "text-bg-success" : "text-bg-secondary")">@((Model.DisplayStocks[index].Product?.IsActive ?? false) && (Model.DisplayStocks[index].Product?.Status == 1) && (Model.DisplayStocks[index].Batch?.IsActive ?? false) && (Model.DisplayStocks[index].Batch?.Status == 1) ? "Active" : "Inactive")</span></td>
                         <td class="col-action">
                             <div class="setup-row-actions">
-                                <a class="btn btn-sm btn-outline-primary" asp-action="DisplayProducts" asp-route-editId="@Model.DisplayStocks[index].Id" asp-route-search="@Model.Search" asp-route-branchId="@Model.BranchId">Edit</a>
+                                <a class="btn btn-sm btn-outline-primary" asp-action="DisplayProducts" asp-route-editId="@Model.DisplayStocks[index].Id" asp-route-search="@Model.Search" asp-route-filterBranchId="@Model.BranchId">Edit</a>
                                 @if ((Model.DisplayStocks[index].Product?.IsActive ?? false) && Model.DisplayStocks[index].Product?.Status == 1)
                                 {
                                     <button class="btn btn-sm btn-outline-danger product-deactivate-button" type="button" data-bs-toggle="modal" data-bs-target="#productStatusModal" data-product-id="@Model.DisplayStocks[index].ProductId" data-product-name="@(Model.DisplayStocks[index].Product?.Name ?? "Product")" data-action-url="@Url.Action("DeactivateProductFromStock", "Configuration")">Deactivate</button>
@@ -98,7 +98,7 @@
                                         <input name="id" type="hidden" value="@Model.DisplayStocks[index].ProductId" />
                                         <input name="source" type="hidden" value="Display" />
                                         <input name="search" type="hidden" value="@Model.Search" />
-                                        <input name="branchId" type="hidden" value="@Model.BranchId" />
+                                        <input name="filterBranchId" type="hidden" value="@Model.BranchId" />
                                         <button class="btn btn-sm btn-outline-success" type="submit">Activate</button>
                                     </form>
                                 }
@@ -118,6 +118,7 @@
                 @Html.AntiForgeryToken()
                 <input asp-for="StockForm.Id" type="hidden" />
                 <input name="search" type="hidden" value="@Model.Search" />
+                <input name="filterBranchId" type="hidden" value="@Model.BranchId" />
                 <div class="modal-header">
                     <h2 class="modal-title fs-5">@(isEdit ? "Edit Display Stock" : "Add Display Stock")</h2>
                     <button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -255,7 +256,7 @@
                 <input id="productStatusId" name="id" type="hidden" />
                 <input name="source" type="hidden" value="Display" />
                 <input name="search" type="hidden" value="@Model.Search" />
-                <input name="branchId" type="hidden" value="@Model.BranchId" />
+                <input name="filterBranchId" type="hidden" value="@Model.BranchId" />
                 <div class="modal-header">
                     <h2 class="modal-title fs-5" id="productStatusModalLabel">Deactivate Record</h2>
                     <button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button>

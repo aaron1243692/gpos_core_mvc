@@ -132,13 +132,15 @@ namespace gpos.Controllers
             return Json(batches);
         }
 
-        public async Task<IActionResult> DisplayProducts(string? search, int? branchId, int? editId)
+        public async Task<IActionResult> DisplayProducts(string? search, int? branchId, int? filterBranchId, int? editId)
         {
+            branchId = filterBranchId ?? branchId;
             return View(await BuildDisplayProductsPageAsync(search, branchId: branchId, editId: editId, activeModalId: editId.HasValue ? "displayProductModal" : string.Empty));
         }
 
-        public async Task<IActionResult> WarehouseProducts(string? search, int? branchId, int? editId)
+        public async Task<IActionResult> WarehouseProducts(string? search, int? branchId, int? filterBranchId, int? editId)
         {
+            branchId = filterBranchId ?? branchId;
             return View(await BuildWarehouseProductsPageAsync(search, branchId: branchId, editId: editId, activeModalId: editId.HasValue ? "warehouseProductModal" : string.Empty));
         }
 
@@ -149,13 +151,13 @@ namespace gpos.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> SaveDisplayProduct([Bind(Prefix = "StockForm")] ProductStockForm form, string? search)
+        public async Task<IActionResult> SaveDisplayProduct([Bind(Prefix = "StockForm")] ProductStockForm form, string? search, int? filterBranchId)
         {
             await ValidateProductStockFormAsync(form, isEdit: form.Id.HasValue && form.Id.Value > 0, isDisplay: true);
             await PopulateProductStockFormDisplayNamesAsync(form);
             if (!ModelState.IsValid)
             {
-                return View("DisplayProducts", await BuildDisplayProductsPageAsync(search, form, "displayProductModal", form.BranchId));
+                return View("DisplayProducts", await BuildDisplayProductsPageAsync(search, form, "displayProductModal", filterBranchId));
             }
 
             var now = DateTime.UtcNow;
@@ -170,7 +172,7 @@ namespace gpos.Controllers
                 if (displayStock is null)
                 {
                     ModelState.AddModelError(string.Empty, "Display product was not found.");
-                    return View("DisplayProducts", await BuildDisplayProductsPageAsync(search, form, "displayProductModal", form.BranchId));
+                    return View("DisplayProducts", await BuildDisplayProductsPageAsync(search, form, "displayProductModal", filterBranchId));
                 }
 
                 displayStock.BranchId = form.BranchId;
@@ -179,7 +181,7 @@ namespace gpos.Controllers
                 displayStock.UpdatedAt = now;
 
                 await _db.SaveChangesAsync();
-                return RedirectToAction(nameof(DisplayProducts), new { search, branchId = form.BranchId });
+                return RedirectToAction(nameof(DisplayProducts), new { search, filterBranchId });
             }
 
             _db.DisplayStocks.Add(new DisplayStock
@@ -193,18 +195,18 @@ namespace gpos.Controllers
             });
 
             await _db.SaveChangesAsync();
-            return RedirectToAction(nameof(DisplayProducts), new { search, branchId = form.BranchId });
+            return RedirectToAction(nameof(DisplayProducts), new { search, filterBranchId });
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> SaveWarehouseProduct([Bind(Prefix = "StockForm")] ProductStockForm form, string? search)
+        public async Task<IActionResult> SaveWarehouseProduct([Bind(Prefix = "StockForm")] ProductStockForm form, string? search, int? filterBranchId)
         {
             await ValidateProductStockFormAsync(form, isEdit: form.Id.HasValue && form.Id.Value > 0, isDisplay: false);
             await PopulateProductStockFormDisplayNamesAsync(form);
             if (!ModelState.IsValid)
             {
-                return View("WarehouseProducts", await BuildWarehouseProductsPageAsync(search, form, "warehouseProductModal", form.BranchId));
+                return View("WarehouseProducts", await BuildWarehouseProductsPageAsync(search, form, "warehouseProductModal", filterBranchId));
             }
 
             var now = DateTime.UtcNow;
@@ -216,7 +218,7 @@ namespace gpos.Controllers
                 if (warehouseStock is null)
                 {
                     ModelState.AddModelError(string.Empty, "Warehouse product was not found.");
-                    return View("WarehouseProducts", await BuildWarehouseProductsPageAsync(search, form, "warehouseProductModal", form.BranchId));
+                    return View("WarehouseProducts", await BuildWarehouseProductsPageAsync(search, form, "warehouseProductModal", filterBranchId));
                 }
 
                 warehouseStock.BranchId = form.BranchId;
@@ -225,7 +227,7 @@ namespace gpos.Controllers
                 warehouseStock.UpdatedAt = now;
 
                 await _db.SaveChangesAsync();
-                return RedirectToAction(nameof(WarehouseProducts), new { search, branchId = form.BranchId });
+                return RedirectToAction(nameof(WarehouseProducts), new { search, filterBranchId });
             }
 
             _db.WarehouseStocks.Add(new WarehouseStock
@@ -239,7 +241,7 @@ namespace gpos.Controllers
             });
 
             await _db.SaveChangesAsync();
-            return RedirectToAction(nameof(WarehouseProducts), new { search, branchId = form.BranchId });
+            return RedirectToAction(nameof(WarehouseProducts), new { search, filterBranchId });
         }
 
         [HttpPost]
@@ -1043,18 +1045,19 @@ namespace gpos.Controllers
         }
 
 
-        public async Task<IActionResult> Tanks(string? search, int? editId, int? branchId)
+        public async Task<IActionResult> Tanks(string? search, int? editId, int? branchId, int? filterBranchId)
         {
+            branchId = filterBranchId ?? branchId;
             return View(await BuildTanksPageAsync(search, branchId, editId: editId, activeModalId: editId.HasValue ? "tankModal" : ""));
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> SaveTank([Bind(Prefix = "TankForm")] TankForm form, string? search)
+        public async Task<IActionResult> SaveTank([Bind(Prefix = "TankForm")] TankForm form, string? search, int? filterBranchId)
         {
             if (!ModelState.IsValid)
             {
-                return View("Tanks", await BuildTanksPageAsync(search, form.BranchId, form, activeModalId: "tankModal"));
+                return View("Tanks", await BuildTanksPageAsync(search, filterBranchId, form, activeModalId: "tankModal"));
             }
 
             var fuelExists = await _db.Fuels.AnyAsync(fuel => fuel.Id == form.FuelId && fuel.Status == 1 && fuel.IsActive);
@@ -1062,13 +1065,13 @@ namespace gpos.Controllers
             if (!fuelExists)
             {
                 ModelState.AddModelError("TankForm.FuelId", "Tank fuel is required.");
-                return View("Tanks", await BuildTanksPageAsync(search, form.BranchId, form, activeModalId: "tankModal"));
+                return View("Tanks", await BuildTanksPageAsync(search, filterBranchId, form, activeModalId: "tankModal"));
             }
 
             if (!await _db.Branches.AnyAsync(branch => branch.Id == form.BranchId && branch.Status == 1))
             {
                 ModelState.AddModelError("TankForm.BranchId", "Branch is required.");
-                return View("Tanks", await BuildTanksPageAsync(search, form.BranchId, form, activeModalId: "tankModal"));
+                return View("Tanks", await BuildTanksPageAsync(search, filterBranchId, form, activeModalId: "tankModal"));
             }
 
             var now = DateTime.UtcNow;
@@ -1094,7 +1097,7 @@ namespace gpos.Controllers
             }
 
             await _db.SaveChangesAsync();
-            return RedirectToAction(nameof(Tanks), new { search, branchId = form.BranchId });
+            return RedirectToAction(nameof(Tanks), new { search, filterBranchId });
         }
 
         [HttpPost]
@@ -1133,24 +1136,25 @@ namespace gpos.Controllers
         }
 
 
-        public async Task<IActionResult> Pumps(string? search, int? editId, int? branchId)
+        public async Task<IActionResult> Pumps(string? search, int? editId, int? branchId, int? filterBranchId)
         {
+            branchId = filterBranchId ?? branchId;
             return View(await BuildPumpsPageAsync(search, branchId, editId: editId, activeModalId: editId.HasValue ? "pumpModal" : ""));
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> SavePump([Bind(Prefix = "PumpForm")] PumpForm form, string? search)
+        public async Task<IActionResult> SavePump([Bind(Prefix = "PumpForm")] PumpForm form, string? search, int? filterBranchId)
         {
             if (!ModelState.IsValid)
             {
-                return View("Pumps", await BuildPumpsPageAsync(search, form.BranchId, form, activeModalId: "pumpModal"));
+                return View("Pumps", await BuildPumpsPageAsync(search, filterBranchId, form, activeModalId: "pumpModal"));
             }
 
             if (!await _db.Branches.AnyAsync(branch => branch.Id == form.BranchId && branch.Status == 1))
             {
                 ModelState.AddModelError("PumpForm.BranchId", "Branch is required.");
-                return View("Pumps", await BuildPumpsPageAsync(search, form.BranchId, form, activeModalId: "pumpModal"));
+                return View("Pumps", await BuildPumpsPageAsync(search, filterBranchId, form, activeModalId: "pumpModal"));
             }
 
             var now = DateTime.UtcNow;
@@ -1173,7 +1177,7 @@ namespace gpos.Controllers
             }
 
             await _db.SaveChangesAsync();
-            return RedirectToAction(nameof(Pumps), new { search, branchId = form.BranchId });
+            return RedirectToAction(nameof(Pumps), new { search, filterBranchId });
         }
 
         [HttpPost]

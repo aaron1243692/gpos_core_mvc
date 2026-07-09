@@ -30,7 +30,7 @@
             <input class="form-control" name="search" value="@Model.Search" placeholder="Search low stock settings" />
             @if (isBranchScoped)
             {
-                <select class="form-select" name="branchId">
+                <select class="form-select" name="filterBranchId">
                     @foreach (var branch in Model.BranchOptions)
                     {
                         <option value="@branch.Value" selected="@((Model.BranchId?.ToString() ?? string.Empty) == branch.Value ? "selected" : null)">@branch.Text</option>
@@ -121,7 +121,7 @@
                         </td>
                         <td>@(row.UpdatedAt?.ToString("yyyy-MM-dd HH:mm") ?? "-")</td>
                         <td class="col-action">
-                            <a class="btn btn-sm btn-outline-primary" asp-action="@Model.PageAction" asp-route-editId="@row.Id" asp-route-search="@Model.Search" asp-route-branchId="@Model.BranchId">Edit</a>
+                            <a class="btn btn-sm btn-outline-primary" asp-action="@Model.PageAction" asp-route-editId="@row.Id" asp-route-search="@Model.Search" asp-route-filterBranchId="@Model.BranchId">Edit</a>
                         </td>
                     </tr>
                 }
@@ -138,6 +138,7 @@
                 <input asp-for="Form.Id" type="hidden" />
                 <input asp-for="Form.StockType" type="hidden" />
                 <input name="search" type="hidden" value="@Model.Search" />
+                <input name="filterBranchId" type="hidden" value="@Model.BranchId" />
 
                 <div class="modal-header">
                     <h2 class="modal-title fs-5">@(isEdit ? "Edit Low Stock Setting" : "Add Low Stock Setting")</h2>

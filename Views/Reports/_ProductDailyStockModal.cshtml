@@ -13,6 +13,7 @@
                 <input asp-for="Form.StockType" type="hidden" />
                 <input asp-for="Form.ProductId" type="hidden" data-daily-stock-product-id />
                 <input name="search" type="hidden" value="@Model.Search" />
+                <input name="filterBranchId" type="hidden" value="@Model.BranchId" />
                 <div class="modal-header">
                     <h2 class="modal-title fs-5">@(isEdit ? $"Edit {Model.StockType} Daily Stock" : $"Add {Model.StockType} Daily Stock")</h2>
                     <button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button>

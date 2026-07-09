@@ -19,7 +19,7 @@
     <div class="table-actions fuel-toolbar">
         <form asp-action="@Model.PageAction" method="get" class="setup-search-form fuel-toolbar-search flex-wrap">
             <input class="form-control" name="search" value="@Model.Search" placeholder="Search display daily stock" />
-            <select class="form-select" name="branchId">
+            <select class="form-select" name="filterBranchId">
                 @foreach (var branch in Model.BranchOptions)
                 {
                     <option value="@branch.Value" selected="@((Model.BranchId?.ToString() ?? string.Empty) == branch.Value ? "selected" : null)">@branch.Text</option>
@@ -69,7 +69,7 @@
                         <td>@record.Ending.ToString("N2")</td>
                         <td>@record.Loss.ToString("N2")</td>
                         <td>@(record.Remarks ?? "-")</td>
-                        <td class="col-action"><a class="btn btn-sm btn-outline-primary" asp-action="@Model.PageAction" asp-route-editId="@record.Id" asp-route-search="@Model.Search" asp-route-branchId="@Model.BranchId">Edit</a></td>
+                        <td class="col-action"><a class="btn btn-sm btn-outline-primary" asp-action="@Model.PageAction" asp-route-editId="@record.Id" asp-route-search="@Model.Search" asp-route-filterBranchId="@Model.BranchId">Edit</a></td>
                     </tr>
                 }
             </tbody>

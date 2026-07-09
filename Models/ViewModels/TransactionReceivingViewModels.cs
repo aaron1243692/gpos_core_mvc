@@ -8,6 +8,8 @@ namespace gpos.Models.ViewModels
         public string Search { get; set; } = string.Empty;
         public int? BranchId { get; set; }
         public string FormBranchName { get; set; } = string.Empty;
+        public string FormSupplierName { get; set; } = string.Empty;
+        public string FormProductName { get; set; } = string.Empty;
         public ProductReceivingForm Form { get; set; } = new();
         public List<ProductReceivingRowViewModel> Receivings { get; set; } = new();
         public List<SelectListItem> BranchOptions { get; set; } = new();
@@ -82,6 +84,8 @@ namespace gpos.Models.ViewModels
         public string Search { get; set; } = string.Empty;
         public int? BranchId { get; set; }
         public string FormBranchName { get; set; } = string.Empty;
+        public string FormTankName { get; set; } = string.Empty;
+        public string FormFuelName { get; set; } = string.Empty;
         public FuelReceivingForm Form { get; set; } = new();
         public List<FuelReceivingRowViewModel> Receivings { get; set; } = new();
         public List<SelectListItem> BranchOptions { get; set; } = new();

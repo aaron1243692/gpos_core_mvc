@@ -27,7 +27,7 @@
     <div class="table-actions fuel-toolbar">
         <form asp-action="Tanks" method="get" class="setup-search-form fuel-toolbar-search flex-wrap">
             <input class="form-control" name="search" value="@Model.Search" placeholder="Search by tank or fuel" />
-            <select class="form-select" name="branchId">
+            <select class="form-select" name="filterBranchId">
                 @foreach (var branch in Model.BranchOptions)
                 {
                     <option value="@branch.Value" selected="@((Model.BranchId?.ToString() ?? string.Empty) == branch.Value ? "selected" : null)">@branch.Text</option>
@@ -82,7 +82,7 @@
                         <td><span class="badge @(Model.Tanks[i].Status == 1 ? "text-bg-success" : "text-bg-secondary")">@(Model.Tanks[i].Status == 1 ? "Active" : "Inactive")</span></td>
                         <td class="col-action">
                             <div class="setup-row-actions">
-                                <a class="btn btn-sm btn-outline-primary" asp-action="Tanks" asp-route-editId="@Model.Tanks[i].Id" asp-route-search="@Model.Search" asp-route-branchId="@Model.BranchId">Edit</a>
+                                <a class="btn btn-sm btn-outline-primary" asp-action="Tanks" asp-route-editId="@Model.Tanks[i].Id" asp-route-search="@Model.Search" asp-route-filterBranchId="@Model.BranchId">Edit</a>
                                 @if (Model.Tanks[i].Status == 1 && Model.Tanks[i].IsActive)
                                 {
                                     <form asp-action="DeleteTank" method="post" data-deactivate-form>
@@ -117,6 +117,7 @@
                 @Html.AntiForgeryToken()
                 <input asp-for="TankForm.Id" type="hidden" />
                 <input name="search" type="hidden" value="@Model.Search" />
+                <input name="filterBranchId" type="hidden" value="@Model.BranchId" />
                 <div class="modal-header">
                     <h2 class="modal-title fs-5" id="tankModalLabel">@(Model.TankForm.Id > 0 ? "Edit Tank" : "Add Tank")</h2>
                     <button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button>

@@ -1,42 +1,43 @@
 @model gpos.Models.ViewModels.FuelReceivingPageViewModel
 
-<section class="transaction-ui-page">
-    <div class="content-card transaction-ui-card">
-        <div class="card-title-row">
+<section class="transaction-ui-page product-receiving-page">
+    <div class="content-card transaction-ui-card product-receiving-container">
+        <div class="card-title-row page-header">
             <div>
                 <h1>Fuel Receiving</h1>
                 <p>Receive fuel deliveries into tanks.</p>
             </div>
-            <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#fuelReceivingFormModal">Add Receiving</button>
+            <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#addFuelReceivingModal">Add Receiving</button>
         </div>
 
-        @if (TempData["ReceivingMessage"] is not null)
-        {
-            <div class="alert alert-warning">@TempData["ReceivingMessage"]</div>
-        }
+        <div class="product-receiving-body">
+            @if (TempData["ReceivingMessage"] is not null)
+            {
+                <div class="alert alert-warning">@TempData["ReceivingMessage"]</div>
+            }
 
-        <form asp-action="FuelReceiving" method="get" class="transaction-ui-toolbar">
-            <input class="form-control transaction-ui-search" name="search" value="@Model.Search" type="search" placeholder="Search receiving, supplier, fuel, tank, branch, status..." />
-            <select class="form-select" name="branchId" style="max-width: 220px;">
-                @for (var i = 0; i < Model.BranchOptions.Count; i += 1)
-                {
-                    var option = Model.BranchOptions[i];
-                    var selected = option.Value == (Model.BranchId?.ToString() ?? string.Empty);
-                    if (selected)
+            <form asp-action="FuelReceiving" method="get" class="transaction-ui-toolbar product-receiving-toolbar fuel-receiving-toolbar toolbar">
+                <input class="form-control transaction-ui-search" name="search" value="@Model.Search" type="search" placeholder="Search receiving, supplier, fuel, tank, branch, status..." />
+                <select class="form-select" name="filterBranchId" style="max-width: 220px;">
+                    @for (var i = 0; i < Model.BranchOptions.Count; i += 1)
                     {
-                        <option value="@option.Value" selected>@option.Text</option>
+                        var option = Model.BranchOptions[i];
+                        var selected = option.Value == (Model.BranchId?.ToString() ?? string.Empty);
+                        if (selected)
+                        {
+                            <option value="@option.Value" selected>@option.Text</option>
+                        }
+                        else
+                        {
+                            <option value="@option.Value">@option.Text</option>
+                        }
                     }
-                    else
-                    {
-                        <option value="@option.Value">@option.Text</option>
-                    }
-                }
-            </select>
-            <button class="btn btn-outline-primary" type="submit">Search</button>
-            <a class="btn btn-outline-secondary" asp-action="FuelReceiving">Clear</a>
-        </form>
+                </select>
+                <button class="btn btn-outline-primary" type="submit">Search</button>
+                <a class="btn btn-outline-secondary" asp-action="FuelReceiving">Clear</a>
+            </form>
 
-        <div class="table-responsive transaction-ui-table-wrap">
+            <div class="table-responsive transaction-ui-table-wrap product-receiving-table-wrapper">
             <table class="table app-table table-sm align-middle mb-0">
                 <thead>
                     <tr>
@@ -87,12 +88,14 @@
                                         @Html.AntiForgeryToken()
                                         <input name="id" type="hidden" value="@Model.Receivings[i].Id" />
                                         <input name="search" type="hidden" value="@Model.Search" />
+                                        <input name="filterBranchId" type="hidden" value="@Model.BranchId" />
                                         <button class="btn btn-sm btn-outline-success" type="submit">Complete</button>
                                     </form>
                                     <form asp-action="CancelFuelReceiving" method="post" class="d-inline" onsubmit="return confirm('Cancel this pending fuel receiving?');">
                                         @Html.AntiForgeryToken()
                                         <input name="id" type="hidden" value="@Model.Receivings[i].Id" />
                                         <input name="search" type="hidden" value="@Model.Search" />
+                                        <input name="filterBranchId" type="hidden" value="@Model.BranchId" />
                                         <button class="btn btn-sm btn-outline-danger" type="submit">Cancel</button>
                                     </form>
                                 }
@@ -101,16 +104,18 @@
                     }
                 </tbody>
             </table>
+            </div>
         </div>
     </div>
 </section>
 
-<div class="modal fade" id="fuelReceivingFormModal" tabindex="-1" aria-hidden="true">
+<div class="modal fade" id="addFuelReceivingModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content">
             <form asp-action="SaveFuelReceiving" method="post">
                 @Html.AntiForgeryToken()
                 <input name="search" type="hidden" value="@Model.Search" />
+                <input name="filterBranchId" type="hidden" value="@Model.BranchId" />
                 <div class="modal-header">
                     <h2 class="modal-title fs-5">Add Fuel Receiving</h2>
                     <button class="btn-close" type="button" data-bs-dismiss="modal"></button>
@@ -130,27 +135,26 @@
                             <span asp-validation-for="Form.BranchId" class="text-danger"></span>
                         </div>
                         <div class="col-md-6">
-                            <label asp-for="Form.SupplierId" class="form-label">Supplier</label>
-                            <select asp-for="Form.SupplierId" asp-items="Model.SupplierOptions" class="form-select"></select>
-                            <span asp-validation-for="Form.SupplierId" class="text-danger"></span>
-                        </div>
-                        <div class="col-md-6">
-                            <label asp-for="Form.FuelId" class="form-label">Fuel</label>
-                            <select asp-for="Form.FuelId" asp-items="Model.FuelOptions" class="form-select"></select>
+                            <label asp-for="Form.TankId" class="form-label">Tank</label>
+                            <input asp-for="Form.TankId" type="hidden" id="fuelReceivingTankId" data-fuel-receiving-tank />
+                            <input asp-for="Form.FuelId" type="hidden" id="fuelReceivingFuelId" />
+                            <div class="input-group">
+                                <input class="form-control" id="fuelReceivingTankDisplay" value="@Model.FormTankName" placeholder="Select tank" readonly />
+                                <button type="button" class="btn btn-outline-secondary fuel-receiving-tank-select-btn" data-bs-toggle="modal" data-bs-target="#fuelReceivingTankSelectorModal">
+                                    <img src="/icons/search.png" alt="Search" style="width:16px;height:16px;" />
+                                </button>
+                            </div>
+                            <span asp-validation-for="Form.TankId" class="text-danger"></span>
                             <span asp-validation-for="Form.FuelId" class="text-danger"></span>
                         </div>
                         <div class="col-md-6">
-                            <label asp-for="Form.TankId" class="form-label">Tank</label>
-                            <select asp-for="Form.TankId" asp-items="Model.TankOptions" class="form-select" data-fuel-receiving-tank></select>
-                            <span asp-validation-for="Form.TankId" class="text-danger"></span>
+                            <label class="form-label" for="fuelReceivingFuelDisplay">Fuel</label>
+                            <input class="form-control" id="fuelReceivingFuelDisplay" value="@Model.FormFuelName" placeholder="Fuel from selected tank" readonly />
                         </div>
                         <div class="col-md-6">
-                            <label asp-for="Form.Status" class="form-label">Status</label>
-                            <select asp-for="Form.Status" class="form-select">
-                                <option value="1">Completed</option>
-                                <option value="0">Pending</option>
-                                <option value="2">Cancelled</option>
-                            </select>
+                            <label asp-for="Form.SupplierId" class="form-label">Supplier</label>
+                            <select asp-for="Form.SupplierId" asp-items="Model.SupplierOptions" class="form-select"></select>
+                            <span asp-validation-for="Form.SupplierId" class="text-danger"></span>
                         </div>
                         <div class="col-md-4">
                             <label asp-for="Form.Liters" class="form-label">Liters</label>
@@ -178,6 +182,44 @@
                     <button class="btn btn-primary" type="submit">Save Receiving</button>
                 </div>
             </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="fuelReceivingTankSelectorModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title fs-5">Select Tank</h2>
+                <button class="btn-close" type="button" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="input-group mb-3">
+                    <input class="form-control" id="fuelReceivingTankSearchInput" type="search" placeholder="Search tank, fuel, or branch" />
+                    <button class="btn btn-outline-primary" id="fuelReceivingTankSearchButton" type="button">Search</button>
+                </div>
+                <div class="table-responsive">
+                    <table class="table app-table table-sm align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>No</th>
+                                <th>Branch</th>
+                                <th>Tank</th>
+                                <th>Fuel</th>
+                                <th>Current Liters</th>
+                                <th>Capacity</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="fuelReceivingTankSelectorResults">
+                            <tr><td class="text-center text-muted fw-bold" colspan="7">Search for a tank.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Close</button>
+            </div>
         </div>
     </div>
 </div>
@@ -211,46 +253,99 @@
 <script>
     document.addEventListener("DOMContentLoaded", function () {
         const branchInput = document.getElementById("fuelReceivingBranchId");
-        const tankSelect = document.querySelector("[data-fuel-receiving-tank]");
-        const fuelSelect = document.querySelector("[name='Form.FuelId']");
+        const branchDisplay = document.getElementById("fuelReceivingBranchDisplay");
+        const tankInput = document.getElementById("fuelReceivingTankId");
+        const tankDisplay = document.getElementById("fuelReceivingTankDisplay");
+        const fuelInput = document.getElementById("fuelReceivingFuelId");
+        const fuelDisplay = document.getElementById("fuelReceivingFuelDisplay");
+        const tankSearchInput = document.getElementById("fuelReceivingTankSearchInput");
+        const tankSearchButton = document.getElementById("fuelReceivingTankSearchButton");
+        const tankResults = document.getElementById("fuelReceivingTankSelectorResults");
+        const tankSelectorModal = document.getElementById("fuelReceivingTankSelectorModal");
 
-        async function refreshTanks() {
-            if (!branchInput || !tankSelect) {
+        const escapeHtml = value => String(value ?? "")
+            .replaceAll("&", "&amp;")
+            .replaceAll("<", "&lt;")
+            .replaceAll(">", "&gt;")
+            .replaceAll('"', "&quot;")
+            .replaceAll("'", "&#039;");
+
+        function closeSelectorOnly(modalElement) {
+            if (modalElement && window.bootstrap) {
+                bootstrap.Modal.getOrCreateInstance(modalElement).hide();
+                setTimeout(function () {
+                    if (document.querySelector(".modal.show")) {
+                        document.body.classList.add("modal-open");
+                    }
+                }, 150);
+            }
+        }
+
+        function renderTankRows(tanks) {
+            if (!tankResults) return;
+            tankResults.innerHTML = "";
+            if (!tanks.length) {
+                tankResults.innerHTML = '<tr><td class="text-center text-muted fw-bold" colspan="7">No tanks found.</td></tr>';
                 return;
             }
 
-            tankSelect.innerHTML = '<option value="0">Select tank</option>';
-            if (!branchInput.value) {
-                return;
-            }
+            tanks.forEach((tank, index) => {
+                const tr = document.createElement("tr");
+                tr.innerHTML = `
+                    <td>${index + 1}</td>
+                    <td>${escapeHtml(tank.branchName || "-")}</td>
+                    <td>${escapeHtml(tank.tankName || "-")}</td>
+                    <td>${escapeHtml(tank.fuelName || "-")}</td>
+                    <td>${Number(tank.currentLiters || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                    <td>${Number(tank.capacity || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                    <td><button class="btn btn-sm btn-outline-primary" type="button">Select</button></td>
+                `;
+                tr.querySelector("button").addEventListener("click", () => {
+                    if (tankInput) tankInput.value = tank.tankId || "";
+                    if (tankDisplay) tankDisplay.value = tank.tankName || "";
+                    if (fuelInput) fuelInput.value = tank.fuelId || "";
+                    if (fuelDisplay) fuelDisplay.value = tank.fuelName || "";
+                    if (branchInput) branchInput.value = tank.branchId || "";
+                    if (branchDisplay) branchDisplay.value = tank.branchName || "";
 
-            const response = await fetch(`/Transaction/TankOptionsByBranch?branchId=${encodeURIComponent(branchInput.value)}`, {
-                headers: { "Accept": "application/json" }
-            });
-            if (!response.ok) {
-                return;
-            }
+                    tankInput?.dispatchEvent(new Event("change", { bubbles: true }));
+                    fuelInput?.dispatchEvent(new Event("change", { bubbles: true }));
 
-            const tanks = await response.json();
-            tanks.forEach(function (tank) {
-                const option = document.createElement("option");
-                option.value = tank.id;
-                option.textContent = tank.text;
-                option.dataset.fuelId = tank.fuelId || "";
-                tankSelect.appendChild(option);
+                    closeSelectorOnly(tankSelectorModal);
+                });
+                tankResults.appendChild(tr);
             });
         }
 
-        branchInput?.addEventListener("change", function () {
-            refreshTanks();
-            if (fuelSelect) {
-                fuelSelect.value = "0";
+        async function searchTanks() {
+            if (!tankResults) return;
+            tankResults.innerHTML = '<tr><td class="text-center text-muted fw-bold" colspan="7">Loading tanks...</td></tr>';
+            const query = encodeURIComponent(tankSearchInput?.value || "");
+            const branch = encodeURIComponent(branchInput?.value || "");
+            const response = await fetch(`/Transaction/SearchFuelReceivingTanks?search=${query}&branchId=${branch}`, {
+                headers: { "Accept": "application/json" }
+            });
+            if (!response.ok) {
+                tankResults.innerHTML = '<tr><td class="text-center text-danger fw-bold" colspan="7">Unable to load tanks.</td></tr>';
+                return;
             }
+
+            renderTankRows(await response.json());
+        }
+
+        branchInput?.addEventListener("change", function () {
+            if (tankInput) tankInput.value = "";
+            if (tankDisplay) tankDisplay.value = "";
+            if (fuelInput) fuelInput.value = "";
+            if (fuelDisplay) fuelDisplay.value = "";
         });
-        tankSelect?.addEventListener("change", function () {
-            const fuelId = tankSelect.selectedOptions[0]?.dataset.fuelId;
-            if (fuelSelect && fuelId) {
-                fuelSelect.value = fuelId;
+
+        document.querySelector(".fuel-receiving-tank-select-btn")?.addEventListener("click", searchTanks);
+        tankSearchButton?.addEventListener("click", searchTanks);
+        tankSearchInput?.addEventListener("keydown", event => {
+            if (event.key === "Enter") {
+                event.preventDefault();
+                searchTanks();
             }
         });
     });

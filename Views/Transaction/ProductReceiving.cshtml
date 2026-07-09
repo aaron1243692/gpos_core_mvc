@@ -7,7 +7,7 @@
                 <h1>Product Receiving</h1>
                 <p>Receive product batches into warehouse stock.</p>
             </div>
-            <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#productReceivingFormModal">Add Receiving</button>
+            <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#addProductReceivingModal">Add Receiving</button>
         </div>
 
         <div class="product-receiving-body">
@@ -22,7 +22,7 @@
 
             <form asp-action="ProductReceiving" method="get" class="transaction-ui-toolbar product-receiving-toolbar toolbar">
                 <input class="form-control transaction-ui-search" name="search" value="@Model.Search" type="search" placeholder="Search receiving, supplier, product, batch, branch, status..." />
-                <select class="form-select" name="branchId" style="max-width: 220px;">
+                <select class="form-select" name="filterBranchId" style="max-width: 220px;">
                     @for (var i = 0; i < Model.BranchOptions.Count; i += 1)
                     {
                         var option = Model.BranchOptions[i];
@@ -92,12 +92,14 @@
                                             @Html.AntiForgeryToken()
                                             <input name="id" type="hidden" value="@Model.Receivings[i].Id" />
                                             <input name="search" type="hidden" value="@Model.Search" />
+                                            <input name="filterBranchId" type="hidden" value="@Model.BranchId" />
                                             <button class="btn btn-sm btn-outline-success" type="submit">Complete</button>
                                         </form>
                                         <form asp-action="CancelProductReceiving" method="post" class="d-inline" onsubmit="return confirm('Cancel this pending product receiving?');">
                                             @Html.AntiForgeryToken()
                                             <input name="id" type="hidden" value="@Model.Receivings[i].Id" />
                                             <input name="search" type="hidden" value="@Model.Search" />
+                                            <input name="filterBranchId" type="hidden" value="@Model.BranchId" />
                                             <button class="btn btn-sm btn-outline-danger" type="submit">Cancel</button>
                                         </form>
                                     }
@@ -111,12 +113,13 @@
     </div>
 </section>
 
-<div class="modal fade" id="productReceivingFormModal" tabindex="-1" aria-hidden="true">
+<div class="modal fade" id="addProductReceivingModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content">
             <form asp-action="SaveProductReceiving" method="post">
                 @Html.AntiForgeryToken()
                 <input name="search" type="hidden" value="@Model.Search" />
+                <input name="filterBranchId" type="hidden" value="@Model.BranchId" />
                 <div class="modal-header">
                     <h2 class="modal-title fs-5">Add Product Receiving</h2>
                     <button class="btn-close" type="button" data-bs-dismiss="modal"></button>
@@ -137,7 +140,13 @@
                         </div>
                         <div class="col-md-6">
                             <label asp-for="Form.SupplierId" class="form-label">Supplier</label>
-                            <select asp-for="Form.SupplierId" asp-items="Model.SupplierOptions" class="form-select"></select>
+                            <input asp-for="Form.SupplierId" type="hidden" id="productReceivingSupplierId" />
+                            <div class="input-group">
+                                <input class="form-control" id="productReceivingSupplierDisplay" value="@Model.FormSupplierName" placeholder="Select supplier" readonly />
+                                <button type="button" class="btn btn-outline-secondary product-receiving-supplier-select-btn" data-bs-toggle="modal" data-bs-target="#productReceivingSupplierSelectorModal">
+                                    <img src="/icons/search.png" alt="Search" style="width:16px;height:16px;" />
+                                </button>
+                            </div>
                             <span asp-validation-for="Form.SupplierId" class="text-danger"></span>
                         </div>
                         <div class="col-md-6">
@@ -149,7 +158,13 @@
                         </div>
                         <div class="col-md-6 product-existing-fields">
                             <label asp-for="Form.ProductId" class="form-label">Product</label>
-                            <select asp-for="Form.ProductId" asp-items="Model.ProductOptions" class="form-select"></select>
+                            <input asp-for="Form.ProductId" type="hidden" id="productReceivingProductId" />
+                            <div class="input-group">
+                                <input class="form-control" id="productReceivingProductDisplay" value="@Model.FormProductName" placeholder="Select product" readonly />
+                                <button type="button" class="btn btn-outline-secondary product-receiving-product-select-btn" data-bs-toggle="modal" data-bs-target="#productReceivingProductSelectorModal">
+                                    <img src="/icons/search.png" alt="Search" style="width:16px;height:16px;" />
+                                </button>
+                            </div>
                             <span asp-validation-for="Form.ProductId" class="text-danger"></span>
                         </div>
                         <div class="col-md-6 product-new-fields d-none">
@@ -176,7 +191,6 @@
                             <label asp-for="Form.ExpiryDate" class="form-label">Expiry Date</label>
                             <input asp-for="Form.ExpiryDate" class="form-control" type="date" />
                         </div>
-                        <input asp-for="Form.Status" type="hidden" value="1" />
                         <div class="col-md-4">
                             <label asp-for="Form.Quantity" class="form-label">Quantity</label>
                             <input asp-for="Form.Quantity" class="form-control" type="number" step="0.01" min="0.01" />
@@ -203,6 +217,79 @@
                     <button class="btn btn-primary" type="submit">Save Receiving</button>
                 </div>
             </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="productReceivingProductSelectorModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title fs-5">Select Product</h2>
+                <button class="btn-close" type="button" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="input-group mb-3">
+                    <input class="form-control" id="productReceivingProductSearchInput" type="search" placeholder="Search product, category, or unit" />
+                    <button class="btn btn-outline-primary" id="productReceivingProductSearchButton" type="button">Search</button>
+                </div>
+                <div class="table-responsive">
+                    <table class="table app-table table-sm align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>No</th>
+                                <th>Product</th>
+                                <th>Category</th>
+                                <th>Unit</th>
+                                <th>Current Warehouse Quantity</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="productReceivingProductSelectorResults">
+                            <tr><td class="text-center text-muted fw-bold" colspan="6">Search for a product.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="productReceivingSupplierSelectorModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title fs-5">Select Supplier</h2>
+                <button class="btn-close" type="button" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="input-group mb-3">
+                    <input class="form-control" id="productReceivingSupplierSearchInput" type="search" placeholder="Search supplier, contact, or address" />
+                    <button class="btn btn-outline-primary" id="productReceivingSupplierSearchButton" type="button">Search</button>
+                </div>
+                <div class="table-responsive">
+                    <table class="table app-table table-sm align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>No</th>
+                                <th>Supplier</th>
+                                <th>Contact</th>
+                                <th>Address</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="productReceivingSupplierSelectorResults">
+                            <tr><td class="text-center text-muted fw-bold" colspan="5">Search for a supplier.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Close</button>
+            </div>
         </div>
     </div>
 </div>
@@ -238,6 +325,37 @@
         const mode = document.querySelector("[data-product-mode]");
         const existingFields = Array.from(document.querySelectorAll(".product-existing-fields"));
         const newFields = Array.from(document.querySelectorAll(".product-new-fields"));
+        const branchInput = document.getElementById("productReceivingBranchId");
+        const productInput = document.getElementById("productReceivingProductId");
+        const productDisplay = document.getElementById("productReceivingProductDisplay");
+        const productSearchInput = document.getElementById("productReceivingProductSearchInput");
+        const productSearchButton = document.getElementById("productReceivingProductSearchButton");
+        const productResults = document.getElementById("productReceivingProductSelectorResults");
+        const productSelectorModal = document.getElementById("productReceivingProductSelectorModal");
+        const supplierInput = document.getElementById("productReceivingSupplierId");
+        const supplierDisplay = document.getElementById("productReceivingSupplierDisplay");
+        const supplierSearchInput = document.getElementById("productReceivingSupplierSearchInput");
+        const supplierSearchButton = document.getElementById("productReceivingSupplierSearchButton");
+        const supplierResults = document.getElementById("productReceivingSupplierSelectorResults");
+        const supplierSelectorModal = document.getElementById("productReceivingSupplierSelectorModal");
+
+        const escapeHtml = value => String(value ?? "")
+            .replaceAll("&", "&amp;")
+            .replaceAll("<", "&lt;")
+            .replaceAll(">", "&gt;")
+            .replaceAll('"', "&quot;")
+            .replaceAll("'", "&#039;");
+
+        function closeSelectorOnly(modalElement) {
+            if (modalElement && window.bootstrap) {
+                bootstrap.Modal.getOrCreateInstance(modalElement).hide();
+                setTimeout(function () {
+                    if (document.querySelector(".modal.show")) {
+                        document.body.classList.add("modal-open");
+                    }
+                }, 150);
+            }
+        }
 
         function syncProductMode() {
             const isNew = mode && mode.value === "New";
@@ -249,5 +367,109 @@
             mode.addEventListener("change", syncProductMode);
             syncProductMode();
         }
+
+        function renderProducts(products) {
+            if (!productResults) return;
+            productResults.innerHTML = "";
+            if (!products.length) {
+                productResults.innerHTML = '<tr><td class="text-center text-muted fw-bold" colspan="6">No products found.</td></tr>';
+                return;
+            }
+
+            products.forEach((product, index) => {
+                const tr = document.createElement("tr");
+                tr.innerHTML = `
+                    <td>${index + 1}</td>
+                    <td>${escapeHtml(product.productName || "-")}</td>
+                    <td>${escapeHtml(product.categoryName || "-")}</td>
+                    <td>${escapeHtml(product.unitName || "-")}</td>
+                    <td>${Number(product.currentWarehouseQuantity || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                    <td><button class="btn btn-sm btn-outline-primary" type="button">Select</button></td>
+                `;
+                tr.querySelector("button").addEventListener("click", () => {
+                    if (productInput) productInput.value = product.productId || "";
+                    if (productDisplay) productDisplay.value = product.productName || "";
+                    productInput?.dispatchEvent(new Event("change", { bubbles: true }));
+                    closeSelectorOnly(productSelectorModal);
+                });
+                productResults.appendChild(tr);
+            });
+        }
+
+        async function searchProducts() {
+            if (!productResults) return;
+            productResults.innerHTML = '<tr><td class="text-center text-muted fw-bold" colspan="6">Loading products...</td></tr>';
+            const query = encodeURIComponent(productSearchInput?.value || "");
+            const branch = encodeURIComponent(branchInput?.value || "");
+            const response = await fetch(`/Transaction/SearchProductReceivingProducts?search=${query}&branchId=${branch}`, {
+                headers: { "Accept": "application/json" }
+            });
+            if (!response.ok) {
+                productResults.innerHTML = '<tr><td class="text-center text-danger fw-bold" colspan="6">Unable to load products.</td></tr>';
+                return;
+            }
+
+            renderProducts(await response.json());
+        }
+
+        function renderSuppliers(suppliers) {
+            if (!supplierResults) return;
+            supplierResults.innerHTML = "";
+            if (!suppliers.length) {
+                supplierResults.innerHTML = '<tr><td class="text-center text-muted fw-bold" colspan="5">No suppliers found.</td></tr>';
+                return;
+            }
+
+            suppliers.forEach((supplier, index) => {
+                const tr = document.createElement("tr");
+                tr.innerHTML = `
+                    <td>${index + 1}</td>
+                    <td>${escapeHtml(supplier.supplierName || "-")}</td>
+                    <td>${escapeHtml(supplier.contact || "-")}</td>
+                    <td>${escapeHtml(supplier.address || "-")}</td>
+                    <td><button class="btn btn-sm btn-outline-primary" type="button">Select</button></td>
+                `;
+                tr.querySelector("button").addEventListener("click", () => {
+                    if (supplierInput) supplierInput.value = supplier.supplierId || "";
+                    if (supplierDisplay) supplierDisplay.value = supplier.supplierName || "";
+                    supplierInput?.dispatchEvent(new Event("change", { bubbles: true }));
+                    closeSelectorOnly(supplierSelectorModal);
+                });
+                supplierResults.appendChild(tr);
+            });
+        }
+
+        async function searchSuppliers() {
+            if (!supplierResults) return;
+            supplierResults.innerHTML = '<tr><td class="text-center text-muted fw-bold" colspan="5">Loading suppliers...</td></tr>';
+            const query = encodeURIComponent(supplierSearchInput?.value || "");
+            const response = await fetch(`/Transaction/SearchProductReceivingSuppliers?search=${query}`, {
+                headers: { "Accept": "application/json" }
+            });
+            if (!response.ok) {
+                supplierResults.innerHTML = '<tr><td class="text-center text-danger fw-bold" colspan="5">Unable to load suppliers.</td></tr>';
+                return;
+            }
+
+            renderSuppliers(await response.json());
+        }
+
+        document.querySelector(".product-receiving-product-select-btn")?.addEventListener("click", searchProducts);
+        productSearchButton?.addEventListener("click", searchProducts);
+        productSearchInput?.addEventListener("keydown", event => {
+            if (event.key === "Enter") {
+                event.preventDefault();
+                searchProducts();
+            }
+        });
+
+        document.querySelector(".product-receiving-supplier-select-btn")?.addEventListener("click", searchSuppliers);
+        supplierSearchButton?.addEventListener("click", searchSuppliers);
+        supplierSearchInput?.addEventListener("keydown", event => {
+            if (event.key === "Enter") {
+                event.preventDefault();
+                searchSuppliers();
+            }
+        });
     });
 </script>

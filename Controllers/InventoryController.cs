@@ -28,18 +28,21 @@ namespace gpos.Controllers
         public IActionResult DisplayDailyStock() => RedirectToAction("DisplayDailyStock", "Reports");
         public IActionResult TankDailyStock() => RedirectToAction("TankDailyStock", "Reports");
 
-        public async Task<IActionResult> LowStockWarehouse(string? search, int? editId, int? branchId)
+        public async Task<IActionResult> LowStockWarehouse(string? search, int? editId, int? branchId, int? filterBranchId)
         {
+            branchId = filterBranchId ?? branchId;
             return View("LowStockSettings", await BuildLowStockSettingsPageAsync(WarehouseStockType, search, branchId, editId: editId, activeModalId: editId.HasValue ? LowStockModalId : string.Empty));
         }
 
-        public async Task<IActionResult> LowStockDisplay(string? search, int? editId, int? branchId)
+        public async Task<IActionResult> LowStockDisplay(string? search, int? editId, int? branchId, int? filterBranchId)
         {
+            branchId = filterBranchId ?? branchId;
             return View("LowStockSettings", await BuildLowStockSettingsPageAsync(DisplayStockType, search, branchId, editId: editId, activeModalId: editId.HasValue ? LowStockModalId : string.Empty));
         }
 
-        public async Task<IActionResult> LowStockFuel(string? search, int? editId, int? branchId)
+        public async Task<IActionResult> LowStockFuel(string? search, int? editId, int? branchId, int? filterBranchId)
         {
+            branchId = filterBranchId ?? branchId;
             return View("LowStockSettings", await BuildLowStockSettingsPageAsync(FuelStockType, search, branchId, editId: editId, activeModalId: editId.HasValue ? LowStockModalId : string.Empty));
         }
 
@@ -188,26 +191,26 @@ namespace gpos.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> SaveLowStockWarehouse([Bind(Prefix = "Form")] LowStockThresholdForm form, string? search)
+        public async Task<IActionResult> SaveLowStockWarehouse([Bind(Prefix = "Form")] LowStockThresholdForm form, string? search, int? filterBranchId)
         {
-            return await SaveLowStockSettingAsync(WarehouseStockType, form, search, nameof(LowStockWarehouse));
+            return await SaveLowStockSettingAsync(WarehouseStockType, form, search, filterBranchId, nameof(LowStockWarehouse));
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> SaveLowStockDisplay([Bind(Prefix = "Form")] LowStockThresholdForm form, string? search)
+        public async Task<IActionResult> SaveLowStockDisplay([Bind(Prefix = "Form")] LowStockThresholdForm form, string? search, int? filterBranchId)
         {
-            return await SaveLowStockSettingAsync(DisplayStockType, form, search, nameof(LowStockDisplay));
+            return await SaveLowStockSettingAsync(DisplayStockType, form, search, filterBranchId, nameof(LowStockDisplay));
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> SaveLowStockFuel([Bind(Prefix = "Form")] LowStockThresholdForm form, string? search)
+        public async Task<IActionResult> SaveLowStockFuel([Bind(Prefix = "Form")] LowStockThresholdForm form, string? search, int? filterBranchId)
         {
-            return await SaveLowStockSettingAsync(FuelStockType, form, search, nameof(LowStockFuel));
+            return await SaveLowStockSettingAsync(FuelStockType, form, search, filterBranchId, nameof(LowStockFuel));
         }
 
-        private async Task<IActionResult> SaveLowStockSettingAsync(string stockType, LowStockThresholdForm form, string? search, string redirectAction)
+        private async Task<IActionResult> SaveLowStockSettingAsync(string stockType, LowStockThresholdForm form, string? search, int? filterBranchId, string redirectAction)
         {
             form.StockType = stockType;
             form.UnitLabel = UnitLabelFor(stockType);
@@ -215,7 +218,7 @@ namespace gpos.Controllers
 
             if (!ModelState.IsValid)
             {
-                return View("LowStockSettings", await BuildLowStockSettingsPageAsync(stockType, search, form.BranchId, form, activeModalId: LowStockModalId));
+                return View("LowStockSettings", await BuildLowStockSettingsPageAsync(stockType, search, filterBranchId, form, activeModalId: LowStockModalId));
             }
 
             var now = DateTime.UtcNow;
@@ -269,7 +272,7 @@ namespace gpos.Controllers
             setting.UpdatedAt = now;
 
             await _db.SaveChangesAsync();
-            return RedirectToAction(redirectAction, new { search, branchId = stockType == WarehouseStockType || stockType == DisplayStockType || stockType == FuelStockType ? form.BranchId : null });
+            return RedirectToAction(redirectAction, new { search, filterBranchId });
         }
 
         private void ValidateLowStockForm(string stockType, LowStockThresholdForm form)
