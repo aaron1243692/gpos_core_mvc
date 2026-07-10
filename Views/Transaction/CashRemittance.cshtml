@@ -16,7 +16,7 @@
             </ol>
         </nav>
         <h1 class="mb-0">Cash Remittance</h1>
-        <p class="page-subtitle text-muted mt-2">Record the final cash turnover after Daily Cash reconciliation.</p>
+        <p class="page-subtitle text-muted mt-2">Record the final cash turnover and complete an open Daily Cash session.</p>
     </div>
     <div class="page-actions"><button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#cashRemittanceModal">Add Remittance</button></div>
 </div>
@@ -39,15 +39,15 @@
             <table class="table app-table table-sm align-middle mb-0">
                 <thead>
                     <tr>
-                        <th>No</th><th>Remittance No</th><th>Date</th><th>Branch</th><th>Shift</th><th>User</th>
+                        <th>No</th><th>Remittance No</th><th>Date</th><th>Branch</th><th>Business Date</th><th>Shift</th><th>Cashier</th>
                         <th class="text-end">Expected Cash</th><th class="text-end">Actual Cash</th><th class="text-end">Remitted Amount</th>
-                        <th class="text-end">Difference</th><th>Received By</th><th>Status</th><th>Action</th>
+                        <th>Received By</th><th>Received DateTime</th><th>Remarks</th><th>Status</th><th>Action</th>
                     </tr>
                 </thead>
                 <tbody>
                     @if (Model.Records.Count == 0)
                     {
-                        <tr><td class="text-center text-muted fw-bold" colspan="13">No remittance records found.</td></tr>
+                        <tr><td class="text-center text-muted fw-bold" colspan="15">No remittance records found.</td></tr>
                     }
                     else
                     {
@@ -55,10 +55,12 @@
                         {
                             var item = Model.Records[i];
                             <tr>
-                                <td>@(i + 1)</td><td class="fw-bold">@item.RemittanceNo</td><td>@item.ReceivedDateTime.ToString("yyyy-MM-dd HH:mm")</td><td>@item.Branch?.Name</td><td>@item.Shift?.Name</td><td>@UserName(item.User)</td>
-                                <td class="text-end">@Money(item.ExpectedCash)</td><td class="text-end">@Money(item.ActualCash)</td><td class="text-end">@Money(item.RemittedAmount)</td><td class="text-end">@Money(item.RemittanceDifference)</td><td>@UserName(item.ReceivedByUser)</td>
+                                <td>@(i + 1)</td><td class="fw-bold">@item.RemittanceNo</td><td>@item.CreatedAt?.ToString("yyyy-MM-dd HH:mm")</td><td>@item.Branch?.Name</td><td>@item.DailyCash?.BusinessDate.ToString("yyyy-MM-dd")</td><td>@item.Shift?.Name</td><td>@UserName(item.User)</td>
+                                <td class="text-end">@Money(item.ExpectedCash)</td><td class="text-end">@Money(item.ActualCash)</td><td class="text-end">@Money(item.RemittedAmount)</td><td>@UserName(item.ReceivedByUser)</td><td>@item.ReceivedDateTime.ToString("yyyy-MM-dd HH:mm")</td><td>@item.Remarks</td>
                                 <td><span class="badge @(item.Status == 1 ? "bg-success" : "bg-secondary")">@(item.Status == 1 ? "Active" : "Inactive")</span></td>
-                                <td>@if (item.Status == 1) { <form asp-action="DeleteCashRemittance" method="post" data-deactivate-form>@Html.AntiForgeryToken()<input name="id" value="@item.Id" type="hidden" /><button class="btn btn-sm btn-outline-danger" type="submit">Deactivate</button></form> }</td>
+                                <td><button class="btn btn-sm btn-outline-primary remittance-view-button" type="button" data-bs-toggle="modal" data-bs-target="#remittanceViewModal"
+                                    data-no="@item.RemittanceNo" data-date="@item.CreatedAt?.ToString("yyyy-MM-dd HH:mm")" data-branch="@item.Branch?.Name" data-business-date="@item.DailyCash?.BusinessDate.ToString("yyyy-MM-dd")" data-shift="@item.Shift?.Name" data-cashier="@UserName(item.User)"
+                                    data-expected="@Money(item.ExpectedCash)" data-actual="@Money(item.ActualCash)" data-remitted="@Money(item.RemittedAmount)" data-receiver="@UserName(item.ReceivedByUser)" data-received="@item.ReceivedDateTime.ToString("yyyy-MM-dd HH:mm")" data-remarks="@item.Remarks" data-status="@(item.Status == 1 ? "Active" : "Inactive")">View</button></td>
                             </tr>
                         }
                     }
@@ -67,6 +69,18 @@
         </div>
     </div>
 </section>
+
+<div class="modal fade" id="remittanceViewModal" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-dialog-centered modal-lg"><div class="modal-content">
+    <div class="modal-header"><h2 class="modal-title fs-5">View Cash Remittance</h2><button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button></div>
+    <div class="modal-body"><div class="row g-3">
+        <div class="col-md-6"><label class="form-label">Remittance No</label><input id="viewRemittanceNo" class="form-control" readonly /></div><div class="col-md-6"><label class="form-label">Date</label><input id="viewRemittanceDate" class="form-control" readonly /></div>
+        <div class="col-md-6"><label class="form-label">Branch</label><input id="viewRemittanceBranch" class="form-control" readonly /></div><div class="col-md-6"><label class="form-label">Business Date</label><input id="viewRemittanceBusinessDate" class="form-control" readonly /></div>
+        <div class="col-md-6"><label class="form-label">Shift</label><input id="viewRemittanceShift" class="form-control" readonly /></div><div class="col-md-6"><label class="form-label">Cashier</label><input id="viewRemittanceCashier" class="form-control" readonly /></div>
+        <div class="col-md-4"><label class="form-label">Expected Cash</label><input id="viewRemittanceExpected" class="form-control" readonly /></div><div class="col-md-4"><label class="form-label">Actual Cash</label><input id="viewRemittanceActual" class="form-control" readonly /></div><div class="col-md-4"><label class="form-label">Remitted Amount</label><input id="viewRemittanceRemitted" class="form-control" readonly /></div>
+        <div class="col-md-6"><label class="form-label">Received By</label><input id="viewRemittanceReceiver" class="form-control" readonly /></div><div class="col-md-6"><label class="form-label">Received DateTime</label><input id="viewRemittanceReceived" class="form-control" readonly /></div>
+        <div class="col-md-6"><label class="form-label">Status</label><input id="viewRemittanceStatus" class="form-control" readonly /></div><div class="col-12"><label class="form-label">Remarks</label><textarea id="viewRemittanceRemarks" class="form-control" rows="3" readonly></textarea></div>
+    </div></div><div class="modal-footer"><button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Close</button></div>
+</div></div></div>
 
 <div class="modal fade" id="cashRemittanceModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
@@ -81,7 +95,7 @@
                             <label asp-for="Form.DailyCashId" class="form-label">Daily Cash</label>
                             <input asp-for="Form.DailyCashId" id="remitDailyCashId" type="hidden" />
                             <div class="input-group" data-daily-cash-selector data-daily-cash-hidden="#remitDailyCashId" data-daily-cash-display="#remitDailyCashDisplay" data-daily-cash-mode="remittance">
-                                <input asp-for="Form.DailyCashDisplay" id="remitDailyCashDisplay" class="form-control" placeholder="Select reconciled Daily Cash" readonly />
+                                <input asp-for="Form.DailyCashDisplay" id="remitDailyCashDisplay" class="form-control" placeholder="Select open Daily Cash" readonly />
                                 <button type="button" class="btn btn-outline-secondary" data-daily-cash-open><img src="/icons/search.png" alt="Search" style="width:16px;height:16px;" /></button>
                             </div>
                             <span asp-validation-for="Form.DailyCashId" class="text-danger"></span>
@@ -92,7 +106,6 @@
                         <div class="col-md-6"><label class="form-label">Cashier</label><input asp-for="Form.UserName" id="remitUserDisplay" class="form-control" readonly /></div>
                         <div class="col-md-6"><label class="form-label">Expected Cash</label><input asp-for="Form.ExpectedCash" id="remitExpectedCashDisplay" class="form-control" readonly /></div>
                         <div class="col-md-6"><label class="form-label">Actual Cash</label><input asp-for="Form.ActualCash" id="remitActualCashDisplay" class="form-control" readonly /></div>
-                        <div class="col-md-6"><label class="form-label">Remaining Amount</label><input asp-for="Form.RemainingAmount" id="remitRemainingDisplay" class="form-control" readonly /></div>
                         <div class="col-md-6"><label asp-for="Form.RemittedAmount" class="form-label">Remitted Amount</label><input asp-for="Form.RemittedAmount" class="form-control" type="number" step="0.01" min="0.01" /><span asp-validation-for="Form.RemittedAmount" class="text-danger"></span></div>
                         <div class="col-md-6">
                             <label asp-for="Form.ReceivedByUserId" class="form-label">Received By</label>
@@ -139,6 +152,10 @@
     <partial name="_ValidationScriptsPartial" />
     <script>
         document.addEventListener('DOMContentLoaded', function () {
+            document.querySelectorAll('.remittance-view-button').forEach(button => button.addEventListener('click', function () {
+                const fields = { No: 'no', Date: 'date', Branch: 'branch', BusinessDate: 'businessDate', Shift: 'shift', Cashier: 'cashier', Expected: 'expected', Actual: 'actual', Remitted: 'remitted', Receiver: 'receiver', Received: 'received', Remarks: 'remarks', Status: 'status' };
+                Object.entries(fields).forEach(([field, key]) => { const element = document.getElementById(`viewRemittance${field}`); if (element) element.value = this.dataset[key] || '-'; });
+            }));
             const html = (value) => String(value ?? '').replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll("'", '&#039;');
             const restore = () => { if (document.querySelector('.modal.show')) document.body.classList.add('modal-open'); };
 
@@ -157,7 +174,6 @@
                 document.getElementById('remitUserDisplay').value = details.user;
                 document.getElementById('remitExpectedCashDisplay').value = Number(details.expectedCash).toFixed(2);
                 document.getElementById('remitActualCashDisplay').value = Number(details.actualCash).toFixed(2);
-                document.getElementById('remitRemainingDisplay').value = Number(details.remainingAmount).toFixed(2);
             }
 
             async function searchDailyCash() {

@@ -16,9 +16,7 @@ namespace gpos.Controllers
         private static readonly string[] SaleStatuses = ["Completed", "Voided", "Returned", "Cancelled"];
         private const int CashStatusInactive = 0;
         private const int CashStatusOpen = 1;
-        private const int CashStatusReconciled = 2;
-        private const int CashStatusPartiallyRemitted = 3;
-        private const int CashStatusClosed = 4;
+        private const int CashStatusRemitted = 4;
         private readonly ApplicationDbContext _db;
         private readonly FinancialMetricsService _financialMetrics;
         private readonly ProductBatchNumberService _batchNumberService;
@@ -485,6 +483,12 @@ namespace gpos.Controllers
                 return View("DailyCash", await BuildDailyCashPageAsync(search, filterBranchId, filterShiftId, filterUserId, dateFrom, dateTo, status, form, "dailyCashFormModal"));
             }
 
+            if (form.Id > 0 && !await _db.DailyCashRecords.AnyAsync(item => item.Id == form.Id && item.Status == CashStatusOpen))
+            {
+                ModelState.AddModelError(string.Empty, "A remitted Daily Cash session is readonly.");
+                return View("DailyCash", await BuildDailyCashPageAsync(search, filterBranchId, filterShiftId, filterUserId, dateFrom, dateTo, status, form));
+            }
+
             var validationError = await ValidateCashScopeAsync(form.BranchId, form.ShiftId, form.UserId);
             if (validationError is not null)
             {
@@ -534,9 +538,7 @@ namespace gpos.Controllers
                 dailyCash.Difference = form.ActualCash - dailyCash.ExpectedCash;
                 dailyCash.Remarks = CleanOptional(form.Remarks);
                 dailyCash.OpenedAt ??= now;
-                dailyCash.Status = form.Id == 0
-                    ? CashStatusOpen
-                    : dailyCash.Status == CashStatusOpen ? CashStatusReconciled : dailyCash.Status;
+                dailyCash.Status = CashStatusOpen;
                 dailyCash.UpdatedAt = now;
 
                 if (form.Id == 0)
@@ -644,11 +646,11 @@ namespace gpos.Controllers
             }
 
             var dailyCash = await _db.DailyCashRecords.FirstOrDefaultAsync(item => item.Id == form.DailyCashId
-                && (item.Status == CashStatusReconciled || item.Status == CashStatusPartiallyRemitted));
+                && item.Status == CashStatusOpen);
             var receiverExists = await _db.Users.AnyAsync(user => user.Id == form.ReceivedByUserId && user.Status == 1);
             if (dailyCash is null || !receiverExists)
             {
-                ModelState.AddModelError(string.Empty, dailyCash is null ? "Select a reconciled or partially remitted Daily Cash record." : "Select an active receiver.");
+                ModelState.AddModelError(string.Empty, dailyCash is null ? "Select an open Daily Cash record. A remitted session cannot be remitted again." : "Select an active receiver.");
                 return View("CashRemittance", await BuildCashRemittancePageAsync(search, filterBranchId, filterShiftId, filterUserId, dateFrom, dateTo, status, form, "cashRemittanceModal"));
             }
 
@@ -684,7 +686,7 @@ namespace gpos.Controllers
 
                 _db.CashRemittances.Add(item);
                 dailyCash.RemittedAmount = totalRemitted;
-                dailyCash.Status = remainingAmount <= 0m ? CashStatusClosed : CashStatusPartiallyRemitted;
+                dailyCash.Status = CashStatusRemitted;
                 dailyCash.UpdatedAt = now;
                 await _db.SaveChangesAsync();
                 await transaction.CommitAsync();
@@ -759,10 +761,7 @@ namespace gpos.Controllers
         {
             var searchText = (search ?? string.Empty).Trim();
             var resultLimit = Math.Clamp(take, 1, 50);
-            var remittanceMode = string.Equals(mode, "remittance", StringComparison.OrdinalIgnoreCase);
-            var allowedStatuses = remittanceMode
-                ? new[] { CashStatusReconciled, CashStatusPartiallyRemitted }
-                : new[] { CashStatusOpen, CashStatusReconciled, CashStatusPartiallyRemitted };
+            var allowedStatuses = new[] { CashStatusOpen };
 
             var query = _db.DailyCashRecords.AsNoTracking()
                 .Include(item => item.Branch)
@@ -1028,6 +1027,7 @@ namespace gpos.Controllers
                     .Include(item => item.Shift)
                     .Include(item => item.User)
                     .Include(item => item.CreatedByUser)
+                    .Include(item => item.DailyCash)
                     .AsQueryable();
                 ApplyCashInFilters(ref query, filter);
                 page.CashIns = await query.OrderByDescending(item => item.TransactionDateTime).ThenByDescending(item => item.Id).Take(200).ToListAsync();
@@ -1039,6 +1039,7 @@ namespace gpos.Controllers
                     .Include(item => item.Shift)
                     .Include(item => item.User)
                     .Include(item => item.CreatedByUser)
+                    .Include(item => item.DailyCash)
                     .AsQueryable();
                 ApplyCashOutFilters(ref query, filter);
                 page.CashOuts = await query.OrderByDescending(item => item.TransactionDateTime).ThenByDescending(item => item.Id).Take(200).ToListAsync();
@@ -1083,7 +1084,7 @@ namespace gpos.Controllers
                 ? await _db.DailyCashRecords.AsNoTracking()
                     .Include(record => record.Branch)
                     .Include(record => record.User)
-                    .FirstOrDefaultAsync(record => record.Id == editId.Value)
+                    .FirstOrDefaultAsync(record => record.Id == editId.Value && record.Status == CashStatusOpen)
                 : null;
             if (item is null)
             {
@@ -1158,9 +1159,7 @@ namespace gpos.Controllers
             var value = (status ?? string.Empty).Trim();
             return string.Equals(value, "Open", StringComparison.OrdinalIgnoreCase) ? "Open"
                 : string.Equals(value, "Active", StringComparison.OrdinalIgnoreCase) ? "Active"
-                : string.Equals(value, "Reconciled", StringComparison.OrdinalIgnoreCase) ? "Reconciled"
-                : string.Equals(value, "Partially Remitted", StringComparison.OrdinalIgnoreCase) || string.Equals(value, "PartiallyRemitted", StringComparison.OrdinalIgnoreCase) ? "Partially Remitted"
-                : string.Equals(value, "Closed", StringComparison.OrdinalIgnoreCase) ? "Closed"
+                : string.Equals(value, "Remitted", StringComparison.OrdinalIgnoreCase) ? "Remitted"
                 : string.Equals(value, "Inactive", StringComparison.OrdinalIgnoreCase) ? "Inactive"
                 : string.Empty;
         }
@@ -1170,10 +1169,7 @@ namespace gpos.Controllers
             return status switch
             {
                 CashStatusOpen => "Open",
-                CashStatusReconciled => "Reconciled",
-                CashStatusPartiallyRemitted => "Partially Remitted",
-                CashStatusClosed => "Closed",
-                _ => "Inactive"
+                _ => "Remitted"
             };
         }
 
@@ -1182,10 +1178,7 @@ namespace gpos.Controllers
             return status switch
             {
                 CashStatusOpen => "bg-primary",
-                CashStatusReconciled => "bg-info text-dark",
-                CashStatusPartiallyRemitted => "bg-warning text-dark",
-                CashStatusClosed => "bg-success",
-                _ => "bg-secondary"
+                _ => "bg-success"
             };
         }
 
@@ -1197,9 +1190,7 @@ namespace gpos.Controllers
             if (filter.DateFrom.HasValue) query = query.Where(item => item.BusinessDate >= filter.DateFrom.Value.Date);
             if (filter.DateTo.HasValue) query = query.Where(item => item.BusinessDate < filter.DateTo.Value.Date.AddDays(1));
             if (filter.Status == "Open") query = query.Where(item => item.Status == CashStatusOpen);
-            if (filter.Status == "Reconciled") query = query.Where(item => item.Status == CashStatusReconciled);
-            if (filter.Status == "Partially Remitted") query = query.Where(item => item.Status == CashStatusPartiallyRemitted);
-            if (filter.Status == "Closed") query = query.Where(item => item.Status == CashStatusClosed);
+            if (filter.Status == "Remitted") query = query.Where(item => item.Status != CashStatusOpen);
             if (filter.Status == "Inactive") query = query.Where(item => item.Status == CashStatusInactive);
             if (!string.IsNullOrWhiteSpace(filter.Search))
             {
@@ -1365,10 +1356,6 @@ namespace gpos.Controllers
             dailyCash.RemittedAmount = await _db.CashRemittances
                 .Where(remittance => remittance.DailyCashId == dailyCash.Id && remittance.Status == 1)
                 .SumAsync(remittance => remittance.RemittedAmount);
-            if (dailyCash.Status == CashStatusPartiallyRemitted || dailyCash.Status == CashStatusClosed)
-            {
-                dailyCash.Status = dailyCash.ActualCash - dailyCash.RemittedAmount <= 0m ? CashStatusClosed : CashStatusPartiallyRemitted;
-            }
             dailyCash.UpdatedAt = DateTime.UtcNow;
         }
 

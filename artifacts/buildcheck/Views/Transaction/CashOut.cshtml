@@ -42,8 +42,29 @@
                             var item = Model.CashOuts[i];
                             <tr>
                                 <td>@(i + 1)</td><td>@item.TransactionDateTime.ToString("yyyy-MM-dd HH:mm")</td><td>@item.Branch?.Name</td><td>@item.Shift?.Name</td><td>@UserName(item.User)</td><td class="text-end">@Money(item.Amount)</td><td>@item.Reason</td><td>@item.Remarks</td><td>@UserName(item.CreatedByUser)</td><td><span class="badge @(item.Status == 1 ? "bg-success" : "bg-secondary")">@(item.Status == 1 ? "Active" : "Inactive")</span></td>
-                                <td>@if (item.Status == 1) { <form asp-action="DeleteCashOut" method="post" data-deactivate-form>@Html.AntiForgeryToken()<input name="id" value="@item.Id" type="hidden" /><button class="btn btn-sm btn-outline-danger" type="submit">Deactivate</button></form> }</td>
+                                <td><button class="btn btn-sm btn-outline-primary" type="button" data-bs-toggle="modal" data-bs-target="#cashOutViewModal-@item.Id">View</button></td>
                             </tr>
+                            <div class="modal fade" id="cashOutViewModal-@item.Id" tabindex="-1" aria-labelledby="cashOutViewModalLabel-@item.Id" aria-hidden="true">
+                                <div class="modal-dialog modal-dialog-centered modal-lg"><div class="modal-content">
+                                    <div class="modal-header"><h2 class="modal-title fs-5" id="cashOutViewModalLabel-@item.Id">View Cash Out</h2><button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button></div>
+                                    <div class="modal-body"><div class="row g-3">
+                                        <div class="col-md-6"><label class="form-label">Cash Out No</label><input class="form-control" value="@item.Id" readonly /></div>
+                                        <div class="col-md-6"><label class="form-label">Daily Cash No</label><input class="form-control" value="@(item.DailyCashId?.ToString() ?? "-")" readonly /></div>
+                                        <div class="col-md-6"><label class="form-label">Business Date</label><input class="form-control" value="@(item.DailyCash?.BusinessDate.ToString("yyyy-MM-dd") ?? "-")" readonly /></div>
+                                        <div class="col-md-6"><label class="form-label">Branch</label><input class="form-control" value="@(item.Branch?.Name ?? "-")" readonly /></div>
+                                        <div class="col-md-6"><label class="form-label">Shift</label><input class="form-control" value="@(item.Shift?.Name ?? "-")" readonly /></div>
+                                        <div class="col-md-6"><label class="form-label">Cashier/User</label><input class="form-control" value="@UserName(item.User)" readonly /></div>
+                                        <div class="col-md-6"><label class="form-label">Date/Time</label><input class="form-control" value="@item.TransactionDateTime.ToString("yyyy-MM-dd HH:mm")" readonly /></div>
+                                        <div class="col-md-6"><label class="form-label">Amount</label><input class="form-control" value="@Money(item.Amount)" readonly /></div>
+                                        <div class="col-12"><label class="form-label">Reason</label><input class="form-control" value="@item.Reason" readonly /></div>
+                                        <div class="col-12"><label class="form-label">Remarks</label><textarea class="form-control" rows="3" readonly>@item.Remarks</textarea></div>
+                                        <div class="col-md-6"><label class="form-label">Created By</label><input class="form-control" value="@UserName(item.CreatedByUser)" readonly /></div>
+                                        <div class="col-md-6"><label class="form-label">Created At</label><input class="form-control" value="@(item.CreatedAt?.ToString("yyyy-MM-dd HH:mm") ?? "-")" readonly /></div>
+                                        <div class="col-md-6"><label class="form-label">Status</label><input class="form-control" value="@(item.Status == 1 ? "Active" : "Inactive")" readonly /></div>
+                                    </div></div>
+                                    <div class="modal-footer"><button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Close</button></div>
+                                </div></div>
+                            </div>
                         }
                     }
                 </tbody>

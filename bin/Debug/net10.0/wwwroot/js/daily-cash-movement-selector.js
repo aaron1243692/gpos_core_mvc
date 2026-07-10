@@ -46,7 +46,7 @@ document.addEventListener('DOMContentLoaded', function () {
             results.innerHTML = rows.length ? '' : '<tr><td class="text-center text-muted fw-bold" colspan="10">No eligible Daily Cash records found for this Branch.</td></tr>';
             rows.forEach((row, index) => {
                 const tr = document.createElement('tr');
-                tr.innerHTML = `<td>${index + 1}</td><td>${html(row.dailyCashNo)}</td><td>${html(row.businessDate)}</td><td>${html(row.branchName)}</td><td>${html(row.shiftName)}</td><td>${html(row.cashierName)}</td><td class="text-end">${html(money(row.openingCash))}</td><td class="text-end">${html(money(row.expectedCash))}</td><td>${html(row.status)}</td><td><button class="btn btn-sm btn-outline-primary" type="button">Select</button></td>`;
+                tr.innerHTML = `<td>${index + 1}</td><td>${html(row.dailyCashNo)}</td><td>${html(row.businessDate)}</td><td>${html(row.branchName)}</td><td>${html(row.shiftName)}</td><td>${html(row.cashierName)}</td><td>${html(money(row.openingCash))}</td><td>${html(money(row.expectedCash))}</td><td>${html(row.status)}</td><td><button class="btn btn-sm btn-outline-primary" type="button">Select</button></td>`;
                 tr.querySelector('button').addEventListener('click', () => {
                     setDailyCash(activeSelector, row);
                     bootstrap.Modal.getOrCreateInstance(modalElement).hide();

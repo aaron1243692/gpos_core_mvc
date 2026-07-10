@@ -34,10 +34,7 @@
                 <select class="form-select" name="status">
                     <option value="">All Statuses</option>
                     <option value="Open" selected="@(Model.Filter.Status == "Open")">Open</option>
-                    <option value="Reconciled" selected="@(Model.Filter.Status == "Reconciled")">Reconciled</option>
-                    <option value="Partially Remitted" selected="@(Model.Filter.Status == "Partially Remitted")">Partially Remitted</option>
-                    <option value="Closed" selected="@(Model.Filter.Status == "Closed")">Closed</option>
-                    <option value="Inactive" selected="@(Model.Filter.Status == "Inactive")">Inactive</option>
+                    <option value="Remitted" selected="@(Model.Filter.Status == "Remitted")">Remitted</option>
                 </select>
             </div>
             <div class="col-md-auto d-flex gap-1">
@@ -83,13 +80,16 @@
                                 <td class="text-end">@Money(item.Difference)</td>
                                 <td><span class="badge @gpos.Controllers.TransactionController.CashStatusBadge(item.Status)">@gpos.Controllers.TransactionController.CashStatusName(item.Status)</span></td>
                                 <td class="text-nowrap">
-                                    <a class="btn btn-sm btn-outline-secondary" asp-action="DailyCash" asp-route-editId="@item.Id">Edit</a>
-                                    @if (item.Status != 0 && item.Status != 4)
+                                    @if (item.Status == 1)
                                     {
-                                        <form asp-action="DeleteDailyCash" method="post" class="d-inline" data-deactivate-form>
-                                            @Html.AntiForgeryToken()<input name="id" value="@item.Id" type="hidden" />
-                                            <button class="btn btn-sm btn-outline-danger" type="submit">Deactivate</button>
-                                        </form>
+                                        <a class="btn btn-sm btn-outline-secondary" asp-action="DailyCash" asp-route-editId="@item.Id">Edit</a>
+                                    }
+                                    else
+                                    {
+                                        <button class="btn btn-sm btn-outline-primary daily-cash-view-button" type="button" data-bs-toggle="modal" data-bs-target="#dailyCashViewModal"
+                                                data-no="DC-@item.Id.ToString("000000")" data-date="@item.BusinessDate.ToString("yyyy-MM-dd")" data-branch="@item.Branch?.Name" data-shift="@item.Shift?.Name" data-cashier="@UserName(item.User)"
+                                                data-opening="@Money(item.OpeningCash)" data-in="@Money(item.TotalCashIn)" data-out="@Money(item.TotalCashOut)" data-sales="@Money(item.CashSales)"
+                                                data-expected="@Money(item.ExpectedCash)" data-actual="@Money(item.ActualCash)" data-difference="@Money(item.Difference)" data-remarks="@item.Remarks">View</button>
                                     }
                                 </td>
                             </tr>
@@ -100,6 +100,27 @@
         </div>
     </div>
 </section>
+
+<div class="modal fade" id="dailyCashViewModal" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-dialog-centered modal-lg"><div class="modal-content">
+    <div class="modal-header"><h2 class="modal-title fs-5">View Daily Cash</h2><button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button></div>
+    <div class="modal-body"><div class="row g-3">
+        <div class="col-md-6"><label class="form-label">Daily Cash No</label><input id="viewDailyCashNo" class="form-control" readonly /></div>
+        <div class="col-md-6"><label class="form-label">Business Date</label><input id="viewDailyCashDate" class="form-control" readonly /></div>
+        <div class="col-md-4"><label class="form-label">Branch</label><input id="viewDailyCashBranch" class="form-control" readonly /></div>
+        <div class="col-md-4"><label class="form-label">Shift</label><input id="viewDailyCashShift" class="form-control" readonly /></div>
+        <div class="col-md-4"><label class="form-label">Cashier</label><input id="viewDailyCashCashier" class="form-control" readonly /></div>
+        <div class="col-md-4"><label class="form-label">Opening Cash</label><input id="viewDailyCashOpening" class="form-control" readonly /></div>
+        <div class="col-md-4"><label class="form-label">Cash In</label><input id="viewDailyCashIn" class="form-control" readonly /></div>
+        <div class="col-md-4"><label class="form-label">Cash Out</label><input id="viewDailyCashOut" class="form-control" readonly /></div>
+        <div class="col-md-4"><label class="form-label">Cash Sales</label><input id="viewDailyCashSales" class="form-control" readonly /></div>
+        <div class="col-md-4"><label class="form-label">Expected Cash</label><input id="viewDailyCashExpected" class="form-control" readonly /></div>
+        <div class="col-md-4"><label class="form-label">Actual Cash</label><input id="viewDailyCashActual" class="form-control" readonly /></div>
+        <div class="col-md-4"><label class="form-label">Difference</label><input id="viewDailyCashDifference" class="form-control" readonly /></div>
+        <div class="col-md-4"><label class="form-label">Status</label><input class="form-control" value="Remitted" readonly /></div>
+        <div class="col-12"><label class="form-label">Remarks</label><textarea id="viewDailyCashRemarks" class="form-control" rows="3" readonly></textarea></div>
+    </div></div>
+    <div class="modal-footer"><button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Close</button></div>
+</div></div></div>
 
 <div class="modal fade" id="dailyCashFormModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
@@ -219,6 +240,10 @@
         });
 
         document.addEventListener('DOMContentLoaded', function () {
+            document.querySelectorAll('.daily-cash-view-button').forEach(button => button.addEventListener('click', function () {
+                const fields = { No: 'no', Date: 'date', Branch: 'branch', Shift: 'shift', Cashier: 'cashier', Opening: 'opening', In: 'in', Out: 'out', Sales: 'sales', Expected: 'expected', Actual: 'actual', Difference: 'difference', Remarks: 'remarks' };
+                Object.entries(fields).forEach(([field, key]) => { const element = document.getElementById(`viewDailyCash${field}`); if (element) element.value = this.dataset[key] || '-'; });
+            }));
             const selector = document.querySelector('[data-cash-user-selector]');
             const userModalElement = document.getElementById('cashUserSelectorModal');
             const searchInput = userModalElement?.querySelector('[data-user-search-input]');

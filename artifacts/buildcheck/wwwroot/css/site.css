@@ -5618,33 +5618,34 @@ table tbody td {
     overflow: auto;
 }
 #dailyCashSelectorModal .modal-dialog.daily-cash-selector-dialog {
-    width: 95vw;
-    max-width: 1600px;
+    width: 95vw !important;
+    max-width: 1600px !important;
 }
 
 @media (max-width: 991.98px) {
     #dailyCashSelectorModal .modal-dialog.daily-cash-selector-dialog {
-        width: 98vw;
-        max-width: 98vw;
-        margin: 0.5rem auto;
+        width: 98vw !important;
+        max-width: 98vw !important;
+        margin: 0.5rem auto !important;
     }
 }
 
 .daily-cash-selector-table th,
 .daily-cash-selector-table td {
-  vertical-align: middle;
-  white-space: nowrap;
+  vertical-align: middle !important;
+  text-align: center !important;
+  white-space: nowrap !important;
 }
 
 .daily-cash-selector-table th:last-child,
 .daily-cash-selector-table td:last-child {
-  position: sticky;
-  right: 0;
-  z-index: 1;
-  background-color: var(--bs-body-bg, #fff);
-  text-align: center;
+  position: sticky !important;
+  right: 0 !important;
+  z-index: 1 !important;
+  background-color: var(--bs-body-bg, #fff) !important;
+  text-align: center !important;
 }
 
 .daily-cash-selector-table th:last-child {
-  z-index: 2;
+  z-index: 2 !important;
 }
