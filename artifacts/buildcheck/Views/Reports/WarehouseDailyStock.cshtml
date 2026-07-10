@@ -39,31 +39,32 @@
         <table class="table app-table table-sm align-middle admin-table mb-0">
             <thead>
                 <tr>
-                    <th>No</th>
-                    <th>Date</th>
-                    <th>Branch</th>
-                    <th>Product</th>
-                    <th>Batch</th>
-                    <th>Beginning</th>
-                    <th>Sold</th>
-                    <th>Actual</th>
-                    <th>Ending</th>
-                    <th>Loss</th>
-                    <th>Remarks</th>
-                    <th>Action</th>
+                    <th class="text-nowrap">No</th>
+                    <th class="text-nowrap">Date</th>
+                    <th class="text-nowrap">Branch</th>
+                    <th class="text-nowrap">Product</th>
+                    <th class="text-nowrap">Batch</th>
+                    <th class="text-nowrap">Beginning</th>
+                    <th class="text-nowrap">Sold</th>
+                    <th class="text-nowrap">Actual</th>
+                    <th class="text-nowrap">Ending</th>
+                    <th class="text-nowrap">Loss</th>
+                    <th class="text-nowrap">Remarks</th>
+                    <th class="text-nowrap">Recorded By</th>
+                    <th class="text-nowrap">Action</th>
                 </tr>
             </thead>
             <tbody>
                 @if (Model.Records.Count == 0)
                 {
-                    <tr><td class="text-center text-muted fw-bold" colspan="12">No records yet.</td></tr>
+                    <tr><td class="text-center text-muted fw-bold" colspan="13">No records yet.</td></tr>
                 }
                 @for (var i = 0; i < Model.Records.Count; i += 1)
                 {
                     var record = Model.Records[i];
                     <tr>
                         <td>@(i + 1)</td>
-                        <td>@record.StockDate.ToString("yyyy-MM-dd")</td>
+                        <td class="text-nowrap">@record.StockDate.ToString("yyyy-MM-dd")</td>
                         <td>@(record.Branch?.Name ?? "Unassigned")</td>
                         <td>@(record.Product?.Name ?? "-")</td>
                         <td>@(record.Batch?.BatchNo ?? "-")</td>
@@ -73,6 +74,7 @@
                         <td>@record.Ending.ToString("N2")</td>
                         <td>@record.Loss.ToString("N2")</td>
                         <td>@(record.Remarks ?? "-")</td>
+                        <td class="text-nowrap">@(record.CreatedBy == 1 ? "admin" : record.CreatedBy?.ToString() ?? "System")</td>
                         <td class="col-action"><a class="btn btn-sm btn-outline-primary" asp-action="@Model.PageAction" asp-route-editId="@record.Id" asp-route-search="@Model.Search" asp-route-filterBranchId="@Model.BranchId">Edit</a></td>
                     </tr>
                 }

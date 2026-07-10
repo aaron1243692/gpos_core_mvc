@@ -1,55 +1,208 @@
-﻿<section class="transaction-ui-page">
-    <div class="content-card transaction-ui-card">
-        <div class="card-title-row">
-            <div>
-                <h1>Daily Cash</h1>
-                <p>UI-only cash control sheet. Expected Cash = Beginning Cash + Sales Cash + Cash In - Cash Out.</p>
+@{
+    ViewData["Title"] = "Daily Cash";
+}
+
+<div class="page-header">
+    <div class="page-heading">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item">GPOS</li>
+                <li class="breadcrumb-item">Transaction</li>
+                <li class="breadcrumb-item active" aria-current="page">Daily Cash</li>
+            </ol>
+        </nav>
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+            <h1 class="mb-0">Daily Cash</h1>
+            <span class="badge bg-warning text-dark">UI Preview Only</span>
+            <span class="badge bg-secondary">Backend not connected yet</span>
+        </div>
+        <p class="page-subtitle text-muted mt-2">UI-only cash control sheet. Expected Cash = Opening Cash + Sales Cash + Cash In - Cash Out.</p>
+    </div>
+    <div class="page-actions">
+        <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#dailyCashFormModal">Add Daily Cash</button>
+    </div>
+</div>
+
+<section class="transaction-ui-page">
+    <div class="content-card mb-3">
+        <form class="row g-2 align-items-center" onsubmit="return false;">
+            <div class="col-md-3">
+                <input class="form-control" type="search" placeholder="Search daily cash..." id="dailyCashSearch" />
             </div>
-            <span class="status-badge">UI Only</span>
-        </div>
-        <div class="transaction-ui-toolbar">
-            <input class="form-control transaction-ui-search" type="search" placeholder="Search daily cash..." data-transaction-search="#dailyCashTable" />
-            <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#dailyCashFormModal">Add Daily Cash</button>
-        </div>
+            <div class="col-md-2">
+                <select class="form-select" id="dailyCashBranch">
+                    <option value="">All Branches</option>
+                    <option>Main Branch</option>
+                    <option>Branch 2</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <input class="form-control" type="date" value="2026-07-09" id="dailyCashDate" />
+            </div>
+            <div class="col-md-2">
+                <select class="form-select" id="dailyCashShift">
+                    <option value="">All Shifts</option>
+                    <option>Morning Shift</option>
+                    <option>Afternoon Shift</option>
+                    <option>Night Shift</option>
+                </select>
+            </div>
+            <div class="col-md-1">
+                <input class="form-control" placeholder="Cashier" id="dailyCashCashier" />
+            </div>
+            <div class="col-md-1">
+                <select class="form-select" id="dailyCashStatus">
+                    <option value="">All Statuses</option>
+                    <option>Open</option>
+                    <option>Closed</option>
+                    <option>Reviewed</option>
+                </select>
+            </div>
+            <div class="col-md-auto d-flex gap-1">
+                <button class="btn btn-primary" type="button">Search</button>
+                <button class="btn btn-outline-secondary" type="button">Clear</button>
+            </div>
+        </form>
+    </div>
+
+    <div class="content-card transaction-ui-card">
         <div class="table-responsive transaction-ui-table-wrap">
             <table class="table app-table table-sm align-middle mb-0" id="dailyCashTable">
-                <thead><tr><th>No</th><th>Date</th><th>User/Cashier</th><th>Beginning Cash</th><th>Cash In</th><th>Cash Out</th><th>Sales Cash</th><th>Expected Cash</th><th>Ending Cash</th><th>Difference</th><th>Status</th><th>Action</th></tr></thead>
+                <thead>
+                    <tr>
+                        <th class="text-nowrap">No</th>
+                        <th class="text-nowrap">Date</th>
+                        <th class="text-nowrap">Branch</th>
+                        <th class="text-nowrap">Shift</th>
+                        <th class="text-nowrap">Cashier</th>
+                        <th class="text-nowrap">Opening Cash</th>
+                        <th class="text-nowrap">Cash In</th>
+                        <th class="text-nowrap">Cash Out</th>
+                        <th class="text-nowrap">Sales Cash</th>
+                        <th class="text-nowrap">Expected Cash</th>
+                        <th class="text-nowrap">Actual Cash</th>
+                        <th class="text-nowrap">Difference</th>
+                        <th class="text-nowrap">Status</th>
+                        <th class="text-nowrap">Action</th>
+                    </tr>
+                </thead>
                 <tbody>
-                    <tr data-search-row><td>1</td><td>2026-06-24</td><td>admin</td><td>₱5,000.00</td><td>₱500.00</td><td>₱200.00</td><td>₱18,400.00</td><td>₱23,700.00</td><td>₱23,650.00</td><td>₱-50.00</td><td><span class="badge text-bg-primary">Open</span></td><td><span class="transaction-ui-actions"><button class="btn btn-sm btn-outline-primary" type="button" data-bs-toggle="modal" data-bs-target="#dailyCashViewModal">View</button><button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="modal" data-bs-target="#dailyCashFormModal">Edit</button><button class="btn btn-sm btn-outline-danger" type="button" data-bs-toggle="modal" data-bs-target="#dailyCashConfirmModal">Close Cash</button></span></td></tr>
-                    <tr data-empty-row hidden><td class="text-center text-muted fw-bold" colspan="12">No records found.</td></tr>
+                    <tr>
+                        <td>1</td>
+                        <td class="text-nowrap">2026-07-09</td>
+                        <td>Main Branch</td>
+                        <td>Morning Shift</td>
+                        <td>admin</td>
+                        <td>₱5,000.00</td>
+                        <td>₱500.00</td>
+                        <td>₱200.00</td>
+                        <td>₱18,400.00</td>
+                        <td>₱23,700.00</td>
+                        <td>₱23,650.00</td>
+                        <td>₱-50.00</td>
+                        <td><span class="badge bg-primary text-nowrap">Open</span></td>
+                        <td class="text-nowrap">
+                            <button class="btn btn-sm btn-outline-primary" type="button" data-bs-toggle="modal" data-bs-target="#dailyCashViewModal">View</button>
+                            <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="modal" data-bs-target="#dailyCashFormModal">Edit</button>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>2</td>
+                        <td class="text-nowrap">2026-07-08</td>
+                        <td>Main Branch</td>
+                        <td>Afternoon Shift</td>
+                        <td>cashier_01</td>
+                        <td>₱5,000.00</td>
+                        <td>₱0.00</td>
+                        <td>₱100.00</td>
+                        <td>₱24,150.00</td>
+                        <td>₱29,050.00</td>
+                        <td>₱29,050.00</td>
+                        <td>₱0.00</td>
+                        <td><span class="badge bg-success text-nowrap">Closed</span></td>
+                        <td class="text-nowrap">
+                            <button class="btn btn-sm btn-outline-primary" type="button" data-bs-toggle="modal" data-bs-target="#dailyCashViewModal">View</button>
+                            <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="modal" data-bs-target="#dailyCashFormModal" disabled>Edit</button>
+                        </td>
+                    </tr>
+                    <tr class="d-none">
+                        <td class="text-center text-muted fw-bold" colspan="14">No records found.</td>
+                    </tr>
                 </tbody>
             </table>
         </div>
     </div>
-    <div class="content-card transaction-db-card">
-        <h2 class="h5 mb-1">Recommended Future Tables</h2>
-        <p class="mb-0">Reference only: daily totals should roll up user cash movements, cash payments, and sales.</p>
-        <ul class="transaction-db-list"><li>daily_cash</li><li>cash_movements</li><li>payments</li><li>sales</li></ul>
-    </div>
 </section>
 
+<!-- Add/Edit Modal -->
 <div class="modal fade" id="dailyCashFormModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content">
-            <div class="modal-header"><h2 class="modal-title fs-5">Daily Cash</h2><button class="btn-close" type="button" data-bs-dismiss="modal"></button></div>
+            <div class="modal-header">
+                <h2 class="modal-title fs-5">Add/Edit Daily Cash</h2>
+                <button class="btn-close" type="button" data-bs-dismiss="modal"></button>
+            </div>
             <div class="modal-body">
                 <div class="row g-3">
-                    <div class="col-md-6"><label class="form-label">Date</label><input class="form-control" type="date" value="2026-06-24" /></div>
-                    <div class="col-md-6"><label class="form-label">User/Cashier</label><input class="form-control" value="admin" /></div>
-                    <div class="col-md-4"><label class="form-label">Beginning Cash</label><input class="form-control" type="number" value="5000" /></div>
-                    <div class="col-md-4"><label class="form-label">Cash In</label><input class="form-control" type="number" value="500" /></div>
-                    <div class="col-md-4"><label class="form-label">Cash Out</label><input class="form-control" type="number" value="200" /></div>
-                    <div class="col-md-4"><label class="form-label">Sales Cash</label><input class="form-control" type="number" value="18400" /></div>
-                    <div class="col-md-4"><label class="form-label">Expected Cash</label><input class="form-control" value="23700.00" readonly /></div>
-                    <div class="col-md-4"><label class="form-label">Ending Cash</label><input class="form-control" type="number" value="23650" /></div>
-                    <div class="col-md-4"><label class="form-label">Difference</label><input class="form-control" value="-50.00" readonly /></div>
-                    <div class="col-md-4"><label class="form-label">Status</label><select class="form-select"><option>Open</option><option>Closed</option><option>Reviewed</option></select></div>
-                    <div class="col-md-12"><label class="form-label">Remarks</label><textarea class="form-control" rows="3">Short by ₱50.00 pending review.</textarea></div>
+                    <div class="col-md-6">
+                        <label class="form-label">Branch</label>
+                        <select class="form-select">
+                            <option>Main Branch</option>
+                            <option>Branch 2</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Date</label>
+                        <input class="form-control" type="date" value="2026-07-09" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Shift</label>
+                        <select class="form-select">
+                            <option>Morning Shift</option>
+                            <option>Afternoon Shift</option>
+                            <option>Night Shift</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Cashier</label>
+                        <input class="form-control" value="admin" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Opening Cash Amount</label>
+                        <input class="form-control" type="number" step="0.01" min="0" placeholder="1234.00" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Actual Cash Amount</label>
+                        <input class="form-control" type="number" step="0.01" min="0" placeholder="1234.00" />
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">Remarks</label>
+                        <textarea class="form-control" rows="3" placeholder="Enter remarks here..."></textarea>
+                    </div>
                 </div>
             </div>
-            <div class="modal-footer"><button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button><button class="btn btn-primary" type="button" data-bs-dismiss="modal">Save UI Draft</button></div>
+            <div class="modal-footer">
+                <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button>
+                <button class="btn btn-primary" type="button" onclick="alert('Backend not connected yet.');" data-bs-dismiss="modal">Save</button>
+            </div>
         </div>
     </div>
 </div>
-<div class="modal fade" id="dailyCashViewModal" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-dialog-centered"><div class="modal-content"><div class="modal-header"><h2 class="modal-title fs-5">Daily Cash Summary</h2><button class="btn-close" type="button" data-bs-dismiss="modal"></button></div><div class="modal-body">This preview is UI only. No cash records are saved.</div><div class="modal-footer"><button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Close</button></div></div></div></div>
-<div class="modal fade" id="dailyCashConfirmModal" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-dialog-centered"><div class="modal-content"><div class="modal-header"><h2 class="modal-title fs-5">Close Cash</h2><button class="btn-close" type="button" data-bs-dismiss="modal"></button></div><div class="modal-body">Close this daily cash record? This button is UI only.</div><div class="modal-footer"><button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button><button class="btn btn-primary" type="button" data-bs-dismiss="modal">Close Cash</button></div></div></div></div>
+
+<!-- View Modal -->
+<div class="modal fade" id="dailyCashViewModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title fs-5">Daily Cash Details</h2>
+                <button class="btn-close" type="button" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>This is a UI preview. Daily cash recording backend is not connected yet.</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>

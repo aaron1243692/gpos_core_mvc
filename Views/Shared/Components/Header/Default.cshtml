@@ -21,6 +21,7 @@
                             <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Configuration.Vat" ? "active" : "")" asp-controller="Configuration" asp-action="Vat">VAT</a>
                             <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Configuration.Pumps" ? "active" : "")" asp-controller="Configuration" asp-action="Pumps">Dispensers</a>
                             <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Configuration.Nozzles" ? "active" : "")" asp-controller="Configuration" asp-action="Nozzles">Nozzles</a>
+                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Configuration.Shift" ? "active" : "")" asp-controller="Configuration" asp-action="Shift">Shift</a>
                         </div>
                     </div>
                     <div class="dropend eg-rb-dropdown-group">
@@ -147,6 +148,8 @@
                             <a class="dropdown-item eg-rb-dropdown-link nav-page-not-working @(Model.ActivePage == "Transaction.CashIn" ? "active" : "")" asp-controller="Transaction" asp-action="CashIn">Cash In <span class="nav-status-pill">UI Only</span></a>
                             @* UI-only / not working yet *@
                             <a class="dropdown-item eg-rb-dropdown-link nav-page-not-working @(Model.ActivePage == "Transaction.CashOut" ? "active" : "")" asp-controller="Transaction" asp-action="CashOut">Cash Out <span class="nav-status-pill">UI Only</span></a>
+                            @* UI-only / not working yet *@
+                            <a class="dropdown-item eg-rb-dropdown-link nav-page-not-working @(Model.ActivePage == "Transaction.CashRemittance" ? "active" : "")" asp-controller="Transaction" asp-action="CashRemittance">Cash Remittance <span class="nav-status-pill">Not Working</span></a>
                         </div>
                     </div>
                     <div class="dropend eg-rb-dropdown-group">

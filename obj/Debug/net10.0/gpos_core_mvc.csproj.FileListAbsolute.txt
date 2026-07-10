@@ -18110,3 +18110,7 @@ C:\project\gpos_core_mvc\bin\Debug\net10.0\Views\Configuration\DisplayBatches.cs
 C:\project\gpos_core_mvc\bin\Debug\net10.0\Views\Configuration\WarehouseBatches.cshtml
 C:\project\gpos_core_mvc\artifacts\buildcheck\Views\Configuration\DisplayBatches.cshtml
 C:\project\gpos_core_mvc\artifacts\buildcheck\Views\Configuration\WarehouseBatches.cshtml
+C:\project\gpos_core_mvc\bin\Debug\net10.0\Views\Configuration\Shift.cshtml
+C:\project\gpos_core_mvc\artifacts\buildcheck\Views\Configuration\Shift.cshtml
+C:\project\gpos_core_mvc\artifacts\buildcheck\Views\Transaction\CashRemittance.cshtml
+C:\project\gpos_core_mvc\bin\Debug\net10.0\Views\Transaction\CashRemittance.cshtml

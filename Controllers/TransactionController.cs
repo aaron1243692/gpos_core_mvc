@@ -25,6 +25,8 @@ namespace gpos.Controllers
             _batchNumberService = batchNumberService;
         }
 
+        public IActionResult CashRemittance() => View();
+
         public async Task<IActionResult> POS()
         {
             return View(await BuildPosPageAsync());

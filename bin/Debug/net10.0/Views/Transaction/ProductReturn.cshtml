@@ -1,11 +1,203 @@
-<section class="transaction-ui-page">
-    <div class="content-card transaction-ui-card">
-        <div class="card-title-row"><div><h1>Product Return</h1><p>UI-only product return page. Future flow: add returned product stock back to display_stocks.</p></div><span class="status-badge">UI Only</span></div>
-        <div class="transaction-ui-toolbar"><input class="form-control transaction-ui-search" type="search" placeholder="Search product returns..." data-transaction-search="#productReturnTable" /><button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#productReturnFormModal">Add Return</button></div>
-        <div class="table-responsive transaction-ui-table-wrap"><table class="table app-table table-sm align-middle mb-0" id="productReturnTable"><thead><tr><th>No</th><th>Return No</th><th>Receipt No</th><th>Product</th><th>Quantity</th><th>Display Stock After</th><th>Reason</th><th>Returned By</th><th>Date</th><th>Status</th><th>Action</th></tr></thead><tbody><tr data-search-row><td>1</td><td>RET-P-0001</td><td>RCPT-20260624-0001</td><td>Engine Oil 1L</td><td>1</td><td>17.00</td><td>Wrong item</td><td>admin</td><td>2026-06-24</td><td><span class="badge text-bg-warning">Pending</span></td><td><span class="transaction-ui-actions"><button class="btn btn-sm btn-outline-primary" type="button" data-bs-toggle="modal" data-bs-target="#productReturnViewModal">View</button><button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="modal" data-bs-target="#productReturnFormModal">Edit</button><button class="btn btn-sm btn-outline-danger" type="button" data-bs-toggle="modal" data-bs-target="#productReturnConfirmModal">Return</button></span></td></tr><tr data-empty-row hidden><td class="text-center text-muted fw-bold" colspan="11">No records found.</td></tr></tbody></table></div>
+@{
+    ViewData["Title"] = "Product Return";
+}
+
+<div class="page-header">
+    <div class="page-heading">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item">GPOS</li>
+                <li class="breadcrumb-item">Transaction</li>
+                <li class="breadcrumb-item active" aria-current="page">Product Return</li>
+            </ol>
+        </nav>
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+            <h1 class="mb-0">Product Return</h1>
+            <span class="badge bg-warning text-dark">UI Preview Only</span>
+            <span class="badge bg-secondary">Backend not connected yet</span>
+        </div>
+        <p class="page-subtitle text-muted mt-2">Process product returns and issue refunds to customers.</p>
     </div>
-    <div class="content-card transaction-db-card"><h2 class="h5 mb-1">Recommended Future Tables</h2><p class="mb-0">Reference only: product returns should point back to sale items and add stock back to display_stocks later.</p><ul class="transaction-db-list"><li>returns</li><li>return_items</li><li>sales</li><li>sale_items</li><li>display_stocks</li><li>stock_movements</li></ul></div>
+    <div class="page-actions">
+        <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#productReturnFormModal">Add Return</button>
+    </div>
+</div>
+
+<section class="transaction-ui-page">
+    <div class="content-card mb-3">
+        <form class="row g-2 align-items-center" onsubmit="return false;">
+            <div class="col-md-3">
+                <input class="form-control" type="search" placeholder="Search product returns..." id="productReturnSearch" />
+            </div>
+            <div class="col-md-2">
+                <select class="form-select" id="productReturnBranch">
+                    <option value="">All Branches</option>
+                    <option>Main Branch</option>
+                    <option>Branch 2</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <input class="form-control" type="date" value="2026-07-09" id="productReturnDateFrom" />
+            </div>
+            <div class="col-md-2">
+                <input class="form-control" type="date" value="2026-07-09" id="productReturnDateTo" />
+            </div>
+            <div class="col-md-1">
+                <select class="form-select" id="productReturnStatus">
+                    <option value="">All Statuses</option>
+                    <option>Completed</option>
+                    <option>Pending</option>
+                    <option>Cancelled</option>
+                </select>
+            </div>
+            <div class="col-md-auto d-flex gap-1">
+                <button class="btn btn-primary" type="button">Search</button>
+                <button class="btn btn-outline-secondary" type="button">Clear</button>
+            </div>
+        </form>
+    </div>
+
+    <div class="content-card transaction-ui-card">
+        <div class="table-responsive transaction-ui-table-wrap">
+            <table class="table app-table table-sm align-middle mb-0" id="productReturnTable">
+                <thead>
+                    <tr>
+                        <th class="text-nowrap">No</th>
+                        <th class="text-nowrap">Date</th>
+                        <th class="text-nowrap">Branch</th>
+                        <th class="text-nowrap">Receipt No</th>
+                        <th class="text-nowrap">Product</th>
+                        <th class="text-nowrap">Batch</th>
+                        <th class="text-nowrap">Quantity</th>
+                        <th class="text-nowrap">Reason</th>
+                        <th class="text-nowrap">Refund Amount</th>
+                        <th class="text-nowrap">Processed By</th>
+                        <th class="text-nowrap">Status</th>
+                        <th class="text-nowrap">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>1</td>
+                        <td class="text-nowrap">2026-07-09</td>
+                        <td>Main Branch</td>
+                        <td>RCPT-20260709-0012</td>
+                        <td>Engine Oil 1L</td>
+                        <td>B-OIL-001</td>
+                        <td>1.00</td>
+                        <td>Wrong item purchased</td>
+                        <td>₱320.00</td>
+                        <td>admin</td>
+                        <td><span class="badge bg-success text-nowrap">Completed</span></td>
+                        <td class="text-nowrap">
+                            <button class="btn btn-sm btn-outline-primary" type="button" data-bs-toggle="modal" data-bs-target="#productReturnViewModal">View</button>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>2</td>
+                        <td class="text-nowrap">2026-07-08</td>
+                        <td>Main Branch</td>
+                        <td>RCPT-20260708-0044</td>
+                        <td>Coolant 1L</td>
+                        <td>B-CLT-002</td>
+                        <td>2.00</td>
+                        <td>Defective packaging</td>
+                        <td>₱360.00</td>
+                        <td>supervisor_01</td>
+                        <td><span class="badge bg-success text-nowrap">Completed</span></td>
+                        <td class="text-nowrap">
+                            <button class="btn btn-sm btn-outline-primary" type="button" data-bs-toggle="modal" data-bs-target="#productReturnViewModal">View</button>
+                        </td>
+                    </tr>
+                    <tr class="d-none">
+                        <td class="text-center text-muted fw-bold" colspan="12">No records found.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
 </section>
-<div class="modal fade" id="productReturnFormModal" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-dialog-centered"><div class="modal-content"><div class="modal-header"><h2 class="modal-title fs-5">Product Return</h2><button class="btn-close" type="button" data-bs-dismiss="modal"></button></div><div class="modal-body"><div class="row g-3"><div class="col-md-6"><label class="form-label">Receipt No</label><input class="form-control" value="RCPT-20260624-0001" /></div><div class="col-md-6"><label class="form-label">Product</label><input class="form-control" value="Engine Oil 1L" /></div><div class="col-md-6"><label class="form-label">Quantity</label><input class="form-control" type="number" value="1" /></div><div class="col-md-6"><label class="form-label">Status</label><select class="form-select"><option>Pending</option><option>Completed</option><option>Cancelled</option></select></div><div class="col-12"><label class="form-label">Reason</label><input class="form-control" value="Wrong item" /></div><div class="col-12"><label class="form-label">Remarks</label><textarea class="form-control" rows="3">Customer returned unopened item.</textarea></div></div></div><div class="modal-footer"><button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button><button class="btn btn-primary" type="button" data-bs-dismiss="modal">Save UI Draft</button></div></div></div></div>
-<div class="modal fade" id="productReturnViewModal" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-dialog-centered"><div class="modal-content"><div class="modal-header"><h2 class="modal-title fs-5">Product Return Details</h2><button class="btn-close" type="button" data-bs-dismiss="modal"></button></div><div class="modal-body">Product return preview only. No stock is restored.</div><div class="modal-footer"><button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Close</button></div></div></div></div>
-<div class="modal fade" id="productReturnConfirmModal" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-dialog-centered"><div class="modal-content"><div class="modal-header"><h2 class="modal-title fs-5">Complete Product Return</h2><button class="btn-close" type="button" data-bs-dismiss="modal"></button></div><div class="modal-body">Complete this return? This is UI only.</div><div class="modal-footer"><button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button><button class="btn btn-primary" type="button" data-bs-dismiss="modal">Complete Return</button></div></div></div></div>
+
+<!-- Add Modal -->
+<div class="modal fade" id="productReturnFormModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title fs-5">Add Product Return</h2>
+                <button class="btn-close" type="button" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Branch</label>
+                        <select class="form-select">
+                            <option>Main Branch</option>
+                            <option>Branch 2</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Original Receipt</label>
+                        <div class="input-group">
+                            <input class="form-control" type="text" placeholder="Search/select receipt..." readonly />
+                            <button class="btn btn-outline-secondary" type="button" onclick="alert('Selector backend not connected yet.');"><img src="/icons/search.png" alt="Search" style="width:16px;height:16px;" /></button>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Product</label>
+                        <div class="input-group">
+                            <input class="form-control" type="text" placeholder="Search/select product..." readonly />
+                            <button class="btn btn-outline-secondary" type="button" onclick="alert('Selector backend not connected yet.');"><img src="/icons/search.png" alt="Search" style="width:16px;height:16px;" /></button>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Batch</label>
+                        <input class="form-control" placeholder="Auto-populated from receipt" readonly />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Quantity</label>
+                        <input class="form-control" type="number" step="1" value="1" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Refund Amount</label>
+                        <input class="form-control" type="number" step="0.01" value="0.00" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Reason</label>
+                        <select class="form-select">
+                            <option>Wrong item</option>
+                            <option>Defective product</option>
+                            <option>Customer change of mind</option>
+                            <option>Expired batch</option>
+                        </select>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">Remarks</label>
+                        <textarea class="form-control" rows="3" placeholder="Enter additional remarks here..."></textarea>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button>
+                <button class="btn btn-primary" type="button" onclick="alert('Backend not connected yet.');" data-bs-dismiss="modal">Save</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- View Modal -->
+<div class="modal fade" id="productReturnViewModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title fs-5">Product Return Details</h2>
+                <button class="btn-close" type="button" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>This is a UI preview. Product return backend is not connected yet.</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>

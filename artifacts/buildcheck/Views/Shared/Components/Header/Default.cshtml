@@ -21,6 +21,7 @@
                             <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Configuration.Vat" ? "active" : "")" asp-controller="Configuration" asp-action="Vat">VAT</a>
                             <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Configuration.Pumps" ? "active" : "")" asp-controller="Configuration" asp-action="Pumps">Dispensers</a>
                             <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Configuration.Nozzles" ? "active" : "")" asp-controller="Configuration" asp-action="Nozzles">Nozzles</a>
+                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Configuration.Shift" ? "active" : "")" asp-controller="Configuration" asp-action="Shift">Shift</a>
                         </div>
                     </div>
                     <div class="dropend eg-rb-dropdown-group">
@@ -82,14 +83,11 @@
                         </div>
                     </div>
                     <div class="dropend eg-rb-dropdown-group">
-                        <button class="dropdown-item eg-rb-dropdown-group-toggle nav-group-not-working" type="button">Daily Stock <span class="nav-status-pill">Not Working</span></button>
+                        <button class="dropdown-item eg-rb-dropdown-group-toggle " type="button">Daily Stock </button>
                         <div class="dropdown-menu eg-rb-submenu">
-                            @* Report/static page, shown here because it is inventory stock viewing *@
-                            <a class="dropdown-item eg-rb-dropdown-link nav-page-not-working @(Model.ActivePage == "Reports.WarehouseDailyStock" ? "active" : "")" asp-controller="Reports" asp-action="WarehouseDailyStock">Warehouse <span class="nav-status-pill">Not Working</span></a>
-                            @* Report/static page, shown here because it is inventory stock viewing *@
-                            <a class="dropdown-item eg-rb-dropdown-link nav-page-not-working @(Model.ActivePage == "Reports.DisplayDailyStock" ? "active" : "")" asp-controller="Reports" asp-action="DisplayDailyStock">Display <span class="nav-status-pill">Not Working</span></a>
-                            @* Report/static page, shown here because it is inventory stock viewing *@
-                            <a class="dropdown-item eg-rb-dropdown-link nav-page-not-working @(Model.ActivePage == "Reports.TankDailyStock" ? "active" : "")" asp-controller="Reports" asp-action="TankDailyStock">Tank <span class="nav-status-pill">Not Working</span></a>
+                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Reports.WarehouseDailyStock" ? "active" : "")" asp-controller="Reports" asp-action="WarehouseDailyStock">Warehouse </a>
+                            <a class="dropdown-item eg-rb-dropdown-link  @(Model.ActivePage == "Reports.DisplayDailyStock" ? "active" : "")" asp-controller="Reports" asp-action="DisplayDailyStock">Display </a>
+                            <a class="dropdown-item eg-rb-dropdown-link  @(Model.ActivePage == "Reports.TankDailyStock" ? "active" : "")" asp-controller="Reports" asp-action="TankDailyStock">Tank </a>
                         </div>
                     </div>
                     <div class="dropend eg-rb-dropdown-group">
@@ -150,6 +148,8 @@
                             <a class="dropdown-item eg-rb-dropdown-link nav-page-not-working @(Model.ActivePage == "Transaction.CashIn" ? "active" : "")" asp-controller="Transaction" asp-action="CashIn">Cash In <span class="nav-status-pill">UI Only</span></a>
                             @* UI-only / not working yet *@
                             <a class="dropdown-item eg-rb-dropdown-link nav-page-not-working @(Model.ActivePage == "Transaction.CashOut" ? "active" : "")" asp-controller="Transaction" asp-action="CashOut">Cash Out <span class="nav-status-pill">UI Only</span></a>
+                            @* UI-only / not working yet *@
+                            <a class="dropdown-item eg-rb-dropdown-link nav-page-not-working @(Model.ActivePage == "Transaction.CashRemittance" ? "active" : "")" asp-controller="Transaction" asp-action="CashRemittance">Cash Remittance <span class="nav-status-pill">Not Working</span></a>
                         </div>
                     </div>
                     <div class="dropend eg-rb-dropdown-group">
