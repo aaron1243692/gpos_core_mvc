@@ -111,6 +111,375 @@ namespace gpos.Migrations
                     b.ToTable("branches", (string)null);
                 });
 
+            modelBuilder.Entity("gpos.Models.CashIn", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("id");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("amount");
+
+                    b.Property<int>("BranchId")
+                        .HasColumnType("int")
+                        .HasColumnName("branch_id");
+
+                    b.Property<DateTime?>("CreatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("created_at");
+
+                    b.Property<int?>("CreatedByUserId")
+                        .HasColumnType("int")
+                        .HasColumnName("created_by_user_id");
+
+                    b.Property<int?>("DailyCashId")
+                        .HasColumnType("int")
+                        .HasColumnName("daily_cash_id");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("varchar(200)")
+                        .HasColumnName("reason");
+
+                    b.Property<string>("Remarks")
+                        .HasMaxLength(500)
+                        .HasColumnType("varchar(500)")
+                        .HasColumnName("remarks");
+
+                    b.Property<int>("ShiftId")
+                        .HasColumnType("int")
+                        .HasColumnName("shift_id");
+
+                    b.Property<int>("Status")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(1)
+                        .HasColumnName("status");
+
+                    b.Property<DateTime>("TransactionDateTime")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("transaction_datetime");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("updated_at");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedByUserId");
+
+                    b.HasIndex("DailyCashId");
+
+                    b.HasIndex("ShiftId");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("BranchId", "ShiftId", "UserId", "TransactionDateTime");
+
+                    b.ToTable("cash_ins", (string)null);
+                });
+
+            modelBuilder.Entity("gpos.Models.CashOut", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("id");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("amount");
+
+                    b.Property<int>("BranchId")
+                        .HasColumnType("int")
+                        .HasColumnName("branch_id");
+
+                    b.Property<DateTime?>("CreatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("created_at");
+
+                    b.Property<int?>("CreatedByUserId")
+                        .HasColumnType("int")
+                        .HasColumnName("created_by_user_id");
+
+                    b.Property<int?>("DailyCashId")
+                        .HasColumnType("int")
+                        .HasColumnName("daily_cash_id");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("varchar(200)")
+                        .HasColumnName("reason");
+
+                    b.Property<string>("Remarks")
+                        .HasMaxLength(500)
+                        .HasColumnType("varchar(500)")
+                        .HasColumnName("remarks");
+
+                    b.Property<int>("ShiftId")
+                        .HasColumnType("int")
+                        .HasColumnName("shift_id");
+
+                    b.Property<int>("Status")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(1)
+                        .HasColumnName("status");
+
+                    b.Property<DateTime>("TransactionDateTime")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("transaction_datetime");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("updated_at");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedByUserId");
+
+                    b.HasIndex("DailyCashId");
+
+                    b.HasIndex("ShiftId");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("BranchId", "ShiftId", "UserId", "TransactionDateTime");
+
+                    b.ToTable("cash_outs", (string)null);
+                });
+
+            modelBuilder.Entity("gpos.Models.CashRemittance", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("id");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal>("ActualCash")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("actual_cash");
+
+                    b.Property<int>("BranchId")
+                        .HasColumnType("int")
+                        .HasColumnName("branch_id");
+
+                    b.Property<DateTime?>("CreatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("created_at");
+
+                    b.Property<int?>("CreatedByUserId")
+                        .HasColumnType("int")
+                        .HasColumnName("created_by_user_id");
+
+                    b.Property<int>("DailyCashId")
+                        .HasColumnType("int")
+                        .HasColumnName("daily_cash_id");
+
+                    b.Property<decimal>("ExpectedCash")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("expected_cash");
+
+                    b.Property<int>("ReceivedByUserId")
+                        .HasColumnType("int")
+                        .HasColumnName("received_by_user_id");
+
+                    b.Property<DateTime>("ReceivedDateTime")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("received_datetime");
+
+                    b.Property<string>("Remarks")
+                        .HasMaxLength(500)
+                        .HasColumnType("varchar(500)")
+                        .HasColumnName("remarks");
+
+                    b.Property<decimal>("RemittanceDifference")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("remittance_difference");
+
+                    b.Property<string>("RemittanceNo")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("varchar(50)")
+                        .HasColumnName("remittance_no");
+
+                    b.Property<decimal>("RemittedAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("remitted_amount");
+
+                    b.Property<int>("ShiftId")
+                        .HasColumnType("int")
+                        .HasColumnName("shift_id");
+
+                    b.Property<int>("Status")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(1)
+                        .HasColumnName("status");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("updated_at");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BranchId");
+
+                    b.HasIndex("CreatedByUserId");
+
+                    b.HasIndex("DailyCashId");
+
+                    b.HasIndex("ReceivedByUserId");
+
+                    b.HasIndex("RemittanceNo")
+                        .IsUnique();
+
+                    b.HasIndex("ShiftId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("cash_remittances", (string)null);
+                });
+
+            modelBuilder.Entity("gpos.Models.DailyCash", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("id");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal>("ActualCash")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("actual_cash");
+
+                    b.Property<int>("BranchId")
+                        .HasColumnType("int")
+                        .HasColumnName("branch_id");
+
+                    b.Property<DateTime>("BusinessDate")
+                        .HasColumnType("date")
+                        .HasColumnName("business_date");
+
+                    b.Property<decimal>("CashSales")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("cash_sales");
+
+                    b.Property<DateTime?>("CreatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("created_at");
+
+                    b.Property<int?>("CreatedByUserId")
+                        .HasColumnType("int")
+                        .HasColumnName("created_by_user_id");
+
+                    b.Property<decimal>("Difference")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("difference");
+
+                    b.Property<decimal>("ExpectedCash")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("expected_cash");
+
+                    b.Property<DateTime?>("OpenedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("opened_at");
+
+                    b.Property<decimal>("OpeningCash")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("opening_cash");
+
+                    b.Property<int?>("ReceivedByUserId")
+                        .HasColumnType("int")
+                        .HasColumnName("received_by_user_id");
+
+                    b.Property<string>("Remarks")
+                        .HasMaxLength(500)
+                        .HasColumnType("varchar(500)")
+                        .HasColumnName("remarks");
+
+                    b.Property<decimal>("RemittedAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("remitted_amount");
+
+                    b.Property<int>("ShiftId")
+                        .HasColumnType("int")
+                        .HasColumnName("shift_id");
+
+                    b.Property<int>("Status")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(1)
+                        .HasColumnName("status");
+
+                    b.Property<decimal>("TotalCashIn")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("total_cash_in");
+
+                    b.Property<decimal>("TotalCashOut")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("total_cash_out");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("updated_at");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedByUserId");
+
+                    b.HasIndex("ReceivedByUserId");
+
+                    b.HasIndex("ShiftId");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("BranchId", "ShiftId", "UserId", "BusinessDate");
+
+                    b.ToTable("daily_cash", (string)null);
+                });
+
             modelBuilder.Entity("gpos.Models.DailyStockRecord", b =>
                 {
                     b.Property<int>("Id")
@@ -133,6 +502,10 @@ namespace gpos.Migrations
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)")
                         .HasColumnName("beginning_quantity");
+
+                    b.Property<int?>("BranchId")
+                        .HasColumnType("int")
+                        .HasColumnName("branch_id");
 
                     b.Property<DateTime?>("CreatedAt")
                         .HasColumnType("datetime(6)")
@@ -191,6 +564,8 @@ namespace gpos.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("BatchId");
+
+                    b.HasIndex("BranchId");
 
                     b.HasIndex("FuelId");
 
@@ -909,6 +1284,10 @@ namespace gpos.Migrations
 
                     MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<int?>("BranchId")
+                        .HasColumnType("int")
+                        .HasColumnName("branch_id");
+
                     b.Property<decimal?>("CostPerLiter")
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)")
@@ -966,6 +1345,8 @@ namespace gpos.Migrations
                         .HasColumnName("updated_at");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("BranchId");
 
                     b.HasIndex("DeliveryNo")
                         .IsUnique();
@@ -1124,6 +1505,10 @@ namespace gpos.Migrations
 
                     MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<int?>("BranchId")
+                        .HasColumnType("int")
+                        .HasColumnName("branch_id");
+
                     b.Property<DateTime?>("CreatedAt")
                         .HasColumnType("datetime(6)")
                         .HasColumnName("created_at");
@@ -1169,6 +1554,8 @@ namespace gpos.Migrations
                         .HasColumnName("updated_at");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("BranchId");
 
                     b.HasIndex("ProductBatchId");
 
@@ -1986,6 +2373,10 @@ namespace gpos.Migrations
 
                     MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<int?>("BranchId")
+                        .HasColumnType("int")
+                        .HasColumnName("branch_id");
+
                     b.Property<DateTime?>("CreatedAt")
                         .HasColumnType("datetime(6)")
                         .HasColumnName("created_at");
@@ -2015,6 +2406,8 @@ namespace gpos.Migrations
                         .HasColumnName("updated_at");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("BranchId");
 
                     b.HasIndex("TankId");
 
@@ -2242,6 +2635,10 @@ namespace gpos.Migrations
 
                     MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<int?>("BranchId")
+                        .HasColumnType("int")
+                        .HasColumnName("branch_id");
+
                     b.Property<decimal>("CashAmount")
                         .ValueGeneratedOnAdd()
                         .HasPrecision(18, 2)
@@ -2252,6 +2649,10 @@ namespace gpos.Migrations
                     b.Property<DateTime?>("CreatedAt")
                         .HasColumnType("datetime(6)")
                         .HasColumnName("created_at");
+
+                    b.Property<int?>("DailyCashId")
+                        .HasColumnType("int")
+                        .HasColumnName("daily_cash_id");
 
                     b.Property<decimal>("DiscountAmount")
                         .ValueGeneratedOnAdd()
@@ -2304,6 +2705,10 @@ namespace gpos.Migrations
                         .HasColumnName("user_id");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("BranchId");
+
+                    b.HasIndex("DailyCashId");
 
                     b.HasIndex("MemberId");
 
@@ -2532,6 +2937,15 @@ namespace gpos.Migrations
                         .HasColumnType("varchar(100)")
                         .HasColumnName("name");
 
+                    b.Property<decimal?>("OpeningCashAmount")
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("opening_cash_amount");
+
+                    b.Property<string>("Remarks")
+                        .HasMaxLength(500)
+                        .HasColumnType("varchar(500)")
+                        .HasColumnName("remarks");
+
                     b.Property<int>("RequireClosingApproval")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int")
@@ -2721,6 +3135,10 @@ namespace gpos.Migrations
 
                     MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<int?>("BranchId")
+                        .HasColumnType("int")
+                        .HasColumnName("branch_id");
+
                     b.Property<DateTime?>("CreatedAt")
                         .HasColumnType("datetime(6)")
                         .HasColumnName("created_at");
@@ -2762,6 +3180,8 @@ namespace gpos.Migrations
                         .HasColumnName("updated_at");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("BranchId");
 
                     b.HasIndex("ReceivingNo")
                         .IsUnique();
@@ -3574,11 +3994,189 @@ namespace gpos.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("gpos.Models.CashIn", b =>
+                {
+                    b.HasOne("gpos.Models.Branch", "Branch")
+                        .WithMany()
+                        .HasForeignKey("BranchId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("gpos.Models.User", "CreatedByUser")
+                        .WithMany()
+                        .HasForeignKey("CreatedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("gpos.Models.DailyCash", "DailyCash")
+                        .WithMany("CashIns")
+                        .HasForeignKey("DailyCashId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("gpos.Models.ShiftSetting", "Shift")
+                        .WithMany()
+                        .HasForeignKey("ShiftId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("gpos.Models.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Branch");
+
+                    b.Navigation("CreatedByUser");
+
+                    b.Navigation("DailyCash");
+
+                    b.Navigation("Shift");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("gpos.Models.CashOut", b =>
+                {
+                    b.HasOne("gpos.Models.Branch", "Branch")
+                        .WithMany()
+                        .HasForeignKey("BranchId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("gpos.Models.User", "CreatedByUser")
+                        .WithMany()
+                        .HasForeignKey("CreatedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("gpos.Models.DailyCash", "DailyCash")
+                        .WithMany("CashOuts")
+                        .HasForeignKey("DailyCashId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("gpos.Models.ShiftSetting", "Shift")
+                        .WithMany()
+                        .HasForeignKey("ShiftId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("gpos.Models.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Branch");
+
+                    b.Navigation("CreatedByUser");
+
+                    b.Navigation("DailyCash");
+
+                    b.Navigation("Shift");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("gpos.Models.CashRemittance", b =>
+                {
+                    b.HasOne("gpos.Models.Branch", "Branch")
+                        .WithMany()
+                        .HasForeignKey("BranchId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("gpos.Models.User", "CreatedByUser")
+                        .WithMany()
+                        .HasForeignKey("CreatedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("gpos.Models.DailyCash", "DailyCash")
+                        .WithMany("CashRemittances")
+                        .HasForeignKey("DailyCashId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("gpos.Models.User", "ReceivedByUser")
+                        .WithMany()
+                        .HasForeignKey("ReceivedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("gpos.Models.ShiftSetting", "Shift")
+                        .WithMany()
+                        .HasForeignKey("ShiftId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("gpos.Models.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Branch");
+
+                    b.Navigation("CreatedByUser");
+
+                    b.Navigation("DailyCash");
+
+                    b.Navigation("ReceivedByUser");
+
+                    b.Navigation("Shift");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("gpos.Models.DailyCash", b =>
+                {
+                    b.HasOne("gpos.Models.Branch", "Branch")
+                        .WithMany()
+                        .HasForeignKey("BranchId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("gpos.Models.User", "CreatedByUser")
+                        .WithMany()
+                        .HasForeignKey("CreatedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("gpos.Models.User", "ReceivedByUser")
+                        .WithMany()
+                        .HasForeignKey("ReceivedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("gpos.Models.ShiftSetting", "Shift")
+                        .WithMany()
+                        .HasForeignKey("ShiftId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("gpos.Models.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Branch");
+
+                    b.Navigation("CreatedByUser");
+
+                    b.Navigation("ReceivedByUser");
+
+                    b.Navigation("Shift");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("gpos.Models.DailyStockRecord", b =>
                 {
                     b.HasOne("gpos.Models.ProductBatch", "Batch")
                         .WithMany()
                         .HasForeignKey("BatchId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("gpos.Models.Branch", "Branch")
+                        .WithMany()
+                        .HasForeignKey("BranchId")
                         .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("gpos.Models.Fuel", "Fuel")
@@ -3597,6 +4195,8 @@ namespace gpos.Migrations
                         .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("Batch");
+
+                    b.Navigation("Branch");
 
                     b.Navigation("Fuel");
 
@@ -3758,6 +4358,11 @@ namespace gpos.Migrations
 
             modelBuilder.Entity("gpos.Models.FuelDelivery", b =>
                 {
+                    b.HasOne("gpos.Models.Branch", "Branch")
+                        .WithMany()
+                        .HasForeignKey("BranchId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("gpos.Models.Fuel", "Fuel")
                         .WithMany("FuelDeliveries")
                         .HasForeignKey("FuelId")
@@ -3774,6 +4379,8 @@ namespace gpos.Migrations
                         .HasForeignKey("TankId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.Navigation("Branch");
 
                     b.Navigation("Fuel");
 
@@ -3829,6 +4436,11 @@ namespace gpos.Migrations
 
             modelBuilder.Entity("gpos.Models.LowStockSetting", b =>
                 {
+                    b.HasOne("gpos.Models.Branch", "Branch")
+                        .WithMany()
+                        .HasForeignKey("BranchId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("gpos.Models.ProductBatch", "ProductBatch")
                         .WithMany("LowStockSettings")
                         .HasForeignKey("ProductBatchId")
@@ -3843,6 +4455,8 @@ namespace gpos.Migrations
                         .WithMany()
                         .HasForeignKey("TankId")
                         .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Branch");
 
                     b.Navigation("Product");
 
@@ -4025,10 +4639,17 @@ namespace gpos.Migrations
 
             modelBuilder.Entity("gpos.Models.Pump", b =>
                 {
+                    b.HasOne("gpos.Models.Branch", "Branch")
+                        .WithMany()
+                        .HasForeignKey("BranchId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("gpos.Models.Tank", "Tank")
                         .WithMany("Pumps")
                         .HasForeignKey("TankId")
                         .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Branch");
 
                     b.Navigation("Tank");
                 });
@@ -4071,6 +4692,16 @@ namespace gpos.Migrations
 
             modelBuilder.Entity("gpos.Models.Sale", b =>
                 {
+                    b.HasOne("gpos.Models.Branch", "Branch")
+                        .WithMany()
+                        .HasForeignKey("BranchId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("gpos.Models.DailyCash", "DailyCash")
+                        .WithMany("Sales")
+                        .HasForeignKey("DailyCashId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("gpos.Models.Member", "Member")
                         .WithMany()
                         .HasForeignKey("MemberId")
@@ -4081,6 +4712,10 @@ namespace gpos.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.Navigation("Branch");
+
+                    b.Navigation("DailyCash");
 
                     b.Navigation("Member");
 
@@ -4174,10 +4809,17 @@ namespace gpos.Migrations
 
             modelBuilder.Entity("gpos.Models.StockReceiving", b =>
                 {
+                    b.HasOne("gpos.Models.Branch", "Branch")
+                        .WithMany()
+                        .HasForeignKey("BranchId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("gpos.Models.Supplier", "Supplier")
                         .WithMany("StockReceivings")
                         .HasForeignKey("SupplierId")
                         .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Branch");
 
                     b.Navigation("Supplier");
                 });
@@ -4407,6 +5049,17 @@ namespace gpos.Migrations
             modelBuilder.Entity("gpos.Models.Branch", b =>
                 {
                     b.Navigation("Departments");
+                });
+
+            modelBuilder.Entity("gpos.Models.DailyCash", b =>
+                {
+                    b.Navigation("CashIns");
+
+                    b.Navigation("CashOuts");
+
+                    b.Navigation("CashRemittances");
+
+                    b.Navigation("Sales");
                 });
 
             modelBuilder.Entity("gpos.Models.Department", b =>

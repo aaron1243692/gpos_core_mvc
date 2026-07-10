@@ -67,6 +67,10 @@ namespace gpos.Data
         public DbSet<FinancialMetric> FinancialMetrics { get; set; }
         public DbSet<VatSetting> VatSettings { get; set; }
         public DbSet<DailyStockRecord> DailyStockRecords { get; set; }
+        public DbSet<DailyCash> DailyCashRecords { get; set; }
+        public DbSet<CashIn> CashIns { get; set; }
+        public DbSet<CashOut> CashOuts { get; set; }
+        public DbSet<CashRemittance> CashRemittances { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -1215,13 +1219,136 @@ namespace gpos.Data
                 entity.Property(setting => setting.Name).HasColumnName("name").HasMaxLength(100).IsRequired();
                 entity.Property(setting => setting.StartTime).HasColumnName("start_time").HasColumnType("time");
                 entity.Property(setting => setting.EndTime).HasColumnName("end_time").HasColumnType("time");
+                entity.Property(setting => setting.OpeningCashAmount).HasColumnName("opening_cash_amount").HasColumnType("decimal(18,2)");
                 entity.Property(setting => setting.RequireOpeningCash).HasColumnName("require_opening_cash").HasDefaultValue(1);
                 entity.Property(setting => setting.AllowCashIn).HasColumnName("allow_cash_in").HasDefaultValue(1);
                 entity.Property(setting => setting.AllowCashOut).HasColumnName("allow_cash_out").HasDefaultValue(1);
                 entity.Property(setting => setting.RequireClosingApproval).HasColumnName("require_closing_approval").HasDefaultValue(0);
                 entity.Property(setting => setting.Status).HasColumnName("status").HasDefaultValue(1);
+                entity.Property(setting => setting.Remarks).HasColumnName("remarks").HasMaxLength(500);
                 entity.Property(setting => setting.CreatedAt).HasColumnName("created_at");
                 entity.Property(setting => setting.UpdatedAt).HasColumnName("updated_at");
+            });
+
+            modelBuilder.Entity<DailyCash>(entity =>
+            {
+                entity.ToTable("daily_cash");
+                entity.HasKey(item => item.Id);
+
+                entity.Property(item => item.Id).HasColumnName("id");
+                entity.Property(item => item.BranchId).HasColumnName("branch_id");
+                entity.Property(item => item.ShiftId).HasColumnName("shift_id");
+                entity.Property(item => item.UserId).HasColumnName("user_id");
+                entity.Property(item => item.BusinessDate).HasColumnName("business_date").HasColumnType("date");
+                entity.Property(item => item.OpeningCash).HasColumnName("opening_cash").HasPrecision(18, 2);
+                entity.Property(item => item.CashSales).HasColumnName("cash_sales").HasPrecision(18, 2);
+                entity.Property(item => item.TotalCashIn).HasColumnName("total_cash_in").HasPrecision(18, 2);
+                entity.Property(item => item.TotalCashOut).HasColumnName("total_cash_out").HasPrecision(18, 2);
+                entity.Property(item => item.ExpectedCash).HasColumnName("expected_cash").HasPrecision(18, 2);
+                entity.Property(item => item.ActualCash).HasColumnName("actual_cash").HasPrecision(18, 2);
+                entity.Property(item => item.Difference).HasColumnName("difference").HasPrecision(18, 2);
+                entity.Property(item => item.RemittedAmount).HasColumnName("remitted_amount").HasPrecision(18, 2);
+                entity.Property(item => item.ReceivedByUserId).HasColumnName("received_by_user_id");
+                entity.Property(item => item.Remarks).HasColumnName("remarks").HasMaxLength(500);
+                entity.Property(item => item.Status).HasColumnName("status").HasDefaultValue(1);
+                entity.Property(item => item.OpenedAt).HasColumnName("opened_at");
+                entity.Property(item => item.CreatedByUserId).HasColumnName("created_by_user_id");
+                entity.Property(item => item.CreatedAt).HasColumnName("created_at");
+                entity.Property(item => item.UpdatedAt).HasColumnName("updated_at");
+
+                entity.HasIndex(item => new { item.BranchId, item.ShiftId, item.UserId, item.BusinessDate });
+                entity.HasOne(item => item.Branch).WithMany().HasForeignKey(item => item.BranchId).OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne(item => item.Shift).WithMany().HasForeignKey(item => item.ShiftId).OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne(item => item.User).WithMany().HasForeignKey(item => item.UserId).OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne(item => item.ReceivedByUser).WithMany().HasForeignKey(item => item.ReceivedByUserId).OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne(item => item.CreatedByUser).WithMany().HasForeignKey(item => item.CreatedByUserId).OnDelete(DeleteBehavior.Restrict);
+            });
+
+            modelBuilder.Entity<CashIn>(entity =>
+            {
+                entity.ToTable("cash_ins");
+                entity.HasKey(item => item.Id);
+
+                entity.Property(item => item.Id).HasColumnName("id");
+                entity.Property(item => item.BranchId).HasColumnName("branch_id");
+                entity.Property(item => item.ShiftId).HasColumnName("shift_id");
+                entity.Property(item => item.UserId).HasColumnName("user_id");
+                entity.Property(item => item.DailyCashId).HasColumnName("daily_cash_id");
+                entity.Property(item => item.TransactionDateTime).HasColumnName("transaction_datetime");
+                entity.Property(item => item.Amount).HasColumnName("amount").HasPrecision(18, 2);
+                entity.Property(item => item.Reason).HasColumnName("reason").HasMaxLength(200).IsRequired();
+                entity.Property(item => item.Remarks).HasColumnName("remarks").HasMaxLength(500);
+                entity.Property(item => item.CreatedByUserId).HasColumnName("created_by_user_id");
+                entity.Property(item => item.Status).HasColumnName("status").HasDefaultValue(1);
+                entity.Property(item => item.CreatedAt).HasColumnName("created_at");
+                entity.Property(item => item.UpdatedAt).HasColumnName("updated_at");
+
+                entity.HasIndex(item => new { item.BranchId, item.ShiftId, item.UserId, item.TransactionDateTime });
+                entity.HasOne(item => item.Branch).WithMany().HasForeignKey(item => item.BranchId).OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne(item => item.Shift).WithMany().HasForeignKey(item => item.ShiftId).OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne(item => item.User).WithMany().HasForeignKey(item => item.UserId).OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne(item => item.DailyCash).WithMany(daily => daily.CashIns).HasForeignKey(item => item.DailyCashId).OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne(item => item.CreatedByUser).WithMany().HasForeignKey(item => item.CreatedByUserId).OnDelete(DeleteBehavior.Restrict);
+            });
+
+            modelBuilder.Entity<CashOut>(entity =>
+            {
+                entity.ToTable("cash_outs");
+                entity.HasKey(item => item.Id);
+
+                entity.Property(item => item.Id).HasColumnName("id");
+                entity.Property(item => item.BranchId).HasColumnName("branch_id");
+                entity.Property(item => item.ShiftId).HasColumnName("shift_id");
+                entity.Property(item => item.UserId).HasColumnName("user_id");
+                entity.Property(item => item.DailyCashId).HasColumnName("daily_cash_id");
+                entity.Property(item => item.TransactionDateTime).HasColumnName("transaction_datetime");
+                entity.Property(item => item.Amount).HasColumnName("amount").HasPrecision(18, 2);
+                entity.Property(item => item.Reason).HasColumnName("reason").HasMaxLength(200).IsRequired();
+                entity.Property(item => item.Remarks).HasColumnName("remarks").HasMaxLength(500);
+                entity.Property(item => item.CreatedByUserId).HasColumnName("created_by_user_id");
+                entity.Property(item => item.Status).HasColumnName("status").HasDefaultValue(1);
+                entity.Property(item => item.CreatedAt).HasColumnName("created_at");
+                entity.Property(item => item.UpdatedAt).HasColumnName("updated_at");
+
+                entity.HasIndex(item => new { item.BranchId, item.ShiftId, item.UserId, item.TransactionDateTime });
+                entity.HasOne(item => item.Branch).WithMany().HasForeignKey(item => item.BranchId).OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne(item => item.Shift).WithMany().HasForeignKey(item => item.ShiftId).OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne(item => item.User).WithMany().HasForeignKey(item => item.UserId).OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne(item => item.DailyCash).WithMany(daily => daily.CashOuts).HasForeignKey(item => item.DailyCashId).OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne(item => item.CreatedByUser).WithMany().HasForeignKey(item => item.CreatedByUserId).OnDelete(DeleteBehavior.Restrict);
+            });
+
+            modelBuilder.Entity<CashRemittance>(entity =>
+            {
+                entity.ToTable("cash_remittances");
+                entity.HasKey(item => item.Id);
+
+                entity.Property(item => item.Id).HasColumnName("id");
+                entity.Property(item => item.RemittanceNo).HasColumnName("remittance_no").HasMaxLength(50).IsRequired();
+                entity.Property(item => item.BranchId).HasColumnName("branch_id");
+                entity.Property(item => item.ShiftId).HasColumnName("shift_id");
+                entity.Property(item => item.UserId).HasColumnName("user_id");
+                entity.Property(item => item.DailyCashId).HasColumnName("daily_cash_id");
+                entity.Property(item => item.ExpectedCash).HasColumnName("expected_cash").HasPrecision(18, 2);
+                entity.Property(item => item.ActualCash).HasColumnName("actual_cash").HasPrecision(18, 2);
+                entity.Property(item => item.RemittedAmount).HasColumnName("remitted_amount").HasPrecision(18, 2);
+                entity.Property(item => item.RemittanceDifference).HasColumnName("remittance_difference").HasPrecision(18, 2);
+                entity.Property(item => item.ReceivedByUserId).HasColumnName("received_by_user_id");
+                entity.Property(item => item.ReceivedDateTime).HasColumnName("received_datetime");
+                entity.Property(item => item.Remarks).HasColumnName("remarks").HasMaxLength(500);
+                entity.Property(item => item.Status).HasColumnName("status").HasDefaultValue(1);
+                entity.Property(item => item.CreatedByUserId).HasColumnName("created_by_user_id");
+                entity.Property(item => item.CreatedAt).HasColumnName("created_at");
+                entity.Property(item => item.UpdatedAt).HasColumnName("updated_at");
+
+                entity.HasIndex(item => item.RemittanceNo).IsUnique();
+                entity.HasIndex(item => item.DailyCashId);
+                entity.HasOne(item => item.Branch).WithMany().HasForeignKey(item => item.BranchId).OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne(item => item.Shift).WithMany().HasForeignKey(item => item.ShiftId).OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne(item => item.User).WithMany().HasForeignKey(item => item.UserId).OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne(item => item.DailyCash).WithMany(daily => daily.CashRemittances).HasForeignKey(item => item.DailyCashId).OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne(item => item.ReceivedByUser).WithMany().HasForeignKey(item => item.ReceivedByUserId).OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne(item => item.CreatedByUser).WithMany().HasForeignKey(item => item.CreatedByUserId).OnDelete(DeleteBehavior.Restrict);
             });
 
             modelBuilder.Entity<ActivityLog>(entity =>
@@ -1254,6 +1381,7 @@ namespace gpos.Data
                 entity.Property(sale => sale.ReceiptNo).HasColumnName("receipt_no").HasMaxLength(100).IsRequired();
                 entity.Property(sale => sale.UserId).HasColumnName("user_id");
                 entity.Property(sale => sale.BranchId).HasColumnName("branch_id");
+                entity.Property(sale => sale.DailyCashId).HasColumnName("daily_cash_id");
                 entity.Property(sale => sale.MemberId).HasColumnName("member_id");
                 entity.Property(sale => sale.GrossTotal).HasColumnName("gross_total").HasPrecision(18, 2);
                 entity.Property(sale => sale.DiscountAmount).HasColumnName("discount_amount").HasPrecision(18, 2).HasDefaultValue(0m);
@@ -1267,6 +1395,7 @@ namespace gpos.Data
                 entity.HasIndex(sale => sale.ReceiptNo).IsUnique();
                 entity.HasIndex(sale => sale.UserId);
                 entity.HasIndex(sale => sale.BranchId);
+                entity.HasIndex(sale => sale.DailyCashId);
                 entity.HasIndex(sale => sale.MemberId);
                 entity.HasOne(sale => sale.User)
                     .WithMany()
@@ -1275,6 +1404,10 @@ namespace gpos.Data
                 entity.HasOne(sale => sale.Branch)
                     .WithMany()
                     .HasForeignKey(sale => sale.BranchId)
+                    .OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne(sale => sale.DailyCash)
+                    .WithMany(dailyCash => dailyCash.Sales)
+                    .HasForeignKey(sale => sale.DailyCashId)
                     .OnDelete(DeleteBehavior.Restrict);
                 entity.HasOne(sale => sale.Member)
                     .WithMany()

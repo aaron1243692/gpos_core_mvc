@@ -14,6 +14,11 @@ namespace gpos.Controllers
     public class TransactionController : Controller
     {
         private static readonly string[] SaleStatuses = ["Completed", "Voided", "Returned", "Cancelled"];
+        private const int CashStatusInactive = 0;
+        private const int CashStatusOpen = 1;
+        private const int CashStatusReconciled = 2;
+        private const int CashStatusPartiallyRemitted = 3;
+        private const int CashStatusClosed = 4;
         private readonly ApplicationDbContext _db;
         private readonly FinancialMetricsService _financialMetrics;
         private readonly ProductBatchNumberService _batchNumberService;
@@ -25,7 +30,10 @@ namespace gpos.Controllers
             _batchNumberService = batchNumberService;
         }
 
-        public IActionResult CashRemittance() => View();
+        public async Task<IActionResult> CashRemittance(string? search, int? branchId, int? shiftId, int? userId, DateTime? dateFrom, DateTime? dateTo, string? status, int? editId)
+        {
+            return View(await BuildCashRemittancePageAsync(search, branchId, shiftId, userId, dateFrom, dateTo, status, editId: editId));
+        }
 
         public async Task<IActionResult> POS()
         {
@@ -300,6 +308,9 @@ namespace gpos.Controllers
                 }
 
                 var saleBranchId = await CurrentUserBranchIdAsync(userId.Value);
+                var saleDailyCashId = saleBranchId.HasValue
+                    ? await FindOpenDailyCashForSaleAsync(saleBranchId.Value, userId.Value, now)
+                    : null;
                 var vatSetting = await FindCurrentVatSetting();
                 var taxableAmount = Math.Max(0m, grossTotal - discountAmount - rebateAmount);
                 var taxAmount = CalculateVatAmount(taxableAmount, vatSetting);
@@ -320,6 +331,7 @@ namespace gpos.Controllers
                     ReceiptNo = await GenerateReceiptNo(now),
                     UserId = userId.Value,
                     BranchId = saleBranchId,
+                    DailyCashId = saleDailyCashId,
                     MemberId = member?.Id,
                     GrossTotal = grossTotal,
                     DiscountAmount = discountAmount,
@@ -354,6 +366,11 @@ namespace gpos.Controllers
                 ApplyVoucherRedemption(voucherRedemption, sale.Id, now);
 
                 await _db.SaveChangesAsync();
+                if (saleDailyCashId.HasValue)
+                {
+                    await RefreshDailyCashSnapshotAsync(saleDailyCashId.Value);
+                    await _db.SaveChangesAsync();
+                }
                 await UpdateFinancialMetricsForSale(sale, productItems, fuelItems, discountAmount, rebateAmount, isPointsPayment);
                 await dbTransaction.CommitAsync();
 
@@ -454,9 +471,1049 @@ namespace gpos.Controllers
             });
         }
 
-        public IActionResult DailyCash() => View();
-        public IActionResult CashIn() => View();
-        public IActionResult CashOut() => View();
+        public async Task<IActionResult> DailyCash(string? search, int? branchId, int? shiftId, int? userId, DateTime? dateFrom, DateTime? dateTo, string? status, int? editId)
+        {
+            return View(await BuildDailyCashPageAsync(search, branchId, shiftId, userId, dateFrom, dateTo, status, editId: editId));
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> SaveDailyCash([Bind(Prefix = "Form")] DailyCashForm form, string? search, int? filterBranchId, int? filterShiftId, int? filterUserId, DateTime? dateFrom, DateTime? dateTo, string? status)
+        {
+            if (!ModelState.IsValid)
+            {
+                return View("DailyCash", await BuildDailyCashPageAsync(search, filterBranchId, filterShiftId, filterUserId, dateFrom, dateTo, status, form, "dailyCashFormModal"));
+            }
+
+            var validationError = await ValidateCashScopeAsync(form.BranchId, form.ShiftId, form.UserId);
+            if (validationError is not null)
+            {
+                ModelState.AddModelError(string.Empty, validationError);
+                return View("DailyCash", await BuildDailyCashPageAsync(search, filterBranchId, filterShiftId, filterUserId, dateFrom, dateTo, status, form, "dailyCashFormModal"));
+            }
+
+            var businessDate = form.BusinessDate!.Value.Date;
+            var duplicateOpen = await _db.DailyCashRecords.AnyAsync(item => item.Id != form.Id
+                && item.Status == CashStatusOpen
+                && item.BranchId == form.BranchId
+                && item.ShiftId == form.ShiftId
+                && item.UserId == form.UserId
+                && item.BusinessDate == businessDate);
+
+            if (duplicateOpen)
+            {
+                ModelState.AddModelError(string.Empty, "An open Daily Cash session already exists for this branch, business date, shift, and cashier.");
+                return View("DailyCash", await BuildDailyCashPageAsync(search, filterBranchId, filterShiftId, filterUserId, dateFrom, dateTo, status, form, "dailyCashFormModal"));
+            }
+
+            await using var transaction = await _db.Database.BeginTransactionAsync();
+            try
+            {
+                var now = DateTime.UtcNow;
+                var dailyCash = form.Id > 0
+                    ? await _db.DailyCashRecords.FindAsync(form.Id)
+                    : new DailyCash { CreatedAt = now, CreatedByUserId = CurrentUserId() };
+
+                if (dailyCash is null)
+                {
+                    return NotFound();
+                }
+
+                var totals = await CalculateDailyCashTotalsAsync(form.BranchId, form.ShiftId, form.UserId, businessDate, form.Id);
+
+                dailyCash.BranchId = form.BranchId;
+                dailyCash.ShiftId = form.ShiftId;
+                dailyCash.UserId = form.UserId;
+                dailyCash.BusinessDate = businessDate;
+                dailyCash.OpeningCash = form.OpeningCash;
+                dailyCash.CashSales = totals.CashSales;
+                dailyCash.TotalCashIn = totals.TotalCashIn;
+                dailyCash.TotalCashOut = totals.TotalCashOut;
+                dailyCash.ExpectedCash = form.OpeningCash + totals.CashSales + totals.TotalCashIn - totals.TotalCashOut;
+                dailyCash.ActualCash = form.ActualCash;
+                dailyCash.Difference = form.ActualCash - dailyCash.ExpectedCash;
+                dailyCash.Remarks = CleanOptional(form.Remarks);
+                dailyCash.OpenedAt ??= now;
+                dailyCash.Status = form.Id == 0
+                    ? CashStatusOpen
+                    : dailyCash.Status == CashStatusOpen ? CashStatusReconciled : dailyCash.Status;
+                dailyCash.UpdatedAt = now;
+
+                if (form.Id == 0)
+                {
+                    _db.DailyCashRecords.Add(dailyCash);
+                    await _db.SaveChangesAsync();
+                }
+
+                await _db.SaveChangesAsync();
+                await transaction.CommitAsync();
+            }
+            catch
+            {
+                await transaction.RollbackAsync();
+                throw;
+            }
+
+            return RedirectToAction(nameof(DailyCash), new { search, branchId = filterBranchId, shiftId = filterShiftId, userId = filterUserId, dateFrom, dateTo, status });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> DeleteDailyCash(int id, string? search, int? branchId, int? shiftId, int? userId, DateTime? dateFrom, DateTime? dateTo, string? status)
+        {
+            var item = await _db.DailyCashRecords.FindAsync(id);
+            if (item is not null)
+            {
+                item.Status = 0;
+                item.UpdatedAt = DateTime.UtcNow;
+                await _db.SaveChangesAsync();
+            }
+
+            return RedirectToAction(nameof(DailyCash), new { search, branchId, shiftId, userId, dateFrom, dateTo, status });
+        }
+
+        public async Task<IActionResult> CashIn(string? search, int? branchId, int? shiftId, int? userId, DateTime? dateFrom, DateTime? dateTo, string? status)
+        {
+            return View(await BuildCashMovementPageAsync(true, search, branchId, shiftId, userId, dateFrom, dateTo, status));
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> SaveCashIn([Bind(Prefix = "Form")] CashMovementForm form, string? search, int? filterBranchId, int? filterShiftId, int? filterUserId, DateTime? dateFrom, DateTime? dateTo, string? status)
+        {
+            return await SaveCashMovementAsync(true, form, search, filterBranchId, filterShiftId, filterUserId, dateFrom, dateTo, status);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> DeleteCashIn(int id, string? search, int? branchId, int? shiftId, int? userId, DateTime? dateFrom, DateTime? dateTo, string? status)
+        {
+            var item = await _db.CashIns.FindAsync(id);
+            if (item is not null)
+            {
+                item.Status = 0;
+                item.UpdatedAt = DateTime.UtcNow;
+                if (item.DailyCashId.HasValue)
+                {
+                    await RefreshDailyCashSnapshotAsync(item.DailyCashId.Value);
+                }
+                await _db.SaveChangesAsync();
+            }
+
+            return RedirectToAction(nameof(CashIn), new { search, branchId, shiftId, userId, dateFrom, dateTo, status });
+        }
+
+        public async Task<IActionResult> CashOut(string? search, int? branchId, int? shiftId, int? userId, DateTime? dateFrom, DateTime? dateTo, string? status)
+        {
+            return View(await BuildCashMovementPageAsync(false, search, branchId, shiftId, userId, dateFrom, dateTo, status));
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> SaveCashOut([Bind(Prefix = "Form")] CashMovementForm form, string? search, int? filterBranchId, int? filterShiftId, int? filterUserId, DateTime? dateFrom, DateTime? dateTo, string? status)
+        {
+            return await SaveCashMovementAsync(false, form, search, filterBranchId, filterShiftId, filterUserId, dateFrom, dateTo, status);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> DeleteCashOut(int id, string? search, int? branchId, int? shiftId, int? userId, DateTime? dateFrom, DateTime? dateTo, string? status)
+        {
+            var item = await _db.CashOuts.FindAsync(id);
+            if (item is not null)
+            {
+                item.Status = 0;
+                item.UpdatedAt = DateTime.UtcNow;
+                if (item.DailyCashId.HasValue)
+                {
+                    await RefreshDailyCashSnapshotAsync(item.DailyCashId.Value);
+                }
+                await _db.SaveChangesAsync();
+            }
+
+            return RedirectToAction(nameof(CashOut), new { search, branchId, shiftId, userId, dateFrom, dateTo, status });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> SaveCashRemittance([Bind(Prefix = "Form")] CashRemittanceForm form, string? search, int? filterBranchId, int? filterShiftId, int? filterUserId, DateTime? dateFrom, DateTime? dateTo, string? status)
+        {
+            if (!ModelState.IsValid)
+            {
+                return View("CashRemittance", await BuildCashRemittancePageAsync(search, filterBranchId, filterShiftId, filterUserId, dateFrom, dateTo, status, form, "cashRemittanceModal"));
+            }
+
+            var dailyCash = await _db.DailyCashRecords.FirstOrDefaultAsync(item => item.Id == form.DailyCashId
+                && (item.Status == CashStatusReconciled || item.Status == CashStatusPartiallyRemitted));
+            var receiverExists = await _db.Users.AnyAsync(user => user.Id == form.ReceivedByUserId && user.Status == 1);
+            if (dailyCash is null || !receiverExists)
+            {
+                ModelState.AddModelError(string.Empty, dailyCash is null ? "Select a reconciled or partially remitted Daily Cash record." : "Select an active receiver.");
+                return View("CashRemittance", await BuildCashRemittancePageAsync(search, filterBranchId, filterShiftId, filterUserId, dateFrom, dateTo, status, form, "cashRemittanceModal"));
+            }
+
+            await using var transaction = await _db.Database.BeginTransactionAsync();
+            try
+            {
+                var now = DateTime.UtcNow;
+                var remittedBefore = await _db.CashRemittances
+                    .Where(remittance => remittance.DailyCashId == dailyCash.Id && remittance.Status == 1)
+                    .SumAsync(remittance => remittance.RemittedAmount);
+                var totalRemitted = remittedBefore + form.RemittedAmount;
+                var remainingAmount = dailyCash.ActualCash - totalRemitted;
+
+                var item = new CashRemittance
+                {
+                    RemittanceNo = await GenerateRemittanceNoAsync(now),
+                    BranchId = dailyCash.BranchId,
+                    ShiftId = dailyCash.ShiftId,
+                    UserId = dailyCash.UserId,
+                    DailyCashId = dailyCash.Id,
+                    ExpectedCash = dailyCash.ExpectedCash,
+                    ActualCash = dailyCash.ActualCash,
+                    RemittedAmount = form.RemittedAmount,
+                    RemittanceDifference = remainingAmount,
+                    ReceivedByUserId = form.ReceivedByUserId,
+                    ReceivedDateTime = form.ReceivedDateTime!.Value,
+                    Remarks = CleanOptional(form.Remarks),
+                    Status = 1,
+                    CreatedByUserId = CurrentUserId(),
+                    CreatedAt = now,
+                    UpdatedAt = now
+                };
+
+                _db.CashRemittances.Add(item);
+                dailyCash.RemittedAmount = totalRemitted;
+                dailyCash.Status = remainingAmount <= 0m ? CashStatusClosed : CashStatusPartiallyRemitted;
+                dailyCash.UpdatedAt = now;
+                await _db.SaveChangesAsync();
+                await transaction.CommitAsync();
+            }
+            catch
+            {
+                await transaction.RollbackAsync();
+                throw;
+            }
+
+            return RedirectToAction(nameof(CashRemittance), new { search, branchId = filterBranchId, shiftId = filterShiftId, userId = filterUserId, dateFrom, dateTo, status });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> DeleteCashRemittance(int id, string? search, int? branchId, int? shiftId, int? userId, DateTime? dateFrom, DateTime? dateTo, string? status)
+        {
+            var item = await _db.CashRemittances.FindAsync(id);
+            if (item is not null)
+            {
+                item.Status = 0;
+                item.UpdatedAt = DateTime.UtcNow;
+                await _db.SaveChangesAsync();
+            }
+
+            return RedirectToAction(nameof(CashRemittance), new { search, branchId, shiftId, userId, dateFrom, dateTo, status });
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> ShiftOpeningCash(int shiftId)
+        {
+            var amount = await _db.ShiftSettings
+                .AsNoTracking()
+                .Where(shift => shift.Id == shiftId)
+                .Select(shift => shift.OpeningCashAmount ?? 0m)
+                .FirstOrDefaultAsync();
+
+            return Json(new { openingCash = amount });
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> SearchCashUsers(string? search, int take = 20)
+        {
+            var searchText = (search ?? string.Empty).Trim();
+            var resultLimit = Math.Clamp(take, 1, 50);
+            var query = _db.Users.AsNoTracking().Where(user => user.Status == 1);
+
+            if (!string.IsNullOrWhiteSpace(searchText))
+            {
+                query = query.Where(user => user.Username.Contains(searchText)
+                    || user.Email.Contains(searchText)
+                    || (user.FullName != null && user.FullName.Contains(searchText)));
+            }
+
+            var users = await query
+                .OrderBy(user => user.FullName ?? user.Username)
+                .Take(resultLimit)
+                .Select(user => new
+                {
+                    id = user.Id,
+                    name = string.IsNullOrWhiteSpace(user.FullName) ? user.Username : user.FullName,
+                    username = user.Username,
+                    email = user.Email
+                })
+                .ToListAsync();
+
+            return Json(users);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> SearchDailyCashSessions(string? search, string? mode, int? branchId, int take = 20)
+        {
+            var searchText = (search ?? string.Empty).Trim();
+            var resultLimit = Math.Clamp(take, 1, 50);
+            var remittanceMode = string.Equals(mode, "remittance", StringComparison.OrdinalIgnoreCase);
+            var allowedStatuses = remittanceMode
+                ? new[] { CashStatusReconciled, CashStatusPartiallyRemitted }
+                : new[] { CashStatusOpen, CashStatusReconciled, CashStatusPartiallyRemitted };
+
+            var query = _db.DailyCashRecords.AsNoTracking()
+                .Include(item => item.Branch)
+                .Include(item => item.Shift)
+                .Include(item => item.User)
+                .Where(item => allowedStatuses.Contains(item.Status));
+
+            if (branchId.HasValue && branchId.Value > 0)
+            {
+                query = query.Where(item => item.BranchId == branchId.Value);
+            }
+
+            if (!string.IsNullOrWhiteSpace(searchText))
+            {
+                query = query.Where(item => (item.Branch != null && item.Branch.Name.Contains(searchText))
+                    || (item.Shift != null && item.Shift.Name.Contains(searchText))
+                    || (item.User != null && ((item.User.FullName != null && item.User.FullName.Contains(searchText)) || item.User.Username.Contains(searchText)))
+                    || item.BusinessDate.ToString().Contains(searchText));
+            }
+
+            var records = await query
+                .OrderByDescending(item => item.BusinessDate)
+                .ThenByDescending(item => item.Id)
+                .Take(resultLimit)
+                .ToListAsync();
+
+            var rows = records
+                .Select(item => new
+                {
+                    id = item.Id,
+                    display = $"{item.BusinessDate:yyyy-MM-dd} - {item.Branch!.Name} - {item.Shift!.Name} - {(string.IsNullOrWhiteSpace(item.User!.FullName) ? item.User.Username : item.User.FullName)}",
+                    businessDate = item.BusinessDate.ToString("yyyy-MM-dd"),
+                    branch = item.Branch!.Name,
+                    shift = item.Shift!.Name,
+                    user = string.IsNullOrWhiteSpace(item.User!.FullName) ? item.User.Username : item.User.FullName,
+                    expectedCash = item.ExpectedCash,
+                    actualCash = item.ActualCash,
+                    remittedAmount = item.RemittedAmount,
+                    remainingAmount = item.ActualCash - item.RemittedAmount,
+                    status = CashStatusName(item.Status)
+                })
+                .ToList();
+
+            return Json(rows);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> SearchDailyCashForCashIn(int branchId, string? term, DateTime? businessDate, int take = 20)
+        {
+            if (branchId <= 0)
+            {
+                return Json(Array.Empty<object>());
+            }
+
+            var searchText = (term ?? string.Empty).Trim();
+            var resultLimit = Math.Clamp(take, 1, 50);
+
+            var query = _db.DailyCashRecords.AsNoTracking()
+                .Include(item => item.Branch)
+                .Include(item => item.Shift)
+                .Include(item => item.User)
+                .Where(item => item.BranchId == branchId && item.Status == CashStatusOpen);
+
+            if (businessDate.HasValue)
+            {
+                var date = businessDate.Value.Date;
+                query = query.Where(item => item.BusinessDate == date);
+            }
+
+            if (!string.IsNullOrWhiteSpace(searchText))
+            {
+                query = query.Where(item => (item.Branch != null && item.Branch.Name.Contains(searchText))
+                    || (item.Shift != null && item.Shift.Name.Contains(searchText))
+                    || (item.User != null && ((item.User.FullName != null && item.User.FullName.Contains(searchText)) || item.User.Username.Contains(searchText)))
+                    || item.BusinessDate.ToString().Contains(searchText)
+                    || item.Id.ToString().Contains(searchText));
+            }
+
+            var records = await query
+                .OrderByDescending(item => item.BusinessDate)
+                .ThenByDescending(item => item.OpenedAt)
+                .ThenByDescending(item => item.Id)
+                .Take(resultLimit)
+                .ToListAsync();
+
+            var rows = records
+                .Select(item => new
+                {
+                    dailyCashId = item.Id,
+                    dailyCashNo = $"DC-{item.Id:000000}",
+                    branchId = item.BranchId,
+                    branchName = item.Branch != null ? item.Branch.Name : "-",
+                    businessDate = item.BusinessDate.ToString("yyyy-MM-dd"),
+                    shiftId = item.ShiftId,
+                    shiftName = item.Shift != null ? item.Shift.Name : "-",
+                    userId = item.UserId,
+                    cashierName = item.User == null ? "-" : (string.IsNullOrWhiteSpace(item.User.FullName) ? item.User.Username : item.User.FullName),
+                    openingCash = item.OpeningCash,
+                    expectedCash = item.ExpectedCash,
+                    status = CashStatusName(item.Status)
+                })
+                .ToList();
+
+            return Json(rows);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> DailyCashSessionDetails(int id)
+        {
+            var item = await _db.DailyCashRecords.AsNoTracking()
+                .Include(record => record.Branch)
+                .Include(record => record.Shift)
+                .Include(record => record.User)
+                .FirstOrDefaultAsync(record => record.Id == id);
+
+            if (item is null)
+            {
+                return NotFound();
+            }
+
+            return Json(new
+            {
+                id = item.Id,
+                branchId = item.BranchId,
+                branch = item.Branch?.Name ?? "-",
+                shiftId = item.ShiftId,
+                shift = item.Shift?.Name ?? "-",
+                userId = item.UserId,
+                user = UserDisplayName(item.User),
+                businessDate = item.BusinessDate.ToString("yyyy-MM-dd"),
+                expectedCash = item.ExpectedCash,
+                actualCash = item.ActualCash,
+                remittedAmount = item.RemittedAmount,
+                remainingAmount = item.ActualCash - item.RemittedAmount,
+                status = CashStatusName(item.Status)
+            });
+        }
+
+        private async Task<IActionResult> SaveCashMovementAsync(bool isCashIn, CashMovementForm form, string? search, int? filterBranchId, int? filterShiftId, int? filterUserId, DateTime? dateFrom, DateTime? dateTo, string? status)
+        {
+            if (!ModelState.IsValid)
+            {
+                return View(isCashIn ? "CashIn" : "CashOut", await BuildCashMovementPageAsync(isCashIn, search, filterBranchId, filterShiftId, filterUserId, dateFrom, dateTo, status, form, isCashIn ? "cashInFormModal" : "cashOutFormModal"));
+            }
+
+            var dailyCash = await _db.DailyCashRecords
+                .AsNoTracking()
+                .FirstOrDefaultAsync(item => item.Id == form.DailyCashId
+                    && item.BranchId == form.BranchId
+                    && item.Status == CashStatusOpen);
+
+            if (dailyCash is null)
+            {
+                ModelState.AddModelError("Form.DailyCashId", "Select an open Daily Cash session from the selected branch.");
+                return View(isCashIn ? "CashIn" : "CashOut", await BuildCashMovementPageAsync(isCashIn, search, filterBranchId, filterShiftId, filterUserId, dateFrom, dateTo, status, form, isCashIn ? "cashInFormModal" : "cashOutFormModal"));
+            }
+
+            await using var transaction = await _db.Database.BeginTransactionAsync();
+            try
+            {
+                var now = DateTime.UtcNow;
+                var transactionDateTime = form.TransactionDateTime!.Value;
+
+                if (isCashIn)
+                {
+                    var item = new CashIn
+                    {
+                        BranchId = dailyCash.BranchId,
+                        ShiftId = dailyCash.ShiftId,
+                        UserId = dailyCash.UserId,
+                        DailyCashId = dailyCash.Id,
+                        TransactionDateTime = transactionDateTime,
+                        Amount = form.Amount,
+                        Reason = form.Reason.Trim(),
+                        Remarks = CleanOptional(form.Remarks),
+                        CreatedByUserId = CurrentUserId(),
+                        Status = 1,
+                        CreatedAt = now,
+                        UpdatedAt = now
+                    };
+                    _db.CashIns.Add(item);
+                }
+                else
+                {
+                    var item = new CashOut
+                    {
+                        BranchId = dailyCash.BranchId,
+                        ShiftId = dailyCash.ShiftId,
+                        UserId = dailyCash.UserId,
+                        DailyCashId = dailyCash.Id,
+                        TransactionDateTime = transactionDateTime,
+                        Amount = form.Amount,
+                        Reason = form.Reason.Trim(),
+                        Remarks = CleanOptional(form.Remarks),
+                        CreatedByUserId = CurrentUserId(),
+                        Status = 1,
+                        CreatedAt = now,
+                        UpdatedAt = now
+                    };
+                    _db.CashOuts.Add(item);
+                }
+
+                await _db.SaveChangesAsync();
+                await RefreshDailyCashSnapshotAsync(dailyCash.Id);
+                await _db.SaveChangesAsync();
+                await transaction.CommitAsync();
+            }
+            catch
+            {
+                await transaction.RollbackAsync();
+                throw;
+            }
+
+            return RedirectToAction(isCashIn ? nameof(CashIn) : nameof(CashOut), new { search, branchId = filterBranchId, shiftId = filterShiftId, userId = filterUserId, dateFrom, dateTo, status });
+        }
+
+        private async Task<DailyCashPageViewModel> BuildDailyCashPageAsync(string? search, int? branchId, int? shiftId, int? userId, DateTime? dateFrom, DateTime? dateTo, string? status, DailyCashForm? form = null, string activeModalId = "", int? editId = null)
+        {
+            var filter = BuildCashFilter(search, branchId, shiftId, userId, dateFrom, dateTo, status);
+            var query = _db.DailyCashRecords.AsNoTracking()
+                .Include(item => item.Branch)
+                .Include(item => item.Shift)
+                .Include(item => item.User)
+                .Include(item => item.ReceivedByUser)
+                .AsQueryable();
+
+            ApplyDailyCashFilters(ref query, filter);
+
+            return new DailyCashPageViewModel
+            {
+                Filter = filter,
+                Form = form ?? await BuildDailyCashFormAsync(editId),
+                Records = await query.OrderByDescending(item => item.BusinessDate).ThenByDescending(item => item.Id).Take(200).ToListAsync(),
+                BranchOptions = await BuildCashBranchOptionsAsync("All Branches"),
+                ShiftOptions = await BuildCashShiftOptionsAsync("All Shifts"),
+                UserOptions = await BuildCashUserOptionsAsync("All Users"),
+                ActiveModalId = activeModalId
+            };
+        }
+
+        private async Task<CashMovementPageViewModel> BuildCashMovementPageAsync(bool isCashIn, string? search, int? branchId, int? shiftId, int? userId, DateTime? dateFrom, DateTime? dateTo, string? status, CashMovementForm? form = null, string activeModalId = "")
+        {
+            var filter = BuildCashFilter(search, branchId, shiftId, userId, dateFrom, dateTo, status);
+            if (form is not null)
+            {
+                await PopulateCashMovementFormContextAsync(form);
+            }
+            var page = new CashMovementPageViewModel
+            {
+                Filter = filter,
+                Form = form ?? new CashMovementForm(),
+                BranchOptions = await BuildCashBranchOptionsAsync("All Branches"),
+                ShiftOptions = await BuildCashShiftOptionsAsync("All Shifts"),
+                UserOptions = await BuildCashUserOptionsAsync("All Users"),
+                DailyCashOptions = await BuildDailyCashOptionsAsync("Optional Daily Cash"),
+                ActiveModalId = activeModalId
+            };
+
+            if (isCashIn)
+            {
+                var query = _db.CashIns.AsNoTracking()
+                    .Include(item => item.Branch)
+                    .Include(item => item.Shift)
+                    .Include(item => item.User)
+                    .Include(item => item.CreatedByUser)
+                    .AsQueryable();
+                ApplyCashInFilters(ref query, filter);
+                page.CashIns = await query.OrderByDescending(item => item.TransactionDateTime).ThenByDescending(item => item.Id).Take(200).ToListAsync();
+            }
+            else
+            {
+                var query = _db.CashOuts.AsNoTracking()
+                    .Include(item => item.Branch)
+                    .Include(item => item.Shift)
+                    .Include(item => item.User)
+                    .Include(item => item.CreatedByUser)
+                    .AsQueryable();
+                ApplyCashOutFilters(ref query, filter);
+                page.CashOuts = await query.OrderByDescending(item => item.TransactionDateTime).ThenByDescending(item => item.Id).Take(200).ToListAsync();
+            }
+
+            return page;
+        }
+
+        private async Task<CashRemittancePageViewModel> BuildCashRemittancePageAsync(string? search, int? branchId, int? shiftId, int? userId, DateTime? dateFrom, DateTime? dateTo, string? status, CashRemittanceForm? form = null, string activeModalId = "", int? editId = null)
+        {
+            var filter = BuildCashFilter(search, branchId, shiftId, userId, dateFrom, dateTo, status);
+            if (form is not null)
+            {
+                await PopulateCashRemittanceFormContextAsync(form);
+            }
+            var query = _db.CashRemittances.AsNoTracking()
+                .Include(item => item.Branch)
+                .Include(item => item.Shift)
+                .Include(item => item.User)
+                .Include(item => item.ReceivedByUser)
+                .Include(item => item.DailyCash)
+                .AsQueryable();
+
+            ApplyCashRemittanceFilters(ref query, filter);
+
+            return new CashRemittancePageViewModel
+            {
+                Filter = filter,
+                Form = form ?? await BuildCashRemittanceFormAsync(editId),
+                Records = await query.OrderByDescending(item => item.ReceivedDateTime).ThenByDescending(item => item.Id).Take(200).ToListAsync(),
+                BranchOptions = await BuildCashBranchOptionsAsync("All Branches"),
+                ShiftOptions = await BuildCashShiftOptionsAsync("All Shifts"),
+                UserOptions = await BuildCashUserOptionsAsync("All Users"),
+                DailyCashOptions = await BuildDailyCashOptionsAsync("Select Daily Cash"),
+                ActiveModalId = activeModalId
+            };
+        }
+
+        private async Task<DailyCashForm> BuildDailyCashFormAsync(int? editId)
+        {
+            var item = editId.HasValue
+                ? await _db.DailyCashRecords.AsNoTracking()
+                    .Include(record => record.Branch)
+                    .Include(record => record.User)
+                    .FirstOrDefaultAsync(record => record.Id == editId.Value)
+                : null;
+            if (item is null)
+            {
+                return new DailyCashForm();
+            }
+
+            return new DailyCashForm
+            {
+                Id = item.Id,
+                BranchId = item.BranchId,
+                BranchName = item.Branch?.Name ?? string.Empty,
+                ShiftId = item.ShiftId,
+                UserId = item.UserId,
+                UserName = UserDisplayName(item.User),
+                BusinessDate = item.BusinessDate,
+                OpeningCash = item.OpeningCash,
+                ActualCash = item.ActualCash,
+                Remarks = item.Remarks,
+                Status = item.Status
+            };
+        }
+
+        private async Task<CashRemittanceForm> BuildCashRemittanceFormAsync(int? editId)
+        {
+            var item = editId.HasValue
+                ? await _db.CashRemittances.AsNoTracking()
+                    .Include(record => record.DailyCash)
+                        .ThenInclude(dailyCash => dailyCash!.Branch)
+                    .Include(record => record.DailyCash)
+                        .ThenInclude(dailyCash => dailyCash!.Shift)
+                    .Include(record => record.DailyCash)
+                        .ThenInclude(dailyCash => dailyCash!.User)
+                    .Include(record => record.ReceivedByUser)
+                    .FirstOrDefaultAsync(record => record.Id == editId.Value)
+                : null;
+            if (item is null)
+            {
+                return new CashRemittanceForm();
+            }
+
+            var form = new CashRemittanceForm
+            {
+                Id = item.Id,
+                DailyCashId = item.DailyCashId,
+                RemittedAmount = item.RemittedAmount,
+                ReceivedByUserId = item.ReceivedByUserId,
+                ReceivedByName = UserDisplayName(item.ReceivedByUser),
+                ReceivedDateTime = item.ReceivedDateTime,
+                Remarks = item.Remarks
+            };
+            await PopulateCashRemittanceFormContextAsync(form);
+            return form;
+        }
+
+        private static CashModuleFilter BuildCashFilter(string? search, int? branchId, int? shiftId, int? userId, DateTime? dateFrom, DateTime? dateTo, string? status)
+        {
+            var normalizedStatus = NormalizeCashStatus(status);
+            return new CashModuleFilter
+            {
+                Search = (search ?? string.Empty).Trim(),
+                BranchId = branchId > 0 ? branchId : null,
+                ShiftId = shiftId > 0 ? shiftId : null,
+                UserId = userId > 0 ? userId : null,
+                DateFrom = dateFrom,
+                DateTo = dateTo,
+                Status = normalizedStatus
+            };
+        }
+
+        private static string NormalizeCashStatus(string? status)
+        {
+            var value = (status ?? string.Empty).Trim();
+            return string.Equals(value, "Open", StringComparison.OrdinalIgnoreCase) ? "Open"
+                : string.Equals(value, "Active", StringComparison.OrdinalIgnoreCase) ? "Active"
+                : string.Equals(value, "Reconciled", StringComparison.OrdinalIgnoreCase) ? "Reconciled"
+                : string.Equals(value, "Partially Remitted", StringComparison.OrdinalIgnoreCase) || string.Equals(value, "PartiallyRemitted", StringComparison.OrdinalIgnoreCase) ? "Partially Remitted"
+                : string.Equals(value, "Closed", StringComparison.OrdinalIgnoreCase) ? "Closed"
+                : string.Equals(value, "Inactive", StringComparison.OrdinalIgnoreCase) ? "Inactive"
+                : string.Empty;
+        }
+
+        public static string CashStatusName(int status)
+        {
+            return status switch
+            {
+                CashStatusOpen => "Open",
+                CashStatusReconciled => "Reconciled",
+                CashStatusPartiallyRemitted => "Partially Remitted",
+                CashStatusClosed => "Closed",
+                _ => "Inactive"
+            };
+        }
+
+        public static string CashStatusBadge(int status)
+        {
+            return status switch
+            {
+                CashStatusOpen => "bg-primary",
+                CashStatusReconciled => "bg-info text-dark",
+                CashStatusPartiallyRemitted => "bg-warning text-dark",
+                CashStatusClosed => "bg-success",
+                _ => "bg-secondary"
+            };
+        }
+
+        private static void ApplyDailyCashFilters(ref IQueryable<DailyCash> query, CashModuleFilter filter)
+        {
+            if (filter.BranchId.HasValue) query = query.Where(item => item.BranchId == filter.BranchId.Value);
+            if (filter.ShiftId.HasValue) query = query.Where(item => item.ShiftId == filter.ShiftId.Value);
+            if (filter.UserId.HasValue) query = query.Where(item => item.UserId == filter.UserId.Value);
+            if (filter.DateFrom.HasValue) query = query.Where(item => item.BusinessDate >= filter.DateFrom.Value.Date);
+            if (filter.DateTo.HasValue) query = query.Where(item => item.BusinessDate < filter.DateTo.Value.Date.AddDays(1));
+            if (filter.Status == "Open") query = query.Where(item => item.Status == CashStatusOpen);
+            if (filter.Status == "Reconciled") query = query.Where(item => item.Status == CashStatusReconciled);
+            if (filter.Status == "Partially Remitted") query = query.Where(item => item.Status == CashStatusPartiallyRemitted);
+            if (filter.Status == "Closed") query = query.Where(item => item.Status == CashStatusClosed);
+            if (filter.Status == "Inactive") query = query.Where(item => item.Status == CashStatusInactive);
+            if (!string.IsNullOrWhiteSpace(filter.Search))
+            {
+                query = query.Where(item => item.Branch != null && item.Branch.Name.Contains(filter.Search)
+                    || item.Shift != null && item.Shift.Name.Contains(filter.Search)
+                    || item.User != null && ((item.User.FullName != null && item.User.FullName.Contains(filter.Search)) || item.User.Username.Contains(filter.Search))
+                    || item.Remarks != null && item.Remarks.Contains(filter.Search));
+            }
+        }
+
+        private static void ApplyCashInFilters(ref IQueryable<CashIn> query, CashModuleFilter filter)
+        {
+            if (filter.BranchId.HasValue) query = query.Where(item => item.BranchId == filter.BranchId.Value);
+            if (filter.ShiftId.HasValue) query = query.Where(item => item.ShiftId == filter.ShiftId.Value);
+            if (filter.UserId.HasValue) query = query.Where(item => item.UserId == filter.UserId.Value);
+            if (filter.DateFrom.HasValue) query = query.Where(item => item.TransactionDateTime >= filter.DateFrom.Value.Date);
+            if (filter.DateTo.HasValue) query = query.Where(item => item.TransactionDateTime < filter.DateTo.Value.Date.AddDays(1));
+            if (filter.Status == "Active") query = query.Where(item => item.Status == 1);
+            if (filter.Status == "Inactive") query = query.Where(item => item.Status != 1);
+            if (!string.IsNullOrWhiteSpace(filter.Search))
+            {
+                query = query.Where(item => item.Reason.Contains(filter.Search)
+                    || item.Remarks != null && item.Remarks.Contains(filter.Search)
+                    || item.Branch != null && item.Branch.Name.Contains(filter.Search)
+                    || item.Shift != null && item.Shift.Name.Contains(filter.Search)
+                    || item.User != null && ((item.User.FullName != null && item.User.FullName.Contains(filter.Search)) || item.User.Username.Contains(filter.Search)));
+            }
+        }
+
+        private static void ApplyCashOutFilters(ref IQueryable<CashOut> query, CashModuleFilter filter)
+        {
+            if (filter.BranchId.HasValue) query = query.Where(item => item.BranchId == filter.BranchId.Value);
+            if (filter.ShiftId.HasValue) query = query.Where(item => item.ShiftId == filter.ShiftId.Value);
+            if (filter.UserId.HasValue) query = query.Where(item => item.UserId == filter.UserId.Value);
+            if (filter.DateFrom.HasValue) query = query.Where(item => item.TransactionDateTime >= filter.DateFrom.Value.Date);
+            if (filter.DateTo.HasValue) query = query.Where(item => item.TransactionDateTime < filter.DateTo.Value.Date.AddDays(1));
+            if (filter.Status == "Active") query = query.Where(item => item.Status == 1);
+            if (filter.Status == "Inactive") query = query.Where(item => item.Status != 1);
+            if (!string.IsNullOrWhiteSpace(filter.Search))
+            {
+                query = query.Where(item => item.Reason.Contains(filter.Search)
+                    || item.Remarks != null && item.Remarks.Contains(filter.Search)
+                    || item.Branch != null && item.Branch.Name.Contains(filter.Search)
+                    || item.Shift != null && item.Shift.Name.Contains(filter.Search)
+                    || item.User != null && ((item.User.FullName != null && item.User.FullName.Contains(filter.Search)) || item.User.Username.Contains(filter.Search)));
+            }
+        }
+
+        private static void ApplyCashRemittanceFilters(ref IQueryable<CashRemittance> query, CashModuleFilter filter)
+        {
+            if (filter.BranchId.HasValue) query = query.Where(item => item.BranchId == filter.BranchId.Value);
+            if (filter.ShiftId.HasValue) query = query.Where(item => item.ShiftId == filter.ShiftId.Value);
+            if (filter.UserId.HasValue) query = query.Where(item => item.UserId == filter.UserId.Value);
+            if (filter.DateFrom.HasValue) query = query.Where(item => item.ReceivedDateTime >= filter.DateFrom.Value.Date);
+            if (filter.DateTo.HasValue) query = query.Where(item => item.ReceivedDateTime < filter.DateTo.Value.Date.AddDays(1));
+            if (filter.Status == "Active") query = query.Where(item => item.Status == 1);
+            if (filter.Status == "Inactive") query = query.Where(item => item.Status != 1);
+            if (!string.IsNullOrWhiteSpace(filter.Search))
+            {
+                query = query.Where(item => item.RemittanceNo.Contains(filter.Search)
+                    || item.Remarks != null && item.Remarks.Contains(filter.Search)
+                    || item.Branch != null && item.Branch.Name.Contains(filter.Search)
+                    || item.Shift != null && item.Shift.Name.Contains(filter.Search)
+                    || item.User != null && ((item.User.FullName != null && item.User.FullName.Contains(filter.Search)) || item.User.Username.Contains(filter.Search))
+                    || item.ReceivedByUser != null && ((item.ReceivedByUser.FullName != null && item.ReceivedByUser.FullName.Contains(filter.Search)) || item.ReceivedByUser.Username.Contains(filter.Search)));
+            }
+        }
+
+        private async Task<(decimal CashSales, decimal TotalCashIn, decimal TotalCashOut)> CalculateDailyCashTotalsAsync(int branchId, int shiftId, int userId, DateTime businessDate, int dailyCashId)
+        {
+            var nextDate = businessDate.AddDays(1);
+            var salesQuery = _db.Sales.AsNoTracking()
+                .Where(sale => sale.Status == "Completed");
+
+            if (dailyCashId > 0)
+            {
+                salesQuery = salesQuery.Where(sale => sale.DailyCashId == dailyCashId
+                    || (!sale.DailyCashId.HasValue
+                        && sale.BranchId == branchId
+                        && sale.UserId == userId
+                        && (sale.CreatedAt ?? DateTime.MinValue) >= businessDate
+                        && (sale.CreatedAt ?? DateTime.MinValue) < nextDate));
+            }
+            else
+            {
+                salesQuery = salesQuery.Where(sale => sale.BranchId == branchId
+                    && sale.UserId == userId
+                    && (sale.CreatedAt ?? DateTime.MinValue) >= businessDate
+                    && (sale.CreatedAt ?? DateTime.MinValue) < nextDate);
+            }
+
+            var cashSales = await salesQuery.SumAsync(sale => sale.CashAmount);
+
+            var cashInQuery = _db.CashIns.AsNoTracking()
+                .Where(item => item.BranchId == branchId && item.ShiftId == shiftId && item.UserId == userId && item.Status == 1);
+            var cashOutQuery = _db.CashOuts.AsNoTracking()
+                .Where(item => item.BranchId == branchId && item.ShiftId == shiftId && item.UserId == userId && item.Status == 1);
+
+            if (dailyCashId > 0)
+            {
+                cashInQuery = cashInQuery.Where(item => item.DailyCashId == dailyCashId || (!item.DailyCashId.HasValue && item.TransactionDateTime >= businessDate && item.TransactionDateTime < nextDate));
+                cashOutQuery = cashOutQuery.Where(item => item.DailyCashId == dailyCashId || (!item.DailyCashId.HasValue && item.TransactionDateTime >= businessDate && item.TransactionDateTime < nextDate));
+            }
+            else
+            {
+                cashInQuery = cashInQuery.Where(item => item.TransactionDateTime >= businessDate && item.TransactionDateTime < nextDate);
+                cashOutQuery = cashOutQuery.Where(item => item.TransactionDateTime >= businessDate && item.TransactionDateTime < nextDate);
+            }
+
+            return (cashSales, await cashInQuery.SumAsync(item => item.Amount), await cashOutQuery.SumAsync(item => item.Amount));
+        }
+
+        private async Task<int?> FindOpenDailyCashForSaleAsync(int branchId, int userId, DateTime saleDateTime)
+        {
+            return await _db.DailyCashRecords.AsNoTracking()
+                .Where(item => item.Status == CashStatusOpen
+                    && item.BranchId == branchId
+                    && item.UserId == userId
+                    && item.BusinessDate == saleDateTime.Date)
+                .OrderByDescending(item => item.OpenedAt ?? item.CreatedAt ?? DateTime.MinValue)
+                .ThenByDescending(item => item.Id)
+                .Select(item => (int?)item.Id)
+                .FirstOrDefaultAsync();
+        }
+
+        private async Task LinkCashMovementsToDailyCashAsync(DailyCash dailyCash)
+        {
+            var start = dailyCash.BusinessDate.Date;
+            var end = start.AddDays(1);
+            var cashIns = await _db.CashIns.Where(item => !item.DailyCashId.HasValue
+                && item.BranchId == dailyCash.BranchId
+                && item.ShiftId == dailyCash.ShiftId
+                && item.UserId == dailyCash.UserId
+                && item.TransactionDateTime >= start
+                && item.TransactionDateTime < end)
+                .ToListAsync();
+            var cashOuts = await _db.CashOuts.Where(item => !item.DailyCashId.HasValue
+                && item.BranchId == dailyCash.BranchId
+                && item.ShiftId == dailyCash.ShiftId
+                && item.UserId == dailyCash.UserId
+                && item.TransactionDateTime >= start
+                && item.TransactionDateTime < end)
+                .ToListAsync();
+
+            cashIns.ForEach(item => item.DailyCashId = dailyCash.Id);
+            cashOuts.ForEach(item => item.DailyCashId = dailyCash.Id);
+        }
+
+        private async Task RefreshDailyCashSnapshotAsync(int dailyCashId)
+        {
+            var dailyCash = await _db.DailyCashRecords.FindAsync(dailyCashId);
+            if (dailyCash is null)
+            {
+                return;
+            }
+
+            var totals = await CalculateDailyCashTotalsAsync(dailyCash.BranchId, dailyCash.ShiftId, dailyCash.UserId, dailyCash.BusinessDate.Date, dailyCash.Id);
+            dailyCash.CashSales = totals.CashSales;
+            dailyCash.TotalCashIn = totals.TotalCashIn;
+            dailyCash.TotalCashOut = totals.TotalCashOut;
+            dailyCash.ExpectedCash = dailyCash.OpeningCash + totals.CashSales + totals.TotalCashIn - totals.TotalCashOut;
+            dailyCash.Difference = dailyCash.ActualCash - dailyCash.ExpectedCash;
+            dailyCash.RemittedAmount = await _db.CashRemittances
+                .Where(remittance => remittance.DailyCashId == dailyCash.Id && remittance.Status == 1)
+                .SumAsync(remittance => remittance.RemittedAmount);
+            if (dailyCash.Status == CashStatusPartiallyRemitted || dailyCash.Status == CashStatusClosed)
+            {
+                dailyCash.Status = dailyCash.ActualCash - dailyCash.RemittedAmount <= 0m ? CashStatusClosed : CashStatusPartiallyRemitted;
+            }
+            dailyCash.UpdatedAt = DateTime.UtcNow;
+        }
+
+        private async Task<int?> FindMatchingDailyCashIdAsync(int branchId, int shiftId, int userId, DateTime businessDate)
+        {
+            return await _db.DailyCashRecords.AsNoTracking()
+                .Where(item => item.Status == 1
+                    && item.BranchId == branchId
+                    && item.ShiftId == shiftId
+                    && item.UserId == userId
+                    && item.BusinessDate == businessDate.Date)
+                .OrderByDescending(item => item.Id)
+                .Select(item => (int?)item.Id)
+                .FirstOrDefaultAsync();
+        }
+
+        private async Task<string?> ValidateCashScopeAsync(int branchId, int shiftId, int userId)
+        {
+            var branchExists = await _db.Branches.AnyAsync(item => item.Id == branchId && item.Status == 1);
+            if (!branchExists) return "Select an active branch.";
+            var shiftExists = await _db.ShiftSettings.AnyAsync(item => item.Id == shiftId && item.Status == 1);
+            if (!shiftExists) return "Select an active shift.";
+            var userExists = await _db.Users.AnyAsync(item => item.Id == userId && item.Status == 1);
+            return userExists ? null : "Select an active user.";
+        }
+
+        private async Task<List<SelectListItem>> BuildCashBranchOptionsAsync(string label)
+        {
+            var options = await _db.Branches.AsNoTracking().Where(item => item.Status == 1).OrderBy(item => item.Name).Select(item => new SelectListItem { Value = item.Id.ToString(), Text = item.Name }).ToListAsync();
+            options.Insert(0, new SelectListItem { Value = "", Text = label });
+            return options;
+        }
+
+        private async Task<List<SelectListItem>> BuildCashShiftOptionsAsync(string label)
+        {
+            var options = await _db.ShiftSettings.AsNoTracking().Where(item => item.Status == 1).OrderBy(item => item.Name).Select(item => new SelectListItem { Value = item.Id.ToString(), Text = item.Name }).ToListAsync();
+            options.Insert(0, new SelectListItem { Value = "", Text = label });
+            return options;
+        }
+
+        private async Task<List<SelectListItem>> BuildCashUserOptionsAsync(string label)
+        {
+            var options = await _db.Users.AsNoTracking().Where(item => item.Status == 1).OrderBy(item => item.FullName ?? item.Username).Select(item => new SelectListItem { Value = item.Id.ToString(), Text = string.IsNullOrWhiteSpace(item.FullName) ? item.Username : item.FullName }).ToListAsync();
+            options.Insert(0, new SelectListItem { Value = "", Text = label });
+            return options;
+        }
+
+        private async Task<List<SelectListItem>> BuildDailyCashOptionsAsync(string label)
+        {
+            var records = await _db.DailyCashRecords.AsNoTracking()
+                .Include(item => item.Branch)
+                .Include(item => item.Shift)
+                .Include(item => item.User)
+                .Where(item => item.Status == 1)
+                .OrderByDescending(item => item.BusinessDate)
+                .ThenByDescending(item => item.Id)
+                .Take(100)
+                .ToListAsync();
+
+            var options = records
+                .Select(item => new SelectListItem
+                {
+                    Value = item.Id.ToString(),
+                    Text = $"{item.BusinessDate:yyyy-MM-dd} - {item.Branch?.Name ?? "-"} - {item.Shift?.Name ?? "-"} - {UserDisplayName(item.User)}"
+                })
+                .ToList();
+            options.Insert(0, new SelectListItem { Value = "", Text = label });
+            return options;
+        }
+
+        private async Task PopulateCashMovementFormContextAsync(CashMovementForm form)
+        {
+            if (form.DailyCashId <= 0)
+            {
+                if (form.BranchId > 0 && string.IsNullOrWhiteSpace(form.BranchName))
+                {
+                    var branch = await _db.Branches.AsNoTracking().FirstOrDefaultAsync(item => item.Id == form.BranchId);
+                    form.BranchName = branch?.Name ?? string.Empty;
+                }
+
+                return;
+            }
+
+            var dailyCash = await _db.DailyCashRecords.AsNoTracking()
+                .Include(item => item.Branch)
+                .Include(item => item.Shift)
+                .Include(item => item.User)
+                .FirstOrDefaultAsync(item => item.Id == form.DailyCashId);
+
+            if (dailyCash is null)
+            {
+                return;
+            }
+
+            form.DailyCashDisplay = $"{dailyCash.BusinessDate:yyyy-MM-dd} - {dailyCash.Branch?.Name ?? "-"} - {dailyCash.Shift?.Name ?? "-"} - {UserDisplayName(dailyCash.User)}";
+            form.BranchId = dailyCash.BranchId;
+            form.BranchName = dailyCash.Branch?.Name ?? string.Empty;
+            form.ShiftId = dailyCash.ShiftId;
+            form.ShiftName = dailyCash.Shift?.Name ?? string.Empty;
+            form.UserId = dailyCash.UserId;
+            form.UserName = UserDisplayName(dailyCash.User);
+            form.BusinessDate = dailyCash.BusinessDate;
+        }
+
+        private async Task PopulateCashRemittanceFormContextAsync(CashRemittanceForm form)
+        {
+            if (form.DailyCashId > 0)
+            {
+                var dailyCash = await _db.DailyCashRecords.AsNoTracking()
+                    .Include(item => item.Branch)
+                    .Include(item => item.Shift)
+                    .Include(item => item.User)
+                    .FirstOrDefaultAsync(item => item.Id == form.DailyCashId);
+
+                if (dailyCash is not null)
+                {
+                    form.DailyCashDisplay = $"{dailyCash.BusinessDate:yyyy-MM-dd} - {dailyCash.Branch?.Name ?? "-"} - {dailyCash.Shift?.Name ?? "-"} - {UserDisplayName(dailyCash.User)}";
+                    form.BranchId = dailyCash.BranchId;
+                    form.BranchName = dailyCash.Branch?.Name ?? string.Empty;
+                    form.ShiftId = dailyCash.ShiftId;
+                    form.ShiftName = dailyCash.Shift?.Name ?? string.Empty;
+                    form.UserId = dailyCash.UserId;
+                    form.UserName = UserDisplayName(dailyCash.User);
+                    form.BusinessDate = dailyCash.BusinessDate;
+                    form.ExpectedCash = dailyCash.ExpectedCash;
+                    form.ActualCash = dailyCash.ActualCash;
+                    form.TotalRemitted = dailyCash.RemittedAmount;
+                    form.RemainingAmount = dailyCash.ActualCash - dailyCash.RemittedAmount;
+                }
+            }
+
+            if (form.ReceivedByUserId > 0 && string.IsNullOrWhiteSpace(form.ReceivedByName))
+            {
+                var receiver = await _db.Users.AsNoTracking().FirstOrDefaultAsync(user => user.Id == form.ReceivedByUserId);
+                form.ReceivedByName = UserDisplayName(receiver);
+            }
+        }
+
+        private async Task<string> GenerateRemittanceNoAsync(DateTime now)
+        {
+            var prefix = $"REMIT-{now:yyyyMMdd}-";
+            var count = await _db.CashRemittances.CountAsync(item => item.RemittanceNo.StartsWith(prefix));
+            return $"{prefix}{count + 1:0000}";
+        }
+
         public async Task<IActionResult> ProductReceiving(string? search, int? branchId, int? filterBranchId)
         {
             branchId = filterBranchId ?? branchId;

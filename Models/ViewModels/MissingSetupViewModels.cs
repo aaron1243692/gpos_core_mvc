@@ -254,6 +254,35 @@ namespace gpos.Models.ViewModels
         public int Status { get; set; } = 1;
     }
 
+    public class ShiftForm
+    {
+        public int Id { get; set; }
+
+        [Required(ErrorMessage = "Shift Name is required.")]
+        public string Name { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Start Time is required.")]
+        public TimeSpan? StartTime { get; set; }
+
+        [Required(ErrorMessage = "End Time is required.")]
+        public TimeSpan? EndTime { get; set; }
+
+        [Range(0, double.MaxValue, ErrorMessage = "Opening Cash Amount must be 0 or greater.")]
+        public decimal? OpeningCashAmount { get; set; }
+
+        public string? Remarks { get; set; }
+        public int Status { get; set; } = 1;
+    }
+
+    public class ShiftPageViewModel
+    {
+        public string Search { get; set; } = string.Empty;
+        public string Status { get; set; } = string.Empty;
+        public string ActiveModalId { get; set; } = string.Empty;
+        public ShiftForm ShiftForm { get; set; } = new();
+        public List<ShiftSetting> Shifts { get; set; } = new();
+    }
+
     public class ScheduleForm
     {
         public int Id { get; set; }

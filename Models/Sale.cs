@@ -6,6 +6,7 @@ namespace gpos.Models
         public string ReceiptNo { get; set; } = string.Empty;
         public int UserId { get; set; }
         public int? BranchId { get; set; }
+        public int? DailyCashId { get; set; }
         public int? MemberId { get; set; }
         public decimal GrossTotal { get; set; }
         public decimal DiscountAmount { get; set; }
@@ -18,6 +19,7 @@ namespace gpos.Models
 
         public User? User { get; set; }
         public Branch? Branch { get; set; }
+        public DailyCash? DailyCash { get; set; }
         public Member? Member { get; set; }
         public ICollection<SaleItem> Items { get; set; } = new List<SaleItem>();
         public ICollection<ProductSale> ProductSales { get; set; } = new List<ProductSale>();

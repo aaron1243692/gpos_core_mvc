@@ -18105,7 +18105,6 @@ C:\project\gpos_core_mvc\artifacts\syntaxcheck\ru\Microsoft.CodeAnalysis.Workspa
 C:\project\gpos_core_mvc\artifacts\syntaxcheck\tr\Microsoft.CodeAnalysis.Workspaces.MSBuild.BuildHost.resources.dll
 C:\project\gpos_core_mvc\artifacts\syntaxcheck\zh-Hans\Microsoft.CodeAnalysis.Workspaces.MSBuild.BuildHost.resources.dll
 C:\project\gpos_core_mvc\artifacts\syntaxcheck\zh-Hant\Microsoft.CodeAnalysis.Workspaces.MSBuild.BuildHost.resources.dll
-C:\project\gpos_core_mvc\obj\Debug\net10.0\compressed\ios0330fcj-{0}-z7sew61ll1-z7sew61ll1.gz
 C:\project\gpos_core_mvc\bin\Debug\net10.0\Views\Configuration\DisplayBatches.cshtml
 C:\project\gpos_core_mvc\bin\Debug\net10.0\Views\Configuration\WarehouseBatches.cshtml
 C:\project\gpos_core_mvc\artifacts\buildcheck\Views\Configuration\DisplayBatches.cshtml
@@ -18114,3 +18113,10 @@ C:\project\gpos_core_mvc\bin\Debug\net10.0\Views\Configuration\Shift.cshtml
 C:\project\gpos_core_mvc\artifacts\buildcheck\Views\Configuration\Shift.cshtml
 C:\project\gpos_core_mvc\artifacts\buildcheck\Views\Transaction\CashRemittance.cshtml
 C:\project\gpos_core_mvc\bin\Debug\net10.0\Views\Transaction\CashRemittance.cshtml
+C:\project\gpos_core_mvc\artifacts\buildcheck\wwwroot\js\daily-cash-movement-selector.js
+C:\project\gpos_core_mvc\artifacts\buildcheck\Views\Transaction\_DailyCashMovementSelector.cshtml
+C:\project\gpos_core_mvc\obj\Debug\net10.0\compressed\xzi7b5bysz-{0}-w71zez9ugf-w71zez9ugf.gz
+C:\project\gpos_core_mvc\bin\Debug\net10.0\wwwroot\js\daily-cash-movement-selector.js
+C:\project\gpos_core_mvc\bin\Debug\net10.0\wwwroot\js\daily-cash-movement-selector.js.gz
+C:\project\gpos_core_mvc\bin\Debug\net10.0\Views\Transaction\_DailyCashMovementSelector.cshtml
+C:\project\gpos_core_mvc\obj\Debug\net10.0\compressed\ios0330fcj-{0}-y06nit5dm2-y06nit5dm2.gz

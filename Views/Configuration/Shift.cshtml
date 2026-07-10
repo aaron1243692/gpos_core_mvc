@@ -1,5 +1,11 @@
+@model gpos.Models.ViewModels.ShiftPageViewModel
 @{
     ViewData["Title"] = "Shift Configuration";
+
+    string FormatTime(TimeSpan? value)
+    {
+        return value.HasValue ? DateTime.Today.Add(value.Value).ToString("hh:mm tt") : "";
+    }
 }
 
 <div class="page-header">
@@ -14,32 +20,38 @@
         </nav>
         <div class="d-flex align-items-center gap-2 flex-wrap">
             <h1 class="mb-0">Shift</h1>
-            <span class="badge bg-warning text-dark">UI Preview Only</span>
-            <span class="badge bg-secondary">Backend not connected yet</span>
         </div>
-        <p class="page-subtitle text-muted mt-2">Manage cashier shift settings, timings, and cash control policies.</p>
+        <p class="page-subtitle text-muted mt-2">Manage reusable cashier shift settings and default opening cash amounts.</p>
     </div>
     <div class="page-actions">
         <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#shiftFormModal">Add Shift</button>
     </div>
 </div>
 
+@if (TempData["ConfigSetupFeedback"] is string feedback)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        @feedback
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
 <section class="transaction-ui-page">
     <div class="content-card mb-3">
-        <form class="row g-2 align-items-center" onsubmit="return false;">
+        <form asp-action="Shift" method="get" class="row g-2 align-items-center">
             <div class="col-md-4">
-                <input class="form-control" type="search" placeholder="Search shift name..." id="shiftSearchInput" />
+                <input class="form-control" name="search" value="@Model.Search" type="search" placeholder="Search shift name or remarks..." />
             </div>
             <div class="col-md-3">
-                <select class="form-select" id="shiftStatusFilter">
+                <select class="form-select" name="status">
                     <option value="">All Statuses</option>
-                    <option>Active</option>
-                    <option>Inactive</option>
+                    <option value="Active" selected="@(Model.Status == "Active")">Active</option>
+                    <option value="Inactive" selected="@(Model.Status == "Inactive")">Inactive</option>
                 </select>
             </div>
             <div class="col-md-auto d-flex gap-1">
-                <button class="btn btn-primary" type="button">Search</button>
-                <button class="btn btn-outline-secondary" type="button">Clear</button>
+                <button class="btn btn-primary" type="submit">Search</button>
+                <a class="btn btn-outline-secondary" asp-action="Shift">Clear</a>
             </div>
         </form>
     </div>
@@ -53,138 +65,136 @@
                         <th class="text-nowrap">Shift Name</th>
                         <th class="text-nowrap">Start Time</th>
                         <th class="text-nowrap">End Time</th>
-                        <th class="text-nowrap">Opening Cash Amount</th>
-                        <th class="text-nowrap">Allow Cash In</th>
-                        <th class="text-nowrap">Allow Cash Out</th>
+                        <th class="text-nowrap text-end">Opening Cash Amount</th>
                         <th class="text-nowrap">Status</th>
+                        <th class="text-nowrap">Remarks</th>
                         <th class="text-nowrap">Action</th>
                     </tr>
                 </thead>
                 <tbody>
-                    <tr>
-                        <td>1</td>
-                        <td class="text-nowrap fw-bold">Morning Shift</td>
-                        <td>06:00 AM</td>
-                        <td>02:00 PM</td>
-                        <td>₱5,000.00</td>
-                        <td>Yes</td>
-                        <td>Yes</td>
-                        <td><span class="badge bg-success text-nowrap">Active</span></td>
-                        <td class="text-nowrap">
-                            <button class="btn btn-sm btn-outline-primary" type="button" data-bs-toggle="modal" data-bs-target="#shiftViewModal">View</button>
-                            <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="modal" data-bs-target="#shiftFormModal">Edit</button>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>2</td>
-                        <td class="text-nowrap fw-bold">Afternoon Shift</td>
-                        <td>02:00 PM</td>
-                        <td>10:00 PM</td>
-                        <td>₱5,000.00</td>
-                        <td>Yes</td>
-                        <td>Yes</td>
-                        <td><span class="badge bg-success text-nowrap">Active</span></td>
-                        <td class="text-nowrap">
-                            <button class="btn btn-sm btn-outline-primary" type="button" data-bs-toggle="modal" data-bs-target="#shiftViewModal">View</button>
-                            <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="modal" data-bs-target="#shiftFormModal">Edit</button>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>3</td>
-                        <td class="text-nowrap fw-bold">Night Shift</td>
-                        <td>10:00 PM</td>
-                        <td>06:00 AM</td>
-                        <td>₱5,000.00</td>
-                        <td>Yes</td>
-                        <td>Yes</td>
-                        <td><span class="badge bg-success text-nowrap">Active</span></td>
-                        <td class="text-nowrap">
-                            <button class="btn btn-sm btn-outline-primary" type="button" data-bs-toggle="modal" data-bs-target="#shiftViewModal">View</button>
-                            <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="modal" data-bs-target="#shiftFormModal">Edit</button>
-                        </td>
-                    </tr>
-                    <tr class="d-none">
-                        <td class="text-center text-muted fw-bold" colspan="9">No records found.</td>
-                    </tr>
+                    @if (Model.Shifts.Count == 0)
+                    {
+                        <tr>
+                            <td class="text-center text-muted fw-bold" colspan="8">No records found.</td>
+                        </tr>
+                    }
+                    else
+                    {
+                        @for (var i = 0; i < Model.Shifts.Count; i++)
+                        {
+                            var shift = Model.Shifts[i];
+                            <tr>
+                                <td>@(i + 1)</td>
+                                <td class="text-nowrap fw-bold">@shift.Name</td>
+                                <td>@FormatTime(shift.StartTime)</td>
+                                <td>@FormatTime(shift.EndTime)</td>
+                                <td class="text-end">@(shift.OpeningCashAmount.HasValue ? shift.OpeningCashAmount.Value.ToString("N2") : "")</td>
+                                <td>
+                                    @if (shift.Status == 1)
+                                    {
+                                        <span class="badge bg-success text-nowrap">Active</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-secondary text-nowrap">Inactive</span>
+                                    }
+                                </td>
+                                <td>@shift.Remarks</td>
+                                <td class="text-nowrap">
+                                    <a class="btn btn-sm btn-outline-secondary" asp-action="Shift" asp-route-editId="@shift.Id" asp-route-search="@Model.Search" asp-route-status="@Model.Status">Edit</a>
+                                    @if (shift.Status == 1)
+                                    {
+                                        <form asp-action="DeleteShift" method="post" class="d-inline" data-deactivate-form>
+                                            @Html.AntiForgeryToken()
+                                            <input name="id" type="hidden" value="@shift.Id" />
+                                            <input name="search" type="hidden" value="@Model.Search" />
+                                            <input name="status" type="hidden" value="@Model.Status" />
+                                            <button class="btn btn-sm btn-outline-danger" type="submit">Deactivate</button>
+                                        </form>
+                                    }
+                                    else
+                                    {
+                                        <form asp-action="ActivateShift" method="post" class="d-inline">
+                                            @Html.AntiForgeryToken()
+                                            <input name="id" type="hidden" value="@shift.Id" />
+                                            <input name="search" type="hidden" value="@Model.Search" />
+                                            <input name="status" type="hidden" value="@Model.Status" />
+                                            <button class="btn btn-sm btn-outline-success" type="submit">Activate</button>
+                                        </form>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    }
                 </tbody>
             </table>
         </div>
     </div>
 </section>
 
-<!-- Add/Edit Modal -->
 <div class="modal fade" id="shiftFormModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content">
-            <div class="modal-header">
-                <h2 class="modal-title fs-5">Add/Edit Shift</h2>
-                <button class="btn-close" type="button" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <div class="row g-3">
-                    <div class="col-md-12">
-                        <label class="form-label">Shift Name</label>
-                        <input class="form-control" placeholder="e.g. Morning Shift" />
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label">Start Time</label>
-                        <input class="form-control" type="time" value="06:00" />
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label">End Time</label>
-                        <input class="form-control" type="time" value="14:00" />
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label">Opening Cash Amount</label>
-                        <input class="form-control" type="number" step="0.01" min="0" placeholder="1234.00" />
-                    </div>
-                    <div class="col-md-4">
-                        <div class="form-check mt-4">
-                            <input class="form-check-input" type="checkbox" id="allowCashInCheckbox" checked />
-                            <label class="form-check-label" for="allowCashInCheckbox">Allow Cash In</label>
+            <form asp-action="SaveShift" method="post">
+                @Html.AntiForgeryToken()
+                <input asp-for="ShiftForm.Id" type="hidden" />
+                <input asp-for="ShiftForm.Status" type="hidden" />
+                <input name="search" type="hidden" value="@Model.Search" />
+                <input name="status" type="hidden" value="@Model.Status" />
+                <div class="modal-header">
+                    <h2 class="modal-title fs-5">Shift</h2>
+                    <button class="btn-close" type="button" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+                    <div class="row g-3">
+                        <div class="col-md-12">
+                            <label asp-for="ShiftForm.Name" class="form-label">Shift Name</label>
+                            <input asp-for="ShiftForm.Name" class="form-control" placeholder="e.g. Morning Shift" autocomplete="off" />
+                            <span asp-validation-for="ShiftForm.Name" class="text-danger"></span>
                         </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="form-check mt-4">
-                            <input class="form-check-input" type="checkbox" id="allowCashOutCheckbox" checked />
-                            <label class="form-check-label" for="allowCashOutCheckbox">Allow Cash Out</label>
+                        <div class="col-md-6">
+                            <label asp-for="ShiftForm.StartTime" class="form-label">Start Time</label>
+                            <input asp-for="ShiftForm.StartTime" class="form-control" type="time" />
+                            <span asp-validation-for="ShiftForm.StartTime" class="text-danger"></span>
                         </div>
-                    </div>
-                    <div class="col-md-12">
-                        <label class="form-label">Status</label>
-                        <select class="form-select">
-                            <option>Active</option>
-                            <option>Inactive</option>
-                        </select>
-                    </div>
-                    <div class="col-md-12">
-                        <label class="form-label">Remarks</label>
-                        <textarea class="form-control" rows="3" placeholder="Enter remarks..."></textarea>
+                        <div class="col-md-6">
+                            <label asp-for="ShiftForm.EndTime" class="form-label">End Time</label>
+                            <input asp-for="ShiftForm.EndTime" class="form-control" type="time" />
+                            <span asp-validation-for="ShiftForm.EndTime" class="text-danger"></span>
+                        </div>
+                        <div class="col-md-6">
+                            <label asp-for="ShiftForm.OpeningCashAmount" class="form-label">Opening Cash Amount</label>
+                            <input asp-for="ShiftForm.OpeningCashAmount" class="form-control" type="number" step="0.01" min="0" placeholder="1000.00" />
+                            <span asp-validation-for="ShiftForm.OpeningCashAmount" class="text-danger"></span>
+                        </div>
+                        <div class="col-md-12">
+                            <label asp-for="ShiftForm.Remarks" class="form-label">Remarks</label>
+                            <textarea asp-for="ShiftForm.Remarks" class="form-control" rows="3" placeholder="Enter remarks..."></textarea>
+                            <span asp-validation-for="ShiftForm.Remarks" class="text-danger"></span>
+                        </div>
                     </div>
                 </div>
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button>
-                <button class="btn btn-primary" type="button" onclick="alert('Backend not connected yet.');" data-bs-dismiss="modal">Save</button>
-            </div>
+                <div class="modal-footer">
+                    <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button>
+                    <button class="btn btn-primary" type="submit">Save</button>
+                </div>
+            </form>
         </div>
     </div>
 </div>
 
-<!-- View Modal -->
-<div class="modal fade" id="shiftViewModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2 class="modal-title fs-5">Shift Details</h2>
-                <button class="btn-close" type="button" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <p>This is a UI preview. Shift configuration backend is not connected yet.</p>
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Close</button>
-            </div>
-        </div>
-    </div>
-</div>
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    @if (!string.IsNullOrWhiteSpace(Model.ActiveModalId))
+    {
+        <script>
+            document.addEventListener('DOMContentLoaded', function () {
+                const modalElement = document.getElementById('@Model.ActiveModalId');
+                if (modalElement) {
+                    bootstrap.Modal.getOrCreateInstance(modalElement).show();
+                }
+            });
+        </script>
+    }
+}

@@ -1,189 +1,106 @@
+@model gpos.Models.ViewModels.CashMovementPageViewModel
 @{
     ViewData["Title"] = "Cash In";
+    string Money(decimal value) => value.ToString("N2");
+    string UserName(gpos.Models.User? user) => user is null ? "-" : string.IsNullOrWhiteSpace(user.FullName) ? user.Username : user.FullName;
 }
 
 <div class="page-header">
     <div class="page-heading">
-        <nav aria-label="breadcrumb">
-            <ol class="breadcrumb">
-                <li class="breadcrumb-item">GPOS</li>
-                <li class="breadcrumb-item">Transaction</li>
-                <li class="breadcrumb-item active" aria-current="page">Cash In</li>
-            </ol>
-        </nav>
-        <div class="d-flex align-items-center gap-2 flex-wrap">
-            <h1 class="mb-0">Cash In</h1>
-            <span class="badge bg-warning text-dark">UI Preview Only</span>
-            <span class="badge bg-secondary">Backend not connected yet</span>
-        </div>
-        <p class="page-subtitle text-muted mt-2">Register cashier drawer cash-in events (e.g. drawer top-ups).</p>
+        <nav aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item">GPOS</li><li class="breadcrumb-item">Transaction</li><li class="breadcrumb-item active" aria-current="page">Cash In</li></ol></nav>
+        <h1 class="mb-0">Cash In</h1>
+        <p class="page-subtitle text-muted mt-2">Record additional cash added to the cashier drawer during the shift.</p>
     </div>
-    <div class="page-actions">
-        <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#cashInFormModal">Add Cash In</button>
-    </div>
+    <div class="page-actions"><button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#cashInFormModal">Add Cash In</button></div>
 </div>
 
 <section class="transaction-ui-page">
     <div class="content-card mb-3">
-        <form class="row g-2 align-items-center" onsubmit="return false;">
-            <div class="col-md-3">
-                <input class="form-control" type="search" placeholder="Search cash in..." id="cashInSearch" />
-            </div>
-            <div class="col-md-2">
-                <select class="form-select" id="cashInBranch">
-                    <option value="">All Branches</option>
-                    <option>Main Branch</option>
-                    <option>Branch 2</option>
-                </select>
-            </div>
-            <div class="col-md-2">
-                <input class="form-control" type="date" value="2026-07-09" id="cashInDateFrom" />
-            </div>
-            <div class="col-md-2">
-                <input class="form-control" type="date" value="2026-07-09" id="cashInDateTo" />
-            </div>
-            <div class="col-md-1">
-                <select class="form-select" id="cashInStatus">
-                    <option value="">All Statuses</option>
-                    <option>Approved</option>
-                    <option>Pending</option>
-                    <option>Cancelled</option>
-                </select>
-            </div>
-            <div class="col-md-auto d-flex gap-1">
-                <button class="btn btn-primary" type="button">Search</button>
-                <button class="btn btn-outline-secondary" type="button">Clear</button>
-            </div>
+        <form asp-action="CashIn" method="get" class="row g-2 align-items-center">
+            <div class="col-md-3"><input class="form-control" name="search" value="@Model.Filter.Search" type="search" placeholder="Search cash in..." /></div>
+            <div class="col-md-2"><select class="form-select" name="branchId" asp-items="Model.BranchOptions"></select></div>
+            <div class="col-md-2"><input class="form-control" name="dateFrom" value="@Model.Filter.DateFrom?.ToString("yyyy-MM-dd")" type="date" /></div>
+            <div class="col-md-2"><input class="form-control" name="dateTo" value="@Model.Filter.DateTo?.ToString("yyyy-MM-dd")" type="date" /></div>
+            <div class="col-md-1"><select class="form-select" name="status"><option value="">All</option><option value="Active" selected="@(Model.Filter.Status == "Active")">Active</option><option value="Inactive" selected="@(Model.Filter.Status == "Inactive")">Inactive</option></select></div>
+            <div class="col-md-auto d-flex gap-1"><button class="btn btn-primary" type="submit">Search</button><a class="btn btn-outline-secondary" asp-action="CashIn">Clear</a></div>
         </form>
     </div>
 
     <div class="content-card transaction-ui-card">
         <div class="table-responsive transaction-ui-table-wrap">
-            <table class="table app-table table-sm align-middle mb-0" id="cashInTable">
-                <thead>
-                    <tr>
-                        <th class="text-nowrap">No</th>
-                        <th class="text-nowrap">Date/Time</th>
-                        <th class="text-nowrap">Branch</th>
-                        <th class="text-nowrap">Shift</th>
-                        <th class="text-nowrap">User</th>
-                        <th class="text-nowrap">Amount</th>
-                        <th class="text-nowrap">Reason</th>
-                        <th class="text-nowrap">Remarks</th>
-                        <th class="text-nowrap">Created By</th>
-                        <th class="text-nowrap">Status</th>
-                        <th class="text-nowrap">Action</th>
-                    </tr>
-                </thead>
+            <table class="table app-table table-sm align-middle mb-0">
+                <thead><tr><th>No</th><th>Date</th><th>Branch</th><th>Shift</th><th>User</th><th class="text-end">Amount</th><th>Reason</th><th>Remarks</th><th>Created By</th><th>Status</th><th>Action</th></tr></thead>
                 <tbody>
-                    <tr>
-                        <td>1</td>
-                        <td class="text-nowrap">2026-07-09 10:15</td>
-                        <td>Main Branch</td>
-                        <td>Morning Shift</td>
-                        <td>cashier_01</td>
-                        <td>₱500.00</td>
-                        <td>Drawer top-up</td>
-                        <td>Standard morning start-up fund top-up</td>
-                        <td>admin</td>
-                        <td><span class="badge bg-success text-nowrap">Approved</span></td>
-                        <td class="text-nowrap">
-                            <button class="btn btn-sm btn-outline-primary" type="button" data-bs-toggle="modal" data-bs-target="#cashInViewModal">View</button>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>2</td>
-                        <td class="text-nowrap">2026-07-08 14:30</td>
-                        <td>Main Branch</td>
-                        <td>Afternoon Shift</td>
-                        <td>cashier_02</td>
-                        <td>₱1,000.00</td>
-                        <td>Additional float</td>
-                        <td>Approved by supervisor</td>
-                        <td>supervisor_01</td>
-                        <td><span class="badge bg-success text-nowrap">Approved</span></td>
-                        <td class="text-nowrap">
-                            <button class="btn btn-sm btn-outline-primary" type="button" data-bs-toggle="modal" data-bs-target="#cashInViewModal">View</button>
-                        </td>
-                    </tr>
-                    <tr class="d-none">
-                        <td class="text-center text-muted fw-bold" colspan="11">No records found.</td>
-                    </tr>
+                    @if (Model.CashIns.Count == 0)
+                    {
+                        <tr><td class="text-center text-muted fw-bold" colspan="11">No records found.</td></tr>
+                    }
+                    else
+                    {
+                        @for (var i = 0; i < Model.CashIns.Count; i++)
+                        {
+                            var item = Model.CashIns[i];
+                            <tr>
+                                <td>@(i + 1)</td><td>@item.TransactionDateTime.ToString("yyyy-MM-dd HH:mm")</td><td>@item.Branch?.Name</td><td>@item.Shift?.Name</td><td>@UserName(item.User)</td><td class="text-end">@Money(item.Amount)</td><td>@item.Reason</td><td>@item.Remarks</td><td>@UserName(item.CreatedByUser)</td><td><span class="badge @(item.Status == 1 ? "bg-success" : "bg-secondary")">@(item.Status == 1 ? "Active" : "Inactive")</span></td>
+                                <td>@if (item.Status == 1) { <form asp-action="DeleteCashIn" method="post" data-deactivate-form>@Html.AntiForgeryToken()<input name="id" value="@item.Id" type="hidden" /><button class="btn btn-sm btn-outline-danger" type="submit">Deactivate</button></form> }</td>
+                            </tr>
+                        }
+                    }
                 </tbody>
             </table>
         </div>
     </div>
 </section>
 
-<!-- Add Modal -->
 <div class="modal fade" id="cashInFormModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content">
-            <div class="modal-header">
-                <h2 class="modal-title fs-5">Add Cash In</h2>
-                <button class="btn-close" type="button" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <div class="row g-3">
-                    <div class="col-md-6">
-                        <label class="form-label">Branch</label>
-                        <select class="form-select">
-                            <option>Main Branch</option>
-                            <option>Branch 2</option>
-                        </select>
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label">Date/Time</label>
-                        <input class="form-control" type="datetime-local" value="2026-07-09T10:15" />
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label">Shift</label>
-                        <select class="form-select">
-                            <option>Morning Shift</option>
-                            <option>Afternoon Shift</option>
-                            <option>Night Shift</option>
-                        </select>
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label">User</label>
-                        <input class="form-control" value="cashier_01" />
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label">Amount</label>
-                        <input class="form-control" type="number" value="500" />
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label">Reason</label>
-                        <input class="form-control" value="Drawer top-up" />
-                    </div>
-                    <div class="col-12">
-                        <label class="form-label">Remarks</label>
-                        <textarea class="form-control" rows="3" placeholder="Enter remarks here..."></textarea>
+            <form asp-action="SaveCashIn" method="post">
+                @Html.AntiForgeryToken()
+                <div class="modal-header"><h2 class="modal-title fs-5">Add Cash In</h2><button class="btn-close" type="button" data-bs-dismiss="modal"></button></div>
+                <div class="modal-body">
+                    <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+                    <div class="row g-3">
+                        <div class="col-md-12">
+                            <label asp-for="Form.BranchId" class="form-label">Branch</label>
+                            <input asp-for="Form.BranchId" id="cashInBranchId" type="hidden" />
+                            <div class="input-group" data-branch-selector data-branch-hidden="#cashInBranchId" data-branch-display="#cashInBranchDisplay" data-branch-empty-text="Select branch">
+                                <input asp-for="Form.BranchName" id="cashInBranchDisplay" class="form-control" placeholder="Select branch" readonly />
+                                <button type="button" class="btn btn-outline-secondary branch-select-btn" data-branch-open><img src="/icons/search.png" alt="Search" style="width:16px;height:16px;" /></button>
+                            </div>
+                            <span asp-validation-for="Form.BranchId" class="text-danger"></span>
+                        </div>
+                        <div class="col-md-12">
+                            <label asp-for="Form.DailyCashId" class="form-label">Daily Cash</label>
+                            <input asp-for="Form.DailyCashId" id="cashInDailyCashId" type="hidden" />
+                            <div class="input-group" data-daily-cash-selector data-daily-cash-hidden="#cashInDailyCashId" data-daily-cash-display="#cashInDailyCashDisplay" data-branch-hidden="#cashInBranchId" data-branch-display="#cashInBranchDisplay" data-business-date-display="#cashInBusinessDateDisplay" data-shift-display="#cashInShiftDisplay" data-user-display="#cashInUserDisplay">
+                                <input asp-for="Form.DailyCashDisplay" id="cashInDailyCashDisplay" class="form-control" placeholder="Select Daily Cash" readonly />
+                                <button type="button" class="btn btn-outline-secondary" data-daily-cash-open><img src="/icons/search.png" alt="Search" style="width:16px;height:16px;" /></button>
+                            </div>
+                            <span asp-validation-for="Form.DailyCashId" class="text-danger"></span>
+                        </div>
+                        <div class="col-md-6"><label class="form-label">Business Date</label><input id="cashInBusinessDateDisplay" class="form-control" value="@(Model.Form.BusinessDate?.ToString("yyyy-MM-dd") ?? string.Empty)" readonly /></div>
+                        <div class="col-md-6"><label class="form-label">Shift</label><input id="cashInShiftDisplay" class="form-control" value="@Model.Form.ShiftName" readonly /></div>
+                        <div class="col-md-6"><label class="form-label">Cashier</label><input id="cashInUserDisplay" class="form-control" value="@Model.Form.UserName" readonly /></div>
+                        <div class="col-md-6"><label asp-for="Form.TransactionDateTime" class="form-label">Created At</label><input asp-for="Form.TransactionDateTime" class="form-control" type="datetime-local" /><span asp-validation-for="Form.TransactionDateTime" class="text-danger"></span></div>
+                        <div class="col-md-6"><label asp-for="Form.Amount" class="form-label">Amount</label><input asp-for="Form.Amount" class="form-control" type="number" step="0.01" min="0.01" /><span asp-validation-for="Form.Amount" class="text-danger"></span></div>
+                        <div class="col-md-12"><label asp-for="Form.Reason" class="form-label">Reason</label><input asp-for="Form.Reason" class="form-control" /><span asp-validation-for="Form.Reason" class="text-danger"></span></div>
+                        <div class="col-12"><label asp-for="Form.Remarks" class="form-label">Remarks</label><textarea asp-for="Form.Remarks" class="form-control" rows="3"></textarea></div>
                     </div>
                 </div>
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button>
-                <button class="btn btn-primary" type="button" onclick="alert('Backend not connected yet.');" data-bs-dismiss="modal">Save</button>
-            </div>
+                <div class="modal-footer"><button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button><button class="btn btn-primary" type="submit">Save</button></div>
+            </form>
         </div>
     </div>
 </div>
 
-<!-- View Modal -->
-<div class="modal fade" id="cashInViewModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2 class="modal-title fs-5">Cash In Details</h2>
-                <button class="btn-close" type="button" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <p>This is a UI preview. Cash In backend is not connected yet.</p>
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Close</button>
-            </div>
-        </div>
-    </div>
-</div>
+<partial name="_DailyCashMovementSelector" />
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script src="~/js/daily-cash-movement-selector.js" asp-append-version="true"></script>
+    @if (!string.IsNullOrWhiteSpace(Model.ActiveModalId))
+    {
+        <script>document.addEventListener('DOMContentLoaded', () => bootstrap.Modal.getOrCreateInstance(document.getElementById('@Model.ActiveModalId')).show());</script>
+    }
+}
