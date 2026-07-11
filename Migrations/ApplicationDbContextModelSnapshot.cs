@@ -31,6 +31,8 @@ namespace gpos.Migrations
 
                     MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<int?>("BranchId").HasColumnType("int").HasColumnName("branch_id");
+
                     b.Property<string>("Action")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -1395,6 +1397,8 @@ namespace gpos.Migrations
                         .HasColumnType("decimal(18,2)")
                         .HasColumnName("old_price");
 
+                    b.Property<string>("Reason").HasMaxLength(255).HasColumnType("varchar(255)").HasColumnName("reason");
+
                     b.Property<string>("Remarks")
                         .HasMaxLength(255)
                         .HasColumnType("varchar(255)")
@@ -1411,6 +1415,8 @@ namespace gpos.Migrations
                         .HasColumnName("updated_at");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("BranchId");
 
                     b.HasIndex("FuelId");
 
@@ -2169,6 +2175,12 @@ namespace gpos.Migrations
 
                     MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<int?>("BranchId")
+                        .HasColumnType("int")
+                        .HasColumnName("branch_id");
+
+                    b.Property<int?>("BranchId").HasColumnType("int").HasColumnName("branch_id");
+
                     b.Property<int?>("BatchId")
                         .HasColumnType("int")
                         .HasColumnName("batch_id");
@@ -2199,6 +2211,8 @@ namespace gpos.Migrations
                         .HasColumnType("int")
                         .HasColumnName("product_id");
 
+                    b.Property<string>("Reason").HasMaxLength(255).HasColumnType("varchar(255)").HasColumnName("reason");
+
                     b.Property<string>("Remarks")
                         .HasMaxLength(255)
                         .HasColumnType("varchar(255)")
@@ -2217,6 +2231,8 @@ namespace gpos.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("BatchId");
+
+                    b.HasIndex("BranchId");
 
                     b.HasIndex("CreatedBy");
 
@@ -4391,12 +4407,15 @@ namespace gpos.Migrations
 
             modelBuilder.Entity("gpos.Models.FuelPriceHistory", b =>
                 {
+                    b.HasOne("gpos.Models.Branch", "Branch").WithMany().HasForeignKey("BranchId").OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("gpos.Models.Fuel", "Fuel")
                         .WithMany("FuelPriceHistory")
                         .HasForeignKey("FuelId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.Navigation("Branch");
                     b.Navigation("Fuel");
                 });
 
@@ -4583,6 +4602,8 @@ namespace gpos.Migrations
 
             modelBuilder.Entity("gpos.Models.ProductPriceHistory", b =>
                 {
+                    b.HasOne("gpos.Models.Branch", "Branch").WithMany().HasForeignKey("BranchId").OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("gpos.Models.ProductBatch", "Batch")
                         .WithMany()
                         .HasForeignKey("BatchId")
@@ -4600,6 +4621,7 @@ namespace gpos.Migrations
                         .IsRequired();
 
                     b.Navigation("Batch");
+                    b.Navigation("Branch");
 
                     b.Navigation("Product");
                 });

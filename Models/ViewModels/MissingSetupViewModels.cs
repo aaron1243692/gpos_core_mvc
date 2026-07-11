@@ -111,21 +111,32 @@ namespace gpos.Models.ViewModels
     public class FuelPriceHistoryForm
     {
         public int Id { get; set; }
+        [Range(1, int.MaxValue, ErrorMessage = "Branch is required.")]
+        public int BranchId { get; set; }
+        public string BranchName { get; set; } = string.Empty;
         [Range(1, int.MaxValue, ErrorMessage = "Fuel is required.")]
         public int FuelId { get; set; }
+        public string FuelName { get; set; } = string.Empty;
+        public decimal? CurrentPrice { get; set; }
         [Required(ErrorMessage = "New Price is required.")]
         [Range(0, double.MaxValue, ErrorMessage = "New Price cannot be negative.")]
         public decimal? NewPrice { get; set; }
         [Required(ErrorMessage = "Effective At is required.")]
         public DateTime? EffectiveAt { get; set; } = DateTime.Today;
+        public string? Reason { get; set; }
         public string? Remarks { get; set; }
     }
 
     public class ProductPriceHistoryForm
     {
         public int Id { get; set; }
+        [Range(1, int.MaxValue, ErrorMessage = "Branch is required.")]
+        public int BranchId { get; set; }
+        public string BranchName { get; set; } = string.Empty;
         [Range(1, int.MaxValue, ErrorMessage = "Product is required.")]
         public int ProductId { get; set; }
+        public string ProductBatchDisplay { get; set; } = string.Empty;
+        [Range(1, int.MaxValue, ErrorMessage = "Batch is required.")]
         public int? BatchId { get; set; }
         public decimal? CurrentPrice { get; set; }
         [Required(ErrorMessage = "New Selling Price is required.")]
@@ -133,6 +144,7 @@ namespace gpos.Models.ViewModels
         public decimal? NewPrice { get; set; }
         [Required(ErrorMessage = "Effective Date is required.")]
         public DateTime? EffectiveDate { get; set; } = DateTime.Today;
+        public string? Reason { get; set; }
         public string? Remarks { get; set; }
     }
 
@@ -362,6 +374,8 @@ namespace gpos.Models.ViewModels
         public string Search { get; set; } = string.Empty;
         public int? BranchId { get; set; }
         public string BranchName { get; set; } = string.Empty;
+        public DateTime? DateFrom { get; set; }
+        public DateTime? DateTo { get; set; }
         public string ActiveModalId { get; set; } = string.Empty;
         public ProductUnitForm ProductUnitForm { get; set; } = new();
         public ProductBatchForm ProductBatchForm { get; set; } = new();

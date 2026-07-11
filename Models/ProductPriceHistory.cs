@@ -4,10 +4,12 @@ namespace gpos.Models
     {
         public int Id { get; set; }
         public int ProductId { get; set; }
+        public int? BranchId { get; set; }
         public int? BatchId { get; set; }
         public decimal OldPrice { get; set; }
         public decimal NewPrice { get; set; }
         public DateTime EffectiveDate { get; set; }
+        public string? Reason { get; set; }
         public string? Remarks { get; set; }
         public int? CreatedBy { get; set; }
         public int Status { get; set; } = 1;
@@ -15,6 +17,7 @@ namespace gpos.Models
         public DateTime? UpdatedAt { get; set; }
 
         public Product? Product { get; set; }
+        public Branch? Branch { get; set; }
         public ProductBatch? Batch { get; set; }
     }
 }

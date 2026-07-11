@@ -2228,32 +2228,79 @@ namespace gpos.Controllers
         public IActionResult DisplayStockAdjustment() => View();
         public IActionResult WarehouseStockAdjustment() => View();
         public IActionResult TankFuelAdjustment() => View();
-        public async Task<IActionResult> ProductPriceAdjustment(string? search)
+        public async Task<IActionResult> ProductPriceAdjustment(string? search, int? filterBranchId, DateTime? dateFrom, DateTime? dateTo)
         {
-            return View(await BuildProductPriceAdjustmentPageAsync(search));
+            return View(await BuildProductPriceAdjustmentPageAsync(search, filterBranchId, dateFrom, dateTo));
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> SearchPriceAdjustmentFuels(string? search, int take = 20)
+        {
+            var term = (search ?? string.Empty).Trim();
+            return Json(await _db.Fuels.AsNoTracking().Where(item => item.Status == 1 && item.IsActive && (term == "" || item.Name.Contains(term)))
+                .OrderBy(item => item.Name).Take(Math.Clamp(take, 1, 50)).Select(item => new { id = item.Id, name = item.Name, price = item.CurrentPricePerLiter }).ToListAsync());
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> SearchProductPriceAdjustmentItems(int branchId, string? term, int take = 50)
+        {
+            if (branchId <= 0) return BadRequest(new { message = "Please select a Branch first." });
+            var searchText = (term ?? string.Empty).Trim();
+            var rows = await _db.DisplayStocks.AsNoTracking().Include(stock => stock.Product).Include(stock => stock.Batch)
+                .Where(stock => stock.BranchId == branchId && stock.Product != null && stock.Batch != null && stock.Product.Status == 1 && stock.Product.IsActive && stock.Batch.Status == 1 && stock.Batch.IsActive
+                    && (searchText == "" || stock.Product.Name.Contains(searchText) || stock.Batch.BatchNo.Contains(searchText)))
+                .OrderBy(stock => stock.Product!.Name).ThenBy(stock => stock.Batch!.BatchNo).Take(Math.Clamp(take, 1, 50))
+                .Select(stock => new
+                {
+                    displayStockId = stock.Id,
+                    branchId = stock.BranchId,
+                    productId = stock.ProductId,
+                    productName = stock.Product!.Name,
+                    batchId = stock.BatchId,
+                    batchNumber = stock.Batch!.BatchNo,
+                    currentSellingPrice = stock.Batch.SellingPrice,
+                    availableQuantity = stock.Quantity,
+                    status = "Active"
+                }).ToListAsync();
+            return Json(rows);
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> SaveProductPriceAdjustment([Bind(Prefix = "ProductPriceHistoryForm")] ProductPriceHistoryForm form, string? search)
+        public async Task<IActionResult> SaveProductPriceAdjustment([Bind(Prefix = "ProductPriceHistoryForm")] ProductPriceHistoryForm form, string? search, int? filterBranchId, DateTime? dateFrom, DateTime? dateTo)
         {
             if (!ModelState.IsValid)
             {
-                return View("ProductPriceAdjustment", await BuildProductPriceAdjustmentPageAsync(search, form, "productPriceAdjustmentModal"));
+                return View("ProductPriceAdjustment", await BuildProductPriceAdjustmentPageAsync(search, filterBranchId, dateFrom, dateTo, form, "productPriceAdjustmentModal"));
             }
 
-            var product = await _db.Products.AsNoTracking().FirstOrDefaultAsync(item => item.Id == form.ProductId && item.Status == 1 && item.IsActive);
-            if (product is null)
+            if (!await _db.Branches.AnyAsync(item => item.Id == form.BranchId && item.Status == 1))
             {
-                ModelState.AddModelError("ProductPriceHistoryForm.ProductId", "Select a product.");
-                return View("ProductPriceAdjustment", await BuildProductPriceAdjustmentPageAsync(search, form, "productPriceAdjustmentModal"));
+                ModelState.AddModelError("ProductPriceHistoryForm.BranchId", "Select an active branch.");
+                return View("ProductPriceAdjustment", await BuildProductPriceAdjustmentPageAsync(search, filterBranchId, dateFrom, dateTo, form, "productPriceAdjustmentModal"));
             }
 
-            var batch = await ResolveProductPriceBatchAsync(form.ProductId, form.BatchId);
+            var selectedStock = await _db.DisplayStocks.AsNoTracking()
+                .Include(stock => stock.Batch)
+                    .ThenInclude(batch => batch!.Product)
+                .FirstOrDefaultAsync(stock => stock.BranchId == form.BranchId
+                    && stock.BatchId == form.BatchId
+                    && stock.Batch != null
+                    && stock.Batch.Status == 1
+                    && stock.Batch.IsActive
+                    && stock.Batch.Product != null
+                    && stock.Batch.Product.Status == 1
+                    && stock.Batch.Product.IsActive);
+            var batch = selectedStock?.Batch;
             if (batch is null)
             {
-                ModelState.AddModelError("ProductPriceHistoryForm.BatchId", "No active batch was found for this product.");
-                return View("ProductPriceAdjustment", await BuildProductPriceAdjustmentPageAsync(search, form, "productPriceAdjustmentModal"));
+                ModelState.AddModelError("ProductPriceHistoryForm.BatchId", "The selected batch is not in Display Stock for this Branch.");
+                return View("ProductPriceAdjustment", await BuildProductPriceAdjustmentPageAsync(search, filterBranchId, dateFrom, dateTo, form, "productPriceAdjustmentModal"));
+            }
+            if (form.ProductId != batch.ProductId)
+            {
+                ModelState.AddModelError("ProductPriceHistoryForm.ProductId", "The selected Product does not match the selected Batch.");
+                return View("ProductPriceAdjustment", await BuildProductPriceAdjustmentPageAsync(search, filterBranchId, dateFrom, dateTo, form, "productPriceAdjustmentModal"));
             }
 
             var newPrice = form.NewPrice!.Value;
@@ -2261,17 +2308,19 @@ namespace gpos.Controllers
             {
                 ModelState.AddModelError("ProductPriceHistoryForm.NewPrice", "New Selling Price must be different from the current price.");
                 form.CurrentPrice = batch.SellingPrice;
-                return View("ProductPriceAdjustment", await BuildProductPriceAdjustmentPageAsync(search, form, "productPriceAdjustmentModal"));
+                return View("ProductPriceAdjustment", await BuildProductPriceAdjustmentPageAsync(search, filterBranchId, dateFrom, dateTo, form, "productPriceAdjustmentModal"));
             }
 
             var now = DateTime.UtcNow;
             var history = new ProductPriceHistory
             {
-                ProductId = form.ProductId,
+                ProductId = batch.ProductId,
+                BranchId = form.BranchId,
                 BatchId = batch.Id,
                 OldPrice = batch.SellingPrice,
                 NewPrice = newPrice,
                 EffectiveDate = form.EffectiveDate!.Value,
+                Reason = CleanOptional(form.Reason),
                 Remarks = CleanOptional(form.Remarks),
                 CreatedBy = CurrentUserId(),
                 Status = 1,
@@ -2283,37 +2332,45 @@ namespace gpos.Controllers
             batch.UpdatedAt = now;
             _db.ProductPriceHistory.Add(history);
             await _db.SaveChangesAsync();
-            return RedirectToAction(nameof(ProductPriceAdjustment), new { search });
+            return RedirectToAction(nameof(ProductPriceAdjustment), new { search, filterBranchId, dateFrom, dateTo });
         }
 
-        public async Task<IActionResult> FuelPriceAdjustment(string? search)
+        public async Task<IActionResult> FuelPriceAdjustment(string? search, int? filterBranchId, DateTime? dateFrom, DateTime? dateTo)
         {
-            return View(await BuildFuelPriceAdjustmentPageAsync(search));
+            return View(await BuildFuelPriceAdjustmentPageAsync(search, filterBranchId, dateFrom, dateTo));
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> SaveFuelPriceAdjustment([Bind(Prefix = "FuelPriceHistoryForm")] FuelPriceHistoryForm form, string? search)
+        public async Task<IActionResult> SaveFuelPriceAdjustment([Bind(Prefix = "FuelPriceHistoryForm")] FuelPriceHistoryForm form, string? search, int? filterBranchId, DateTime? dateFrom, DateTime? dateTo)
         {
             if (!ModelState.IsValid)
             {
-                return View("FuelPriceAdjustment", await BuildFuelPriceAdjustmentPageAsync(search, form, "fuelPriceAdjustmentModal"));
+                return View("FuelPriceAdjustment", await BuildFuelPriceAdjustmentPageAsync(search, filterBranchId, dateFrom, dateTo, form, "fuelPriceAdjustmentModal"));
+            }
+
+            if (!await _db.Branches.AnyAsync(item => item.Id == form.BranchId && item.Status == 1))
+            {
+                ModelState.AddModelError("FuelPriceHistoryForm.BranchId", "Select an active branch.");
+                return View("FuelPriceAdjustment", await BuildFuelPriceAdjustmentPageAsync(search, filterBranchId, dateFrom, dateTo, form, "fuelPriceAdjustmentModal"));
             }
 
             var fuel = await _db.Fuels.FindAsync(form.FuelId);
             if (fuel is null || fuel.Status != 1 || !fuel.IsActive)
             {
                 ModelState.AddModelError("FuelPriceHistoryForm.FuelId", "Select a fuel.");
-                return View("FuelPriceAdjustment", await BuildFuelPriceAdjustmentPageAsync(search, form, "fuelPriceAdjustmentModal"));
+                return View("FuelPriceAdjustment", await BuildFuelPriceAdjustmentPageAsync(search, filterBranchId, dateFrom, dateTo, form, "fuelPriceAdjustmentModal"));
             }
 
             var now = DateTime.UtcNow;
             var history = new FuelPriceHistory
             {
                 FuelId = form.FuelId,
+                BranchId = form.BranchId,
                 OldPrice = fuel.CurrentPricePerLiter,
                 NewPrice = form.NewPrice!.Value,
                 EffectiveAt = form.EffectiveAt!.Value,
+                Reason = CleanOptional(form.Reason),
                 Remarks = CleanOptional(form.Remarks),
                 CreatedBy = CurrentUserId(),
                 CreatedAt = now,
@@ -2324,7 +2381,7 @@ namespace gpos.Controllers
             fuel.UpdatedAt = now;
             _db.FuelPriceHistory.Add(history);
             await _db.SaveChangesAsync();
-            return RedirectToAction(nameof(FuelPriceAdjustment), new { search });
+            return RedirectToAction(nameof(FuelPriceAdjustment), new { search, filterBranchId, dateFrom, dateTo });
         }
 
         [HttpPost]
@@ -2863,13 +2920,19 @@ namespace gpos.Controllers
             };
         }
 
-        private async Task<SetupModulesPageViewModel> BuildProductPriceAdjustmentPageAsync(string? search, ProductPriceHistoryForm? form = null, string activeModalId = "")
+        private async Task<SetupModulesPageViewModel> BuildProductPriceAdjustmentPageAsync(string? search, int? filterBranchId, DateTime? dateFrom, DateTime? dateTo, ProductPriceHistoryForm? form = null, string activeModalId = "")
         {
+            var branchOptions = await BuildCashBranchOptionsAsync("All Branches");
+            branchOptions.ForEach(option => option.Selected = option.Value == filterBranchId?.ToString());
             IQueryable<ProductPriceHistory> query = _db.ProductPriceHistory
                 .AsNoTracking()
                 .Include(history => history.Product)
-                .Include(history => history.Batch);
+                .Include(history => history.Batch)
+                .Include(history => history.Branch);
             var searchText = (search ?? string.Empty).Trim();
+            if (filterBranchId.HasValue) query = query.Where(history => history.BranchId == filterBranchId.Value);
+            if (dateFrom.HasValue) query = query.Where(history => history.CreatedAt >= dateFrom.Value.Date);
+            if (dateTo.HasValue) query = query.Where(history => history.CreatedAt < dateTo.Value.Date.AddDays(1));
 
             if (!string.IsNullOrWhiteSpace(searchText))
             {
@@ -2883,6 +2946,8 @@ namespace gpos.Controllers
                 query = query.Where(history =>
                     (history.Product != null && history.Product.Name.Contains(searchText))
                     || (history.Batch != null && history.Batch.BatchNo.Contains(searchText))
+                    || (history.Branch != null && history.Branch.Name.Contains(searchText))
+                    || (history.Reason != null && history.Reason.Contains(searchText))
                     || (hasPriceSearch && (history.OldPrice == priceSearch || history.NewPrice == priceSearch))
                     || (history.CreatedBy.HasValue && createdByIds.Contains(history.CreatedBy.Value)));
             }
@@ -2914,10 +2979,14 @@ namespace gpos.Controllers
             return new SetupModulesPageViewModel
             {
                 Search = searchText,
+                BranchId = filterBranchId,
+                DateFrom = dateFrom,
+                DateTo = dateTo,
                 ActiveModalId = activeModalId,
                 ProductPriceHistoryForm = form ?? new ProductPriceHistoryForm(),
                 ProductOptions = await BuildProductOptionsAsync(),
                 ProductBatches = await BuildActiveProductPriceBatchesAsync(),
+                BranchOptions = branchOptions,
                 ProductPriceHistory = histories,
                 ProductPriceHistoryCreatedBy = users,
                 CurrentProductPriceHistoryIds = currentHistoryIds.ToHashSet()
@@ -2952,14 +3021,23 @@ namespace gpos.Controllers
                 .ToListAsync();
         }
 
-        private async Task<SetupModulesPageViewModel> BuildFuelPriceAdjustmentPageAsync(string? search, FuelPriceHistoryForm? form = null, string activeModalId = "")
+        private async Task<SetupModulesPageViewModel> BuildFuelPriceAdjustmentPageAsync(string? search, int? filterBranchId, DateTime? dateFrom, DateTime? dateTo, FuelPriceHistoryForm? form = null, string activeModalId = "")
         {
-            IQueryable<FuelPriceHistory> query = _db.FuelPriceHistory.AsNoTracking().Include(history => history.Fuel);
+            var branchOptions = await BuildCashBranchOptionsAsync("All Branches");
+            branchOptions.ForEach(option => option.Selected = option.Value == filterBranchId?.ToString());
+            IQueryable<FuelPriceHistory> query = _db.FuelPriceHistory.AsNoTracking().Include(history => history.Fuel).Include(history => history.Branch);
             var searchText = (search ?? string.Empty).Trim();
+            if (filterBranchId.HasValue) query = query.Where(history => history.BranchId == filterBranchId.Value);
+            if (dateFrom.HasValue) query = query.Where(history => history.CreatedAt >= dateFrom.Value.Date);
+            if (dateTo.HasValue) query = query.Where(history => history.CreatedAt < dateTo.Value.Date.AddDays(1));
 
             if (!string.IsNullOrWhiteSpace(searchText))
             {
-                query = query.Where(history => history.Fuel != null && history.Fuel.Name.Contains(searchText));
+                var createdByIdsForSearch = await _db.Users.AsNoTracking().Where(user => user.Username.Contains(searchText) || (user.FullName != null && user.FullName.Contains(searchText))).Select(user => user.Id).ToListAsync();
+                query = query.Where(history => (history.Fuel != null && history.Fuel.Name.Contains(searchText))
+                    || (history.Branch != null && history.Branch.Name.Contains(searchText))
+                    || (history.Reason != null && history.Reason.Contains(searchText))
+                    || (history.CreatedBy.HasValue && createdByIdsForSearch.Contains(history.CreatedBy.Value)));
             }
 
             var histories = await query
@@ -2988,9 +3066,13 @@ namespace gpos.Controllers
             return new SetupModulesPageViewModel
             {
                 Search = searchText,
+                BranchId = filterBranchId,
+                DateFrom = dateFrom,
+                DateTo = dateTo,
                 ActiveModalId = activeModalId,
                 FuelPriceHistoryForm = form ?? new FuelPriceHistoryForm(),
                 FuelOptions = await BuildFuelOptionsAsync(),
+                BranchOptions = branchOptions,
                 FuelPriceHistory = histories,
                 FuelPriceHistoryCreatedBy = users,
                 CurrentFuelPriceHistoryIds = currentHistoryIds.ToHashSet()

@@ -415,9 +415,11 @@ namespace gpos.Data
 
                 entity.Property(history => history.Id).HasColumnName("id");
                 entity.Property(history => history.FuelId).HasColumnName("fuel_id");
+                entity.Property(history => history.BranchId).HasColumnName("branch_id");
                 entity.Property(history => history.OldPrice).HasColumnName("old_price").HasPrecision(18, 2);
                 entity.Property(history => history.NewPrice).HasColumnName("new_price").HasPrecision(18, 2);
                 entity.Property(history => history.EffectiveAt).HasColumnName("effective_at");
+                entity.Property(history => history.Reason).HasColumnName("reason").HasMaxLength(255);
                 entity.Property(history => history.Remarks).HasColumnName("remarks").HasMaxLength(255);
                 entity.Property(history => history.CreatedBy).HasColumnName("created_by");
                 entity.Property(history => history.Status).HasColumnName("status").HasDefaultValue(1);
@@ -425,6 +427,8 @@ namespace gpos.Data
                 entity.Property(history => history.UpdatedAt).HasColumnName("updated_at");
 
                 entity.HasIndex(history => history.FuelId);
+                entity.HasIndex(history => history.BranchId);
+                entity.HasOne(history => history.Branch).WithMany().HasForeignKey(history => history.BranchId).OnDelete(DeleteBehavior.Restrict);
                 entity.HasOne(history => history.Fuel)
                     .WithMany(fuel => fuel.FuelPriceHistory)
                     .HasForeignKey(history => history.FuelId)
@@ -438,10 +442,12 @@ namespace gpos.Data
 
                 entity.Property(history => history.Id).HasColumnName("id");
                 entity.Property(history => history.ProductId).HasColumnName("product_id");
+                entity.Property(history => history.BranchId).HasColumnName("branch_id");
                 entity.Property(history => history.BatchId).HasColumnName("batch_id");
                 entity.Property(history => history.OldPrice).HasColumnName("old_price").HasPrecision(10, 2);
                 entity.Property(history => history.NewPrice).HasColumnName("new_price").HasPrecision(10, 2);
                 entity.Property(history => history.EffectiveDate).HasColumnName("effective_date");
+                entity.Property(history => history.Reason).HasColumnName("reason").HasMaxLength(255);
                 entity.Property(history => history.Remarks).HasColumnName("remarks").HasMaxLength(255);
                 entity.Property(history => history.CreatedBy).HasColumnName("created_by");
                 entity.Property(history => history.Status).HasColumnName("status").HasDefaultValue(1);
@@ -449,6 +455,8 @@ namespace gpos.Data
                 entity.Property(history => history.UpdatedAt).HasColumnName("updated_at");
 
                 entity.HasIndex(history => history.ProductId);
+                entity.HasIndex(history => history.BranchId);
+                entity.HasOne(history => history.Branch).WithMany().HasForeignKey(history => history.BranchId).OnDelete(DeleteBehavior.Restrict);
                 entity.HasIndex(history => history.BatchId);
                 entity.HasIndex(history => history.CreatedBy);
                 entity.HasOne(history => history.Product)
