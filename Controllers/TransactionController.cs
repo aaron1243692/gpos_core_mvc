@@ -2236,9 +2236,92 @@ namespace gpos.Controllers
         public IActionResult VoidSale() => View();
         public IActionResult VoidProduct() => View();
         public IActionResult VoidFuel() => View();
-        public IActionResult DisplayStockAdjustment() => View();
-        public IActionResult WarehouseStockAdjustment() => View();
-        public IActionResult TankFuelAdjustment() => View();
+        public async Task<IActionResult> DisplayStockAdjustment(string? search, int? branchId, DateTime? dateFrom, DateTime? dateTo, string? status, int? editId, int? detailsId)
+            => View(await BuildStockAdjustmentPageAsync("Display", search, branchId, dateFrom, dateTo, status, editId, detailsId));
+        public async Task<IActionResult> WarehouseStockAdjustment(string? search, int? branchId, DateTime? dateFrom, DateTime? dateTo, string? status, int? editId, int? detailsId)
+            => View(await BuildStockAdjustmentPageAsync("Warehouse", search, branchId, dateFrom, dateTo, status, editId, detailsId));
+        public async Task<IActionResult> TankFuelAdjustment(string? search, int? branchId, DateTime? dateFrom, DateTime? dateTo, string? status, int? editId, int? detailsId)
+            => View(await BuildStockAdjustmentPageAsync("Fuel", search, branchId, dateFrom, dateTo, status, editId, detailsId));
+
+        [HttpPost, ValidateAntiForgeryToken]
+        public async Task<IActionResult> SaveStockAdjustment([Bind(Prefix = "Form")] StockAdjustmentForm form)
+        {
+            var scope = NormalizeAdjustmentScope(form.Scope);
+            ValidateAdjustmentTarget(form, scope);
+            var userId = CurrentUserId();
+            if (!userId.HasValue) ModelState.AddModelError(string.Empty, "Please sign in before saving an adjustment.");
+            var target = await LoadAdjustmentTargetAsync(form, scope, false);
+            if (target is null) ModelState.AddModelError(string.Empty, "Select a valid stock item for the selected branch.");
+            if (!ModelState.IsValid) return View(AdjustmentViewName(scope), await BuildStockAdjustmentPageAsync(scope, null, form.BranchId, null, null, null, form.Id, null, form));
+
+            var adjustment = form.Id > 0 ? await _db.StockAdjustments.FirstOrDefaultAsync(x => x.Id == form.Id && x.Scope == scope) : null;
+            if (form.Id > 0 && (adjustment is null || adjustment.Status != "Draft")) return AdjustmentRedirect(scope, "Only draft adjustments can be edited.");
+            var now = DateTime.Now;
+            adjustment ??= new StockAdjustment { AdjustmentNo = await GenerateAdjustmentNoAsync(now), Scope = scope, AdjustedBy = userId!.Value, CreatedAt = now };
+            PopulateAdjustment(adjustment, form, target!, scope, now);
+            if (adjustment.Id == 0) _db.StockAdjustments.Add(adjustment);
+            await _db.SaveChangesAsync();
+            return AdjustmentRedirect(scope, "Adjustment draft saved.");
+        }
+
+        [HttpPost, ValidateAntiForgeryToken]
+        public async Task<IActionResult> PostStockAdjustment(int id)
+        {
+            var userId = CurrentUserId();
+            var adjustment = await _db.StockAdjustments.FirstOrDefaultAsync(x => x.Id == id);
+            if (!userId.HasValue || adjustment is null) return AdjustmentRedirect(adjustment?.Scope ?? "Warehouse", "Adjustment was not found.");
+            if (adjustment.Status != "Draft") return AdjustmentRedirect(adjustment.Scope, "Only draft adjustments can be posted.");
+            await using var transaction = await _db.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
+            try
+            {
+                var target = await LoadAdjustmentTargetAsync(adjustment, true) ?? throw new InvalidOperationException("The stock item no longer exists.");
+                ApplyPostedAdjustment(adjustment, target, userId.Value, DateTime.Now);
+                if (adjustment.ReversalOfAdjustmentId.HasValue)
+                {
+                    var original = await _db.StockAdjustments.FirstOrDefaultAsync(x => x.Id == adjustment.ReversalOfAdjustmentId.Value && x.Status == "Posted");
+                    if (original is null || original.ReversedByAdjustmentId.HasValue) throw new InvalidOperationException("The original adjustment cannot be reversed.");
+                    original.Status = "Reversed"; original.ReversedByAdjustmentId = adjustment.Id; original.UpdatedAt = DateTime.Now;
+                }
+                await _db.SaveChangesAsync();
+                await transaction.CommitAsync();
+                return AdjustmentRedirect(adjustment.Scope, "Adjustment posted successfully.");
+            }
+            catch (Exception ex) { await transaction.RollbackAsync(); return AdjustmentRedirect(adjustment.Scope, $"Posting failed: {ex.Message}"); }
+        }
+
+        [HttpPost, ValidateAntiForgeryToken]
+        public async Task<IActionResult> CancelStockAdjustment(int id)
+        {
+            var adjustment = await _db.StockAdjustments.FirstOrDefaultAsync(x => x.Id == id);
+            var userId = CurrentUserId();
+            if (adjustment is null || !userId.HasValue) return AdjustmentRedirect(adjustment?.Scope ?? "Warehouse", "Adjustment was not found.");
+            if (adjustment.Status != "Draft") return AdjustmentRedirect(adjustment.Scope, "Only draft adjustments can be cancelled.");
+            adjustment.Status = "Cancelled"; adjustment.CancelledBy = userId; adjustment.CancelledAt = DateTime.Now; adjustment.UpdatedAt = DateTime.Now;
+            await _db.SaveChangesAsync();
+            return AdjustmentRedirect(adjustment.Scope, "Adjustment cancelled.");
+        }
+
+        [HttpPost, ValidateAntiForgeryToken]
+        public async Task<IActionResult> ReverseStockAdjustment(int id)
+        {
+            var original = await _db.StockAdjustments.FirstOrDefaultAsync(x => x.Id == id);
+            var userId = CurrentUserId();
+            if (original is null || !userId.HasValue) return AdjustmentRedirect(original?.Scope ?? "Warehouse", "Adjustment was not found.");
+            if (original.Status != "Posted" || original.ReversedByAdjustmentId.HasValue) return AdjustmentRedirect(original.Scope, "Only an unreversed posted adjustment can be reversed.");
+            var now = DateTime.Now;
+            var reversal = new StockAdjustment
+            {
+                AdjustmentNo = await GenerateAdjustmentNoAsync(now), Scope = original.Scope, BusinessDate = DateTime.Today,
+                BranchId = original.BranchId, WarehouseStockId = original.WarehouseStockId, DisplayStockId = original.DisplayStockId, TankId = original.TankId,
+                ProductId = original.ProductId, BatchId = original.BatchId, FuelId = original.FuelId,
+                AdjustmentType = original.SignedQuantity < 0 ? "Increase" : "Decrease", AdjustmentQuantity = original.AdjustmentQuantity,
+                Reason = $"Reversal of {original.AdjustmentNo}", Remarks = $"Reversal of {original.AdjustmentNo}. {original.Remarks}".Trim(),
+                Status = "Draft", AdjustedBy = userId.Value, CreatedAt = now, ReversalOfAdjustmentId = original.Id
+            };
+            _db.StockAdjustments.Add(reversal);
+            await _db.SaveChangesAsync();
+            return AdjustmentRedirect(original.Scope, $"Reversal {reversal.AdjustmentNo} created as Draft. Review and post it to update stock.");
+        }
         public async Task<IActionResult> ProductPriceAdjustment(string? search, int? filterBranchId, DateTime? dateFrom, DateTime? dateTo)
         {
             return View(await BuildProductPriceAdjustmentPageAsync(search, filterBranchId, dateFrom, dateTo));
@@ -5027,6 +5110,74 @@ namespace gpos.Controllers
             return string.Equals((paymentMethod ?? string.Empty).Trim(), "Points", StringComparison.OrdinalIgnoreCase)
                 ? "Points"
                 : "Cash";
+        }
+
+        private async Task<StockAdjustmentPageViewModel> BuildStockAdjustmentPageAsync(string scope, string? search, int? branchId, DateTime? dateFrom, DateTime? dateTo, string? status, int? editId, int? detailsId, StockAdjustmentForm? suppliedForm = null)
+        {
+            scope = NormalizeAdjustmentScope(scope);
+            var query = _db.StockAdjustments.AsNoTracking().Include(x => x.Branch).Include(x => x.Product).Include(x => x.Batch).Include(x => x.Fuel).Include(x => x.Tank).Include(x => x.AdjustedByUser).Where(x => x.Scope == scope);
+            if (branchId > 0) query = query.Where(x => x.BranchId == branchId);
+            if (dateFrom.HasValue) query = query.Where(x => x.BusinessDate >= dateFrom.Value.Date);
+            if (dateTo.HasValue) query = query.Where(x => x.BusinessDate < dateTo.Value.Date.AddDays(1));
+            if (!string.IsNullOrWhiteSpace(status)) query = query.Where(x => x.Status == status);
+            if (!string.IsNullOrWhiteSpace(search)) query = query.Where(x => x.AdjustmentNo.Contains(search) || x.Reason.Contains(search) || (x.Remarks != null && x.Remarks.Contains(search)) || (x.Product != null && x.Product.Name.Contains(search)) || (x.Fuel != null && x.Fuel.Name.Contains(search)));
+            var form = suppliedForm;
+            if (form is null && editId.HasValue)
+            {
+                var x = await _db.StockAdjustments.AsNoTracking().FirstOrDefaultAsync(a => a.Id == editId && a.Scope == scope && a.Status == "Draft");
+                if (x != null) form = new StockAdjustmentForm { Id = x.Id, Scope = scope, BusinessDate = x.BusinessDate, BranchId = x.BranchId, WarehouseStockId = x.WarehouseStockId, DisplayStockId = x.DisplayStockId, TankId = x.TankId, AdjustmentType = x.AdjustmentType, AdjustmentQuantity = x.AdjustmentQuantity, Reason = x.Reason, Remarks = x.Remarks };
+            }
+            form ??= new StockAdjustmentForm { Scope = scope, BusinessDate = DateTime.Today, BranchId = branchId ?? 0 };
+            return new StockAdjustmentPageViewModel { Scope = scope, Title = scope == "Fuel" ? "Fuel Stock Adjustment" : $"{scope} Stock Adjustment", PageAction = AdjustmentViewName(scope), Search = search ?? "", BranchId = branchId, DateFrom = dateFrom, DateTo = dateTo, Status = status, Form = form, Rows = await query.OrderByDescending(x => x.BusinessDate).ThenByDescending(x => x.Id).ToListAsync(), BranchOptions = await BuildBranchFilterOptionsAsync(), Targets = await BuildAdjustmentTargetsAsync(scope), DetailsId = detailsId };
+        }
+
+        private async Task<List<StockAdjustmentTargetOption>> BuildAdjustmentTargetsAsync(string scope)
+        {
+            if (scope == "Warehouse") return await _db.WarehouseStocks.AsNoTracking().Include(x => x.Product).Include(x => x.Batch).Where(x => x.BranchId.HasValue).Select(x => new StockAdjustmentTargetOption { Id = x.Id, BranchId = x.BranchId!.Value, Label = x.Product!.Name + " / " + x.Batch!.BatchNo, ProductOrFuel = x.Product.Name, BatchOrTank = x.Batch.BatchNo, CurrentQuantity = x.Quantity }).ToListAsync();
+            if (scope == "Display") return await _db.DisplayStocks.AsNoTracking().Include(x => x.Product).Include(x => x.Batch).Where(x => x.BranchId.HasValue).Select(x => new StockAdjustmentTargetOption { Id = x.Id, BranchId = x.BranchId!.Value, Label = x.Product!.Name + " / " + x.Batch!.BatchNo, ProductOrFuel = x.Product.Name, BatchOrTank = x.Batch.BatchNo, CurrentQuantity = x.Quantity }).ToListAsync();
+            return await _db.Tanks.AsNoTracking().Include(x => x.Fuel).Where(x => x.BranchId.HasValue && x.IsActive && x.Status == 1).Select(x => new StockAdjustmentTargetOption { Id = x.Id, BranchId = x.BranchId!.Value, Label = x.TankNo + " / " + x.Fuel!.Name, ProductOrFuel = x.Fuel.Name, BatchOrTank = x.TankNo, CurrentQuantity = x.CurrentLiters, Capacity = x.CapacityLiters }).ToListAsync();
+        }
+
+        private static string NormalizeAdjustmentScope(string? scope) => scope is "Display" or "Fuel" ? scope : "Warehouse";
+        private static string AdjustmentViewName(string scope) => scope == "Display" ? nameof(DisplayStockAdjustment) : scope == "Fuel" ? nameof(TankFuelAdjustment) : nameof(WarehouseStockAdjustment);
+        private IActionResult AdjustmentRedirect(string scope, string message) { TempData["AdjustmentMessage"] = message; return RedirectToAction(AdjustmentViewName(NormalizeAdjustmentScope(scope))); }
+        private static void ValidateAdjustmentTarget(StockAdjustmentForm form, string scope)
+        {
+            if (scope == "Warehouse" && !form.WarehouseStockId.HasValue) form.WarehouseStockId = 0;
+            if (scope == "Display" && !form.DisplayStockId.HasValue) form.DisplayStockId = 0;
+            if (scope == "Fuel" && !form.TankId.HasValue) form.TankId = 0;
+        }
+        private async Task<object?> LoadAdjustmentTargetAsync(StockAdjustmentForm form, string scope, bool tracking)
+        {
+            if (scope == "Warehouse") return await _db.WarehouseStocks.FirstOrDefaultAsync(x => x.Id == form.WarehouseStockId && x.BranchId == form.BranchId);
+            if (scope == "Display") return await _db.DisplayStocks.FirstOrDefaultAsync(x => x.Id == form.DisplayStockId && x.BranchId == form.BranchId);
+            return await _db.Tanks.FirstOrDefaultAsync(x => x.Id == form.TankId && x.BranchId == form.BranchId && x.IsActive && x.Status == 1);
+        }
+        private async Task<object?> LoadAdjustmentTargetAsync(StockAdjustment x, bool tracking)
+        {
+            if (x.Scope == "Warehouse") return await _db.WarehouseStocks.FirstOrDefaultAsync(s => s.Id == x.WarehouseStockId && s.BranchId == x.BranchId);
+            if (x.Scope == "Display") return await _db.DisplayStocks.FirstOrDefaultAsync(s => s.Id == x.DisplayStockId && s.BranchId == x.BranchId);
+            return await _db.Tanks.FirstOrDefaultAsync(s => s.Id == x.TankId && s.BranchId == x.BranchId && s.IsActive && s.Status == 1);
+        }
+        private static decimal TargetQuantity(object target) => target is WarehouseStock w ? w.Quantity : target is DisplayStock d ? d.Quantity : ((Tank)target).CurrentLiters;
+        private static void PopulateAdjustment(StockAdjustment x, StockAdjustmentForm f, object target, string scope, DateTime now)
+        {
+            x.BusinessDate = f.BusinessDate!.Value.Date; x.BranchId = f.BranchId; x.AdjustmentType = f.AdjustmentType == "Increase" ? "Increase" : "Decrease"; x.AdjustmentQuantity = f.AdjustmentQuantity; x.Reason = f.Reason.Trim(); x.Remarks = f.Remarks?.Trim(); x.UpdatedAt = now;
+            x.WarehouseStockId = target is WarehouseStock w ? w.Id : null; x.DisplayStockId = target is DisplayStock d ? d.Id : null; x.TankId = target is Tank t ? t.Id : null;
+            x.ProductId = target is WarehouseStock ww ? ww.ProductId : target is DisplayStock dd ? dd.ProductId : null; x.BatchId = target is WarehouseStock wb ? wb.BatchId : target is DisplayStock db ? db.BatchId : null; x.FuelId = target is Tank ft ? ft.FuelId : null;
+        }
+        private static void ApplyPostedAdjustment(StockAdjustment x, object target, int userId, DateTime now)
+        {
+            var before = TargetQuantity(target); var signed = x.AdjustmentType == "Increase" ? x.AdjustmentQuantity : -x.AdjustmentQuantity; var after = before + signed;
+            if (x.AdjustmentQuantity <= 0 || after < 0) throw new InvalidOperationException("Adjustment would create an invalid negative balance.");
+            if (target is Tank tank && tank.CapacityLiters > 0 && after > tank.CapacityLiters) throw new InvalidOperationException("Adjustment would exceed tank capacity.");
+            if (target is WarehouseStock w) { w.Quantity = after; w.UpdatedAt = now; } else if (target is DisplayStock d) { d.Quantity = after; d.UpdatedAt = now; } else { var t = (Tank)target; t.CurrentLiters = after; t.UpdatedAt = now; }
+            x.BeforeQuantity = before; x.SignedQuantity = signed; x.AfterQuantity = after; x.Status = "Posted"; x.PostedBy = userId; x.PostedAt = now; x.UpdatedAt = now;
+        }
+        private async Task<string> GenerateAdjustmentNoAsync(DateTime now)
+        {
+            var prefix = $"SA-{now:yyyyMMdd}-"; var last = await _db.StockAdjustments.Where(x => x.AdjustmentNo.StartsWith(prefix)).OrderByDescending(x => x.Id).Select(x => x.AdjustmentNo).FirstOrDefaultAsync();
+            var sequence = last != null && int.TryParse(last[(last.LastIndexOf('-') + 1)..], out var n) ? n + 1 : 1; return $"{prefix}{sequence:000000}";
         }
 
         private async Task<string> BranchNameAsync(int? branchId)

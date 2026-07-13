@@ -15,23 +15,23 @@
             {
                 <div class="alert alert-warning">@TempData["TransferMessage"]</div>
             }
-            <form asp-action="BranchToBranchProduct" method="get" class="transaction-ui-toolbar product-receiving-toolbar toolbar flex-wrap">
-                <input class="form-control transaction-ui-search" name="search" value="@Model.Search" type="search" placeholder="Search transfer, branch, product, batch, status..." />
-                <select class="form-select" name="sourceBranchId">
+            <form asp-action="BranchToBranchProduct" method="get" class="transaction-ui-toolbar product-receiving-toolbar product-receiving-filter-toolbar toolbar d-flex align-items-end gap-2 flex-wrap">
+                <input class="form-control transaction-ui-search product-receiving-filter-search" name="search" value="@Model.Search" type="search" placeholder="Search transfer, branch, product, batch, status..." />
+                <select class="form-select product-receiving-filter-branch" name="sourceBranchId" aria-label="Source branch filter">
                     <option value="">All Source Branches</option>
                     @foreach (var branch in Model.BranchOptions)
                     {
                         <option value="@branch.Value" selected="@(Model.SourceFilterBranchId?.ToString() == branch.Value ? "selected" : null)">@branch.Text</option>
                     }
                 </select>
-                <select class="form-select" name="destinationBranchId">
+                <select class="form-select product-receiving-filter-branch" name="destinationBranchId" aria-label="Destination branch filter">
                     <option value="">All Destination Branches</option>
                     @foreach (var branch in Model.BranchOptions)
                     {
                         <option value="@branch.Value" selected="@(Model.DestinationFilterBranchId?.ToString() == branch.Value ? "selected" : null)">@branch.Text</option>
                     }
                 </select>
-                <button class="btn btn-outline-primary" type="submit">Search</button>
+                <button class="btn btn-primary" type="submit">Search</button>
                 <a class="btn btn-outline-secondary" asp-action="BranchToBranchProduct">Clear</a>
             </form>
             <div class="table-responsive transaction-ui-table-wrap product-receiving-table-wrapper">

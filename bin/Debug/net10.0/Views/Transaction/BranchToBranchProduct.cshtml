@@ -1,4 +1,8 @@
 @model gpos.Models.ViewModels.StockTransferPageViewModel
+@{
+    var sourceBranchName = Model.BranchOptions.FirstOrDefault(item => item.Value == Model.Form.SourceBranchId?.ToString())?.Text ?? string.Empty;
+    var destinationBranchName = Model.BranchOptions.FirstOrDefault(item => item.Value == Model.Form.DestinationBranchId?.ToString())?.Text ?? string.Empty;
+}
 
 <section class="product-receiving-page">
     <div class="content-card transaction-ui-card product-receiving-container">
@@ -11,9 +15,24 @@
             {
                 <div class="alert alert-warning">@TempData["TransferMessage"]</div>
             }
-            <form asp-action="BranchToBranchProduct" method="get" class="transaction-ui-toolbar product-receiving-toolbar toolbar">
-                <input class="form-control transaction-ui-search" name="search" value="@Model.Search" type="search" placeholder="Search transfer, branch, product, batch, status..." />
-                <button class="btn btn-outline-primary" type="submit">Search</button>
+            <form asp-action="BranchToBranchProduct" method="get" class="transaction-ui-toolbar product-receiving-toolbar product-receiving-filter-toolbar toolbar d-flex align-items-end gap-2 flex-wrap">
+                <input class="form-control transaction-ui-search product-receiving-filter-search" name="search" value="@Model.Search" type="search" placeholder="Search transfer, branch, product, batch, status..." />
+                <select class="form-select product-receiving-filter-branch" name="sourceBranchId" aria-label="Source branch filter">
+                    <option value="">All Source Branches</option>
+                    @foreach (var branch in Model.BranchOptions)
+                    {
+                        <option value="@branch.Value" selected="@(Model.SourceFilterBranchId?.ToString() == branch.Value ? "selected" : null)">@branch.Text</option>
+                    }
+                </select>
+                <select class="form-select product-receiving-filter-branch" name="destinationBranchId" aria-label="Destination branch filter">
+                    <option value="">All Destination Branches</option>
+                    @foreach (var branch in Model.BranchOptions)
+                    {
+                        <option value="@branch.Value" selected="@(Model.DestinationFilterBranchId?.ToString() == branch.Value ? "selected" : null)">@branch.Text</option>
+                    }
+                </select>
+                <button class="btn btn-primary" type="submit">Search</button>
+                <a class="btn btn-outline-secondary" asp-action="BranchToBranchProduct">Clear</a>
             </form>
             <div class="table-responsive transaction-ui-table-wrap product-receiving-table-wrapper">
                 <table class="table app-table table-sm align-middle mb-0">
@@ -46,8 +65,26 @@
                 <div class="modal-header"><h2 class="modal-title fs-5">Add Transfer</h2><button class="btn-close" type="button" data-bs-dismiss="modal"></button></div>
                 <div class="modal-body">
                     <div class="row g-3">
-                        <div class="col-md-6"><label asp-for="Form.SourceBranchId" class="form-label">Source Branch</label><select asp-for="Form.SourceBranchId" asp-items="Model.BranchOptions" class="form-select" data-source-branch-select></select></div>
-                        <div class="col-md-6"><label asp-for="Form.DestinationBranchId" class="form-label">Destination Branch</label><select asp-for="Form.DestinationBranchId" asp-items="Model.BranchOptions" class="form-select"></select></div>
+                        <div class="col-md-6">
+                            <label asp-for="Form.SourceBranchId" class="form-label">Source Branch</label>
+                            <input asp-for="Form.SourceBranchId" id="transferSourceBranchId" type="hidden" data-source-branch-select />
+                            <div class="input-group" data-branch-selector data-branch-hidden="#transferSourceBranchId" data-branch-display="#transferSourceBranchDisplay" data-branch-empty-text="Select source branch">
+                                <input id="transferSourceBranchDisplay" class="form-control" type="text" value="@sourceBranchName" placeholder="Select source branch" readonly />
+                                <button type="button" class="btn btn-outline-secondary branch-select-btn" data-branch-open>
+                                    <img src="/icons/search.png" alt="Search" style="width:16px;height:16px;" />
+                                </button>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label asp-for="Form.DestinationBranchId" class="form-label">Destination Branch</label>
+                            <input asp-for="Form.DestinationBranchId" id="transferDestinationBranchId" type="hidden" />
+                            <div class="input-group" data-branch-selector data-branch-hidden="#transferDestinationBranchId" data-branch-display="#transferDestinationBranchDisplay" data-branch-empty-text="Select destination branch">
+                                <input id="transferDestinationBranchDisplay" class="form-control" type="text" value="@destinationBranchName" placeholder="Select destination branch" readonly />
+                                <button type="button" class="btn btn-outline-secondary branch-select-btn" data-branch-open>
+                                    <img src="/icons/search.png" alt="Search" style="width:16px;height:16px;" />
+                                </button>
+                            </div>
+                        </div>
                         <div class="col-12">
                             <label class="form-label">Product</label>
                             <div class="input-group">

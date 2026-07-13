@@ -72,10 +72,57 @@ namespace gpos.Data
         public DbSet<CashIn> CashIns { get; set; }
         public DbSet<CashOut> CashOuts { get; set; }
         public DbSet<CashRemittance> CashRemittances { get; set; }
+        public DbSet<StockAdjustment> StockAdjustments { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
+
+            modelBuilder.Entity<StockAdjustment>(entity =>
+            {
+                entity.ToTable("stock_adjustments");
+                entity.HasKey(x => x.Id);
+                entity.Property(x => x.Id).HasColumnName("id");
+                entity.Property(x => x.AdjustmentNo).HasColumnName("adjustment_no").HasMaxLength(30);
+                entity.Property(x => x.Scope).HasColumnName("scope").HasMaxLength(20);
+                entity.Property(x => x.BusinessDate).HasColumnName("business_date");
+                entity.Property(x => x.BranchId).HasColumnName("branch_id");
+                entity.Property(x => x.WarehouseStockId).HasColumnName("warehouse_stock_id");
+                entity.Property(x => x.DisplayStockId).HasColumnName("display_stock_id");
+                entity.Property(x => x.TankId).HasColumnName("tank_id");
+                entity.Property(x => x.ProductId).HasColumnName("product_id");
+                entity.Property(x => x.BatchId).HasColumnName("batch_id");
+                entity.Property(x => x.FuelId).HasColumnName("fuel_id");
+                entity.Property(x => x.AdjustmentType).HasColumnName("adjustment_type").HasMaxLength(10);
+                entity.Property(x => x.BeforeQuantity).HasColumnName("before_quantity").HasPrecision(18, 3);
+                entity.Property(x => x.AdjustmentQuantity).HasColumnName("adjustment_quantity").HasPrecision(18, 3);
+                entity.Property(x => x.SignedQuantity).HasColumnName("signed_quantity").HasPrecision(18, 3);
+                entity.Property(x => x.AfterQuantity).HasColumnName("after_quantity").HasPrecision(18, 3);
+                entity.Property(x => x.Reason).HasColumnName("reason").HasMaxLength(100);
+                entity.Property(x => x.Remarks).HasColumnName("remarks").HasMaxLength(1000);
+                entity.Property(x => x.Status).HasColumnName("status").HasMaxLength(20);
+                entity.Property(x => x.AdjustedBy).HasColumnName("adjusted_by");
+                entity.Property(x => x.CreatedAt).HasColumnName("created_at");
+                entity.Property(x => x.UpdatedAt).HasColumnName("updated_at");
+                entity.Property(x => x.PostedBy).HasColumnName("posted_by");
+                entity.Property(x => x.PostedAt).HasColumnName("posted_at");
+                entity.Property(x => x.CancelledBy).HasColumnName("cancelled_by");
+                entity.Property(x => x.CancelledAt).HasColumnName("cancelled_at");
+                entity.Property(x => x.ReversalOfAdjustmentId).HasColumnName("reversal_of_adjustment_id");
+                entity.Property(x => x.ReversedByAdjustmentId).HasColumnName("reversed_by_adjustment_id");
+                entity.HasIndex(x => x.AdjustmentNo).IsUnique();
+                entity.HasIndex(x => new { x.Scope, x.BranchId, x.BusinessDate, x.Status });
+                entity.HasOne(x => x.Branch).WithMany().HasForeignKey(x => x.BranchId).OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne(x => x.WarehouseStock).WithMany().HasForeignKey(x => x.WarehouseStockId).OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne(x => x.DisplayStock).WithMany().HasForeignKey(x => x.DisplayStockId).OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne(x => x.Tank).WithMany().HasForeignKey(x => x.TankId).OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne(x => x.Product).WithMany().HasForeignKey(x => x.ProductId).OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne(x => x.Batch).WithMany().HasForeignKey(x => x.BatchId).OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne(x => x.Fuel).WithMany().HasForeignKey(x => x.FuelId).OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne(x => x.AdjustedByUser).WithMany().HasForeignKey(x => x.AdjustedBy).OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne(x => x.PostedByUser).WithMany().HasForeignKey(x => x.PostedBy).OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne(x => x.ReversalOfAdjustment).WithMany().HasForeignKey(x => x.ReversalOfAdjustmentId).OnDelete(DeleteBehavior.Restrict);
+            });
 
             modelBuilder.Entity<User>(entity =>
             {

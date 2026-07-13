@@ -3129,6 +3129,168 @@ namespace gpos.Migrations
                     b.ToTable("station_settings", (string)null);
                 });
 
+            modelBuilder.Entity("gpos.Models.StockAdjustment", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("id");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("AdjustedBy")
+                        .HasColumnType("int")
+                        .HasColumnName("adjusted_by");
+
+                    b.Property<string>("AdjustmentNo")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("varchar(30)")
+                        .HasColumnName("adjustment_no");
+
+                    b.Property<decimal>("AdjustmentQuantity")
+                        .HasPrecision(18, 3)
+                        .HasColumnType("decimal(18,3)")
+                        .HasColumnName("adjustment_quantity");
+
+                    b.Property<string>("AdjustmentType")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("varchar(10)")
+                        .HasColumnName("adjustment_type");
+
+                    b.Property<decimal>("AfterQuantity")
+                        .HasPrecision(18, 3)
+                        .HasColumnType("decimal(18,3)")
+                        .HasColumnName("after_quantity");
+
+                    b.Property<int?>("BatchId")
+                        .HasColumnType("int")
+                        .HasColumnName("batch_id");
+
+                    b.Property<decimal>("BeforeQuantity")
+                        .HasPrecision(18, 3)
+                        .HasColumnType("decimal(18,3)")
+                        .HasColumnName("before_quantity");
+
+                    b.Property<int>("BranchId")
+                        .HasColumnType("int")
+                        .HasColumnName("branch_id");
+
+                    b.Property<DateTime>("BusinessDate")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("business_date");
+
+                    b.Property<DateTime?>("CancelledAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("cancelled_at");
+
+                    b.Property<int?>("CancelledBy")
+                        .HasColumnType("int")
+                        .HasColumnName("cancelled_by");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("created_at");
+
+                    b.Property<int?>("DisplayStockId")
+                        .HasColumnType("int")
+                        .HasColumnName("display_stock_id");
+
+                    b.Property<int?>("FuelId")
+                        .HasColumnType("int")
+                        .HasColumnName("fuel_id");
+
+                    b.Property<DateTime?>("PostedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("posted_at");
+
+                    b.Property<int?>("PostedBy")
+                        .HasColumnType("int")
+                        .HasColumnName("posted_by");
+
+                    b.Property<int?>("ProductId")
+                        .HasColumnType("int")
+                        .HasColumnName("product_id");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("varchar(100)")
+                        .HasColumnName("reason");
+
+                    b.Property<string>("Remarks")
+                        .HasMaxLength(1000)
+                        .HasColumnType("varchar(1000)")
+                        .HasColumnName("remarks");
+
+                    b.Property<int?>("ReversalOfAdjustmentId")
+                        .HasColumnType("int")
+                        .HasColumnName("reversal_of_adjustment_id");
+
+                    b.Property<int?>("ReversedByAdjustmentId")
+                        .HasColumnType("int")
+                        .HasColumnName("reversed_by_adjustment_id");
+
+                    b.Property<string>("Scope")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("varchar(20)")
+                        .HasColumnName("scope");
+
+                    b.Property<decimal>("SignedQuantity")
+                        .HasPrecision(18, 3)
+                        .HasColumnType("decimal(18,3)")
+                        .HasColumnName("signed_quantity");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("varchar(20)")
+                        .HasColumnName("status");
+
+                    b.Property<int?>("TankId")
+                        .HasColumnType("int")
+                        .HasColumnName("tank_id");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("updated_at");
+
+                    b.Property<int?>("WarehouseStockId")
+                        .HasColumnType("int")
+                        .HasColumnName("warehouse_stock_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AdjustedBy");
+
+                    b.HasIndex("AdjustmentNo")
+                        .IsUnique();
+
+                    b.HasIndex("BatchId");
+
+                    b.HasIndex("BranchId");
+
+                    b.HasIndex("DisplayStockId");
+
+                    b.HasIndex("FuelId");
+
+                    b.HasIndex("PostedBy");
+
+                    b.HasIndex("ProductId");
+
+                    b.HasIndex("ReversalOfAdjustmentId");
+
+                    b.HasIndex("TankId");
+
+                    b.HasIndex("WarehouseStockId");
+
+                    b.HasIndex("Scope", "BranchId", "BusinessDate", "Status");
+
+                    b.ToTable("stock_adjustments", (string)null);
+                });
+
             modelBuilder.Entity("gpos.Models.StockMovement", b =>
                 {
                     b.Property<int>("Id")
@@ -4892,6 +5054,81 @@ namespace gpos.Migrations
                         .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("DefaultBranch");
+                });
+
+            modelBuilder.Entity("gpos.Models.StockAdjustment", b =>
+                {
+                    b.HasOne("gpos.Models.User", "AdjustedByUser")
+                        .WithMany()
+                        .HasForeignKey("AdjustedBy")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("gpos.Models.ProductBatch", "Batch")
+                        .WithMany()
+                        .HasForeignKey("BatchId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("gpos.Models.Branch", "Branch")
+                        .WithMany()
+                        .HasForeignKey("BranchId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("gpos.Models.DisplayStock", "DisplayStock")
+                        .WithMany()
+                        .HasForeignKey("DisplayStockId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("gpos.Models.Fuel", "Fuel")
+                        .WithMany()
+                        .HasForeignKey("FuelId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("gpos.Models.User", "PostedByUser")
+                        .WithMany()
+                        .HasForeignKey("PostedBy")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("gpos.Models.Product", "Product")
+                        .WithMany()
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("gpos.Models.StockAdjustment", "ReversalOfAdjustment")
+                        .WithMany()
+                        .HasForeignKey("ReversalOfAdjustmentId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("gpos.Models.Tank", "Tank")
+                        .WithMany()
+                        .HasForeignKey("TankId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("gpos.Models.WarehouseStock", "WarehouseStock")
+                        .WithMany()
+                        .HasForeignKey("WarehouseStockId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("AdjustedByUser");
+
+                    b.Navigation("Batch");
+
+                    b.Navigation("Branch");
+
+                    b.Navigation("DisplayStock");
+
+                    b.Navigation("Fuel");
+
+                    b.Navigation("PostedByUser");
+
+                    b.Navigation("Product");
+
+                    b.Navigation("ReversalOfAdjustment");
+
+                    b.Navigation("Tank");
+
+                    b.Navigation("WarehouseStock");
                 });
 
             modelBuilder.Entity("gpos.Models.StockMovement", b =>
