@@ -42,6 +42,7 @@
                 <col class="col-batch-number" />
                 <col class="col-supplier" />
                 <col class="col-received-liters" />
+                <col class="col-received-liters" />
                 <col class="col-cost-price" />
                 <col class="col-received-date" />
                 <col class="col-status" />
@@ -56,6 +57,7 @@
                     <th class="col-batch-number text-nowrap" scope="col">Batch No</th>
                     <th class="col-supplier text-nowrap" scope="col">Supplier</th>
                     <th class="col-received-liters text-nowrap" scope="col">Liters</th>
+                    <th class="col-received-liters text-nowrap" scope="col">Remaining Liters</th>
                     <th class="col-cost-price text-nowrap" scope="col">Cost/Liter</th>
                     <th class="col-received-date text-nowrap" scope="col">Received Date</th>
                     <th class="col-status status-cell text-nowrap" scope="col">Status</th>
@@ -66,19 +68,20 @@
                 @if (Model.FuelBatches.Count == 0)
                 {
                     <tr>
-                        <td class="text-center text-muted fw-bold" colspan="11">No fuel batches found.</td>
+                        <td class="text-center text-muted fw-bold" colspan="12">No fuel batches found.</td>
                     </tr>
                 }
                 @for (var index = 0; index < Model.FuelBatches.Count; index += 1)
                 {
                     <tr>
                         <td class="col-no">@(index + 1)</td>
-                        <td class="text-cell">@(Model.FuelBatches[index].Branch?.Name ?? Model.FuelBatches[index].Tank?.Branch?.Name ?? "-")</td>
+                        <td class="text-cell">@(Model.FuelBatches[index].Tank?.Branch?.Name ?? "-")</td>
                         <td class="text-cell">@(Model.FuelBatches[index].Tank?.TankNo ?? "-")</td>
-                        <td class="col-fuel text-cell text-truncate">@(Model.FuelBatches[index].Fuel?.Name ?? Model.FuelBatches[index].Tank?.Fuel?.Name ?? "-")</td>
+                        <td class="col-fuel text-cell text-truncate">@(Model.FuelBatches[index].Tank?.Fuel?.Name ?? "-")</td>
                         <td class="col-batch-number text-nowrap">@Model.FuelBatches[index].BatchNo</td>
                         <td class="col-supplier text-cell text-truncate">@(Model.FuelBatches[index].Supplier?.Name ?? "-")</td>
                         <td class="col-received-liters number-cell">@Model.FuelBatches[index].ReceivedLiters.ToString("#,0.##", CultureInfo.InvariantCulture) L</td>
+                        <td class="col-received-liters number-cell">@Model.FuelBatches[index].RemainingLiters.ToString("#,0.##", CultureInfo.InvariantCulture) L</td>
                         <td class="col-cost-price number-cell">&#8369;@Model.FuelBatches[index].CostPricePerLiter.ToString("N2", CultureInfo.InvariantCulture)</td>
                         <td class="col-received-date number-cell">@Model.FuelBatches[index].ReceivedDate.ToString("MMM dd, yyyy", CultureInfo.InvariantCulture)</td>
                         <td class="col-status status-cell">
@@ -139,11 +142,6 @@
                             <label asp-for="FuelBatchForm.CostPricePerLiter" class="form-label">Cost Price / Liter</label>
                             <input asp-for="FuelBatchForm.CostPricePerLiter" class="form-control" type="number" step="0.01" min="0" />
                             <span asp-validation-for="FuelBatchForm.CostPricePerLiter" class="text-danger small"></span>
-                        </div>
-                        <div>
-                            <label asp-for="FuelBatchForm.SellingPricePerLiter" class="form-label">Selling Price / Liter</label>
-                            <input asp-for="FuelBatchForm.SellingPricePerLiter" class="form-control" type="number" step="0.01" min="0" />
-                            <span asp-validation-for="FuelBatchForm.SellingPricePerLiter" class="text-danger small"></span>
                         </div>
                         <div>
                             <label asp-for="FuelBatchForm.ExpiryDate" class="form-label">Expiry Date</label>

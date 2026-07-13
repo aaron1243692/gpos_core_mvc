@@ -83,29 +83,7 @@
                         <td class="col-date number-cell">@(batch?.CreatedAt?.ToString("MMM dd, yyyy", CultureInfo.InvariantCulture) ?? "-")</td>
                         <td class="col-status status-cell"><span class="badge @(batchIsActive ? "text-bg-success" : "text-bg-secondary")">@(batchIsActive ? "Active" : "Inactive")</span></td>
                         <td class="col-action action-cell">
-                            <div class="setup-row-actions">
-                                <a class="btn btn-sm btn-outline-primary" asp-action="WarehouseProducts" asp-route-editId="@stock.Id" asp-route-search="@Model.Search" asp-route-filterBranchId="@Model.BranchId">Edit</a>
-                                @if (batch is not null && batchIsActive)
-                                {
-                                    <form asp-action="DeactivateWarehouseBatch" method="post" data-deactivate-form>
-                                        @Html.AntiForgeryToken()
-                                        <input name="id" type="hidden" value="@batch.Id" />
-                                        <input name="search" type="hidden" value="@Model.Search" />
-                                        <input name="filterBranchId" type="hidden" value="@Model.BranchId" />
-                                        <button class="btn btn-sm btn-outline-danger" type="submit">Deactivate</button>
-                                    </form>
-                                }
-                                @if (batch is not null && !batchIsActive)
-                                {
-                                    <form asp-action="ActivateWarehouseBatch" method="post">
-                                        @Html.AntiForgeryToken()
-                                        <input name="id" type="hidden" value="@batch.Id" />
-                                        <input name="search" type="hidden" value="@Model.Search" />
-                                        <input name="filterBranchId" type="hidden" value="@Model.BranchId" />
-                                        <button class="btn btn-sm btn-outline-success" type="submit">Activate</button>
-                                    </form>
-                                }
-                            </div>
+                            <span class="badge text-bg-light border text-secondary">View only</span>
                         </td>
                     </tr>
                 }

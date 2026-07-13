@@ -276,15 +276,20 @@ namespace gpos.Controllers
                 return View("FuelBatches", await BuildFuelBatchesPageAsync(search, filterBranchId, form: form, activeModalId: "fuelBatchModal"));
             }
 
-            var batch = await _db.FuelBatches.FindAsync(form.Id);
+            var batch = await _db.FuelBatches.Include(item => item.Tank).FirstOrDefaultAsync(item => item.Id == form.Id);
             if (batch is null)
             {
                 return NotFound();
             }
 
+            if (batch.Tank is null || batch.BranchId != batch.Tank.BranchId || batch.FuelId != batch.Tank.FuelId)
+            {
+                ModelState.AddModelError(string.Empty, "Fuel batch Branch and Fuel must match its Tank before metadata can be edited.");
+                return View("FuelBatches", await BuildFuelBatchesPageAsync(search, filterBranchId, form: form, activeModalId: "fuelBatchModal"));
+            }
+
             batch.SupplierId = form.SupplierId;
             batch.CostPricePerLiter = form.CostPricePerLiter!.Value;
-            batch.SellingPricePerLiter = form.SellingPricePerLiter ?? 0m;
             batch.ExpiryDate = form.ExpiryDate;
             batch.Remarks = CleanOptional(form.Remarks);
             batch.UpdatedAt = DateTime.UtcNow;
@@ -1220,11 +1225,11 @@ namespace gpos.Controllers
 
         private async Task<SetupModulesPageViewModel> BuildFuelBatchesPageAsync(string? search, int? branchId = null, FuelBatchForm? form = null, int? editId = null, string activeModalId = "")
         {
-            IQueryable<FuelBatch> query = _db.FuelBatches.AsNoTracking().Include(batch => batch.Fuel).Include(batch => batch.Supplier).Include(batch => batch.Branch).Include(batch => batch.Tank).ThenInclude(tank => tank!.Branch).Include(batch => batch.Tank).ThenInclude(tank => tank!.Fuel);
+            IQueryable<FuelBatch> query = _db.FuelBatches.AsNoTracking().Include(batch => batch.Supplier).Include(batch => batch.Tank).ThenInclude(tank => tank!.Branch).Include(batch => batch.Tank).ThenInclude(tank => tank!.Fuel);
             var searchText = (search ?? string.Empty).Trim();
-            if (!string.IsNullOrWhiteSpace(searchText)) query = query.Where(batch => batch.BatchNo.Contains(searchText) || (batch.Fuel != null && batch.Fuel.Name.Contains(searchText)) || (batch.Supplier != null && batch.Supplier.Name.Contains(searchText)) || (batch.Tank != null && batch.Tank.TankNo.Contains(searchText)) || (batch.Branch != null && batch.Branch.Name.Contains(searchText)) || (batch.Tank != null && batch.Tank.Branch != null && batch.Tank.Branch.Name.Contains(searchText)));
-            if (branchId.HasValue && branchId.Value > 0) query = query.Where(batch => batch.BranchId == branchId.Value || (batch.Tank != null && batch.Tank.BranchId == branchId.Value));
-            return new SetupModulesPageViewModel { Search = searchText, BranchId = branchId, BranchName = await BranchNameAsync(branchId), ActiveModalId = activeModalId, FuelBatchForm = form ?? await BuildFuelBatchFormAsync(editId), BranchOptions = await BuildBranchFilterOptionsAsync(), SupplierOptions = await BuildSupplierOptionsAsync(), FuelBatches = await query.OrderBy(batch => batch.Tank!.TankNo).ThenBy(batch => batch.Fuel!.Name).ThenBy(batch => batch.ReceivedDate).ThenBy(batch => batch.Id).ToListAsync() };
+            if (!string.IsNullOrWhiteSpace(searchText)) query = query.Where(batch => batch.BatchNo.Contains(searchText) || (batch.Supplier != null && batch.Supplier.Name.Contains(searchText)) || (batch.Tank != null && batch.Tank.TankNo.Contains(searchText)) || (batch.Tank != null && batch.Tank.Fuel != null && batch.Tank.Fuel.Name.Contains(searchText)) || (batch.Tank != null && batch.Tank.Branch != null && batch.Tank.Branch.Name.Contains(searchText)));
+            if (branchId.HasValue && branchId.Value > 0) query = query.Where(batch => batch.Tank != null && batch.Tank.BranchId == branchId.Value);
+            return new SetupModulesPageViewModel { Search = searchText, BranchId = branchId, BranchName = await BranchNameAsync(branchId), ActiveModalId = activeModalId, FuelBatchForm = form ?? await BuildFuelBatchFormAsync(editId), BranchOptions = await BuildBranchFilterOptionsAsync(), SupplierOptions = await BuildSupplierOptionsAsync(), FuelBatches = await query.OrderBy(batch => batch.Tank!.TankNo).ThenBy(batch => batch.Tank!.Fuel!.Name).ThenBy(batch => batch.ReceivedDate).ThenBy(batch => batch.Id).ToListAsync() };
         }
 
         private async Task<SetupModulesPageViewModel> BuildStockReceivingPageAsync(string? search, StockReceivingForm? form = null, int? editId = null, string activeModalId = "")

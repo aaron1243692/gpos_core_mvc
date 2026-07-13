@@ -35,6 +35,7 @@ namespace gpos.Data
         public DbSet<FuelDelivery> FuelDeliveries { get; set; }
         public DbSet<FuelBatch> FuelBatches { get; set; }
         public DbSet<FuelPriceHistory> FuelPriceHistory { get; set; }
+        public DbSet<BranchFuelPrice> BranchFuelPrices { get; set; }
         public DbSet<ProductPriceHistory> ProductPriceHistory { get; set; }
         public DbSet<PumpMeterReading> PumpMeterReadings { get; set; }
         public DbSet<Discount> Discounts { get; set; }
@@ -786,6 +787,23 @@ namespace gpos.Data
                     .WithMany()
                     .HasForeignKey(setting => setting.TankId)
                     .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            modelBuilder.Entity<BranchFuelPrice>(entity =>
+            {
+                entity.ToTable("branch_fuel_prices");
+                entity.HasKey(price => price.Id);
+                entity.Property(price => price.Id).HasColumnName("id");
+                entity.Property(price => price.BranchId).HasColumnName("branch_id");
+                entity.Property(price => price.FuelId).HasColumnName("fuel_id");
+                entity.Property(price => price.CurrentPricePerLiter).HasColumnName("current_price_per_liter").HasPrecision(18, 2);
+                entity.Property(price => price.EffectiveAt).HasColumnName("effective_at");
+                entity.Property(price => price.Status).HasColumnName("status").HasDefaultValue(1);
+                entity.Property(price => price.CreatedAt).HasColumnName("created_at");
+                entity.Property(price => price.UpdatedAt).HasColumnName("updated_at");
+                entity.HasIndex(price => new { price.BranchId, price.FuelId }).IsUnique();
+                entity.HasOne(price => price.Branch).WithMany(branch => branch.FuelPrices).HasForeignKey(price => price.BranchId).OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne(price => price.Fuel).WithMany(fuel => fuel.BranchPrices).HasForeignKey(price => price.FuelId).OnDelete(DeleteBehavior.Restrict);
             });
 
             modelBuilder.Entity<WarehouseStock>(entity =>

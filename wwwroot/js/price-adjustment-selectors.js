@@ -19,7 +19,8 @@ document.addEventListener('DOMContentLoaded', () => {
     byId('priceAdjustmentBranchResults').addEventListener('click', e => { const b=e.target.closest('button[data-id]'); if(!b)return; const changed=byId(c.branch.id).value!==b.dataset.id; byId(c.branch.id).value=b.dataset.id; byId(c.branch.name).value=b.dataset.name; if(changed){byId(c.item.id).value='';if(c.item.batchId)byId(c.item.batchId).value='';byId(c.item.name).value='';byId(c.item.price).value='';} branchModal.hide(); });
     async function items() {
         const term=byId('priceAdjustmentItemSearch').value; const branchId=byId(c.branch.id).value;
-        const url=c.kind==='fuel'?`/Transaction/SearchPriceAdjustmentFuels?search=${encodeURIComponent(term)}`:`/Transaction/SearchProductPriceAdjustmentItems?branchId=${branchId}&term=${encodeURIComponent(term)}`;
+        if(!branchId){byId('priceAdjustmentItemResults').innerHTML='<tr><td colspan="7" class="text-center text-danger">Please select a Branch first.</td></tr>';return;}
+        const url=c.kind==='fuel'?`/Transaction/SearchPriceAdjustmentFuels?branchId=${branchId}&search=${encodeURIComponent(term)}`:`/Transaction/SearchProductPriceAdjustmentItems?branchId=${branchId}&term=${encodeURIComponent(term)}`;
         byId('priceAdjustmentItemResults').innerHTML='<tr><td colspan="7" class="text-center text-muted">Loading products...</td></tr>';
         let response;
         try { response=await fetch(url); } catch { byId('priceAdjustmentItemResults').innerHTML='<tr><td colspan="7" class="text-center text-danger">Unable to load products.</td></tr>'; return; }

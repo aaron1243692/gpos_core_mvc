@@ -31,8 +31,6 @@ namespace gpos.Migrations
 
                     MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<int?>("BranchId").HasColumnType("int").HasColumnName("branch_id");
-
                     b.Property<string>("Action")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -111,6 +109,56 @@ namespace gpos.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("branches", (string)null);
+                });
+
+            modelBuilder.Entity("gpos.Models.BranchFuelPrice", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("id");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("BranchId")
+                        .HasColumnType("int")
+                        .HasColumnName("branch_id");
+
+                    b.Property<DateTime?>("CreatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("created_at");
+
+                    b.Property<decimal>("CurrentPricePerLiter")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("current_price_per_liter");
+
+                    b.Property<DateTime?>("EffectiveAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("effective_at");
+
+                    b.Property<int>("FuelId")
+                        .HasColumnType("int")
+                        .HasColumnName("fuel_id");
+
+                    b.Property<int>("Status")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(1)
+                        .HasColumnName("status");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FuelId");
+
+                    b.HasIndex("BranchId", "FuelId")
+                        .IsUnique();
+
+                    b.ToTable("branch_fuel_prices", (string)null);
                 });
 
             modelBuilder.Entity("gpos.Models.CashIn", b =>
@@ -1371,6 +1419,10 @@ namespace gpos.Migrations
 
                     MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<int?>("BranchId")
+                        .HasColumnType("int")
+                        .HasColumnName("branch_id");
+
                     b.Property<DateTime?>("CreatedAt")
                         .HasColumnType("datetime(6)")
                         .HasColumnName("created_at");
@@ -1397,7 +1449,10 @@ namespace gpos.Migrations
                         .HasColumnType("decimal(18,2)")
                         .HasColumnName("old_price");
 
-                    b.Property<string>("Reason").HasMaxLength(255).HasColumnType("varchar(255)").HasColumnName("reason");
+                    b.Property<string>("Reason")
+                        .HasMaxLength(255)
+                        .HasColumnType("varchar(255)")
+                        .HasColumnName("reason");
 
                     b.Property<string>("Remarks")
                         .HasMaxLength(255)
@@ -2175,15 +2230,13 @@ namespace gpos.Migrations
 
                     MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<int?>("BranchId")
-                        .HasColumnType("int")
-                        .HasColumnName("branch_id");
-
-                    b.Property<int?>("BranchId").HasColumnType("int").HasColumnName("branch_id");
-
                     b.Property<int?>("BatchId")
                         .HasColumnType("int")
                         .HasColumnName("batch_id");
+
+                    b.Property<int?>("BranchId")
+                        .HasColumnType("int")
+                        .HasColumnName("branch_id");
 
                     b.Property<DateTime?>("CreatedAt")
                         .HasColumnType("datetime(6)")
@@ -2211,7 +2264,10 @@ namespace gpos.Migrations
                         .HasColumnType("int")
                         .HasColumnName("product_id");
 
-                    b.Property<string>("Reason").HasMaxLength(255).HasColumnType("varchar(255)").HasColumnName("reason");
+                    b.Property<string>("Reason")
+                        .HasMaxLength(255)
+                        .HasColumnType("varchar(255)")
+                        .HasColumnName("reason");
 
                     b.Property<string>("Remarks")
                         .HasMaxLength(255)
@@ -4010,6 +4066,25 @@ namespace gpos.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("gpos.Models.BranchFuelPrice", b =>
+                {
+                    b.HasOne("gpos.Models.Branch", "Branch")
+                        .WithMany("FuelPrices")
+                        .HasForeignKey("BranchId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("gpos.Models.Fuel", "Fuel")
+                        .WithMany("BranchPrices")
+                        .HasForeignKey("FuelId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Branch");
+
+                    b.Navigation("Fuel");
+                });
+
             modelBuilder.Entity("gpos.Models.CashIn", b =>
                 {
                     b.HasOne("gpos.Models.Branch", "Branch")
@@ -4407,7 +4482,10 @@ namespace gpos.Migrations
 
             modelBuilder.Entity("gpos.Models.FuelPriceHistory", b =>
                 {
-                    b.HasOne("gpos.Models.Branch", "Branch").WithMany().HasForeignKey("BranchId").OnDelete(DeleteBehavior.Restrict);
+                    b.HasOne("gpos.Models.Branch", "Branch")
+                        .WithMany()
+                        .HasForeignKey("BranchId")
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("gpos.Models.Fuel", "Fuel")
                         .WithMany("FuelPriceHistory")
@@ -4416,6 +4494,7 @@ namespace gpos.Migrations
                         .IsRequired();
 
                     b.Navigation("Branch");
+
                     b.Navigation("Fuel");
                 });
 
@@ -4602,11 +4681,14 @@ namespace gpos.Migrations
 
             modelBuilder.Entity("gpos.Models.ProductPriceHistory", b =>
                 {
-                    b.HasOne("gpos.Models.Branch", "Branch").WithMany().HasForeignKey("BranchId").OnDelete(DeleteBehavior.Restrict);
-
                     b.HasOne("gpos.Models.ProductBatch", "Batch")
                         .WithMany()
                         .HasForeignKey("BatchId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("gpos.Models.Branch", "Branch")
+                        .WithMany()
+                        .HasForeignKey("BranchId")
                         .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("gpos.Models.User", null)
@@ -4621,6 +4703,7 @@ namespace gpos.Migrations
                         .IsRequired();
 
                     b.Navigation("Batch");
+
                     b.Navigation("Branch");
 
                     b.Navigation("Product");
@@ -5071,6 +5154,8 @@ namespace gpos.Migrations
             modelBuilder.Entity("gpos.Models.Branch", b =>
                 {
                     b.Navigation("Departments");
+
+                    b.Navigation("FuelPrices");
                 });
 
             modelBuilder.Entity("gpos.Models.DailyCash", b =>
@@ -5110,6 +5195,8 @@ namespace gpos.Migrations
 
             modelBuilder.Entity("gpos.Models.Fuel", b =>
                 {
+                    b.Navigation("BranchPrices");
+
                     b.Navigation("FuelBatches");
 
                     b.Navigation("FuelDeliveries");

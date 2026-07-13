@@ -40,6 +40,8 @@ namespace gpos.Controllers
 
         private async Task<PosPageViewModel> BuildPosPageAsync()
         {
+            var userId = CurrentUserId();
+            var branchId = userId.HasValue ? await CurrentUserBranchIdAsync(userId.Value) : null;
             var displayStocks = await _db.DisplayStocks
                 .AsNoTracking()
                 .Include(stock => stock.Product)
@@ -55,7 +57,8 @@ namespace gpos.Controllers
                     && stock.Product.Category.IsActive
                     && stock.Batch != null
                     && stock.Batch.Status == 1
-                    && stock.Batch.IsActive)
+                    && stock.Batch.IsActive
+                    && (!branchId.HasValue || stock.BranchId == branchId.Value))
                 .ToListAsync();
 
             var productIds = displayStocks.Select(stock => stock.ProductId).Distinct().ToList();
@@ -76,9 +79,15 @@ namespace gpos.Controllers
                 .ToListAsync();
             var tanks = await _db.Tanks
                 .AsNoTracking()
-                .Where(tank => tank.Status == 1 && tank.IsActive && tank.CurrentLiters > 0)
+                .Where(tank => tank.Status == 1 && tank.IsActive && tank.CurrentLiters > 0
+                    && (!branchId.HasValue || tank.BranchId == branchId.Value))
                 .OrderBy(tank => tank.Id)
                 .ToListAsync();
+            var branchFuelPrices = branchId.HasValue
+                ? await _db.BranchFuelPrices.AsNoTracking()
+                    .Where(price => price.BranchId == branchId.Value && price.Status == 1)
+                    .ToDictionaryAsync(price => price.FuelId, price => price.CurrentPricePerLiter)
+                : new Dictionary<int, decimal>();
             var activeRebate = await _db.RebateRules
                 .AsNoTracking()
                 .Where(rebate => rebate.Status == 1)
@@ -162,7 +171,9 @@ namespace gpos.Controllers
                                 TankNo = tank.TankNo,
                                 Name = fuel.Name,
                                 AvailableLiters = tank.CurrentLiters,
-                                Price = fuel.CurrentPricePerLiter
+                                Price = branchFuelPrices.TryGetValue(fuel.Id, out var branchPrice)
+                                    ? branchPrice
+                                    : fuel.CurrentPricePerLiter
                             };
                     })
                     .Where(option => option is not null)
@@ -251,8 +262,9 @@ namespace gpos.Controllers
             try
             {
                 var now = DateTime.Now;
+                var saleBranchId = await CurrentUserBranchIdAsync(userId.Value);
                 var productItems = await BuildValidatedProductItems(request.Products);
-                var fuelItems = await BuildValidatedFuelItems(request.Fuels);
+                var fuelItems = await BuildValidatedFuelItems(request.Fuels, saleBranchId);
                 var productTotal = productItems.Sum(item => item.Subtotal);
                 var fuelTotal = fuelItems.Sum(item => item.Subtotal);
                 var grossTotal = productTotal + fuelTotal;
@@ -305,7 +317,6 @@ namespace gpos.Controllers
                     rebateAmount = 0m;
                 }
 
-                var saleBranchId = await CurrentUserBranchIdAsync(userId.Value);
                 var saleDailyCashId = saleBranchId.HasValue
                     ? await FindOpenDailyCashForSaleAsync(saleBranchId.Value, userId.Value, now)
                     : null;
@@ -2037,10 +2048,10 @@ namespace gpos.Controllers
             }
 
             await using var transaction = await _db.Database.BeginTransactionAsync();
-            delivery.BranchId = form.BranchId;
+            delivery.BranchId = tank.BranchId;
             delivery.SupplierId = form.SupplierId;
-            delivery.FuelId = form.FuelId;
-            delivery.TankId = form.TankId;
+            delivery.FuelId = tank.FuelId;
+            delivery.TankId = tank.Id;
             delivery.DeliveredLiters = form.Liters;
             delivery.CostPerLiter = form.CostPerLiter;
             delivery.TotalCost = form.Liters * form.CostPerLiter;
@@ -2058,7 +2069,7 @@ namespace gpos.Controllers
             tank.UpdatedAt = now;
 
             await _db.SaveChangesAsync();
-            await CreateFuelBatchForDelivery(delivery, tank, tank.Fuel?.CurrentPricePerLiter ?? 0m, now);
+            await CreateFuelBatchForDelivery(delivery, tank, await ResolveFuelPriceAsync(tank.BranchId, tank.FuelId, tank.Fuel?.CurrentPricePerLiter ?? 0m), now);
             await _db.SaveChangesAsync();
 
             await transaction.CommitAsync();
@@ -2137,7 +2148,7 @@ namespace gpos.Controllers
             await _db.SaveChangesAsync();
             if (delivery.Tank is not null)
             {
-                await CreateFuelBatchForDelivery(delivery, delivery.Tank, delivery.Fuel?.CurrentPricePerLiter ?? 0m, now);
+                await CreateFuelBatchForDelivery(delivery, delivery.Tank, await ResolveFuelPriceAsync(delivery.Tank.BranchId, delivery.Tank.FuelId, delivery.Fuel?.CurrentPricePerLiter ?? 0m), now);
                 await _db.SaveChangesAsync();
             }
 
@@ -2234,11 +2245,23 @@ namespace gpos.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> SearchPriceAdjustmentFuels(string? search, int take = 20)
+        public async Task<IActionResult> SearchPriceAdjustmentFuels(int branchId, string? search, int take = 20)
         {
+            if (branchId <= 0) return BadRequest(new { message = "Please select a Branch first." });
             var term = (search ?? string.Empty).Trim();
-            return Json(await _db.Fuels.AsNoTracking().Where(item => item.Status == 1 && item.IsActive && (term == "" || item.Name.Contains(term)))
-                .OrderBy(item => item.Name).Take(Math.Clamp(take, 1, 50)).Select(item => new { id = item.Id, name = item.Name, price = item.CurrentPricePerLiter }).ToListAsync());
+            return Json(await _db.Fuels.AsNoTracking()
+                .Where(item => item.Status == 1 && item.IsActive && (term == "" || item.Name.Contains(term)))
+                .OrderBy(item => item.Name)
+                .Take(Math.Clamp(take, 1, 50))
+                .Select(item => new
+                {
+                    id = item.Id,
+                    name = item.Name,
+                    price = item.BranchPrices
+                        .Where(price => price.BranchId == branchId && price.Status == 1)
+                        .Select(price => (decimal?)price.CurrentPricePerLiter)
+                        .FirstOrDefault() ?? item.CurrentPricePerLiter
+                }).ToListAsync());
         }
 
         [HttpGet]
@@ -2331,7 +2354,9 @@ namespace gpos.Controllers
             batch.SellingPrice = newPrice;
             batch.UpdatedAt = now;
             _db.ProductPriceHistory.Add(history);
+            await using var transaction = await _db.Database.BeginTransactionAsync();
             await _db.SaveChangesAsync();
+            await transaction.CommitAsync();
             return RedirectToAction(nameof(ProductPriceAdjustment), new { search, filterBranchId, dateFrom, dateTo });
         }
 
@@ -2363,11 +2388,14 @@ namespace gpos.Controllers
             }
 
             var now = DateTime.UtcNow;
+            var branchPrice = await _db.BranchFuelPrices
+                .FirstOrDefaultAsync(item => item.BranchId == form.BranchId && item.FuelId == form.FuelId);
+            var oldPrice = branchPrice?.CurrentPricePerLiter ?? fuel.CurrentPricePerLiter;
             var history = new FuelPriceHistory
             {
                 FuelId = form.FuelId,
                 BranchId = form.BranchId,
-                OldPrice = fuel.CurrentPricePerLiter,
+                OldPrice = oldPrice,
                 NewPrice = form.NewPrice!.Value,
                 EffectiveAt = form.EffectiveAt!.Value,
                 Reason = CleanOptional(form.Reason),
@@ -2377,10 +2405,31 @@ namespace gpos.Controllers
                 UpdatedAt = now
             };
 
-            fuel.CurrentPricePerLiter = history.NewPrice;
-            fuel.UpdatedAt = now;
+            if (branchPrice is null)
+            {
+                branchPrice = new BranchFuelPrice
+                {
+                    BranchId = form.BranchId,
+                    FuelId = form.FuelId,
+                    CurrentPricePerLiter = history.NewPrice,
+                    EffectiveAt = history.EffectiveAt,
+                    Status = 1,
+                    CreatedAt = now,
+                    UpdatedAt = now
+                };
+                _db.BranchFuelPrices.Add(branchPrice);
+            }
+            else
+            {
+                branchPrice.CurrentPricePerLiter = history.NewPrice;
+                branchPrice.EffectiveAt = history.EffectiveAt;
+                branchPrice.Status = 1;
+                branchPrice.UpdatedAt = now;
+            }
             _db.FuelPriceHistory.Add(history);
+            await using var transaction = await _db.Database.BeginTransactionAsync();
             await _db.SaveChangesAsync();
+            await transaction.CommitAsync();
             return RedirectToAction(nameof(FuelPriceAdjustment), new { search, filterBranchId, dateFrom, dateTo });
         }
 
@@ -3180,6 +3229,20 @@ namespace gpos.Controllers
             });
         }
 
+        private async Task<decimal> ResolveFuelPriceAsync(int? branchId, int fuelId, decimal legacyFallback)
+        {
+            if (!branchId.HasValue)
+            {
+                return legacyFallback;
+            }
+
+            return await _db.BranchFuelPrices
+                .AsNoTracking()
+                .Where(price => price.BranchId == branchId.Value && price.FuelId == fuelId && price.Status == 1)
+                .Select(price => (decimal?)price.CurrentPricePerLiter)
+                .FirstOrDefaultAsync() ?? legacyFallback;
+        }
+
         private async Task<string> GenerateNextFuelBatchNoAsync()
         {
             var batchNumbers = await _db.FuelBatches
@@ -3608,6 +3671,21 @@ namespace gpos.Controllers
                     throw new InvalidOperationException("Quantity must be greater than 0.");
                 }
 
+                if (!form.SourceBranchId.HasValue || form.SourceBranchId.Value <= 0)
+                {
+                    throw new InvalidOperationException("Source branch is required.");
+                }
+
+                if (transferType is "WarehouseToDisplayProduct" or "DisplayToWarehouseProduct")
+                {
+                    if (form.DestinationBranchId.HasValue && form.DestinationBranchId != form.SourceBranchId)
+                    {
+                        throw new InvalidOperationException("Warehouse and display transfers must remain within the selected source branch.");
+                    }
+
+                    form.DestinationBranchId = form.SourceBranchId;
+                }
+
                 if (transferType == "BranchToBranchProduct" && (!form.SourceBranchId.HasValue || !form.DestinationBranchId.HasValue || form.SourceBranchId == form.DestinationBranchId))
                 {
                     throw new InvalidOperationException("Select different source and destination branches.");
@@ -3783,7 +3861,7 @@ namespace gpos.Controllers
                 .Where(stock => stock.ProductId == form.ProductId!.Value
                     && stock.Quantity > 0
                     && stock.Batch != null
-                    && (transfer.TransferType != "BranchToBranchProduct" || stock.BranchId == form.SourceBranchId))
+                    && stock.BranchId == form.SourceBranchId)
                 .OrderBy(stock => stock.Batch!.CreatedAt ?? DateTime.MinValue)
                 .ThenBy(stock => stock.Batch!.Id)
                 .ThenBy(stock => stock.Id)
@@ -3829,7 +3907,10 @@ namespace gpos.Controllers
         {
             var fifoStocks = await _db.DisplayStocks
                 .Include(stock => stock.Batch)
-                .Where(stock => stock.ProductId == form.ProductId!.Value && stock.Quantity > 0 && stock.Batch != null)
+                .Where(stock => stock.ProductId == form.ProductId!.Value
+                    && stock.BranchId == form.SourceBranchId
+                    && stock.Quantity > 0
+                    && stock.Batch != null)
                 .OrderByDescending(stock => stock.Batch!.CreatedAt ?? DateTime.MinValue)
                 .ThenByDescending(stock => stock.Batch!.Id)
                 .ThenBy(stock => stock.Id)
@@ -4264,23 +4345,37 @@ namespace gpos.Controllers
             return items;
         }
 
-        private async Task<List<ValidatedFuelSaleItem>> BuildValidatedFuelItems(List<PosFuelSaleRequestItem> fuels)
+        private async Task<List<ValidatedFuelSaleItem>> BuildValidatedFuelItems(List<PosFuelSaleRequestItem> fuels, int? branchId)
         {
             var items = new List<ValidatedFuelSaleItem>();
+
+            if (fuels.Count > 0 && !branchId.HasValue)
+            {
+                throw new InvalidOperationException("The signed-in user must be assigned to a branch before selling fuel.");
+            }
 
             for (var i = 0; i < fuels.Count; i += 1)
             {
                 var request = fuels[i];
                 var tank = await _db.Tanks
                     .Include(item => item.Fuel)
-                    .FirstOrDefaultAsync(item => item.Id == request.TankId && item.FuelId == request.FuelId && item.Status == 1 && item.IsActive);
+                    .FirstOrDefaultAsync(item => item.Id == request.TankId
+                        && item.FuelId == request.FuelId
+                        && item.BranchId == branchId
+                        && item.Status == 1
+                        && item.IsActive);
 
                 if (tank is null || tank.Fuel is null || tank.Fuel.Status != 1 || !tank.Fuel.IsActive)
                 {
                     throw new InvalidOperationException("One or more selected fuel items are no longer available.");
                 }
 
-                var price = tank.Fuel.CurrentPricePerLiter;
+                var branchPrice = await _db.BranchFuelPrices
+                    .AsNoTracking()
+                    .Where(item => item.BranchId == branchId!.Value && item.FuelId == tank.FuelId && item.Status == 1)
+                    .Select(item => (decimal?)item.CurrentPricePerLiter)
+                    .FirstOrDefaultAsync();
+                var price = branchPrice ?? tank.Fuel.CurrentPricePerLiter;
                 var subtotal = request.Liters * price;
                 var costPerLiter = await _db.FuelDeliveries
                     .AsNoTracking()
