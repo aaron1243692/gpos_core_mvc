@@ -1,6 +1,14 @@
-Inventory / product, fuel 
-table display 
 
 
-inventory / batches
-table display
+
+transaction / price  adjustment
+adjustment didnt chang the stock 
+
+http://localhost:5013/Transaction/FuelReceiving
+dont have selling price field
+
+
+pos is selling products and fuel globally not per branch
+
+
+bri

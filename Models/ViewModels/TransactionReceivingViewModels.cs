@@ -120,6 +120,11 @@ namespace gpos.Models.ViewModels
         [Range(typeof(decimal), "0", "999999999", ErrorMessage = "Cost/Liter must be greater than or equal to 0.")]
         public decimal CostPerLiter { get; set; }
 
+        [Range(typeof(decimal), "0", "9999999999999999", ErrorMessage = "Total Cost must be greater than or equal to 0.")]
+        public decimal TotalCost { get; set; }
+
+        public string CostInputMode { get; set; } = "UnitCost";
+
         [Required(ErrorMessage = "Date is required.")]
         public DateTime? ReceivedDate { get; set; }
 
@@ -139,6 +144,8 @@ namespace gpos.Models.ViewModels
         public string Tank { get; set; } = "-";
         public decimal Liters { get; set; }
         public decimal CostPerLiter { get; set; }
+        public decimal TotalCost { get; set; }
+        public DateTime? CreatedAt { get; set; }
         public decimal? TankLitersBefore { get; set; }
         public decimal? TankLitersAfter { get; set; }
         public string ReceivedBy { get; set; } = "-";

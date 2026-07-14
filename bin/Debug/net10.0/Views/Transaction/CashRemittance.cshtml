@@ -39,15 +39,15 @@
             <table class="table app-table table-sm align-middle mb-0">
                 <thead>
                     <tr>
-                        <th>No</th><th>Remittance No</th><th>Date</th><th>Branch</th><th>Business Date</th><th>Shift</th><th>Cashier</th>
-                        <th class="text-end">Expected Cash</th><th class="text-end">Actual Cash</th><th class="text-end">Remitted Amount</th>
-                        <th>Received By</th><th>Received DateTime</th><th>Remarks</th><th>Status</th><th>Action</th>
+                        <th>No</th><th>Remittance No</th><th>Business Date</th><th>Branch</th><th>Shift</th><th>Cashier</th>
+                        <th class="text-end">Expected Cash</th><th class="text-end">Remitted Amount</th><th class="text-end">Remittance Difference</th>
+                        <th>Variance</th><th>Received By</th><th>Received Date/Time</th><th>Status</th><th>Action</th>
                     </tr>
                 </thead>
                 <tbody>
                     @if (Model.Records.Count == 0)
                     {
-                        <tr><td class="text-center text-muted fw-bold" colspan="15">No remittance records found.</td></tr>
+                        <tr><td class="text-center text-muted fw-bold" colspan="14">No remittance records found.</td></tr>
                     }
                     else
                     {
@@ -55,12 +55,12 @@
                         {
                             var item = Model.Records[i];
                             <tr>
-                                <td>@(i + 1)</td><td class="fw-bold">@item.RemittanceNo</td><td>@item.CreatedAt?.ToString("yyyy-MM-dd HH:mm")</td><td>@item.Branch?.Name</td><td>@item.DailyCash?.BusinessDate.ToString("yyyy-MM-dd")</td><td>@item.Shift?.Name</td><td>@UserName(item.User)</td>
-                                <td class="text-end">@Money(item.ExpectedCash)</td><td class="text-end">@Money(item.ActualCash)</td><td class="text-end">@Money(item.RemittedAmount)</td><td>@UserName(item.ReceivedByUser)</td><td>@item.ReceivedDateTime.ToString("yyyy-MM-dd HH:mm")</td><td>@item.Remarks</td>
+                                <td>@(i + 1)</td><td class="fw-bold">@item.RemittanceNo</td><td>@item.DailyCash?.BusinessDate.ToString("yyyy-MM-dd")</td><td>@item.Branch?.Name</td><td>@item.Shift?.Name</td><td>@UserName(item.User)</td>
+                                <td class="text-end">@Money(item.ExpectedCash)</td><td class="text-end">@Money(item.RemittedAmount)</td><td class="text-end">@Money(item.RemittanceDifference)</td><td>@(item.RemittanceDifference == 0 ? "Balanced" : item.RemittanceDifference < 0 ? "Shortage" : "Excess")</td><td>@UserName(item.ReceivedByUser)</td><td>@item.ReceivedDateTime.ToString("yyyy-MM-dd HH:mm")</td>
                                 <td><span class="badge @(item.Status == 1 ? "bg-success" : "bg-secondary")">@(item.Status == 1 ? "Active" : "Inactive")</span></td>
                                 <td><button class="btn btn-sm btn-outline-primary remittance-view-button" type="button" data-bs-toggle="modal" data-bs-target="#remittanceViewModal"
-                                    data-no="@item.RemittanceNo" data-date="@item.CreatedAt?.ToString("yyyy-MM-dd HH:mm")" data-branch="@item.Branch?.Name" data-business-date="@item.DailyCash?.BusinessDate.ToString("yyyy-MM-dd")" data-shift="@item.Shift?.Name" data-cashier="@UserName(item.User)"
-                                    data-expected="@Money(item.ExpectedCash)" data-actual="@Money(item.ActualCash)" data-remitted="@Money(item.RemittedAmount)" data-receiver="@UserName(item.ReceivedByUser)" data-received="@item.ReceivedDateTime.ToString("yyyy-MM-dd HH:mm")" data-remarks="@item.Remarks" data-status="@(item.Status == 1 ? "Active" : "Inactive")">View</button></td>
+                                    data-no="@item.RemittanceNo" data-daily-cash="DC-@item.DailyCashId.ToString("000000")" data-date="@item.CreatedAt?.ToString("yyyy-MM-dd HH:mm")" data-branch="@item.Branch?.Name" data-business-date="@item.DailyCash?.BusinessDate.ToString("yyyy-MM-dd")" data-shift="@item.Shift?.Name" data-cashier="@UserName(item.User)" data-opening="@Money(item.DailyCash?.OpeningCash ?? 0)" data-sales="@Money(item.DailyCash?.CashSales ?? 0)" data-cash-in="@Money(item.DailyCash?.TotalCashIn ?? 0)" data-cash-out="@Money(item.DailyCash?.TotalCashOut ?? 0)"
+                                    data-expected="@Money(item.ExpectedCash)" data-actual="@Money(item.ActualCash)" data-count-difference="@Money(item.ActualCash - item.ExpectedCash)" data-remitted="@Money(item.RemittedAmount)" data-difference="@Money(item.RemittanceDifference)" data-variance="@(item.RemittanceDifference == 0 ? "Balanced" : item.RemittanceDifference < 0 ? "Shortage" : "Excess")" data-receiver="@UserName(item.ReceivedByUser)" data-received="@item.ReceivedDateTime.ToString("yyyy-MM-dd HH:mm")" data-created-by="@UserName(item.CreatedByUser)" data-created-at="@item.CreatedAt?.ToString("yyyy-MM-dd HH:mm")" data-remarks="@item.Remarks" data-status="Completed">View</button></td>
                             </tr>
                         }
                     }
@@ -73,12 +73,14 @@
 <div class="modal fade" id="remittanceViewModal" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-dialog-centered modal-lg"><div class="modal-content">
     <div class="modal-header"><h2 class="modal-title fs-5">View Cash Remittance</h2><button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button></div>
     <div class="modal-body"><div class="row g-3">
-        <div class="col-md-6"><label class="form-label">Remittance No</label><input id="viewRemittanceNo" class="form-control" readonly /></div><div class="col-md-6"><label class="form-label">Date</label><input id="viewRemittanceDate" class="form-control" readonly /></div>
+        <div class="col-md-6"><label class="form-label">Remittance No</label><input id="viewRemittanceNo" class="form-control" readonly /></div><div class="col-md-6"><label class="form-label">Daily Cash No</label><input id="viewRemittanceDailyCash" class="form-control" readonly /></div>
         <div class="col-md-6"><label class="form-label">Branch</label><input id="viewRemittanceBranch" class="form-control" readonly /></div><div class="col-md-6"><label class="form-label">Business Date</label><input id="viewRemittanceBusinessDate" class="form-control" readonly /></div>
         <div class="col-md-6"><label class="form-label">Shift</label><input id="viewRemittanceShift" class="form-control" readonly /></div><div class="col-md-6"><label class="form-label">Cashier</label><input id="viewRemittanceCashier" class="form-control" readonly /></div>
-        <div class="col-md-4"><label class="form-label">Expected Cash</label><input id="viewRemittanceExpected" class="form-control" readonly /></div><div class="col-md-4"><label class="form-label">Actual Cash</label><input id="viewRemittanceActual" class="form-control" readonly /></div><div class="col-md-4"><label class="form-label">Remitted Amount</label><input id="viewRemittanceRemitted" class="form-control" readonly /></div>
+        <div class="col-md-3"><label class="form-label">Opening Cash</label><input id="viewRemittanceOpening" class="form-control" readonly /></div><div class="col-md-3"><label class="form-label">Cash Sales</label><input id="viewRemittanceSales" class="form-control" readonly /></div><div class="col-md-3"><label class="form-label">Cash In</label><input id="viewRemittanceCashIn" class="form-control" readonly /></div><div class="col-md-3"><label class="form-label">Cash Out</label><input id="viewRemittanceCashOut" class="form-control" readonly /></div>
+        <div class="col-md-4"><label class="form-label">Expected Cash</label><input id="viewRemittanceExpected" class="form-control" readonly /></div><div class="col-md-4"><label class="form-label">Actual Cash (Cashier Count)</label><input id="viewRemittanceActual" class="form-control" readonly /></div><div class="col-md-4"><label class="form-label">Count Difference</label><input id="viewRemittanceCountDifference" class="form-control" readonly /></div>
+        <div class="col-md-4"><label class="form-label">Remitted Amount (Receiver Count)</label><input id="viewRemittanceRemitted" class="form-control" readonly /></div><div class="col-md-4"><label class="form-label">Remittance Difference</label><input id="viewRemittanceDifference" class="form-control" readonly /></div><div class="col-md-4"><label class="form-label">Variance</label><input id="viewRemittanceVariance" class="form-control" readonly /></div>
         <div class="col-md-6"><label class="form-label">Received By</label><input id="viewRemittanceReceiver" class="form-control" readonly /></div><div class="col-md-6"><label class="form-label">Received DateTime</label><input id="viewRemittanceReceived" class="form-control" readonly /></div>
-        <div class="col-md-6"><label class="form-label">Status</label><input id="viewRemittanceStatus" class="form-control" readonly /></div><div class="col-12"><label class="form-label">Remarks</label><textarea id="viewRemittanceRemarks" class="form-control" rows="3" readonly></textarea></div>
+        <div class="col-md-6"><label class="form-label">Created By</label><input id="viewRemittanceCreatedBy" class="form-control" readonly /></div><div class="col-md-6"><label class="form-label">Created At</label><input id="viewRemittanceCreatedAt" class="form-control" readonly /></div><div class="col-md-6"><label class="form-label">Status</label><input id="viewRemittanceStatus" class="form-control" readonly /></div><div class="col-12"><label class="form-label">Remarks</label><textarea id="viewRemittanceRemarks" class="form-control" rows="3" readonly></textarea></div>
     </div></div><div class="modal-footer"><button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Close</button></div>
 </div></div></div>
 
@@ -92,30 +94,31 @@
                     <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
                     <div class="row g-3">
                         <div class="col-md-12">
+                            <label asp-for="Form.BranchId" class="form-label">Branch</label>
+                            <input asp-for="Form.BranchId" id="remitBranchId" type="hidden" />
+                            <div class="input-group" data-branch-selector data-branch-hidden="#remitBranchId" data-branch-display="#remitBranchDisplay" data-branch-empty-text="Select branch">
+                                <input asp-for="Form.BranchName" id="remitBranchDisplay" class="form-control" placeholder="Select branch" readonly />
+                                <button type="button" class="btn btn-outline-secondary branch-select-btn" data-branch-open><img src="/icons/search.png" alt="Search" style="width:16px;height:16px;" /></button>
+                            </div>
+                            <span asp-validation-for="Form.BranchId" class="text-danger"></span>
+                        </div>
+                        <div class="col-md-12">
                             <label asp-for="Form.DailyCashId" class="form-label">Daily Cash</label>
                             <input asp-for="Form.DailyCashId" id="remitDailyCashId" type="hidden" />
-                            <div class="input-group" data-daily-cash-selector data-daily-cash-hidden="#remitDailyCashId" data-daily-cash-display="#remitDailyCashDisplay" data-daily-cash-mode="remittance">
+                            <div class="input-group" data-daily-cash-selector data-daily-cash-hidden="#remitDailyCashId" data-daily-cash-display="#remitDailyCashDisplay" data-branch-hidden="#remitBranchId" data-branch-display="#remitBranchDisplay" data-business-date-display="#remitBusinessDateDisplay" data-shift-display="#remitShiftDisplay" data-user-display="#remitUserDisplay" data-expected-cash-display="#remitExpectedCashDisplay" data-remitted-amount-input="#remitAmount" data-difference-display="#remitDifferenceDisplay" data-variance-display="#remitVarianceDisplay">
                                 <input asp-for="Form.DailyCashDisplay" id="remitDailyCashDisplay" class="form-control" placeholder="Select open Daily Cash" readonly />
                                 <button type="button" class="btn btn-outline-secondary" data-daily-cash-open><img src="/icons/search.png" alt="Search" style="width:16px;height:16px;" /></button>
                             </div>
                             <span asp-validation-for="Form.DailyCashId" class="text-danger"></span>
                         </div>
-                        <div class="col-md-6"><label class="form-label">Branch</label><input asp-for="Form.BranchName" id="remitBranchDisplay" class="form-control" readonly /></div>
                         <div class="col-md-6"><label class="form-label">Business Date</label><input value="@Model.Form.BusinessDate?.ToString("yyyy-MM-dd")" id="remitBusinessDateDisplay" class="form-control" readonly /></div>
                         <div class="col-md-6"><label class="form-label">Shift</label><input asp-for="Form.ShiftName" id="remitShiftDisplay" class="form-control" readonly /></div>
                         <div class="col-md-6"><label class="form-label">Cashier</label><input asp-for="Form.UserName" id="remitUserDisplay" class="form-control" readonly /></div>
                         <div class="col-md-6"><label class="form-label">Expected Cash</label><input asp-for="Form.ExpectedCash" id="remitExpectedCashDisplay" class="form-control" readonly /></div>
-                        <div class="col-md-6"><label class="form-label">Actual Cash</label><input asp-for="Form.ActualCash" id="remitActualCashDisplay" class="form-control" readonly /></div>
-                        <div class="col-md-6"><label asp-for="Form.RemittedAmount" class="form-label">Remitted Amount</label><input asp-for="Form.RemittedAmount" class="form-control" type="number" step="0.01" min="0.01" /><span asp-validation-for="Form.RemittedAmount" class="text-danger"></span></div>
-                        <div class="col-md-6">
-                            <label asp-for="Form.ReceivedByUserId" class="form-label">Received By</label>
-                            <input asp-for="Form.ReceivedByUserId" id="remitReceivedByUserId" type="hidden" />
-                            <div class="input-group" data-cash-user-selector data-user-hidden="#remitReceivedByUserId" data-user-display="#remitReceivedByDisplay">
-                                <input asp-for="Form.ReceivedByName" id="remitReceivedByDisplay" class="form-control" placeholder="Select receiver" readonly />
-                                <button type="button" class="btn btn-outline-secondary" data-user-open><img src="/icons/search.png" alt="Search" style="width:16px;height:16px;" /></button>
-                            </div>
-                            <span asp-validation-for="Form.ReceivedByUserId" class="text-danger"></span>
-                        </div>
+                        <div class="col-md-6"><label asp-for="Form.RemittedAmount" class="form-label">Remitted Amount (Receiver Count)</label><input asp-for="Form.RemittedAmount" id="remitAmount" class="form-control" type="number" step="0.01" min="0" max="9999999999999999.99" /><span asp-validation-for="Form.RemittedAmount" class="text-danger"></span></div>
+                        <div class="col-md-6"><label class="form-label">Remittance Difference</label><input id="remitDifferenceDisplay" class="form-control" readonly /></div>
+                        <div class="col-12"><label class="form-label">Variance Classification</label><div id="remitVarianceDisplay" class="alert d-none mb-0"></div></div>
+                        <div class="col-md-6"><label class="form-label">Received By</label><input class="form-control" value="@Model.CurrentUserName" readonly /></div>
                         <div class="col-md-6"><label asp-for="Form.ReceivedDateTime" class="form-label">Received Date/Time</label><input asp-for="Form.ReceivedDateTime" class="form-control" type="datetime-local" /><span asp-validation-for="Form.ReceivedDateTime" class="text-danger"></span></div>
                         <div class="col-12"><label asp-for="Form.Remarks" class="form-label">Remarks</label><textarea asp-for="Form.Remarks" class="form-control" rows="3"></textarea></div>
                     </div>
@@ -126,108 +129,19 @@
     </div>
 </div>
 
-<div class="modal fade" id="dailyCashSelectorModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-lg"><div class="modal-content">
-        <div class="modal-header"><h2 class="modal-title fs-5">Select Daily Cash</h2><button class="btn-close" type="button" data-bs-dismiss="modal"></button></div>
-        <div class="modal-body">
-            <div class="input-group mb-3"><input class="form-control" type="search" placeholder="Search Daily Cash" data-daily-cash-search-input /><button class="btn btn-outline-primary" type="button" data-daily-cash-search-button>Search</button></div>
-            <div class="table-responsive"><table class="table app-table table-sm align-middle mb-0"><thead><tr><th>No</th><th>Daily Cash</th><th>Remaining</th><th>Status</th><th>Action</th></tr></thead><tbody data-daily-cash-search-results><tr><td class="text-center text-muted fw-bold" colspan="5">Search for Daily Cash.</td></tr></tbody></table></div>
-        </div>
-        <div class="modal-footer"><button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Close</button></div>
-    </div></div>
-</div>
-
-<div class="modal fade" id="cashUserSelectorModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-lg"><div class="modal-content">
-        <div class="modal-header"><h2 class="modal-title fs-5">Select User</h2><button class="btn-close" type="button" data-bs-dismiss="modal"></button></div>
-        <div class="modal-body">
-            <div class="input-group mb-3"><input class="form-control" type="search" placeholder="Search user" data-user-search-input /><button class="btn btn-outline-primary" type="button" data-user-search-button>Search</button></div>
-            <div class="table-responsive"><table class="table app-table table-sm align-middle mb-0"><thead><tr><th>No</th><th>Name</th><th>Username</th><th>Email</th><th>Action</th></tr></thead><tbody data-user-search-results><tr><td class="text-center text-muted fw-bold" colspan="5">Search for a user.</td></tr></tbody></table></div>
-        </div>
-        <div class="modal-footer"><button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Close</button></div>
-    </div></div>
-</div>
+<partial name="_DailyCashMovementSelector" />
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             document.querySelectorAll('.remittance-view-button').forEach(button => button.addEventListener('click', function () {
-                const fields = { No: 'no', Date: 'date', Branch: 'branch', BusinessDate: 'businessDate', Shift: 'shift', Cashier: 'cashier', Expected: 'expected', Actual: 'actual', Remitted: 'remitted', Receiver: 'receiver', Received: 'received', Remarks: 'remarks', Status: 'status' };
+                const fields = { No: 'no', DailyCash: 'dailyCash', Branch: 'branch', BusinessDate: 'businessDate', Shift: 'shift', Cashier: 'cashier', Opening: 'opening', Sales: 'sales', CashIn: 'cashIn', CashOut: 'cashOut', Expected: 'expected', Actual: 'actual', CountDifference: 'countDifference', Remitted: 'remitted', Difference: 'difference', Variance: 'variance', Receiver: 'receiver', Received: 'received', CreatedBy: 'createdBy', CreatedAt: 'createdAt', Remarks: 'remarks', Status: 'status' };
                 Object.entries(fields).forEach(([field, key]) => { const element = document.getElementById(`viewRemittance${field}`); if (element) element.value = this.dataset[key] || '-'; });
             }));
-            const html = (value) => String(value ?? '').replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll("'", '&#039;');
-            const restore = () => { if (document.querySelector('.modal.show')) document.body.classList.add('modal-open'); };
-
-            let activeDailyCashSelector = null;
-            const dailyModal = document.getElementById('dailyCashSelectorModal');
-            const dailyResults = dailyModal?.querySelector('[data-daily-cash-search-results]');
-            const dailySearch = dailyModal?.querySelector('[data-daily-cash-search-input]');
-
-            async function setDailyCash(selector, row) {
-                document.querySelector(selector.dataset.dailyCashHidden).value = row.id;
-                document.querySelector(selector.dataset.dailyCashDisplay).value = row.display;
-                const details = await (await fetch(`/Transaction/DailyCashSessionDetails?id=${row.id}`)).json();
-                document.getElementById('remitBranchDisplay').value = details.branch;
-                document.getElementById('remitBusinessDateDisplay').value = details.businessDate;
-                document.getElementById('remitShiftDisplay').value = details.shift;
-                document.getElementById('remitUserDisplay').value = details.user;
-                document.getElementById('remitExpectedCashDisplay').value = Number(details.expectedCash).toFixed(2);
-                document.getElementById('remitActualCashDisplay').value = Number(details.actualCash).toFixed(2);
-            }
-
-            async function searchDailyCash() {
-                if (!dailyResults) return;
-                dailyResults.innerHTML = '<tr><td class="text-center text-muted fw-bold" colspan="5">Loading Daily Cash...</td></tr>';
-                const query = dailySearch ? dailySearch.value.trim() : '';
-                const response = await fetch(`/Transaction/SearchDailyCashSessions?mode=remittance&search=${encodeURIComponent(query)}`);
-                const rows = response.ok ? await response.json() : [];
-                dailyResults.innerHTML = rows.length ? '' : '<tr><td class="text-center text-muted fw-bold" colspan="5">No Daily Cash found.</td></tr>';
-                rows.forEach((row, index) => {
-                    const tr = document.createElement('tr');
-                    tr.innerHTML = `<td>${index + 1}</td><td>${html(row.display)}</td><td>${Number(row.remainingAmount).toFixed(2)}</td><td>${html(row.status)}</td><td><button class="btn btn-sm btn-outline-primary" type="button">Select</button></td>`;
-                    tr.querySelector('button').addEventListener('click', async () => { await setDailyCash(activeDailyCashSelector, row); bootstrap.Modal.getOrCreateInstance(dailyModal).hide(); setTimeout(restore, 150); });
-                    dailyResults.appendChild(tr);
-                });
-            }
-
-            document.querySelectorAll('[data-daily-cash-selector]').forEach((selector) => {
-                selector.querySelector('[data-daily-cash-open]')?.addEventListener('click', (event) => { event.preventDefault(); activeDailyCashSelector = selector; bootstrap.Modal.getOrCreateInstance(dailyModal).show(); searchDailyCash(); });
-            });
-            dailyModal?.querySelector('[data-daily-cash-search-button]')?.addEventListener('click', searchDailyCash);
-            dailySearch?.addEventListener('keydown', (event) => { if (event.key === 'Enter') { event.preventDefault(); searchDailyCash(); } });
-            dailyModal?.addEventListener('hidden.bs.modal', restore);
-
-            let activeUserSelector = null;
-            const userModal = document.getElementById('cashUserSelectorModal');
-            const userResults = userModal?.querySelector('[data-user-search-results]');
-            const userSearch = userModal?.querySelector('[data-user-search-input]');
-            function setUser(selector, user) {
-                document.querySelector(selector.dataset.userHidden).value = user.id;
-                document.querySelector(selector.dataset.userDisplay).value = user.name;
-            }
-            async function searchUsers() {
-                if (!userResults) return;
-                userResults.innerHTML = '<tr><td class="text-center text-muted fw-bold" colspan="5">Loading users...</td></tr>';
-                const query = userSearch ? userSearch.value.trim() : '';
-                const response = await fetch(`/Transaction/SearchCashUsers?search=${encodeURIComponent(query)}`);
-                const rows = response.ok ? await response.json() : [];
-                userResults.innerHTML = rows.length ? '' : '<tr><td class="text-center text-muted fw-bold" colspan="5">No users found.</td></tr>';
-                rows.forEach((user, index) => {
-                    const tr = document.createElement('tr');
-                    tr.innerHTML = `<td>${index + 1}</td><td>${html(user.name)}</td><td>${html(user.username)}</td><td>${html(user.email)}</td><td><button class="btn btn-sm btn-outline-primary" type="button">Select</button></td>`;
-                    tr.querySelector('button').addEventListener('click', () => { setUser(activeUserSelector, user); bootstrap.Modal.getOrCreateInstance(userModal).hide(); setTimeout(restore, 150); });
-                    userResults.appendChild(tr);
-                });
-            }
-            document.querySelectorAll('[data-cash-user-selector]').forEach((selector) => {
-                selector.querySelector('[data-user-open]')?.addEventListener('click', (event) => { event.preventDefault(); activeUserSelector = selector; bootstrap.Modal.getOrCreateInstance(userModal).show(); searchUsers(); });
-            });
-            userModal?.querySelector('[data-user-search-button]')?.addEventListener('click', searchUsers);
-            userSearch?.addEventListener('keydown', (event) => { if (event.key === 'Enter') { event.preventDefault(); searchUsers(); } });
-            userModal?.addEventListener('hidden.bs.modal', restore);
         });
     </script>
+    <script src="~/js/daily-cash-movement-selector.js" asp-append-version="true"></script>
     @if (!string.IsNullOrWhiteSpace(Model.ActiveModalId))
     {
         <script>document.addEventListener('DOMContentLoaded', () => bootstrap.Modal.getOrCreateInstance(document.getElementById('@Model.ActiveModalId')).show());</script>

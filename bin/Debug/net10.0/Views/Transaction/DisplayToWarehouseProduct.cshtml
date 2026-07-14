@@ -11,22 +11,22 @@
             {
                 <div class="alert alert-warning">@TempData["TransferMessage"]</div>
             }
-            <form asp-action="DisplayToWarehouseProduct" method="get" class="transaction-ui-toolbar product-receiving-toolbar toolbar">
+            <form asp-action="DisplayToWarehouseProduct" method="get" class="transaction-ui-toolbar product-receiving-toolbar product-receiving-filter-toolbar toolbar">
                 <input class="form-control transaction-ui-search" name="search" value="@Model.Search" type="search" placeholder="Search transfer, product, batch, status..." />
-                <button class="btn btn-outline-primary" type="submit">Search</button>
+                <select class="form-select product-receiving-filter-branch" name="filterBranchId"><option value="">All Branches</option>@foreach(var branch in Model.BranchOptions){<option value="@branch.Value" selected="@(branch.Value == Model.SourceFilterBranchId?.ToString())">@branch.Text</option>}</select><button class="btn btn-outline-primary" type="submit">Search</button><a class="btn btn-outline-secondary" asp-action="DisplayToWarehouseProduct">Clear</a>
             </form>
             <div class="table-responsive transaction-ui-table-wrap product-receiving-table-wrapper">
                 <table class="table app-table table-sm align-middle mb-0">
-                    <thead><tr><th>No</th><th>Transfer No</th><th>Product</th><th>Batch</th><th>Quantity</th><th>Display Before</th><th>Display After</th><th>Warehouse Before</th><th>Warehouse After</th><th>Transferred By</th><th>Date</th><th>Status</th><th>Action</th></tr></thead>
+                    <thead><tr><th>No</th><th>Transfer No</th><th>Branch</th><th>Product</th><th>Batch</th><th>Quantity</th><th>Display Before</th><th>Display After</th><th>Warehouse Before</th><th>Warehouse After</th><th>Transferred By</th><th>Date</th><th>Status</th><th>Action</th></tr></thead>
                     <tbody>
                         @if (Model.Transfers.Count == 0)
                         {
-                            <tr><td class="text-center text-muted fw-bold" colspan="13">No transfers found.</td></tr>
+                            <tr><td class="text-center text-muted fw-bold" colspan="14">No transfers found.</td></tr>
                         }
                         @for (var i = 0; i < Model.Transfers.Count; i += 1)
                         {
                             <tr>
-                                <td>@(i + 1)</td><td>@Model.Transfers[i].TransferNo</td><td>@Model.Transfers[i].Product</td><td>@Model.Transfers[i].Batch</td><td>@Model.Transfers[i].Quantity.ToString("N2")</td><td>@(Model.Transfers[i].SourceBefore?.ToString("N2") ?? "-")</td><td>@(Model.Transfers[i].SourceAfter?.ToString("N2") ?? "-")</td><td>@(Model.Transfers[i].DestinationBefore?.ToString("N2") ?? "-")</td><td>@(Model.Transfers[i].DestinationAfter?.ToString("N2") ?? "-")</td><td>@Model.Transfers[i].TransferredBy</td><td>@Model.Transfers[i].Date?.ToString("yyyy-MM-dd HH:mm")</td><td><span class="badge @(Model.Transfers[i].Status == "Completed" ? "text-bg-success" : Model.Transfers[i].Status == "Cancelled" ? "text-bg-secondary" : "text-bg-warning")">@Model.Transfers[i].Status</span></td><td class="text-nowrap">-</td>
+                                <td>@(i + 1)</td><td>@Model.Transfers[i].TransferNo</td><td>@Model.Transfers[i].SourceBranch</td><td>@Model.Transfers[i].Product</td><td>@Model.Transfers[i].Batch</td><td>@Model.Transfers[i].Quantity.ToString("N2")</td><td>@(Model.Transfers[i].SourceBefore?.ToString("N2") ?? "-")</td><td>@(Model.Transfers[i].SourceAfter?.ToString("N2") ?? "-")</td><td>@(Model.Transfers[i].DestinationBefore?.ToString("N2") ?? "-")</td><td>@(Model.Transfers[i].DestinationAfter?.ToString("N2") ?? "-")</td><td>@Model.Transfers[i].TransferredBy</td><td>@Model.Transfers[i].Date?.ToString("yyyy-MM-dd HH:mm")</td><td><span class="badge @(Model.Transfers[i].Status == "Completed" ? "text-bg-success" : Model.Transfers[i].Status == "Cancelled" ? "text-bg-secondary" : "text-bg-warning")">@Model.Transfers[i].Status</span></td><td class="text-nowrap">-</td>
                             </tr>
                         }
                     </tbody>
@@ -45,7 +45,7 @@
                 <input asp-for="Form.ProductId" type="hidden" data-selected-product-id />
                 <div class="modal-header"><h2 class="modal-title fs-5">Add Transfer</h2><button class="btn-close" type="button" data-bs-dismiss="modal"></button></div>
                 <div class="modal-body">
-                    <div class="row g-3">
+                    <div class="row g-3"><div class="col-12"><label class="form-label">Branch</label><select asp-for="Form.SourceBranchId" class="form-select"><option value="">Select branch</option>@foreach(var branch in Model.BranchOptions){<option value="@branch.Value">@branch.Text</option>}</select></div>
                         <div class="col-12">
                             <label class="form-label">Product</label>
                             <div class="input-group">

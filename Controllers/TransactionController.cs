@@ -651,29 +651,41 @@ namespace gpos.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> SaveCashRemittance([Bind(Prefix = "Form")] CashRemittanceForm form, string? search, int? filterBranchId, int? filterShiftId, int? filterUserId, DateTime? dateFrom, DateTime? dateTo, string? status)
         {
+            var currentUserId = CurrentUserId();
+            if (!currentUserId.HasValue || !await _db.Users.AsNoTracking().AnyAsync(user => user.Id == currentUserId.Value && user.Status == 1))
+            {
+                ModelState.AddModelError(string.Empty, "Please sign in with an active account before creating a Cash Remittance.");
+            }
+            if (form.BranchId <= 0)
+            {
+                ModelState.AddModelError("Form.BranchId", "Branch is required.");
+            }
             if (!ModelState.IsValid)
             {
                 return View("CashRemittance", await BuildCashRemittancePageAsync(search, filterBranchId, filterShiftId, filterUserId, dateFrom, dateTo, status, form, "cashRemittanceModal"));
             }
 
-            var dailyCash = await _db.DailyCashRecords.FirstOrDefaultAsync(item => item.Id == form.DailyCashId
-                && item.Status == CashStatusOpen);
-            var receiverExists = await _db.Users.AnyAsync(user => user.Id == form.ReceivedByUserId && user.Status == 1);
-            if (dailyCash is null || !receiverExists)
+            if (!await _db.Branches.AsNoTracking().AnyAsync(branch => branch.Id == form.BranchId && branch.Status == 1))
             {
-                ModelState.AddModelError(string.Empty, dailyCash is null ? "Select an open Daily Cash record. A remitted session cannot be remitted again." : "Select an active receiver.");
+                ModelState.AddModelError("Form.BranchId", "Select a valid active Branch.");
                 return View("CashRemittance", await BuildCashRemittancePageAsync(search, filterBranchId, filterShiftId, filterUserId, dateFrom, dateTo, status, form, "cashRemittanceModal"));
             }
 
-            await using var transaction = await _db.Database.BeginTransactionAsync();
+            await using var transaction = await _db.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
             try
             {
                 var now = DateTime.UtcNow;
-                var remittedBefore = await _db.CashRemittances
-                    .Where(remittance => remittance.DailyCashId == dailyCash.Id && remittance.Status == 1)
-                    .SumAsync(remittance => remittance.RemittedAmount);
-                var totalRemitted = remittedBefore + form.RemittedAmount;
-                var remainingAmount = dailyCash.ActualCash - totalRemitted;
+                var dailyCash = await _db.DailyCashRecords.FirstOrDefaultAsync(item => item.Id == form.DailyCashId && item.BranchId == form.BranchId && item.Status == CashStatusOpen);
+                if (dailyCash is null) throw new InvalidOperationException("Select an open Daily Cash record from the selected Branch.");
+                if (await _db.CashRemittances.AnyAsync(remittance => remittance.DailyCashId == dailyCash.Id && remittance.Status == 1))
+                {
+                    throw new InvalidOperationException("This Daily Cash has already been remitted.");
+                }
+                var remittanceDifference = form.RemittedAmount - dailyCash.ExpectedCash;
+                if (remittanceDifference != 0m && string.IsNullOrWhiteSpace(form.Remarks))
+                {
+                    throw new InvalidOperationException("Remarks are required when the remittance has a shortage or excess.");
+                }
 
                 var item = new CashRemittance
                 {
@@ -685,27 +697,28 @@ namespace gpos.Controllers
                     ExpectedCash = dailyCash.ExpectedCash,
                     ActualCash = dailyCash.ActualCash,
                     RemittedAmount = form.RemittedAmount,
-                    RemittanceDifference = remainingAmount,
-                    ReceivedByUserId = form.ReceivedByUserId,
+                    RemittanceDifference = remittanceDifference,
+                    ReceivedByUserId = currentUserId!.Value,
                     ReceivedDateTime = form.ReceivedDateTime!.Value,
                     Remarks = CleanOptional(form.Remarks),
                     Status = 1,
-                    CreatedByUserId = CurrentUserId(),
+                    CreatedByUserId = currentUserId.Value,
                     CreatedAt = now,
                     UpdatedAt = now
                 };
 
                 _db.CashRemittances.Add(item);
-                dailyCash.RemittedAmount = totalRemitted;
+                dailyCash.RemittedAmount = form.RemittedAmount;
                 dailyCash.Status = CashStatusRemitted;
                 dailyCash.UpdatedAt = now;
                 await _db.SaveChangesAsync();
                 await transaction.CommitAsync();
             }
-            catch
+            catch (InvalidOperationException ex)
             {
                 await transaction.RollbackAsync();
-                throw;
+                ModelState.AddModelError(string.Empty, ex.Message);
+                return View("CashRemittance", await BuildCashRemittancePageAsync(search, filterBranchId, filterShiftId, filterUserId, dateFrom, dateTo, status, form, "cashRemittanceModal"));
             }
 
             return RedirectToAction(nameof(CashRemittance), new { search, branchId = filterBranchId, shiftId = filterShiftId, userId = filterUserId, dateFrom, dateTo, status });
@@ -715,14 +728,7 @@ namespace gpos.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteCashRemittance(int id, string? search, int? branchId, int? shiftId, int? userId, DateTime? dateFrom, DateTime? dateTo, string? status)
         {
-            var item = await _db.CashRemittances.FindAsync(id);
-            if (item is not null)
-            {
-                item.Status = 0;
-                item.UpdatedAt = DateTime.UtcNow;
-                await _db.SaveChangesAsync();
-            }
-
+            TempData["CashMessage"] = "Cash Remittance records are permanent financial audit records and cannot be deactivated.";
             return RedirectToAction(nameof(CashRemittance), new { search, branchId, shiftId, userId, dateFrom, dateTo, status });
         }
 
@@ -810,6 +816,7 @@ namespace gpos.Controllers
                     user = string.IsNullOrWhiteSpace(item.User!.FullName) ? item.User.Username : item.User.FullName,
                     expectedCash = item.ExpectedCash,
                     actualCash = item.ActualCash,
+                    countDifference = item.ActualCash - item.ExpectedCash,
                     remittedAmount = item.RemittedAmount,
                     remainingAmount = item.ActualCash - item.RemittedAmount,
                     status = CashStatusName(item.Status)
@@ -871,7 +878,11 @@ namespace gpos.Controllers
                     userId = item.UserId,
                     cashierName = item.User == null ? "-" : (string.IsNullOrWhiteSpace(item.User.FullName) ? item.User.Username : item.User.FullName),
                     openingCash = item.OpeningCash,
+                    cashSales = item.CashSales,
+                    cashIn = item.TotalCashIn,
+                    cashOut = item.TotalCashOut,
                     expectedCash = item.ExpectedCash,
+                    actualCash = item.ActualCash,
                     status = CashStatusName(item.Status)
                 })
                 .ToList();
@@ -1071,6 +1082,7 @@ namespace gpos.Controllers
                 .Include(item => item.Shift)
                 .Include(item => item.User)
                 .Include(item => item.ReceivedByUser)
+                .Include(item => item.CreatedByUser)
                 .Include(item => item.DailyCash)
                 .AsQueryable();
 
@@ -1078,6 +1090,9 @@ namespace gpos.Controllers
 
             return new CashRemittancePageViewModel
             {
+                CurrentUserName = CurrentUserId() is int currentUserId
+                    ? await _db.Users.AsNoTracking().Where(user => user.Id == currentUserId).Select(user => string.IsNullOrWhiteSpace(user.FullName) ? user.Username : user.FullName).FirstOrDefaultAsync() ?? string.Empty
+                    : string.Empty,
                 Filter = filter,
                 Form = form ?? await BuildCashRemittanceFormAsync(editId),
                 Records = await query.OrderByDescending(item => item.ReceivedDateTime).ThenByDescending(item => item.Id).Take(200).ToListAsync(),
@@ -1950,6 +1965,19 @@ namespace gpos.Controllers
         {
             RemoveFuelReceivingUiOnlyModelState();
 
+            var costInputMode = string.Equals(form.CostInputMode, "TotalCost", StringComparison.Ordinal)
+                ? "TotalCost"
+                : string.Equals(form.CostInputMode, "UnitCost", StringComparison.Ordinal) ? "UnitCost" : string.Empty;
+            if (costInputMode.Length == 0)
+            {
+                ModelState.AddModelError("Form.CostInputMode", "Cost input mode must be UnitCost or TotalCost.");
+            }
+            else
+            {
+                form.CostInputMode = costInputMode;
+                ModelState.Remove(costInputMode == "UnitCost" ? "Form.TotalCost" : "Form.CostPerLiter");
+            }
+
             var submittedFuelId = form.FuelId;
             var tank = await _db.Tanks.Include(item => item.Fuel).FirstOrDefaultAsync(item => item.Id == form.TankId && item.Status == 1 && item.IsActive);
             if (tank is not null)
@@ -1969,9 +1997,25 @@ namespace gpos.Controllers
                 ModelState.AddModelError("Form.Liters", "Liters must be greater than 0.");
             }
 
-            if (form.CostPerLiter < 0)
+            if (costInputMode == "UnitCost" && form.CostPerLiter < 0)
             {
                 ModelState.AddModelError("Form.CostPerLiter", "Cost/Liter must be greater than or equal to 0.");
+            }
+
+            if (costInputMode == "TotalCost" && form.TotalCost < 0)
+            {
+                ModelState.AddModelError("Form.TotalCost", "Total Cost must be greater than or equal to 0.");
+            }
+
+            if (form.Liters > 0 && costInputMode == "UnitCost" && form.CostPerLiter >= 0)
+            {
+                form.CostPerLiter = decimal.Round(form.CostPerLiter, 4, MidpointRounding.AwayFromZero);
+                form.TotalCost = decimal.Round(form.Liters * form.CostPerLiter, 2, MidpointRounding.AwayFromZero);
+            }
+            else if (form.Liters > 0 && costInputMode == "TotalCost" && form.TotalCost >= 0)
+            {
+                form.TotalCost = decimal.Round(form.TotalCost, 2, MidpointRounding.AwayFromZero);
+                form.CostPerLiter = decimal.Round(form.TotalCost / form.Liters, 4, MidpointRounding.AwayFromZero);
             }
 
             if (!form.ReceivedDate.HasValue)
@@ -2054,7 +2098,7 @@ namespace gpos.Controllers
             delivery.TankId = tank.Id;
             delivery.DeliveredLiters = form.Liters;
             delivery.CostPerLiter = form.CostPerLiter;
-            delivery.TotalCost = form.Liters * form.CostPerLiter;
+            delivery.TotalCost = form.TotalCost;
             delivery.DeliveryDate = form.ReceivedDate!.Value;
             delivery.Remarks = form.Remarks;
             delivery.Status = 1;
@@ -2069,7 +2113,7 @@ namespace gpos.Controllers
             tank.UpdatedAt = now;
 
             await _db.SaveChangesAsync();
-            await CreateFuelBatchForDelivery(delivery, tank, await ResolveFuelPriceAsync(tank.BranchId, tank.FuelId, tank.Fuel?.CurrentPricePerLiter ?? 0m), now);
+            await CreateFuelBatchForDelivery(delivery, tank, now);
             await _db.SaveChangesAsync();
 
             await transaction.CommitAsync();
@@ -2148,7 +2192,7 @@ namespace gpos.Controllers
             await _db.SaveChangesAsync();
             if (delivery.Tank is not null)
             {
-                await CreateFuelBatchForDelivery(delivery, delivery.Tank, await ResolveFuelPriceAsync(delivery.Tank.BranchId, delivery.Tank.FuelId, delivery.Fuel?.CurrentPricePerLiter ?? 0m), now);
+                await CreateFuelBatchForDelivery(delivery, delivery.Tank, now);
                 await _db.SaveChangesAsync();
             }
 
@@ -2174,8 +2218,8 @@ namespace gpos.Controllers
 
             return RedirectToAction(nameof(FuelReceiving), new { search, filterBranchId });
         }
-        public async Task<IActionResult> WarehouseToDisplayProduct(string? search) => View(await BuildStockTransferPage("WarehouseToDisplayProduct", "Warehouse to Display Product", nameof(SaveWarehouseToDisplayProduct), nameof(CompleteWarehouseToDisplayProduct), nameof(CancelWarehouseToDisplayProduct), search));
-        public async Task<IActionResult> DisplayToWarehouseProduct(string? search) => View(await BuildStockTransferPage("DisplayToWarehouseProduct", "Display to Warehouse Product", nameof(SaveDisplayToWarehouseProduct), nameof(CompleteDisplayToWarehouseProduct), nameof(CancelDisplayToWarehouseProduct), search));
+        public async Task<IActionResult> WarehouseToDisplayProduct(string? search, int? filterBranchId) => View(await BuildStockTransferPage("WarehouseToDisplayProduct", "Warehouse to Display Product", nameof(SaveWarehouseToDisplayProduct), nameof(CompleteWarehouseToDisplayProduct), nameof(CancelWarehouseToDisplayProduct), search, filterBranchId));
+        public async Task<IActionResult> DisplayToWarehouseProduct(string? search, int? filterBranchId) => View(await BuildStockTransferPage("DisplayToWarehouseProduct", "Display to Warehouse Product", nameof(SaveDisplayToWarehouseProduct), nameof(CompleteDisplayToWarehouseProduct), nameof(CancelDisplayToWarehouseProduct), search, filterBranchId));
         public async Task<IActionResult> BranchToBranchProduct(string? search, int? sourceBranchId, int? destinationBranchId) => View(await BuildStockTransferPage("BranchToBranchProduct", "Branch to Branch Product", nameof(SaveBranchToBranchProduct), nameof(CompleteBranchToBranchProduct), nameof(CancelBranchToBranchProduct), search, sourceBranchId, destinationBranchId));
         public async Task<IActionResult> BranchToBranchFuel(string? search) => View(await BuildStockTransferPage("BranchToBranchFuel", "Branch to Branch Fuel", nameof(SaveBranchToBranchFuel), nameof(CompleteBranchToBranchFuel), nameof(CancelBranchToBranchFuel), search));
 
@@ -2243,6 +2287,60 @@ namespace gpos.Controllers
         public async Task<IActionResult> TankFuelAdjustment(string? search, int? branchId, DateTime? dateFrom, DateTime? dateTo, string? status, int? editId, int? detailsId)
             => View(await BuildStockAdjustmentPageAsync("Fuel", search, branchId, dateFrom, dateTo, status, editId, detailsId));
 
+        [HttpGet]
+        public async Task<IActionResult> SearchStockAdjustmentTargets(string scope, int branchId, string? search)
+        {
+            if (branchId <= 0) return BadRequest(new { message = "Please select a Branch first." });
+            var term = (search ?? string.Empty).Trim();
+            scope = NormalizeAdjustmentScope(scope);
+
+            if (scope == "Warehouse")
+            {
+                return Json(await _db.WarehouseStocks.AsNoTracking()
+                    .Where(x => x.BranchId == branchId && x.Batch != null && x.Batch.ProductId == x.ProductId
+                        && (term == "" || (x.Product != null && x.Product.Name.Contains(term)) || x.Batch.BatchNo.Contains(term)))
+                    .OrderBy(x => x.Product != null ? x.Product.Name : string.Empty).ThenBy(x => x.Batch!.BatchNo)
+                    .Take(100)
+                    .Select(x => new
+                    {
+                        id = x.Id, branchId = x.BranchId, productId = x.ProductId,
+                        productName = x.Product != null ? x.Product.Name : string.Empty,
+                        batchId = x.BatchId, batchNumber = x.Batch!.BatchNo, currentQuantity = x.Quantity,
+                        price = x.Batch.CostPrice, expiryDate = x.Batch.ExpiryDate,
+                        status = x.Batch.IsActive && x.Batch.Status == 1 ? "Active" : "Inactive"
+                    }).ToListAsync());
+            }
+
+            if (scope == "Display")
+            {
+                return Json(await _db.DisplayStocks.AsNoTracking()
+                    .Where(x => x.BranchId == branchId && x.Batch != null && x.Batch.ProductId == x.ProductId
+                        && (term == "" || (x.Product != null && x.Product.Name.Contains(term)) || x.Batch.BatchNo.Contains(term)))
+                    .OrderBy(x => x.Product != null ? x.Product.Name : string.Empty).ThenBy(x => x.Batch!.BatchNo)
+                    .Take(100)
+                    .Select(x => new
+                    {
+                        id = x.Id, branchId = x.BranchId, productId = x.ProductId,
+                        productName = x.Product != null ? x.Product.Name : string.Empty,
+                        batchId = x.BatchId, batchNumber = x.Batch!.BatchNo, currentQuantity = x.Quantity,
+                        price = x.Batch.SellingPrice, expiryDate = x.Batch.ExpiryDate,
+                        status = x.Batch.IsActive && x.Batch.Status == 1 ? "Active" : "Inactive"
+                    }).ToListAsync());
+            }
+
+            return Json(await _db.Tanks.AsNoTracking()
+                .Where(x => x.BranchId == branchId && x.IsActive && x.Status == 1
+                    && (term == "" || x.TankNo.Contains(term) || (x.Fuel != null && x.Fuel.Name.Contains(term))))
+                .OrderBy(x => x.TankNo).Take(100)
+                .Select(x => new
+                {
+                    id = x.Id, branchId = x.BranchId, tankName = x.TankNo, fuelId = x.FuelId,
+                    fuelName = x.Fuel != null ? x.Fuel.Name : string.Empty,
+                    currentQuantity = x.CurrentLiters, capacity = x.CapacityLiters,
+                    availableSpace = x.CapacityLiters - x.CurrentLiters, status = "Active"
+                }).ToListAsync());
+        }
+
         [HttpPost, ValidateAntiForgeryToken]
         public async Task<IActionResult> SaveStockAdjustment([Bind(Prefix = "Form")] StockAdjustmentForm form)
         {
@@ -2269,8 +2367,8 @@ namespace gpos.Controllers
         {
             var userId = CurrentUserId();
             var adjustment = await _db.StockAdjustments.FirstOrDefaultAsync(x => x.Id == id);
-            if (!userId.HasValue || adjustment is null) return AdjustmentRedirect(adjustment?.Scope ?? "Warehouse", "Adjustment was not found.");
-            if (adjustment.Status != "Draft") return AdjustmentRedirect(adjustment.Scope, "Only draft adjustments can be posted.");
+            if (!userId.HasValue || adjustment is null) return AdjustmentApplyResponse(adjustment?.Scope ?? "Warehouse", "Adjustment was not found.", false);
+            if (adjustment.Status != "Draft") return AdjustmentApplyResponse(adjustment.Scope, "Only draft adjustments can be applied.", false);
             await using var transaction = await _db.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
             try
             {
@@ -2284,9 +2382,9 @@ namespace gpos.Controllers
                 }
                 await _db.SaveChangesAsync();
                 await transaction.CommitAsync();
-                return AdjustmentRedirect(adjustment.Scope, "Adjustment posted successfully.");
+                return AdjustmentApplyResponse(adjustment.Scope, "Adjustment applied successfully.", true);
             }
-            catch (Exception ex) { await transaction.RollbackAsync(); return AdjustmentRedirect(adjustment.Scope, $"Posting failed: {ex.Message}"); }
+            catch (Exception ex) { await transaction.RollbackAsync(); return AdjustmentApplyResponse(adjustment.Scope, $"Applying adjustment failed: {ex.Message}", false); }
         }
 
         [HttpPost, ValidateAntiForgeryToken]
@@ -2307,7 +2405,7 @@ namespace gpos.Controllers
             var original = await _db.StockAdjustments.FirstOrDefaultAsync(x => x.Id == id);
             var userId = CurrentUserId();
             if (original is null || !userId.HasValue) return AdjustmentRedirect(original?.Scope ?? "Warehouse", "Adjustment was not found.");
-            if (original.Status != "Posted" || original.ReversedByAdjustmentId.HasValue) return AdjustmentRedirect(original.Scope, "Only an unreversed posted adjustment can be reversed.");
+            if (original.Status != "Posted" || original.ReversedByAdjustmentId.HasValue) return AdjustmentRedirect(original.Scope, "Only an unreversed applied adjustment can be reversed.");
             var now = DateTime.Now;
             var reversal = new StockAdjustment
             {
@@ -2320,7 +2418,7 @@ namespace gpos.Controllers
             };
             _db.StockAdjustments.Add(reversal);
             await _db.SaveChangesAsync();
-            return AdjustmentRedirect(original.Scope, $"Reversal {reversal.AdjustmentNo} created as Draft. Review and post it to update stock.");
+            return AdjustmentRedirect(original.Scope, $"Reversal {reversal.AdjustmentNo} created as Draft. Review and apply it to update stock.");
         }
         public async Task<IActionResult> ProductPriceAdjustment(string? search, int? filterBranchId, DateTime? dateFrom, DateTime? dateTo)
         {
@@ -3042,6 +3140,8 @@ namespace gpos.Controllers
                         Tank = item.Tank?.TankNo ?? "-",
                         Liters = item.DeliveredLiters,
                         CostPerLiter = item.CostPerLiter ?? 0m,
+                        TotalCost = item.TotalCost ?? decimal.Round(item.DeliveredLiters * (item.CostPerLiter ?? 0m), 2, MidpointRounding.AwayFromZero),
+                        CreatedAt = item.CreatedAt,
                         TankLitersBefore = before,
                         TankLitersAfter = after,
                         Date = item.DeliveryDate,
@@ -3284,7 +3384,7 @@ namespace gpos.Controllers
             return batch;
         }
 
-        private async Task CreateFuelBatchForDelivery(FuelDelivery delivery, Tank tank, decimal sellingPricePerLiter, DateTime now)
+        private async Task CreateFuelBatchForDelivery(FuelDelivery delivery, Tank tank, DateTime now)
         {
             if (delivery.Id > 0 && await _db.FuelBatches.AnyAsync(batch => batch.FuelDeliveryId == delivery.Id))
             {
@@ -3300,7 +3400,6 @@ namespace gpos.Controllers
                 FuelDeliveryId = delivery.Id,
                 BatchNo = await GenerateNextFuelBatchNoAsync(),
                 CostPricePerLiter = delivery.CostPerLiter ?? 0m,
-                SellingPricePerLiter = sellingPricePerLiter,
                 ReceivedLiters = delivery.DeliveredLiters,
                 RemainingLiters = delivery.DeliveredLiters,
                 ReceivedDate = delivery.DeliveryDate,
@@ -3757,6 +3856,11 @@ namespace gpos.Controllers
                 if (!form.SourceBranchId.HasValue || form.SourceBranchId.Value <= 0)
                 {
                     throw new InvalidOperationException("Source branch is required.");
+                }
+
+                if (!await _db.Branches.AsNoTracking().AnyAsync(branch => branch.Id == form.SourceBranchId.Value && branch.Status == 1))
+                {
+                    throw new InvalidOperationException("Select a valid active branch.");
                 }
 
                 if (transferType is "WarehouseToDisplayProduct" or "DisplayToWarehouseProduct")
@@ -4221,6 +4325,7 @@ namespace gpos.Controllers
                     .Where(stock => stock.Quantity > 0 && stock.Product != null)
                     .GroupBy(stock => new
                     {
+                        stock.BranchId,
                         stock.ProductId,
                         ProductName = stock.Product!.Name,
                         CategoryName = stock.Product.Category != null ? stock.Product.Category.Name : "-",
@@ -4229,6 +4334,7 @@ namespace gpos.Controllers
                     .OrderBy(group => group.Key.ProductName)
                     .Select(group => new StockTransferProductSelectorRowViewModel
                     {
+                        BranchId = group.Key.BranchId,
                         ProductId = group.Key.ProductId,
                         ProductName = group.Key.ProductName,
                         CategoryName = group.Key.CategoryName,
@@ -4269,6 +4375,7 @@ namespace gpos.Controllers
                 .Where(stock => stock.Quantity > 0 && stock.Product != null)
                 .GroupBy(stock => new
                 {
+                    stock.BranchId,
                     stock.ProductId,
                     ProductName = stock.Product!.Name,
                     CategoryName = stock.Product.Category != null ? stock.Product.Category.Name : "-",
@@ -4277,6 +4384,7 @@ namespace gpos.Controllers
                 .OrderBy(group => group.Key.ProductName)
                 .Select(group => new StockTransferProductSelectorRowViewModel
                 {
+                    BranchId = group.Key.BranchId,
                     ProductId = group.Key.ProductId,
                     ProductName = group.Key.ProductName,
                     CategoryName = group.Key.CategoryName,
@@ -5115,7 +5223,7 @@ namespace gpos.Controllers
         private async Task<StockAdjustmentPageViewModel> BuildStockAdjustmentPageAsync(string scope, string? search, int? branchId, DateTime? dateFrom, DateTime? dateTo, string? status, int? editId, int? detailsId, StockAdjustmentForm? suppliedForm = null)
         {
             scope = NormalizeAdjustmentScope(scope);
-            var query = _db.StockAdjustments.AsNoTracking().Include(x => x.Branch).Include(x => x.Product).Include(x => x.Batch).Include(x => x.Fuel).Include(x => x.Tank).Include(x => x.AdjustedByUser).Where(x => x.Scope == scope);
+            var query = _db.StockAdjustments.AsNoTracking().Include(x => x.Branch).Include(x => x.Product).Include(x => x.Batch).Include(x => x.Fuel).Include(x => x.Tank).Include(x => x.AdjustedByUser).Include(x => x.PostedByUser).Where(x => x.Scope == scope);
             if (branchId > 0) query = query.Where(x => x.BranchId == branchId);
             if (dateFrom.HasValue) query = query.Where(x => x.BusinessDate >= dateFrom.Value.Date);
             if (dateTo.HasValue) query = query.Where(x => x.BusinessDate < dateTo.Value.Date.AddDays(1));
@@ -5141,6 +5249,15 @@ namespace gpos.Controllers
         private static string NormalizeAdjustmentScope(string? scope) => scope is "Display" or "Fuel" ? scope : "Warehouse";
         private static string AdjustmentViewName(string scope) => scope == "Display" ? nameof(DisplayStockAdjustment) : scope == "Fuel" ? nameof(TankFuelAdjustment) : nameof(WarehouseStockAdjustment);
         private IActionResult AdjustmentRedirect(string scope, string message) { TempData["AdjustmentMessage"] = message; return RedirectToAction(AdjustmentViewName(NormalizeAdjustmentScope(scope))); }
+        private IActionResult AdjustmentApplyResponse(string scope, string message, bool success)
+        {
+            if (Request.Headers.Accept.Any(value => value?.Contains("application/json", StringComparison.OrdinalIgnoreCase) == true))
+            {
+                if (success) TempData["AdjustmentMessage"] = message;
+                return Json(new { success, message });
+            }
+            return AdjustmentRedirect(scope, message);
+        }
         private static void ValidateAdjustmentTarget(StockAdjustmentForm form, string scope)
         {
             if (scope == "Warehouse" && !form.WarehouseStockId.HasValue) form.WarehouseStockId = 0;
@@ -5149,14 +5266,14 @@ namespace gpos.Controllers
         }
         private async Task<object?> LoadAdjustmentTargetAsync(StockAdjustmentForm form, string scope, bool tracking)
         {
-            if (scope == "Warehouse") return await _db.WarehouseStocks.FirstOrDefaultAsync(x => x.Id == form.WarehouseStockId && x.BranchId == form.BranchId);
-            if (scope == "Display") return await _db.DisplayStocks.FirstOrDefaultAsync(x => x.Id == form.DisplayStockId && x.BranchId == form.BranchId);
+            if (scope == "Warehouse") return await _db.WarehouseStocks.FirstOrDefaultAsync(x => x.Id == form.WarehouseStockId && x.BranchId == form.BranchId && x.Batch != null && x.Batch.ProductId == x.ProductId);
+            if (scope == "Display") return await _db.DisplayStocks.FirstOrDefaultAsync(x => x.Id == form.DisplayStockId && x.BranchId == form.BranchId && x.Batch != null && x.Batch.ProductId == x.ProductId);
             return await _db.Tanks.FirstOrDefaultAsync(x => x.Id == form.TankId && x.BranchId == form.BranchId && x.IsActive && x.Status == 1);
         }
         private async Task<object?> LoadAdjustmentTargetAsync(StockAdjustment x, bool tracking)
         {
-            if (x.Scope == "Warehouse") return await _db.WarehouseStocks.FirstOrDefaultAsync(s => s.Id == x.WarehouseStockId && s.BranchId == x.BranchId);
-            if (x.Scope == "Display") return await _db.DisplayStocks.FirstOrDefaultAsync(s => s.Id == x.DisplayStockId && s.BranchId == x.BranchId);
+            if (x.Scope == "Warehouse") return await _db.WarehouseStocks.FirstOrDefaultAsync(s => s.Id == x.WarehouseStockId && s.BranchId == x.BranchId && s.Batch != null && s.Batch.ProductId == s.ProductId);
+            if (x.Scope == "Display") return await _db.DisplayStocks.FirstOrDefaultAsync(s => s.Id == x.DisplayStockId && s.BranchId == x.BranchId && s.Batch != null && s.Batch.ProductId == s.ProductId);
             return await _db.Tanks.FirstOrDefaultAsync(s => s.Id == x.TankId && s.BranchId == x.BranchId && s.IsActive && s.Status == 1);
         }
         private static decimal TargetQuantity(object target) => target is WarehouseStock w ? w.Quantity : target is DisplayStock d ? d.Quantity : ((Tank)target).CurrentLiters;

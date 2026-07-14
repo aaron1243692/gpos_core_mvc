@@ -65,6 +65,7 @@ namespace gpos.Models.ViewModels
         [Range(1, int.MaxValue, ErrorMessage = "Daily Cash is required.")]
         public int DailyCashId { get; set; }
         public string DailyCashDisplay { get; set; } = string.Empty;
+        [Range(1, int.MaxValue, ErrorMessage = "Branch is required.")]
         public int BranchId { get; set; }
         public string BranchName { get; set; } = string.Empty;
         public int ShiftId { get; set; }
@@ -76,9 +77,8 @@ namespace gpos.Models.ViewModels
         public decimal ActualCash { get; set; }
         public decimal TotalRemitted { get; set; }
         public decimal RemainingAmount { get; set; }
-        [Range(0.01, double.MaxValue, ErrorMessage = "Remitted Amount must be greater than 0.")]
+        [Range(typeof(decimal), "0", "9999999999999999.99", ErrorMessage = "Remitted Amount must be 0 or greater.")]
         public decimal RemittedAmount { get; set; }
-        [Range(1, int.MaxValue, ErrorMessage = "Received By is required.")]
         public int ReceivedByUserId { get; set; }
         public string ReceivedByName { get; set; } = string.Empty;
         [Required(ErrorMessage = "Received Date/Time is required.")]
@@ -112,6 +112,7 @@ namespace gpos.Models.ViewModels
 
     public class CashRemittancePageViewModel
     {
+        public string CurrentUserName { get; set; } = string.Empty;
         public CashModuleFilter Filter { get; set; } = new();
         public CashRemittanceForm Form { get; set; } = new();
         public List<CashRemittance> Records { get; set; } = new();
