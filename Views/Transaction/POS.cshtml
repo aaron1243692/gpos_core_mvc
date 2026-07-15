@@ -179,33 +179,57 @@
             </aside>
         </div>
 
-        <div class="modal fade" id="displayRefillModal" tabindex="-1" aria-labelledby="displayRefillModalLabel" aria-hidden="true">
-            <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal fade" id="displayRefillListModal" tabindex="-1" aria-labelledby="displayRefillListModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <div><h2 class="modal-title fs-5" id="displayRefillModalLabel">Display Refill</h2><p class="mb-0 text-muted">Warehouse to Display · FIFO allocation</p></div>
+                        <div><h2 class="modal-title fs-5" id="displayRefillListModalLabel">Display Refill</h2><p class="mb-0 text-muted">Current Branch warehouse products</p></div>
                         <button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                     <div class="modal-body">
                         <div class="alert d-none" id="displayRefillMessage" role="alert"></div>
-                        <div class="row g-3 mb-3">
-                            <div class="col-md-6"><label class="form-label" for="displayRefillBranch">Branch</label><input class="form-control" id="displayRefillBranch" value="@Model.CurrentBranchName" readonly /></div>
-                            <div class="col-md-6"><label class="form-label" for="displayRefillSearch">Search product</label><input class="form-control" id="displayRefillSearch" type="search" placeholder="Search no or product..." autocomplete="off" /></div>
-                            <div class="col-md-8"><label class="form-label" for="displayRefillProduct">Product</label><select class="form-select" id="displayRefillProduct"><option value="">Select product</option></select><div class="form-text" id="displayRefillAvailable">Available: Select product</div></div>
-                            <div class="col-md-4"><label class="form-label" for="displayRefillQuantity">Transfer Quantity</label><input class="form-control" id="displayRefillQuantity" type="number" min="0.01" step="0.01" inputmode="decimal" /></div>
-                            <div class="col-12"><label class="form-label" for="displayRefillRemarks">Remarks <span class="text-muted">(Optional)</span></label><textarea class="form-control" id="displayRefillRemarks" rows="2" maxlength="255"></textarea></div>
+                        <div class="d-flex flex-wrap align-items-end justify-content-between gap-2 mb-3">
+                            <div class="flex-grow-1" style="max-width: 480px;"><label class="form-label" for="displayRefillSearch">Search warehouse products</label><input class="form-control" id="displayRefillSearch" type="search" placeholder="Search product name or code..." autocomplete="off" /></div>
+                            <button class="btn btn-success" id="addDisplayRefillTransferButton" type="button">Add Transfer</button>
                         </div>
                         <div class="table-responsive">
                             <table class="table app-table table-sm align-middle mb-0">
-                                <thead><tr><th>No</th><th>Product</th><th class="text-end">Available</th><th>Oldest Batch</th><th>Status</th><th>Action</th></tr></thead>
+                                <thead><tr><th>No</th><th>Product</th><th class="text-end">Total Warehouse Quantity</th><th>Oldest Available Batch</th><th class="text-end">Active Batches</th><th>Status</th><th>Action</th></tr></thead>
                                 <tbody id="displayRefillRows"><tr><td class="text-center text-muted" colspan="6">Loading warehouse products...</td></tr></tbody>
                             </table>
                         </div>
                     </div>
-                    <div class="modal-footer">
-                        <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button>
-                        <button class="btn btn-success" id="confirmDisplayRefillButton" type="button">Save Transfer</button>
+                    <div class="modal-footer"><button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Close</button></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal fade" id="displayRefillTransferModal" tabindex="-1" aria-labelledby="displayRefillTransferModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header"><div><h2 class="modal-title fs-5" id="displayRefillTransferModalLabel">Add Transfer</h2><p class="mb-0 text-muted">Warehouse to Display · FIFO allocation</p></div><button class="btn-close" id="closeDisplayRefillTransferButton" type="button" aria-label="Close"></button></div>
+                    <div class="modal-body">
+                        <div class="alert d-none" id="displayRefillTransferMessage" role="alert"></div>
+                        <input id="displayRefillProductId" type="hidden" />
+                        <div class="row g-3">
+                            <div class="col-12"><label class="form-label" for="displayRefillBranch">Branch</label><input class="form-control" id="displayRefillBranch" value="@Model.CurrentBranchName" readonly /></div>
+                            <div class="col-12"><label class="form-label" for="displayRefillProductName">Product</label><div class="input-group"><input class="form-control" id="displayRefillProductName" readonly placeholder="Search/select product..." /><button class="btn btn-outline-secondary" id="openDisplayRefillProductSelector" type="button"><img src="/icons/search.png" alt="Search" style="width:16px;height:16px;" /></button></div></div>
+                            <div class="col-md-6"><label class="form-label" for="displayRefillAvailable">Available Warehouse Quantity</label><input class="form-control" id="displayRefillAvailable" readonly value="0" /></div>
+                            <div class="col-md-6"><label class="form-label" for="displayRefillQuantity">Transfer Quantity</label><input class="form-control" id="displayRefillQuantity" type="number" min="0.01" step="0.01" inputmode="decimal" /></div>
+                            <div class="col-12"><label class="form-label" for="displayRefillRemarks">Remarks <span class="text-muted">(Optional)</span></label><textarea class="form-control" id="displayRefillRemarks" rows="2" maxlength="255"></textarea></div>
+                        </div>
                     </div>
+                    <div class="modal-footer"><button class="btn btn-outline-secondary" id="cancelDisplayRefillTransferButton" type="button">Cancel</button><button class="btn btn-success" id="confirmDisplayRefillButton" type="button">Save Transfer</button></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal fade" id="displayRefillProductSelectorModal" tabindex="-1" aria-labelledby="displayRefillProductSelectorModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+                <div class="modal-content">
+                    <div class="modal-header"><h2 class="modal-title fs-5" id="displayRefillProductSelectorModalLabel">Select Warehouse Product</h2><button class="btn-close" id="closeDisplayRefillSelectorButton" type="button" aria-label="Close"></button></div>
+                    <div class="modal-body"><input class="form-control mb-3" id="displayRefillSelectorSearch" type="search" placeholder="Search product name or code..." autocomplete="off" /><div class="table-responsive"><table class="table app-table table-sm align-middle mb-0"><thead><tr><th>No</th><th>Product</th><th class="text-end">Available</th><th>Oldest Batch</th><th>Status</th><th>Action</th></tr></thead><tbody id="displayRefillSelectorRows"></tbody></table></div></div>
+                    <div class="modal-footer"><button class="btn btn-outline-secondary" id="cancelDisplayRefillSelectorButton" type="button">Cancel</button></div>
                 </div>
             </div>
         </div>
@@ -517,14 +541,26 @@
             const displayRefillButton = document.getElementById("displayRefillButton");
             const recentSalesButton = document.getElementById("recentSalesButton");
             const voidSalesButton = document.getElementById("voidSalesButton");
-            const displayRefillModalElement = document.getElementById("displayRefillModal");
+            const displayRefillListModalElement = document.getElementById("displayRefillListModal");
+            const displayRefillTransferModalElement = document.getElementById("displayRefillTransferModal");
+            const displayRefillProductSelectorModalElement = document.getElementById("displayRefillProductSelectorModal");
             const displayRefillMessage = document.getElementById("displayRefillMessage");
+            const displayRefillTransferMessage = document.getElementById("displayRefillTransferMessage");
             const displayRefillSearch = document.getElementById("displayRefillSearch");
-            const displayRefillProduct = document.getElementById("displayRefillProduct");
+            const displayRefillSelectorSearch = document.getElementById("displayRefillSelectorSearch");
+            const displayRefillProductId = document.getElementById("displayRefillProductId");
+            const displayRefillProductName = document.getElementById("displayRefillProductName");
             const displayRefillQuantity = document.getElementById("displayRefillQuantity");
             const displayRefillRemarks = document.getElementById("displayRefillRemarks");
             const displayRefillAvailable = document.getElementById("displayRefillAvailable");
             const displayRefillRows = document.getElementById("displayRefillRows");
+            const displayRefillSelectorRows = document.getElementById("displayRefillSelectorRows");
+            const addDisplayRefillTransferButton = document.getElementById("addDisplayRefillTransferButton");
+            const openDisplayRefillProductSelector = document.getElementById("openDisplayRefillProductSelector");
+            const closeDisplayRefillTransferButton = document.getElementById("closeDisplayRefillTransferButton");
+            const cancelDisplayRefillTransferButton = document.getElementById("cancelDisplayRefillTransferButton");
+            const closeDisplayRefillSelectorButton = document.getElementById("closeDisplayRefillSelectorButton");
+            const cancelDisplayRefillSelectorButton = document.getElementById("cancelDisplayRefillSelectorButton");
             const confirmDisplayRefillButton = document.getElementById("confirmDisplayRefillButton");
             const recentSalesModalElement = document.getElementById("recentSalesModal");
             const recentSalesMessage = document.getElementById("recentSalesMessage");
@@ -576,38 +612,67 @@
             }
 
             function selectedRefillProduct() {
-                const productId = Number.parseInt(displayRefillProduct.value, 10);
+                const productId = Number.parseInt(displayRefillProductId.value, 10);
                 return displayRefillProducts.find(product => product.productId === productId) || null;
             }
 
             function updateRefillSelection(productId) {
-                displayRefillProduct.value = productId ? String(productId) : "";
+                displayRefillProductId.value = productId ? String(productId) : "";
                 const product = selectedRefillProduct();
-                displayRefillAvailable.textContent = product ? `Available: ${formatQuantity(product.availableQuantity)} · Oldest batch: ${product.oldestBatch}` : "Available: Select product";
+                displayRefillProductName.value = product?.product || "";
+                displayRefillAvailable.value = product ? formatQuantity(product.availableQuantity) : "0";
                 displayRefillQuantity.max = product ? String(product.availableQuantity) : "";
+                displayRefillQuantity.value = "";
             }
 
             function renderDisplayRefillProducts() {
                 const query = displayRefillSearch.value.trim().toLowerCase();
                 const visible = displayRefillProducts.filter(product => !query || `${product.no} ${product.product}`.toLowerCase().includes(query));
-                displayRefillProduct.innerHTML = `<option value="">Select product</option>${visible.map(product => `<option value="${product.productId}">${escapeHtml(product.no)} · ${escapeHtml(product.product)}</option>`).join("")}`;
                 displayRefillRows.innerHTML = visible.length ? visible.map((product, index) => `<tr>
                     <td>${index + 1}</td><td><span class="text-muted">${escapeHtml(product.no)}</span><br><strong>${escapeHtml(product.product)}</strong></td>
-                    <td class="text-end">${formatQuantity(product.availableQuantity)}</td><td>${escapeHtml(product.oldestBatch)}</td><td><span class="badge text-bg-success">Available</span></td>
-                    <td><button class="btn btn-sm btn-outline-success" type="button" data-refill-product-id="${product.productId}">Select</button></td></tr>`).join("") : `<tr><td class="text-center text-muted" colspan="6">No warehouse products found.</td></tr>`;
-                updateRefillSelection(null);
+                    <td class="text-end">${formatQuantity(product.availableQuantity)}</td><td>${escapeHtml(product.oldestBatch)}</td><td class="text-end">${product.activeBatchCount}</td><td><span class="badge text-bg-success">Available</span></td>
+                    <td><button class="btn btn-sm btn-outline-success" type="button" data-refill-transfer-product-id="${product.productId}">Transfer</button></td></tr>`).join("") : `<tr><td class="text-center text-muted" colspan="7">No warehouse products available.</td></tr>`;
+            }
+
+            function renderDisplayRefillSelector() {
+                const query = displayRefillSelectorSearch.value.trim().toLowerCase();
+                const visible = displayRefillProducts.filter(product => !query || `${product.no} ${product.product}`.toLowerCase().includes(query));
+                displayRefillSelectorRows.innerHTML = visible.length ? visible.map((product, index) => `<tr><td>${index + 1}</td><td><span class="text-muted">${escapeHtml(product.no)}</span><br><strong>${escapeHtml(product.product)}</strong></td><td class="text-end">${formatQuantity(product.availableQuantity)}</td><td>${escapeHtml(product.oldestBatch)}</td><td><span class="badge text-bg-success">Available</span></td><td><button class="btn btn-sm btn-outline-primary" type="button" data-refill-select-product-id="${product.productId}">Select</button></td></tr>`).join("") : `<tr><td class="text-center text-muted" colspan="6">No warehouse products available.</td></tr>`;
+            }
+
+            function showModalAfterHide(currentElement, nextElement) {
+                const current = bootstrap.Modal.getOrCreateInstance(currentElement);
+                currentElement.addEventListener("hidden.bs.modal", () => bootstrap.Modal.getOrCreateInstance(nextElement).show(), { once: true });
+                current.hide();
+            }
+
+            function openDisplayRefillTransfer(productId = null) {
+                displayRefillTransferMessage.classList.add("d-none");
+                displayRefillRemarks.value = "";
+                confirmDisplayRefillButton.disabled = false;
+                updateRefillSelection(productId);
+                showModalAfterHide(displayRefillListModalElement, displayRefillTransferModalElement);
+            }
+
+            function openRefillProductSelector() {
+                displayRefillSelectorSearch.value = "";
+                renderDisplayRefillSelector();
+                showModalAfterHide(displayRefillTransferModalElement, displayRefillProductSelectorModalElement);
             }
 
             async function openDisplayRefill() {
                 displayRefillMessage.classList.add("d-none");
-                displayRefillRows.innerHTML = `<tr><td class="text-center text-muted" colspan="6">Loading warehouse products...</td></tr>`;
-                if (window.bootstrap) bootstrap.Modal.getOrCreateInstance(displayRefillModalElement).show();
+                displayRefillRows.innerHTML = `<tr><td class="text-center text-muted" colspan="7">Loading warehouse products...</td></tr>`;
+                if (window.bootstrap) bootstrap.Modal.getOrCreateInstance(displayRefillListModalElement).show();
                 try {
                     const response = await fetch("/Transaction/POSDisplayRefillOptions", { headers: { Accept: "application/json" } });
                     const result = await response.json();
                     if (!response.ok || !result.success) throw new Error(result.message || "Unable to load warehouse products.");
                     displayRefillProducts = Array.isArray(result.products) ? result.products : [];
                     renderDisplayRefillProducts();
+                    if (displayRefillProducts.length === 0) {
+                        showUtilityMessage(displayRefillMessage, "No warehouse products available.");
+                    }
                 } catch (error) {
                     displayRefillProducts = [];
                     renderDisplayRefillProducts();
@@ -618,8 +683,12 @@
             async function submitDisplayRefill() {
                 const product = selectedRefillProduct();
                 const quantity = Math.max(0, Number.parseFloat(displayRefillQuantity.value) || 0);
-                if (!product || quantity <= 0 || quantity > product.availableQuantity) {
-                    showUtilityMessage(displayRefillMessage, "Select a product and enter a quantity within the available warehouse stock.");
+                if (!product) {
+                    showUtilityMessage(displayRefillTransferMessage, "Please select a Product.");
+                    return;
+                }
+                if (quantity <= 0 || quantity > product.availableQuantity) {
+                    showUtilityMessage(displayRefillTransferMessage, "Requested quantity exceeds available stock or is invalid.");
                     return;
                 }
                 confirmDisplayRefillButton.disabled = true;
@@ -631,11 +700,26 @@
                     });
                     const result = await response.json();
                     if (!response.ok || !result.success) throw new Error(result.message || "Unable to complete the display refill.");
-                    showUtilityMessage(displayRefillMessage, result.message, true);
-                    savePosDraft();
-                    window.setTimeout(() => window.location.reload(), 500);
+                    const productInput = productInputByProductId(String(product.productId));
+                    if (productInput) {
+                        const nextAvailable = availableDisplayQuantity(productInput) + quantity;
+                        productInput.dataset.available = String(nextAvailable);
+                        productInput.max = String(nextAvailable);
+                        const card = productInput.closest(".pos-menu-product-card");
+                        if (card) {
+                            card.dataset.available = String(nextAvailable);
+                            card.dataset.availableQuantity = String(nextAvailable);
+                            const availableLabel = card.querySelector("small");
+                            if (availableLabel) availableLabel.textContent = `Available: ${formatQuantity(nextAvailable)}`;
+                        }
+                    }
+                    displayRefillTransferModalElement.addEventListener("hidden.bs.modal", async () => {
+                        await openDisplayRefill();
+                        showUtilityMessage(displayRefillMessage, "Transfer completed successfully.", true);
+                    }, { once: true });
+                    bootstrap.Modal.getOrCreateInstance(displayRefillTransferModalElement).hide();
                 } catch (error) {
-                    showUtilityMessage(displayRefillMessage, error.message || "Unable to complete the display refill.");
+                    showUtilityMessage(displayRefillTransferMessage, error.message || "Unable to complete the display refill.");
                     confirmDisplayRefillButton.disabled = false;
                 }
             }
@@ -1973,11 +2057,25 @@
             displayRefillButton.addEventListener("click", openDisplayRefill);
             recentSalesButton.addEventListener("click", openRecentSales);
             displayRefillSearch.addEventListener("input", renderDisplayRefillProducts);
-            displayRefillProduct.addEventListener("change", () => updateRefillSelection(displayRefillProduct.value));
             displayRefillRows.addEventListener("click", event => {
-                const button = event.target.closest("[data-refill-product-id]");
-                if (button) updateRefillSelection(button.dataset.refillProductId);
+                const button = event.target.closest("[data-refill-transfer-product-id]");
+                if (button) openDisplayRefillTransfer(button.dataset.refillTransferProductId);
             });
+            addDisplayRefillTransferButton.addEventListener("click", () => openDisplayRefillTransfer());
+            openDisplayRefillProductSelector.addEventListener("click", openRefillProductSelector);
+            displayRefillSelectorSearch.addEventListener("input", renderDisplayRefillSelector);
+            displayRefillSelectorRows.addEventListener("click", event => {
+                const button = event.target.closest("[data-refill-select-product-id]");
+                if (!button) return;
+                updateRefillSelection(button.dataset.refillSelectProductId);
+                showModalAfterHide(displayRefillProductSelectorModalElement, displayRefillTransferModalElement);
+            });
+            const returnToRefillList = () => showModalAfterHide(displayRefillTransferModalElement, displayRefillListModalElement);
+            const returnToRefillTransfer = () => showModalAfterHide(displayRefillProductSelectorModalElement, displayRefillTransferModalElement);
+            closeDisplayRefillTransferButton.addEventListener("click", returnToRefillList);
+            cancelDisplayRefillTransferButton.addEventListener("click", returnToRefillList);
+            closeDisplayRefillSelectorButton.addEventListener("click", returnToRefillTransfer);
+            cancelDisplayRefillSelectorButton.addEventListener("click", returnToRefillTransfer);
             confirmDisplayRefillButton.addEventListener("click", submitDisplayRefill);
             recentSalesRows.addEventListener("click", event => {
                 const button = event.target.closest("[data-recent-sale-id]");

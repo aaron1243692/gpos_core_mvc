@@ -186,7 +186,8 @@ namespace gpos.Controllers
                     no = $"P-{group.Key.ProductId:000}",
                     product = group.Key.Name,
                     availableQuantity = group.Sum(item => item.Quantity),
-                    oldestBatch = group.OrderBy(item => item.Batch!.CreatedAt ?? DateTime.MinValue).ThenBy(item => item.BatchId).Select(item => item.Batch!.BatchNo).FirstOrDefault() ?? "-"
+                    oldestBatch = group.OrderBy(item => item.Batch!.CreatedAt ?? DateTime.MinValue).ThenBy(item => item.BatchId).Select(item => item.Batch!.BatchNo).FirstOrDefault() ?? "-",
+                    activeBatchCount = group.Select(item => item.BatchId).Distinct().Count()
                 })
                 .ToList();
             return Ok(new { success = true, branch = context.BranchName, products });
