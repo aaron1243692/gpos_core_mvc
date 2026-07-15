@@ -72,17 +72,15 @@ namespace gpos.Controllers
                 .GroupBy(batch => batch.ProductId)
                 .ToDictionary(group => group.Key, group => group.First());
 
-            var fuels = await _db.Fuels
+            var nozzles = branchId.HasValue ? await _db.Nozzles
                 .AsNoTracking()
-                .Where(fuel => fuel.Status == 1 && fuel.IsActive)
-                .OrderBy(fuel => fuel.Name)
-                .ToListAsync();
-            var tanks = await _db.Tanks
-                .AsNoTracking()
-                .Where(tank => tank.Status == 1 && tank.IsActive && tank.CurrentLiters > 0
-                    && (!branchId.HasValue || tank.BranchId == branchId.Value))
-                .OrderBy(tank => tank.Id)
-                .ToListAsync();
+                .Include(nozzle => nozzle.Pump).ThenInclude(pump => pump!.Dispenser)
+                .Include(nozzle => nozzle.Pump).ThenInclude(pump => pump!.Tank).ThenInclude(tank => tank!.Fuel)
+                .Where(nozzle => nozzle.Status == 1 && nozzle.Pump != null && nozzle.Pump.Status == 1
+                    && nozzle.Pump.Dispenser != null && nozzle.Pump.Dispenser.Status == 1 && nozzle.Pump.Dispenser.BranchId == branchId.Value
+                    && nozzle.Pump.Tank != null && nozzle.Pump.Tank.BranchId == branchId.Value && nozzle.Pump.Tank.Status == 1 && nozzle.Pump.Tank.IsActive && nozzle.Pump.Tank.CurrentLiters > 0
+                    && nozzle.Pump.Tank.Fuel != null && nozzle.Pump.Tank.Fuel.Status == 1 && nozzle.Pump.Tank.Fuel.IsActive)
+                .OrderBy(nozzle => nozzle.Pump!.Name).ThenBy(nozzle => nozzle.NozzleNo).ToListAsync() : new List<Nozzle>();
             var branchFuelPrices = branchId.HasValue
                 ? await _db.BranchFuelPrices.AsNoTracking()
                     .Where(price => price.BranchId == branchId.Value && price.Status == 1)
@@ -158,28 +156,18 @@ namespace gpos.Controllers
                         };
                     })
                     .ToList(),
-                Fuels = fuels
-                    .Select(fuel =>
+                Fuels = nozzles.Select(nozzle => new PosFuelOptionViewModel
                     {
-                        var tank = tanks.FirstOrDefault(item => item.FuelId == fuel.Id);
-                        return tank is null
-                            ? null
-                            : new PosFuelOptionViewModel
-                            {
-                                FuelId = fuel.Id,
-                                TankId = tank.Id,
-                                TankNo = tank.TankNo,
-                                Name = fuel.Name,
-                                AvailableLiters = tank.CurrentLiters,
-                                Price = branchFuelPrices.TryGetValue(fuel.Id, out var branchPrice)
-                                    ? branchPrice
-                                    : fuel.CurrentPricePerLiter
-                            };
+                        NozzleId = nozzle.Id, NozzleName = nozzle.Name ?? string.Empty, NozzleNo = nozzle.NozzleNo,
+                        PumpName = nozzle.Pump!.Name, PumpNo = nozzle.Pump.PumpNo,
+                        DispenserName = nozzle.Pump.Dispenser!.Name,
+                        FuelId = nozzle.Pump.Tank!.FuelId, TankId = nozzle.Pump.Tank.Id, TankNo = nozzle.Pump.Tank.TankNo,
+                        Name = nozzle.Pump.Tank.Fuel!.Name, AvailableLiters = nozzle.Pump.Tank.CurrentLiters,
+                        Price = branchFuelPrices.TryGetValue(nozzle.Pump.Tank.FuelId, out var price) ? price : nozzle.Pump.Tank.Fuel.CurrentPricePerLiter
                     })
-                    .Where(option => option is not null)
                     .Select((option, index) =>
                     {
-                        option!.IsChecked = index == 0;
+                        option.IsChecked = index == 0;
                         return option;
                     })
                     .ToList()
@@ -2495,15 +2483,27 @@ namespace gpos.Controllers
                     && stock.Batch.Product != null
                     && stock.Batch.Product.Status == 1
                     && stock.Batch.Product.IsActive);
-            var batch = selectedStock?.Batch;
-            if (batch is null)
+            var selectedBatch = selectedStock?.Batch;
+            if (selectedBatch is null)
             {
                 ModelState.AddModelError("ProductPriceHistoryForm.BatchId", "The selected batch is not in Display Stock for this Branch.");
                 return View("ProductPriceAdjustment", await BuildProductPriceAdjustmentPageAsync(search, filterBranchId, dateFrom, dateTo, form, "productPriceAdjustmentModal"));
             }
-            if (form.ProductId != batch.ProductId)
+            if (form.ProductId != selectedBatch.ProductId)
             {
                 ModelState.AddModelError("ProductPriceHistoryForm.ProductId", "The selected Product does not match the selected Batch.");
+                return View("ProductPriceAdjustment", await BuildProductPriceAdjustmentPageAsync(search, filterBranchId, dateFrom, dateTo, form, "productPriceAdjustmentModal"));
+            }
+
+            var batch = await _db.ProductBatches.FirstOrDefaultAsync(item =>
+                item.Id == selectedStock!.BatchId
+                && item.ProductId == selectedStock.ProductId
+                && item.ProductId == form.ProductId
+                && item.Status == 1
+                && item.IsActive);
+            if (batch is null)
+            {
+                ModelState.AddModelError("ProductPriceHistoryForm.BatchId", "The selected active Product Batch could not be loaded.");
                 return View("ProductPriceAdjustment", await BuildProductPriceAdjustmentPageAsync(search, filterBranchId, dateFrom, dateTo, form, "productPriceAdjustmentModal"));
             }
 
@@ -4548,15 +4548,13 @@ namespace gpos.Controllers
             for (var i = 0; i < fuels.Count; i += 1)
             {
                 var request = fuels[i];
-                var tank = await _db.Tanks
-                    .Include(item => item.Fuel)
-                    .FirstOrDefaultAsync(item => item.Id == request.TankId
-                        && item.FuelId == request.FuelId
-                        && item.BranchId == branchId
-                        && item.Status == 1
-                        && item.IsActive);
+                var nozzle = await FuelEquipmentValidator.LoadPosNozzleAsync(_db, request.NozzleId ?? 0);
+                var pump = nozzle?.Pump; var tank = pump?.Tank;
 
-                if (tank is null || tank.Fuel is null || tank.Fuel.Status != 1 || !tank.Fuel.IsActive)
+                if (nozzle is null || pump is null || pump.Status != 1 || pump.Dispenser is null || pump.Dispenser.Status != 1
+                    || tank is null || tank.Fuel is null || tank.Status != 1 || !tank.IsActive || tank.Fuel.Status != 1 || !tank.Fuel.IsActive
+                    || pump.Dispenser.BranchId != branchId || tank.BranchId != branchId || pump.DispenserId is null || pump.TankId is null
+                    || await _db.Nozzles.CountAsync(item => item.PumpId == pump.Id && item.Status == 1) != 1)
                 {
                     throw new InvalidOperationException("One or more selected fuel items are no longer available.");
                 }
@@ -4591,7 +4589,9 @@ namespace gpos.Controllers
                     {
                         FuelId = tank.FuelId,
                         TankId = tank.Id,
-                        NozzleId = null,
+                        NozzleId = nozzle.Id,
+                        PumpId = pump.Id,
+                        DispenserId = pump.Dispenser.Id,
                         Liters = request.Liters,
                         PricePerLiter = price,
                         Subtotal = subtotal,

@@ -61,6 +61,12 @@ namespace gpos.Models.ViewModels
         public decimal AvailableLiters { get; set; }
         public decimal Price { get; set; }
         public bool IsChecked { get; set; }
+        public int NozzleId { get; set; }
+        public string NozzleName { get; set; } = string.Empty;
+        public string NozzleNo { get; set; } = string.Empty;
+        public string PumpName { get; set; } = string.Empty;
+        public string PumpNo { get; set; } = string.Empty;
+        public string DispenserName { get; set; } = string.Empty;
     }
 
     public class PosRebateViewModel
@@ -191,13 +197,9 @@ namespace gpos.Models.ViewModels
 
     public class PosFuelSaleRequestItem
     {
-        [Range(1, int.MaxValue)]
         public int FuelId { get; set; }
-
-        [Range(1, int.MaxValue)]
         public int TankId { get; set; }
-
-        public int? NozzleId { get; set; }
+        [Range(1, int.MaxValue)] public int? NozzleId { get; set; }
 
         [Range(typeof(decimal), "0.01", "999999999")]
         public decimal Liters { get; set; }

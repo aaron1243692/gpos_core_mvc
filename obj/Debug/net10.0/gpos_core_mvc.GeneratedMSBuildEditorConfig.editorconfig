@@ -55,6 +55,10 @@ build_metadata.AdditionalFiles.CssScope =
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcQ29uZmlndXJhdGlvblxEaXNjb3VudHMuY3NodG1s
 build_metadata.AdditionalFiles.CssScope = 
 
+[C:/project/gpos_core_mvc/Views/Configuration/Dispensers.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcQ29uZmlndXJhdGlvblxEaXNwZW5zZXJzLmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
 [C:/project/gpos_core_mvc/Views/Configuration/DisplayBatches.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcQ29uZmlndXJhdGlvblxEaXNwbGF5QmF0Y2hlcy5jc2h0bWw=
 build_metadata.AdditionalFiles.CssScope = 
@@ -85,6 +89,10 @@ build_metadata.AdditionalFiles.CssScope =
 
 [C:/project/gpos_core_mvc/Views/Configuration/FuelPrices.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcQ29uZmlndXJhdGlvblxGdWVsUHJpY2VzLmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/project/gpos_core_mvc/Views/Configuration/FuelPumps.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcQ29uZmlndXJhdGlvblxGdWVsUHVtcHMuY3NodG1s
 build_metadata.AdditionalFiles.CssScope = 
 
 [C:/project/gpos_core_mvc/Views/Configuration/Fuels.cshtml]

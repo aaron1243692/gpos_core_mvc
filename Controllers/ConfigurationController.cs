@@ -1196,8 +1196,7 @@ namespace gpos.Controllers
 
         public async Task<IActionResult> Pumps(string? search, int? editId, int? branchId, int? filterBranchId)
         {
-            branchId = filterBranchId ?? branchId;
-            return View(await BuildPumpsPageAsync(search, branchId, editId: editId, activeModalId: editId.HasValue ? "pumpModal" : ""));
+            return RedirectToAction(nameof(Dispensers), new { search, editId, filterBranchId = filterBranchId ?? branchId });
         }
 
         [HttpPost]

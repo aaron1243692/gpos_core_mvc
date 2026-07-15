@@ -7,6 +7,8 @@ namespace gpos.Models
         public int FuelId { get; set; }
         public int TankId { get; set; }
         public int? NozzleId { get; set; }
+        public int? PumpId { get; set; }
+        public int? DispenserId { get; set; }
         public decimal Liters { get; set; }
         public decimal PricePerLiter { get; set; }
         public decimal Subtotal { get; set; }
@@ -20,5 +22,7 @@ namespace gpos.Models
         public Fuel? Fuel { get; set; }
         public Tank? Tank { get; set; }
         public Nozzle? Nozzle { get; set; }
+        public Pump? Pump { get; set; }
+        public Dispenser? Dispenser { get; set; }
     }
 }

@@ -19,6 +19,7 @@ namespace gpos.Data
         public DbSet<Fuel> Fuels { get; set; }
         public DbSet<Tank> Tanks { get; set; }
         public DbSet<Pump> Pumps { get; set; }
+        public DbSet<Dispenser> Dispensers { get; set; }
         public DbSet<ProductCategory> ProductCategories { get; set; }
         public DbSet<ProductUnit> ProductUnits { get; set; }
         public DbSet<Product> Products { get; set; }
@@ -310,14 +311,17 @@ namespace gpos.Data
                 entity.Property(pump => pump.Id).HasColumnName("id");
                 entity.Property(pump => pump.TankId).HasColumnName("tank_id");
                 entity.Property(pump => pump.BranchId).HasColumnName("branch_id");
+                entity.Property(pump => pump.DispenserId).HasColumnName("dispenser_id");
                 entity.Property(pump => pump.PumpNo).HasColumnName("pump_no").IsRequired();
                 entity.Property(pump => pump.Name).HasColumnName("name");
                 entity.Property(pump => pump.Status).HasColumnName("status").HasDefaultValue(1);
+                entity.Property(pump => pump.Remarks).HasColumnName("remarks");
                 entity.Property(pump => pump.CreatedAt).HasColumnName("created_at");
                 entity.Property(pump => pump.UpdatedAt).HasColumnName("updated_at");
 
                 entity.HasIndex(pump => pump.TankId);
                 entity.HasIndex(pump => pump.BranchId);
+                entity.HasIndex(pump => pump.DispenserId);
                 entity.HasOne(pump => pump.Tank)
                     .WithMany(tank => tank.Pumps)
                     .HasForeignKey(pump => pump.TankId)
@@ -326,6 +330,27 @@ namespace gpos.Data
                     .WithMany()
                     .HasForeignKey(pump => pump.BranchId)
                     .OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne(pump => pump.Dispenser)
+                    .WithMany(dispenser => dispenser.Pumps)
+                    .HasForeignKey(pump => pump.DispenserId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            modelBuilder.Entity<Dispenser>(entity =>
+            {
+                entity.ToTable("dispensers");
+                entity.HasKey(item => item.Id);
+                entity.Property(item => item.Id).HasColumnName("id");
+                entity.Property(item => item.BranchId).HasColumnName("branch_id");
+                entity.Property(item => item.DispenserCode).HasColumnName("dispenser_code").HasMaxLength(100).IsRequired();
+                entity.Property(item => item.Name).HasColumnName("name").HasMaxLength(200).IsRequired();
+                entity.Property(item => item.Location).HasColumnName("location").HasMaxLength(200);
+                entity.Property(item => item.Remarks).HasColumnName("remarks").HasMaxLength(500);
+                entity.Property(item => item.Status).HasColumnName("status").HasDefaultValue(1);
+                entity.Property(item => item.CreatedAt).HasColumnName("created_at");
+                entity.Property(item => item.UpdatedAt).HasColumnName("updated_at");
+                entity.HasIndex(item => new { item.BranchId, item.DispenserCode }).IsUnique();
+                entity.HasOne(item => item.Branch).WithMany(branch => branch.Dispensers).HasForeignKey(item => item.BranchId).OnDelete(DeleteBehavior.Restrict);
             });
 
             modelBuilder.Entity<Nozzle>(entity =>
@@ -337,11 +362,13 @@ namespace gpos.Data
                 entity.Property(nozzle => nozzle.PumpId).HasColumnName("pump_id");
                 entity.Property(nozzle => nozzle.TankId).HasColumnName("tank_id");
                 entity.Property(nozzle => nozzle.NozzleNo).HasColumnName("nozzle_no").HasMaxLength(100).IsRequired();
+                entity.Property(nozzle => nozzle.Name).HasColumnName("name").HasMaxLength(200);
+                entity.Property(nozzle => nozzle.Remarks).HasColumnName("remarks").HasMaxLength(500);
                 entity.Property(nozzle => nozzle.Status).HasColumnName("status").HasDefaultValue(1);
                 entity.Property(nozzle => nozzle.CreatedAt).HasColumnName("created_at");
                 entity.Property(nozzle => nozzle.UpdatedAt).HasColumnName("updated_at");
 
-                entity.HasIndex(nozzle => nozzle.PumpId);
+                entity.HasIndex(nozzle => nozzle.PumpId).IsUnique();
                 entity.HasIndex(nozzle => nozzle.TankId);
                 entity.HasOne(nozzle => nozzle.Pump)
                     .WithMany(pump => pump.Nozzles)
@@ -1621,6 +1648,8 @@ namespace gpos.Data
                 entity.Property(item => item.FuelId).HasColumnName("fuel_id");
                 entity.Property(item => item.TankId).HasColumnName("tank_id");
                 entity.Property(item => item.NozzleId).HasColumnName("nozzle_id");
+                entity.Property(item => item.PumpId).HasColumnName("pump_id");
+                entity.Property(item => item.DispenserId).HasColumnName("dispenser_id");
                 entity.Property(item => item.Liters).HasColumnName("liters").HasPrecision(18, 2);
                 entity.Property(item => item.PricePerLiter).HasColumnName("price_per_liter").HasPrecision(18, 2);
                 entity.Property(item => item.Subtotal).HasColumnName("subtotal").HasPrecision(18, 2);
@@ -1634,6 +1663,8 @@ namespace gpos.Data
                 entity.HasIndex(item => item.FuelId);
                 entity.HasIndex(item => item.TankId);
                 entity.HasIndex(item => item.NozzleId);
+                entity.HasIndex(item => item.PumpId);
+                entity.HasIndex(item => item.DispenserId);
                 entity.HasOne(item => item.Sale)
                     .WithMany(sale => sale.FuelSales)
                     .HasForeignKey(item => item.SaleId)
@@ -1650,6 +1681,8 @@ namespace gpos.Data
                     .WithMany()
                     .HasForeignKey(item => item.NozzleId)
                     .OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne(item => item.Pump).WithMany().HasForeignKey(item => item.PumpId).OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne(item => item.Dispenser).WithMany().HasForeignKey(item => item.DispenserId).OnDelete(DeleteBehavior.Restrict);
             });
 
             modelBuilder.Entity<Payment>(entity =>

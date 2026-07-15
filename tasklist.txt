@@ -1,14 +1,12 @@
 
-
+fuel 
+branches dont have their own selling price
 
 transaction / price  adjustment
 adjustment didnt chang the stock 
 
-http://localhost:5013/Transaction/FuelReceiving
-dont have selling price field
 
-
-pos is selling products and fuel globally not per branch
+pos should remember the data even user go to other page and the data should still be there is the user go back to pos
 
 
 bri

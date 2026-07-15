@@ -18118,7 +18118,6 @@ C:\project\gpos_core_mvc\artifacts\buildcheck\Views\Transaction\_DailyCashMoveme
 C:\project\gpos_core_mvc\bin\Debug\net10.0\wwwroot\js\daily-cash-movement-selector.js
 C:\project\gpos_core_mvc\bin\Debug\net10.0\wwwroot\js\daily-cash-movement-selector.js.gz
 C:\project\gpos_core_mvc\bin\Debug\net10.0\Views\Transaction\_DailyCashMovementSelector.cshtml
-C:\project\gpos_core_mvc\obj\Debug\net10.0\compressed\ios0330fcj-{0}-c46xnd9obe-c46xnd9obe.gz
 C:\project\gpos_core_mvc\artifacts\buildcheck\wwwroot\js\price-adjustment-selectors.js
 C:\project\gpos_core_mvc\artifacts\buildcheck\Views\Transaction\_PriceAdjustmentSelectors.cshtml
 C:\project\gpos_core_mvc\bin\Debug\net10.0\wwwroot\js\price-adjustment-selectors.js
@@ -18132,3 +18131,8 @@ C:\project\gpos_core_mvc\bin\Debug\net10.0\wwwroot\js\stock-adjustment.js
 C:\project\gpos_core_mvc\bin\Debug\net10.0\wwwroot\js\stock-adjustment.js.gz
 C:\project\gpos_core_mvc\artifacts\buildcheck\wwwroot\js\stock-adjustment.js
 C:\project\gpos_core_mvc\obj\Debug\net10.0\compressed\wy89or86nb-{0}-cuyj0d54ut-cuyj0d54ut.gz
+C:\project\gpos_core_mvc\bin\Debug\net10.0\Views\Configuration\Dispensers.cshtml
+C:\project\gpos_core_mvc\bin\Debug\net10.0\Views\Configuration\FuelPumps.cshtml
+C:\project\gpos_core_mvc\artifacts\buildcheck\Views\Configuration\Dispensers.cshtml
+C:\project\gpos_core_mvc\artifacts\buildcheck\Views\Configuration\FuelPumps.cshtml
+C:\project\gpos_core_mvc\obj\Debug\net10.0\compressed\ios0330fcj-{0}-2l9xe3lrum-2l9xe3lrum.gz

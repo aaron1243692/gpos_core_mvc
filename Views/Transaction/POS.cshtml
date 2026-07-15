@@ -64,9 +64,24 @@
                     <div class="fuel-type-grid">
                         @for (var index = 0; index < Model.Fuels.Count; index++)
                         {
+                            var nozzleName = Model.Fuels[index].NozzleName?.Trim();
+                            var nozzleNo = Model.Fuels[index].NozzleNo?.Trim();
+                            var nozzleLabel = !string.IsNullOrEmpty(nozzleName) && !string.IsNullOrEmpty(nozzleNo)
+                                ? $"{nozzleName} — {nozzleNo}"
+                                : !string.IsNullOrEmpty(nozzleNo)
+                                    ? $"Nozzle {nozzleNo}"
+                                    : !string.IsNullOrEmpty(nozzleName)
+                                        ? nozzleName
+                                        : $"Nozzle #{Model.Fuels[index].NozzleId}";
+                            var fuelAccessibleLabel = $"{nozzleLabel}, {Model.Fuels[index].Name}, {Model.Fuels[index].Price:N2} pesos per liter, {Model.Fuels[index].AvailableLiters:N2} liters available";
                             <label class="fuel-option">
-                                <input class="form-check-input fuel-choice" type="radio" name="FuelType" value="@Model.Fuels[index].Name" data-fuel-id="@Model.Fuels[index].FuelId" data-tank-id="@Model.Fuels[index].TankId" data-price="@Model.Fuels[index].Price" @(Model.Fuels[index].IsChecked ? "checked" : "") />
-                                <span>@Model.Fuels[index].Name <small>Tank @Model.Fuels[index].TankNo - @Model.Fuels[index].AvailableLiters.ToString("N2") L - ₱@Model.Fuels[index].Price.ToString("N2")/L</small></span>
+                                <input class="form-check-input fuel-choice" type="radio" name="FuelType" value="@Model.Fuels[index].Name" data-nozzle-id="@Model.Fuels[index].NozzleId" data-tank-id="@Model.Fuels[index].TankId" data-fuel-id="@Model.Fuels[index].FuelId" data-price="@Model.Fuels[index].Price" data-available-liters="@Model.Fuels[index].AvailableLiters" data-fuel-name="@Model.Fuels[index].Name" data-nozzle-name="@nozzleLabel" aria-label="@fuelAccessibleLabel" @(Model.Fuels[index].IsChecked ? "checked" : "") />
+                                <span class="fuel-option-content">
+                                    <strong class="fuel-nozzle">@nozzleLabel</strong>
+                                    <span class="fuel-name">@Model.Fuels[index].Name</span>
+                                    <span class="fuel-price">₱@Model.Fuels[index].Price.ToString("N2")/L</span>
+                                    <small class="fuel-available">Available: @Model.Fuels[index].AvailableLiters.ToString("N2") L</small>
+                                </span>
                             </label>
                         }
                     </div>
@@ -826,8 +841,7 @@
 
                 fuelCart.push({
                     id: Date.now().toString() + fuelCart.length.toString(),
-                    fuelId: Number.parseInt(selected.dataset.fuelId, 10) || 0,
-                    tankId: Number.parseInt(selected.dataset.tankId, 10) || 0,
+                    nozzleId: Number.parseInt(selected.dataset.nozzleId, 10) || 0,
                     type: selectedFuelType(),
                     price,
                     liters,
@@ -1322,8 +1336,7 @@
                 });
                 const fuels = fuelCart.map(fuel => {
                     return {
-                        fuelId: fuel.fuelId,
-                        tankId: fuel.tankId,
+                        nozzleId: fuel.nozzleId,
                         liters: fuel.liters,
                         price: fuel.price,
                         subtotal: fuel.subtotal

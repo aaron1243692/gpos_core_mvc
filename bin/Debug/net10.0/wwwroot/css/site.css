@@ -2886,11 +2886,67 @@ textarea.form-control {
 }
 
 .pos-fuel-menu .fuel-option {
-  min-height: 76px;
-  border-color: #f0e2c5;
+  min-height: 0;
+  align-items: flex-start;
+  justify-content: flex-start;
+  border-color: #bbf7d0;
   border-radius: 14px;
-  background: #fffaf0;
+  background: #f7fef9;
   box-shadow: 0 12px 26px rgba(15, 23, 42, 0.04);
+}
+
+.pos-fuel-menu .fuel-option:has(.fuel-choice:checked) {
+  border-color: var(--app-primary);
+  background: var(--app-primary-soft);
+  box-shadow: 0 0 0 2px rgba(22, 163, 74, 0.14);
+}
+
+.pos-fuel-menu .fuel-option:focus-within {
+  outline: 3px solid rgba(22, 163, 74, 0.2);
+  outline-offset: 2px;
+}
+
+.pos-fuel-menu .fuel-option-content {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 0.18rem;
+  text-align: left;
+}
+
+.pos-fuel-menu .fuel-nozzle,
+.pos-fuel-menu .fuel-name,
+.pos-fuel-menu .fuel-price,
+.pos-fuel-menu .fuel-available {
+  display: block;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  text-align: left;
+}
+
+.pos-fuel-menu .fuel-nozzle {
+  color: var(--app-heading);
+  font-size: 0.95rem;
+  line-height: 1.25;
+}
+
+.pos-fuel-menu .fuel-name {
+  color: #42536b;
+  font-size: 0.85rem;
+  font-weight: 800;
+}
+
+.pos-fuel-menu .fuel-price {
+  color: var(--app-primary-dark);
+  font-size: 1.05rem;
+  font-weight: 900;
+}
+
+.pos-fuel-menu .fuel-available {
+  color: #4d7d68;
+  font-size: 0.75rem;
+  font-weight: 800;
 }
 
 .pos-fuel-fields {

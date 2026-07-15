@@ -6,7 +6,9 @@ namespace gpos.Models
         public int PumpId { get; set; }
         public int? TankId { get; set; }
         public string NozzleNo { get; set; } = string.Empty;
+        public string? Name { get; set; }
         public int Status { get; set; } = 1;
+        public string? Remarks { get; set; }
         public DateTime? CreatedAt { get; set; }
         public DateTime? UpdatedAt { get; set; }
 
