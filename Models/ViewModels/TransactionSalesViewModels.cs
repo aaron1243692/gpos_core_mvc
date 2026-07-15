@@ -26,6 +26,8 @@ namespace gpos.Models.ViewModels
 
     public class PosPageViewModel
     {
+        public int? CurrentUserId { get; set; }
+        public int? CurrentBranchId { get; set; }
         public List<PosCategoryCardViewModel> Categories { get; set; } = new();
         public List<PosProductCardViewModel> Products { get; set; } = new();
         public List<PosFuelOptionViewModel> Fuels { get; set; } = new();

@@ -114,6 +114,8 @@ namespace gpos.Controllers
 
             return new PosPageViewModel
             {
+                CurrentUserId = userId,
+                CurrentBranchId = branchId,
                 ActiveRebate = activeRebate,
                 ActiveVat = activeVat,
                 Categories = displayStocks

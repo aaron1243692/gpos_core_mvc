@@ -350,6 +350,12 @@
             const peso = new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP", currencyDisplay: "narrowSymbol" });
             const activeRebate = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.ActiveRebate, new System.Text.Json.JsonSerializerOptions { PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase }));
             const activeVat = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.ActiveVat, new System.Text.Json.JsonSerializerOptions { PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase }));
+            const currentUserId = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.CurrentUserId));
+            const currentBranchId = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.CurrentBranchId));
+            const posDraftVersion = 1;
+            const posDraftKey = currentUserId > 0 && currentBranchId > 0
+                ? `gpos.posDraft.user.${currentUserId}.branch.${currentBranchId}`
+                : "";
             const form = document.getElementById("posSaleForm");
             const submitMessage = document.getElementById("posSubmitMessage");
             const antiForgeryToken = form.querySelector("input[name='__RequestVerificationToken']")?.value || "";
@@ -435,6 +441,204 @@
             let voucherDiscountLookupToken = 0;
             let saleCompleted = false;
             let cartEditDraft = [];
+            let draftSaveTimer = 0;
+            let isRestoringDraft = false;
+
+            function clearPosDraft() {
+                if (!posDraftKey) {
+                    return;
+                }
+
+                try {
+                    window.sessionStorage.removeItem(posDraftKey);
+                } catch (error) {
+                    console.warn("Unable to clear the POS draft.", error);
+                }
+            }
+
+            function buildPosDraft() {
+                const selected = selectedFuel();
+                return {
+                    version: posDraftVersion,
+                    savedAt: new Date().toISOString(),
+                    userId: currentUserId,
+                    branchId: currentBranchId,
+                    mode: {
+                        activeMode,
+                        categoryId: activeCategoryId,
+                        search: productSearch.value
+                    },
+                    products: selectedProducts().map(product => ({
+                        productId: product.productId,
+                        requestedQuantity: product.quantity
+                    })),
+                    fuel: {
+                        selectedNozzleId: Number.parseInt(selected?.dataset.nozzleId, 10) || null,
+                        liters: fuelLitersInput.value,
+                        cashAmount: fuelAmountInput.value,
+                        activeInput: activeFuelInput,
+                        lines: fuelCart.map(fuel => ({
+                            nozzleId: fuel.nozzleId,
+                            liters: fuel.liters
+                        }))
+                    },
+                    payment: {
+                        method: selectedPaymentMethod(),
+                        cashAmount: paymentAmountInput.value,
+                        membershipCardNo: membershipCardNoInput.value,
+                        voucherCode: voucherCodeInput.value
+                    }
+                };
+            }
+
+            function savePosDraft() {
+                if (!posDraftKey || isRestoringDraft || saleCompleted) {
+                    return;
+                }
+
+                try {
+                    const draft = buildPosDraft();
+                    const hasUserInput = draft.products.length > 0
+                        || draft.fuel.lines.length > 0
+                        || Boolean(draft.fuel.liters || draft.fuel.cashAmount)
+                        || draft.payment.method !== "Cash"
+                        || Boolean(draft.payment.cashAmount || draft.payment.membershipCardNo || draft.payment.voucherCode)
+                        || draft.mode.activeMode !== "hot"
+                        || Boolean(draft.mode.search);
+                    if (hasUserInput) {
+                        window.sessionStorage.setItem(posDraftKey, JSON.stringify(draft));
+                    } else {
+                        clearPosDraft();
+                    }
+                } catch (error) {
+                    console.warn("Unable to save the POS draft.", error);
+                }
+            }
+
+            function queuePosDraftSave() {
+                if (!posDraftKey || isRestoringDraft) {
+                    return;
+                }
+
+                window.clearTimeout(draftSaveTimer);
+                draftSaveTimer = window.setTimeout(savePosDraft, 300);
+            }
+
+            function restorePosDraft() {
+                if (!posDraftKey) {
+                    return;
+                }
+
+                let draft;
+                try {
+                    const serializedDraft = window.sessionStorage.getItem(posDraftKey);
+                    if (!serializedDraft) {
+                        return;
+                    }
+                    draft = JSON.parse(serializedDraft);
+                } catch (error) {
+                    console.warn("The saved POS draft was invalid and was removed.", error);
+                    clearPosDraft();
+                    return;
+                }
+
+                if (!draft || draft.version !== posDraftVersion
+                    || Number(draft.userId) !== currentUserId
+                    || Number(draft.branchId) !== currentBranchId) {
+                    clearPosDraft();
+                    return;
+                }
+
+                isRestoringDraft = true;
+                let missingProducts = false;
+                let missingNozzle = false;
+
+                try {
+                    productQuantityInputs.forEach(input => input.value = 0);
+                    (Array.isArray(draft.products) ? draft.products : []).forEach(item => {
+                        const productId = Number.parseInt(item?.productId, 10);
+                        const input = productInputByProductId(productId.toString());
+                        if (!input) {
+                            missingProducts = true;
+                            return;
+                        }
+                        const requested = cartQuantity(item?.requestedQuantity);
+                        const available = cartQuantity(availableDisplayQuantity(input));
+                        input.value = formatQuantity(Math.min(requested, available));
+                        if (requested > available) {
+                            missingProducts = true;
+                        }
+                    });
+
+                    fuelCart.length = 0;
+                    const validFuelByNozzle = new Map(fuelChoices.map(choice => [Number.parseInt(choice.dataset.nozzleId, 10), choice]));
+                    (Array.isArray(draft.fuel?.lines) ? draft.fuel.lines : []).forEach((line, index) => {
+                        const nozzleId = Number.parseInt(line?.nozzleId, 10);
+                        const choice = validFuelByNozzle.get(nozzleId);
+                        const liters = cartQuantity(line?.liters);
+                        if (!choice || liters <= 0) {
+                            missingNozzle = missingNozzle || !choice;
+                            return;
+                        }
+                        const price = Number.parseFloat(choice.dataset.price) || 0;
+                        if (price <= 0) {
+                            missingNozzle = true;
+                            return;
+                        }
+                        fuelCart.push({
+                            id: `restored-${Date.now()}-${index}`,
+                            nozzleId,
+                            type: choice.value || "Fuel",
+                            price,
+                            liters,
+                            amount: liters * price,
+                            subtotal: liters * price
+                        });
+                    });
+
+                    const selectedNozzleId = Number.parseInt(draft.fuel?.selectedNozzleId, 10);
+                    const selectedChoice = validFuelByNozzle.get(selectedNozzleId);
+                    if (selectedChoice) {
+                        selectedChoice.checked = true;
+                    } else if (selectedNozzleId > 0) {
+                        missingNozzle = true;
+                    }
+                    activeFuelInput = draft.fuel?.activeInput === "liters" ? "liters" : "amount";
+                    fuelLitersInput.value = typeof draft.fuel?.liters === "string" ? draft.fuel.liters : "";
+                    fuelAmountInput.value = typeof draft.fuel?.cashAmount === "string" ? draft.fuel.cashAmount : "";
+
+                    const paymentMethod = draft.payment?.method;
+                    paymentMethodSelect.value = Array.from(paymentMethodSelect.options).some(option => option.value === paymentMethod) ? paymentMethod : "Cash";
+                    paymentAmountInput.value = typeof draft.payment?.cashAmount === "string" ? draft.payment.cashAmount : "";
+                    membershipCardNoInput.value = typeof draft.payment?.membershipCardNo === "string" ? draft.payment.membershipCardNo : "";
+                    voucherCodeInput.value = typeof draft.payment?.voucherCode === "string" ? draft.payment.voucherCode : "";
+                    productSearch.value = typeof draft.mode?.search === "string" ? draft.mode.search : "";
+
+                    const categoryButton = categoryButtons.find(button => button.dataset.mode === "category" && button.dataset.categoryId === String(draft.mode?.categoryId));
+                    if (draft.mode?.activeMode === "fuel") {
+                        showFuelMode();
+                    } else if (draft.mode?.activeMode === "category" && categoryButton) {
+                        showProductCategory(categoryButton.dataset.categoryId, categoryButton);
+                    } else {
+                        showHotMode();
+                    }
+                    updatePaymentFields();
+                    updateTotal();
+                    queueMemberDiscountLookup();
+                    queueVoucherDiscountLookup();
+                } finally {
+                    isRestoringDraft = false;
+                }
+
+                if (missingProducts) {
+                    showSubmitMessage("Some restored products are no longer available or exceeded current stock and were adjusted.", false);
+                } else if (missingNozzle) {
+                    showSubmitMessage("The previously selected nozzle is no longer available.", false);
+                } else {
+                    showSubmitMessage("Your unfinished POS transaction was restored.", true);
+                }
+                queuePosDraftSave();
+            }
 
             function numericValue(input) {
                 return Number.parseFloat(input.value) || 0;
@@ -1074,6 +1278,7 @@
                 renderCart();
                 updateSummaryAmounts();
                 renderReceipt();
+                queuePosDraftSave();
             }
 
             async function loadMemberDiscount() {
@@ -1405,6 +1610,8 @@
                         paymentMethod: result.paymentMethod || payload.paymentMethod
                     };
                     saleCompleted = true;
+                    window.clearTimeout(draftSaveTimer);
+                    clearPosDraft();
                     renderReceipt();
                     showReceipt();
                     modalPrintReceiptButton.disabled = false;
@@ -1440,6 +1647,7 @@
             }
 
             function resetSale() {
+                window.clearTimeout(draftSaveTimer);
                 form.reset();
                 restoreProductSubmitFields();
                 fuelCart.length = 0;
@@ -1469,6 +1677,8 @@
                 showHotMode();
                 updatePaymentFields();
                 updateTotal();
+                window.clearTimeout(draftSaveTimer);
+                clearPosDraft();
             }
 
             categoryButtons.forEach(button => {
@@ -1480,6 +1690,7 @@
                     } else {
                         showProductCategory(button.dataset.categoryId, button);
                     }
+                    queuePosDraftSave();
                 });
             });
             productRows.forEach(row => {
@@ -1504,13 +1715,16 @@
             fuelAmountInput.addEventListener("input", () => {
                 activeFuelInput = "amount";
                 updateLiters();
+                queuePosDraftSave();
             });
             fuelLitersInput.addEventListener("input", () => {
                 activeFuelInput = "liters";
                 updateFuelAmount();
+                queuePosDraftSave();
             });
             fuelChoices.forEach(choice => choice.addEventListener("change", () => {
                 updateFuelFieldsForPrice();
+                queuePosDraftSave();
             }));
             addFuelButton.addEventListener("click", addFuelToCart);
             editCartButton.addEventListener("click", openCartEditModal);
@@ -1557,10 +1771,12 @@
             cartEditSaveButton.addEventListener("click", saveCartEditDraft);
             paymentAmountInput.addEventListener("input", () => {
                 renderReceipt();
+                queuePosDraftSave();
             });
             membershipCardNoInput.addEventListener("input", () => {
                 queueMemberDiscountLookup();
                 queueVoucherDiscountLookup();
+                queuePosDraftSave();
             });
             voucherCodeInput.addEventListener("input", () => {
                 voucherCodeInput.value = voucherCodeInput.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 6);
@@ -1568,8 +1784,14 @@
                 queueVoucherDiscountLookup();
                 updateTotal();
             });
-            paymentMethodSelect.addEventListener("change", updatePaymentFields);
-            productSearch.addEventListener("input", filterProducts);
+            paymentMethodSelect.addEventListener("change", () => {
+                updatePaymentFields();
+                queuePosDraftSave();
+            });
+            productSearch.addEventListener("input", () => {
+                filterProducts();
+                queuePosDraftSave();
+            });
             modalPrintReceiptButton.addEventListener("click", printModalReceipt);
             modalConfirmSaleButton.addEventListener("click", submitSale);
             submitSaleButton.addEventListener("click", openCheckoutSummary);
@@ -1583,10 +1805,23 @@
                 event.preventDefault();
                 openCheckoutSummary();
             });
+            document.addEventListener("submit", event => {
+                const action = event.target instanceof HTMLFormElement ? event.target.action : "";
+                if (action && /\/logout\/?(?:\?|$)/i.test(action)) {
+                    clearPosDraft();
+                }
+            }, true);
+            document.addEventListener("click", event => {
+                const logoutLink = event.target instanceof Element ? event.target.closest("a[href]") : null;
+                if (logoutLink && /\/logout\/?(?:\?|$)/i.test(logoutLink.href)) {
+                    clearPosDraft();
+                }
+            }, true);
             window.addEventListener("pageshow", restoreProductSubmitFields);
             showHotMode();
             updatePaymentFields();
             updateTotal();
+            restorePosDraft();
         })();
     </script>
 }

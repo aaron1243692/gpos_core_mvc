@@ -1,12 +1,10 @@
 
-fuel 
-branches dont have their own selling price
-
-transaction / price  adjustment
-adjustment didnt chang the stock 
 
 
-pos should remember the data even user go to other page and the data should still be there is the user go back to pos
+
+k
+
+inconsistent filter design
 
 
 bri
