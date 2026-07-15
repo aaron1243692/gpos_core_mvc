@@ -28,11 +28,24 @@ namespace gpos.Models.ViewModels
     {
         public int? CurrentUserId { get; set; }
         public int? CurrentBranchId { get; set; }
+        public string CurrentBranchName { get; set; } = string.Empty;
+        public bool CanDisplayRefill { get; set; }
         public List<PosCategoryCardViewModel> Categories { get; set; } = new();
         public List<PosProductCardViewModel> Products { get; set; } = new();
         public List<PosFuelOptionViewModel> Fuels { get; set; } = new();
         public PosRebateViewModel? ActiveRebate { get; set; }
         public PosVatViewModel? ActiveVat { get; set; }
+    }
+
+    public class PosDisplayRefillRequest
+    {
+        public int ProductId { get; set; }
+
+        [Range(typeof(decimal), "0.01", "999999999", ErrorMessage = "Quantity must be greater than 0.")]
+        public decimal Quantity { get; set; }
+
+        [StringLength(255)]
+        public string? Remarks { get; set; }
     }
 
     public class PosCategoryCardViewModel

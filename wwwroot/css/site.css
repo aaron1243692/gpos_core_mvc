@@ -5705,3 +5705,28 @@ table tbody td {
 .daily-cash-selector-table th:last-child {
   z-index: 2 !important;
 }
+#confirmClearSaleButton.pos-clear-sale-confirm {
+    width: 104px;
+}
+
+#confirmClearSaleButton .pos-clear-sale-confirm-text {
+    opacity: 0;
+    transition: opacity 180ms ease;
+}
+
+#confirmClearSaleButton:hover .pos-clear-sale-confirm-text,
+#confirmClearSaleButton:focus-visible .pos-clear-sale-confirm-text {
+    opacity: 1;
+}
+
+#posSaleForm .pos-utility-toolbar {
+  width: 100%;
+  min-height: 38px;
+  margin-bottom: 10px;
+  padding: 5px 0;
+}
+
+#posSaleForm .pos-utility-toolbar .btn {
+  min-width: 92px;
+  white-space: nowrap;
+}

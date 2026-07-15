@@ -38,6 +38,226 @@ namespace gpos.Controllers
             return View(await BuildPosPageAsync());
         }
 
+        [HttpGet]
+        public async Task<IActionResult> POSRecentSales()
+        {
+            var context = await CurrentPosUserContextAsync();
+            if (context is null)
+            {
+                return Unauthorized(new { success = false, message = "A valid user and active Branch are required." });
+            }
+
+            var sales = await _db.Sales.AsNoTracking()
+                .Where(sale => sale.UserId == context.UserId
+                    && sale.BranchId == context.BranchId
+                    && sale.Status == "Completed")
+                .OrderByDescending(sale => sale.CreatedAt)
+                .ThenByDescending(sale => sale.Id)
+                .Take(20)
+                .Select(sale => new
+                {
+                    sale.Id,
+                    sale.ReceiptNo,
+                    sale.CreatedAt,
+                    itemCount = sale.ProductSales.Count + sale.FuelSales.Count,
+                    paymentMethod = sale.Payments.OrderBy(payment => payment.Id).Select(payment => payment.PaymentType).FirstOrDefault() ?? "Cash",
+                    total = sale.NetTotal,
+                    sale.Status
+                })
+                .ToListAsync();
+
+            return Ok(new { success = true, sales });
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> POSSaleDetails(int id)
+        {
+            var context = await CurrentPosUserContextAsync();
+            if (context is null)
+            {
+                return Unauthorized(new { success = false, message = "A valid user and active Branch are required." });
+            }
+
+            var sale = await _db.Sales.AsNoTracking()
+                .Include(item => item.Branch)
+                .Include(item => item.User)
+                .Include(item => item.DailyCash).ThenInclude(item => item!.Shift)
+                .Include(item => item.Member)
+                .Include(item => item.ProductSales).ThenInclude(item => item.Product)
+                .Include(item => item.ProductSales).ThenInclude(item => item.Batch)
+                .Include(item => item.FuelSales).ThenInclude(item => item.Fuel)
+                .Include(item => item.FuelSales).ThenInclude(item => item.Tank)
+                .Include(item => item.FuelSales).ThenInclude(item => item.Nozzle)
+                .Include(item => item.Payments)
+                .Include(item => item.PointsLedger)
+                .Include(item => item.VoucherRedemptions)
+                .FirstOrDefaultAsync(item => item.Id == id
+                    && item.UserId == context.UserId
+                    && item.BranchId == context.BranchId
+                    && item.Status == "Completed");
+            if (sale is null)
+            {
+                return NotFound(new { success = false, message = "The completed sale was not found for the current user and Branch." });
+            }
+
+            var voucherDiscount = sale.VoucherRedemptions.Sum(item => item.DiscountAmount);
+            var paymentTotal = sale.Payments.Where(item => item.Status == "Completed").Sum(item => item.Amount);
+            return Ok(new
+            {
+                success = true,
+                sale = new
+                {
+                    sale.Id,
+                    sale.ReceiptNo,
+                    businessDate = sale.DailyCash?.BusinessDate ?? (sale.CreatedAt ?? DateTime.Now).Date,
+                    sale.CreatedAt,
+                    branch = sale.Branch?.Name ?? context.BranchName,
+                    cashier = UserDisplayName(sale.User),
+                    dailyCash = sale.DailyCashId?.ToString() ?? "-",
+                    shift = sale.DailyCash?.Shift?.Name ?? "-",
+                    sale.Status,
+                    paymentMethod = PaymentTypeFor(sale),
+                    sale.CashAmount,
+                    change = Math.Max(0m, sale.CashAmount - sale.NetTotal),
+                    memberDiscount = Math.Max(0m, sale.DiscountAmount - voucherDiscount),
+                    voucherDiscount,
+                    totalDiscount = sale.DiscountAmount,
+                    sale.RebateAmount,
+                    sale.NetTotal,
+                    sale.GrossTotal,
+                    member = sale.Member?.FullName ?? "-",
+                    products = sale.ProductSales.OrderBy(item => item.Id).Select(item => new
+                    {
+                        product = item.Product?.Name ?? "-",
+                        batch = item.Batch?.BatchNo ?? "-",
+                        item.Quantity,
+                        sellingPrice = item.UnitPrice > 0 ? item.UnitPrice : item.Price,
+                        item.UnitCost,
+                        item.Subtotal,
+                        item.GrossProfit
+                    }),
+                    fuels = sale.FuelSales.OrderBy(item => item.Id).Select(item => new
+                    {
+                        nozzle = item.Nozzle?.NozzleNo ?? "-",
+                        fuel = item.Fuel?.Name ?? "-",
+                        item.Liters,
+                        item.PricePerLiter,
+                        tank = item.Tank?.TankNo ?? "-",
+                        item.Subtotal
+                    }),
+                    payments = sale.Payments.OrderBy(item => item.Id).Select(item => new
+                    {
+                        method = item.PaymentType,
+                        item.Amount,
+                        reference = item.ReferenceNo ?? "-",
+                        item.Status
+                    }),
+                    paymentTotal
+                }
+            });
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> POSDisplayRefillOptions()
+        {
+            var context = await CurrentPosUserContextAsync();
+            if (context is null)
+            {
+                return Unauthorized(new { success = false, message = "A valid user and active Branch are required." });
+            }
+            if (!await CanManageDisplayRefillAsync(context.UserId))
+            {
+                return StatusCode(StatusCodes.Status403Forbidden, new { success = false, message = "You are not authorized to refill display stock." });
+            }
+
+            var stocks = await _db.WarehouseStocks.AsNoTracking()
+                .Include(item => item.Product)
+                .Include(item => item.Batch)
+                .Where(item => item.BranchId == context.BranchId
+                    && item.Quantity > 0
+                    && item.Product != null && item.Product.Status == 1 && item.Product.IsActive
+                    && item.Batch != null && item.Batch.Status == 1 && item.Batch.IsActive)
+                .ToListAsync();
+            var products = stocks.GroupBy(item => new { item.ProductId, item.Product!.Name })
+                .OrderBy(group => group.Key.Name)
+                .Select(group => new
+                {
+                    productId = group.Key.ProductId,
+                    no = $"P-{group.Key.ProductId:000}",
+                    product = group.Key.Name,
+                    availableQuantity = group.Sum(item => item.Quantity),
+                    oldestBatch = group.OrderBy(item => item.Batch!.CreatedAt ?? DateTime.MinValue).ThenBy(item => item.BatchId).Select(item => item.Batch!.BatchNo).FirstOrDefault() ?? "-"
+                })
+                .ToList();
+            return Ok(new { success = true, branch = context.BranchName, products });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> POSDisplayRefill([FromBody] PosDisplayRefillRequest? request)
+        {
+            var context = await CurrentPosUserContextAsync();
+            if (context is null)
+            {
+                return Unauthorized(new { success = false, message = "A valid user and active Branch are required." });
+            }
+            if (!await CanManageDisplayRefillAsync(context.UserId))
+            {
+                return StatusCode(StatusCodes.Status403Forbidden, new { success = false, message = "You are not authorized to refill display stock." });
+            }
+            if (request is null || !ModelState.IsValid || request.ProductId <= 0 || request.Quantity <= 0)
+            {
+                return BadRequest(new { success = false, message = "Select a product and enter a valid transfer quantity." });
+            }
+
+            var form = new StockTransferForm
+            {
+                ProductId = request.ProductId,
+                Quantity = request.Quantity,
+                Remarks = request.Remarks?.Trim(),
+                SourceBranchId = context.BranchId,
+                DestinationBranchId = context.BranchId
+            };
+            await using var transaction = await _db.Database.BeginTransactionAsync();
+            try
+            {
+                var product = await _db.Products.AsNoTracking().FirstOrDefaultAsync(item => item.Id == request.ProductId && item.Status == 1 && item.IsActive)
+                    ?? throw new InvalidOperationException("The selected product is no longer active.");
+                var now = DateTime.Now;
+                var transfer = new StockTransfer
+                {
+                    TransferNo = await GenerateTransferNoAsync(),
+                    TransferType = "WarehouseToDisplayProduct",
+                    SourceBranchId = context.BranchId,
+                    DestinationBranchId = context.BranchId,
+                    SourceLocation = "Warehouse",
+                    DestinationLocation = "Display",
+                    Status = "Completed",
+                    Remarks = form.Remarks,
+                    TransferredBy = context.UserId,
+                    CompletedAt = now,
+                    CreatedAt = now,
+                    UpdatedAt = now
+                };
+                _db.StockTransfers.Add(transfer);
+                await _db.SaveChangesAsync();
+                await ApplyWarehouseSourceFifo(transfer, form, product.Name, context.UserId, now);
+                await _db.SaveChangesAsync();
+                await transaction.CommitAsync();
+                return Ok(new { success = true, message = "Display stock refilled successfully.", transferNo = transfer.TransferNo });
+            }
+            catch (InvalidOperationException ex)
+            {
+                await transaction.RollbackAsync();
+                return BadRequest(new { success = false, message = ex.Message });
+            }
+            catch
+            {
+                await transaction.RollbackAsync();
+                return StatusCode(StatusCodes.Status500InternalServerError, new { success = false, message = "Unable to complete the display refill." });
+            }
+        }
+
         private async Task<PosPageViewModel> BuildPosPageAsync()
         {
             var userId = CurrentUserId();
@@ -116,6 +336,8 @@ namespace gpos.Controllers
             {
                 CurrentUserId = userId,
                 CurrentBranchId = branchId,
+                CurrentBranchName = branchId.HasValue ? await BranchNameAsync(branchId) : string.Empty,
+                CanDisplayRefill = userId.HasValue && branchId.HasValue && await CanManageDisplayRefillAsync(userId.Value),
                 ActiveRebate = activeRebate,
                 ActiveVat = activeVat,
                 Categories = displayStocks
@@ -4424,6 +4646,41 @@ namespace gpos.Controllers
             return null;
         }
 
+        private async Task<PosUserContext?> CurrentPosUserContextAsync()
+        {
+            var userId = CurrentUserId();
+            if (!userId.HasValue)
+            {
+                return null;
+            }
+
+            return await _db.Users.AsNoTracking()
+                .Where(user => user.Id == userId.Value
+                    && user.Status == 1
+                    && user.BranchId.HasValue
+                    && user.Branch != null
+                    && user.Branch.Status == 1)
+                .Select(user => new PosUserContext(user.Id, user.BranchId!.Value, user.Branch!.Name))
+                .FirstOrDefaultAsync();
+        }
+
+        private async Task<bool> CanManageDisplayRefillAsync(int userId)
+        {
+            return await _db.UserRoles.AsNoTracking()
+                .AnyAsync(userRole => userRole.UserId == userId
+                    && userRole.Role != null
+                    && userRole.Role.Status == 1
+                    && ((userRole.Role.Code.ToLower() == "supperadmin"
+                            || userRole.Role.Code.ToLower() == "superadmin"
+                            || userRole.Role.Code.ToLower() == "admin"
+                            || userRole.Role.Code.ToLower() == "manager")
+                        || userRole.Role.RolePermissions.Any(rolePermission => rolePermission.Status == 1
+                            && rolePermission.Permission != null
+                            && rolePermission.Permission.Status == 1
+                            && (rolePermission.Permission.Code.ToLower() == "tranwtd.create"
+                                || rolePermission.Permission.Code.ToLower() == "warehouse.display.transfer.create"))));
+        }
+
         private async Task<List<ValidatedProductSaleItem>> BuildValidatedProductItems(List<PosProductSaleRequestItem> products)
         {
             var items = new List<ValidatedProductSaleItem>();
@@ -5387,5 +5644,6 @@ namespace gpos.Controllers
         }
 
         private sealed record VoucherRedemptionResult(Voucher? Voucher, VoucherRule Rule, decimal DiscountAmount);
+        private sealed record PosUserContext(int UserId, int BranchId, string BranchName);
     }
 }

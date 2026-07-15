@@ -6,6 +6,14 @@
         @Html.AntiForgeryToken()
         <input name="CashierUserId" type="hidden" value="@(Context.Session.GetString("UserId") ?? User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "")" />
         <div class="alert d-none" id="posSubmitMessage" role="alert"></div>
+        <div class="pos-utility-toolbar d-flex flex-wrap align-items-center gap-2" aria-label="POS utilities">
+            <button class="btn btn-sm btn-outline-success" id="displayRefillButton" type="button" @(!Model.CanDisplayRefill ? "disabled" : null) title="@(!Model.CanDisplayRefill ? "Display refill requires an authorized role and active Branch." : "Move current Branch warehouse stock to display using FIFO.")">Display Refill</button>
+            <button class="btn btn-sm btn-outline-primary" id="recentSalesButton" type="button" @(Model.CurrentBranchId.HasValue ? null : "disabled")>Recent</button>
+            <span class="d-inline-block" title="Void is unavailable until the audited reversal workflow is completed.">
+                <button class="btn btn-sm btn-outline-danger" id="voidSalesButton" type="button" disabled aria-describedby="voidSalesUnavailable">Void</button>
+            </span>
+            <span class="visually-hidden" id="voidSalesUnavailable">Void is unavailable until the audited reversal workflow is completed.</span>
+        </div>
         <div class="pos-order-layout">
             <section class="pos-order-menu" aria-label="Order menu">
                 <div class="pos-order-toolbar">
@@ -111,7 +119,10 @@
             <aside class="pos-order-summary" aria-label="Cart panel">
                 <div class="pos-summary-top">
                     <h2>Items</h2>
-                    <button class="btn btn-sm btn-outline-primary" id="editCartButton" type="button">Edit</button>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-sm btn-outline-danger" id="clearSaleButton" type="button">Clear</button>
+                        <button class="btn btn-sm btn-outline-primary" id="editCartButton" type="button">Edit</button>
+                    </div>
                 </div>
                 <div class="d-flex justify-content-end mb-2">
                     <span class="text-muted small fw-bold" id="modalCartCount">0 items</span>
@@ -166,6 +177,81 @@
                 <button class="btn btn-primary btn-lg pos-charge-button" id="submitSaleButton" type="button">Checkout</button>
                 <button class="btn btn-outline-secondary" id="newSaleButton" type="button">New Sale</button>
             </aside>
+        </div>
+
+        <div class="modal fade" id="displayRefillModal" tabindex="-1" aria-labelledby="displayRefillModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <div><h2 class="modal-title fs-5" id="displayRefillModalLabel">Display Refill</h2><p class="mb-0 text-muted">Warehouse to Display · FIFO allocation</p></div>
+                        <button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="alert d-none" id="displayRefillMessage" role="alert"></div>
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6"><label class="form-label" for="displayRefillBranch">Branch</label><input class="form-control" id="displayRefillBranch" value="@Model.CurrentBranchName" readonly /></div>
+                            <div class="col-md-6"><label class="form-label" for="displayRefillSearch">Search product</label><input class="form-control" id="displayRefillSearch" type="search" placeholder="Search no or product..." autocomplete="off" /></div>
+                            <div class="col-md-8"><label class="form-label" for="displayRefillProduct">Product</label><select class="form-select" id="displayRefillProduct"><option value="">Select product</option></select><div class="form-text" id="displayRefillAvailable">Available: Select product</div></div>
+                            <div class="col-md-4"><label class="form-label" for="displayRefillQuantity">Transfer Quantity</label><input class="form-control" id="displayRefillQuantity" type="number" min="0.01" step="0.01" inputmode="decimal" /></div>
+                            <div class="col-12"><label class="form-label" for="displayRefillRemarks">Remarks <span class="text-muted">(Optional)</span></label><textarea class="form-control" id="displayRefillRemarks" rows="2" maxlength="255"></textarea></div>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table app-table table-sm align-middle mb-0">
+                                <thead><tr><th>No</th><th>Product</th><th class="text-end">Available</th><th>Oldest Batch</th><th>Status</th><th>Action</th></tr></thead>
+                                <tbody id="displayRefillRows"><tr><td class="text-center text-muted" colspan="6">Loading warehouse products...</td></tr></tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button>
+                        <button class="btn btn-success" id="confirmDisplayRefillButton" type="button">Save Transfer</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal fade" id="recentSalesModal" tabindex="-1" aria-labelledby="recentSalesModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+                <div class="modal-content">
+                    <div class="modal-header"><div><h2 class="modal-title fs-5" id="recentSalesModalLabel">Recent Sales</h2><p class="mb-0 text-muted">Current cashier · @Model.CurrentBranchName</p></div><button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button></div>
+                    <div class="modal-body">
+                        <div class="alert d-none" id="recentSalesMessage" role="alert"></div>
+                        <div class="table-responsive"><table class="table app-table table-sm align-middle mb-0"><thead><tr><th>No</th><th>Receipt No</th><th>Date / Time</th><th>Items</th><th>Payment Method</th><th class="text-end">Total</th><th>Status</th><th>Action</th></tr></thead><tbody id="recentSalesRows"><tr><td class="text-center text-muted" colspan="8">Loading recent sales...</td></tr></tbody></table></div>
+                    </div>
+                    <div class="modal-footer"><button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Close</button></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal fade" id="recentSaleDetailsModal" tabindex="-1" aria-labelledby="recentSaleDetailsModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+                <div class="modal-content">
+                    <div class="modal-header"><h2 class="modal-title fs-5" id="recentSaleDetailsModalLabel">Sale Details</h2><button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button></div>
+                    <div class="modal-body" id="recentSaleDetailsBody"><p class="text-muted mb-0">Loading sale details...</p></div>
+                    <div class="modal-footer"><button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Close</button></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal fade" id="clearSaleModal" tabindex="-1" aria-labelledby="clearSaleModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h2 class="modal-title fs-5" id="clearSaleModalLabel">Clear Current Sale</h2>
+                        <button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p>This will remove all items and fuel selections from the current draft.</p>
+                        <p class="mb-0 fw-semibold">This action cannot be undone.</p>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button>
+                        <button class="btn btn-danger pos-clear-sale-confirm" id="confirmClearSaleButton" type="button" aria-label="Clear Sale">
+                            <span class="pos-clear-sale-confirm-text">Clear Sale</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <div class="modal fade" id="cartEditModal" tabindex="-1" aria-labelledby="cartEditModalLabel" aria-hidden="true">
@@ -393,6 +479,9 @@
             const cartItemCount = document.getElementById("cartItemCount");
             const modalCartCount = document.getElementById("modalCartCount");
             const cartButtonTotal = document.getElementById("cartButtonTotal");
+            const clearSaleButton = document.getElementById("clearSaleButton");
+            const clearSaleModalElement = document.getElementById("clearSaleModal");
+            const confirmClearSaleButton = document.getElementById("confirmClearSaleButton");
             const editCartButton = document.getElementById("editCartButton");
             const cartEditModalElement = document.getElementById("cartEditModal");
             const cartEditRows = document.getElementById("cartEditRows");
@@ -425,6 +514,24 @@
             const modalConfirmSaleButton = document.getElementById("modalConfirmSaleButton");
             const submitSaleButton = document.getElementById("submitSaleButton");
             const newSaleButton = document.getElementById("newSaleButton");
+            const displayRefillButton = document.getElementById("displayRefillButton");
+            const recentSalesButton = document.getElementById("recentSalesButton");
+            const voidSalesButton = document.getElementById("voidSalesButton");
+            const displayRefillModalElement = document.getElementById("displayRefillModal");
+            const displayRefillMessage = document.getElementById("displayRefillMessage");
+            const displayRefillSearch = document.getElementById("displayRefillSearch");
+            const displayRefillProduct = document.getElementById("displayRefillProduct");
+            const displayRefillQuantity = document.getElementById("displayRefillQuantity");
+            const displayRefillRemarks = document.getElementById("displayRefillRemarks");
+            const displayRefillAvailable = document.getElementById("displayRefillAvailable");
+            const displayRefillRows = document.getElementById("displayRefillRows");
+            const confirmDisplayRefillButton = document.getElementById("confirmDisplayRefillButton");
+            const recentSalesModalElement = document.getElementById("recentSalesModal");
+            const recentSalesMessage = document.getElementById("recentSalesMessage");
+            const recentSalesRows = document.getElementById("recentSalesRows");
+            const recentSaleDetailsModalElement = document.getElementById("recentSaleDetailsModal");
+            const recentSaleDetailsBody = document.getElementById("recentSaleDetailsBody");
+            const canDisplayRefill = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.CanDisplayRefill));
             const fuelCart = [];
             let activeMode = "hot";
             let activeCategoryId = "";
@@ -443,6 +550,140 @@
             let cartEditDraft = [];
             let draftSaveTimer = 0;
             let isRestoringDraft = false;
+            let displayRefillProducts = [];
+
+            function escapeHtml(value) {
+                const element = document.createElement("div");
+                element.textContent = value == null ? "" : String(value);
+                return element.innerHTML;
+            }
+
+            function formatDateTime(value) {
+                const date = value ? new Date(value) : null;
+                return date && !Number.isNaN(date.getTime()) ? date.toLocaleString() : "-";
+            }
+
+            function showUtilityMessage(element, message, success = false) {
+                element.textContent = message;
+                element.classList.remove("d-none", "alert-success", "alert-danger");
+                element.classList.add(success ? "alert-success" : "alert-danger");
+            }
+
+            function setUtilityButtonsDisabled(disabled) {
+                displayRefillButton.disabled = disabled || !canDisplayRefill;
+                recentSalesButton.disabled = disabled || !currentBranchId;
+                voidSalesButton.disabled = true;
+            }
+
+            function selectedRefillProduct() {
+                const productId = Number.parseInt(displayRefillProduct.value, 10);
+                return displayRefillProducts.find(product => product.productId === productId) || null;
+            }
+
+            function updateRefillSelection(productId) {
+                displayRefillProduct.value = productId ? String(productId) : "";
+                const product = selectedRefillProduct();
+                displayRefillAvailable.textContent = product ? `Available: ${formatQuantity(product.availableQuantity)} · Oldest batch: ${product.oldestBatch}` : "Available: Select product";
+                displayRefillQuantity.max = product ? String(product.availableQuantity) : "";
+            }
+
+            function renderDisplayRefillProducts() {
+                const query = displayRefillSearch.value.trim().toLowerCase();
+                const visible = displayRefillProducts.filter(product => !query || `${product.no} ${product.product}`.toLowerCase().includes(query));
+                displayRefillProduct.innerHTML = `<option value="">Select product</option>${visible.map(product => `<option value="${product.productId}">${escapeHtml(product.no)} · ${escapeHtml(product.product)}</option>`).join("")}`;
+                displayRefillRows.innerHTML = visible.length ? visible.map((product, index) => `<tr>
+                    <td>${index + 1}</td><td><span class="text-muted">${escapeHtml(product.no)}</span><br><strong>${escapeHtml(product.product)}</strong></td>
+                    <td class="text-end">${formatQuantity(product.availableQuantity)}</td><td>${escapeHtml(product.oldestBatch)}</td><td><span class="badge text-bg-success">Available</span></td>
+                    <td><button class="btn btn-sm btn-outline-success" type="button" data-refill-product-id="${product.productId}">Select</button></td></tr>`).join("") : `<tr><td class="text-center text-muted" colspan="6">No warehouse products found.</td></tr>`;
+                updateRefillSelection(null);
+            }
+
+            async function openDisplayRefill() {
+                displayRefillMessage.classList.add("d-none");
+                displayRefillRows.innerHTML = `<tr><td class="text-center text-muted" colspan="6">Loading warehouse products...</td></tr>`;
+                if (window.bootstrap) bootstrap.Modal.getOrCreateInstance(displayRefillModalElement).show();
+                try {
+                    const response = await fetch("/Transaction/POSDisplayRefillOptions", { headers: { Accept: "application/json" } });
+                    const result = await response.json();
+                    if (!response.ok || !result.success) throw new Error(result.message || "Unable to load warehouse products.");
+                    displayRefillProducts = Array.isArray(result.products) ? result.products : [];
+                    renderDisplayRefillProducts();
+                } catch (error) {
+                    displayRefillProducts = [];
+                    renderDisplayRefillProducts();
+                    showUtilityMessage(displayRefillMessage, error.message || "Unable to load warehouse products.");
+                }
+            }
+
+            async function submitDisplayRefill() {
+                const product = selectedRefillProduct();
+                const quantity = Math.max(0, Number.parseFloat(displayRefillQuantity.value) || 0);
+                if (!product || quantity <= 0 || quantity > product.availableQuantity) {
+                    showUtilityMessage(displayRefillMessage, "Select a product and enter a quantity within the available warehouse stock.");
+                    return;
+                }
+                confirmDisplayRefillButton.disabled = true;
+                try {
+                    const response = await fetch("/Transaction/POSDisplayRefill", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json", "RequestVerificationToken": antiForgeryToken },
+                        body: JSON.stringify({ productId: product.productId, quantity, remarks: displayRefillRemarks.value.trim() })
+                    });
+                    const result = await response.json();
+                    if (!response.ok || !result.success) throw new Error(result.message || "Unable to complete the display refill.");
+                    showUtilityMessage(displayRefillMessage, result.message, true);
+                    savePosDraft();
+                    window.setTimeout(() => window.location.reload(), 500);
+                } catch (error) {
+                    showUtilityMessage(displayRefillMessage, error.message || "Unable to complete the display refill.");
+                    confirmDisplayRefillButton.disabled = false;
+                }
+            }
+
+            async function openRecentSales() {
+                recentSalesMessage.classList.add("d-none");
+                recentSalesRows.innerHTML = `<tr><td class="text-center text-muted" colspan="8">Loading recent sales...</td></tr>`;
+                if (window.bootstrap) bootstrap.Modal.getOrCreateInstance(recentSalesModalElement).show();
+                try {
+                    const response = await fetch("/Transaction/POSRecentSales", { headers: { Accept: "application/json" } });
+                    const result = await response.json();
+                    if (!response.ok || !result.success) throw new Error(result.message || "Unable to load recent sales.");
+                    const sales = Array.isArray(result.sales) ? result.sales : [];
+                    recentSalesRows.innerHTML = sales.length ? sales.map((sale, index) => `<tr><td>${index + 1}</td><td>${escapeHtml(sale.receiptNo)}</td><td>${escapeHtml(formatDateTime(sale.createdAt))}</td><td>${sale.itemCount}</td><td>${escapeHtml(sale.paymentMethod)}</td><td class="text-end">${peso.format(sale.total)}</td><td><span class="badge text-bg-success">${escapeHtml(sale.status)}</span></td><td><button class="btn btn-sm btn-outline-primary" type="button" data-recent-sale-id="${sale.id}">View</button></td></tr>`).join("") : `<tr><td class="text-center text-muted" colspan="8">No recent completed sales found.</td></tr>`;
+                } catch (error) {
+                    recentSalesRows.innerHTML = `<tr><td class="text-center text-muted" colspan="8">Unable to load recent sales.</td></tr>`;
+                    showUtilityMessage(recentSalesMessage, error.message || "Unable to load recent sales.");
+                }
+            }
+
+            function detailRows(items, columns, emptyMessage) {
+                return items.length ? items.map(item => `<tr>${columns.map(column => `<td class="${column.className || ""}">${column.render(item)}</td>`).join("")}</tr>`).join("") : `<tr><td class="text-center text-muted" colspan="${columns.length}">${emptyMessage}</td></tr>`;
+            }
+
+            async function openRecentSaleDetails(saleId) {
+                recentSaleDetailsBody.innerHTML = `<p class="text-muted mb-0">Loading sale details...</p>`;
+                bootstrap.Modal.getInstance(recentSalesModalElement)?.hide();
+                if (window.bootstrap) bootstrap.Modal.getOrCreateInstance(recentSaleDetailsModalElement).show();
+                try {
+                    const response = await fetch(`/Transaction/POSSaleDetails?id=${encodeURIComponent(saleId)}`, { headers: { Accept: "application/json" } });
+                    const result = await response.json();
+                    if (!response.ok || !result.success) throw new Error(result.message || "Unable to load sale details.");
+                    const sale = result.sale;
+                    const products = Array.isArray(sale.products) ? sale.products : [];
+                    const fuels = Array.isArray(sale.fuels) ? sale.fuels : [];
+                    const payments = Array.isArray(sale.payments) ? sale.payments : [];
+                    recentSaleDetailsBody.innerHTML = `<div class="row g-2 mb-3">
+                        <div class="col-md-3"><small class="text-muted d-block">Receipt No</small><strong>${escapeHtml(sale.receiptNo)}</strong></div><div class="col-md-3"><small class="text-muted d-block">Business Date</small><strong>${escapeHtml(new Date(sale.businessDate).toLocaleDateString())}</strong></div><div class="col-md-3"><small class="text-muted d-block">Date / Time</small><strong>${escapeHtml(formatDateTime(sale.createdAt))}</strong></div><div class="col-md-3"><small class="text-muted d-block">Status</small><strong>${escapeHtml(sale.status)}</strong></div>
+                        <div class="col-md-3"><small class="text-muted d-block">Branch</small><strong>${escapeHtml(sale.branch)}</strong></div><div class="col-md-3"><small class="text-muted d-block">Cashier</small><strong>${escapeHtml(sale.cashier)}</strong></div><div class="col-md-3"><small class="text-muted d-block">Daily Cash</small><strong>${escapeHtml(sale.dailyCash)}</strong></div><div class="col-md-3"><small class="text-muted d-block">Shift</small><strong>${escapeHtml(sale.shift)}</strong></div>
+                        <div class="col-md-3"><small class="text-muted d-block">Payment Method</small><strong>${escapeHtml(sale.paymentMethod)}</strong></div><div class="col-md-3"><small class="text-muted d-block">Cash Received</small><strong>${peso.format(sale.cashAmount)}</strong></div><div class="col-md-3"><small class="text-muted d-block">Change</small><strong>${peso.format(sale.change)}</strong></div><div class="col-md-3"><small class="text-muted d-block">Member</small><strong>${escapeHtml(sale.member)}</strong></div>
+                        <div class="col-md-3"><small class="text-muted d-block">Gross Total</small><strong>${peso.format(sale.grossTotal)}</strong></div><div class="col-md-3"><small class="text-muted d-block">Member Discount</small><strong>${peso.format(sale.memberDiscount)}</strong></div><div class="col-md-3"><small class="text-muted d-block">Voucher Discount</small><strong>${peso.format(sale.voucherDiscount)}</strong></div><div class="col-md-3"><small class="text-muted d-block">Net Total</small><strong>${peso.format(sale.netTotal)}</strong></div></div>
+                        <h3 class="fs-6">Products</h3><div class="table-responsive mb-3"><table class="table app-table table-sm"><thead><tr><th>Product</th><th>Batch</th><th class="text-end">Qty</th><th class="text-end">Selling Price</th><th class="text-end">Cost</th><th class="text-end">Subtotal</th><th class="text-end">Gross Profit</th></tr></thead><tbody>${detailRows(products, [{render:i=>escapeHtml(i.product)},{render:i=>escapeHtml(i.batch)},{className:"text-end",render:i=>formatQuantity(i.quantity)},{className:"text-end",render:i=>peso.format(i.sellingPrice)},{className:"text-end",render:i=>peso.format(i.unitCost)},{className:"text-end",render:i=>peso.format(i.subtotal)},{className:"text-end",render:i=>peso.format(i.grossProfit)}], "No product lines.")}</tbody></table></div>
+                        <h3 class="fs-6">Fuel</h3><div class="table-responsive mb-3"><table class="table app-table table-sm"><thead><tr><th>Nozzle</th><th>Fuel</th><th>Tank</th><th class="text-end">Liters</th><th class="text-end">Price/L</th><th class="text-end">Subtotal</th></tr></thead><tbody>${detailRows(fuels, [{render:i=>escapeHtml(i.nozzle)},{render:i=>escapeHtml(i.fuel)},{render:i=>escapeHtml(i.tank)},{className:"text-end",render:i=>formatQuantity(i.liters)},{className:"text-end",render:i=>peso.format(i.pricePerLiter)},{className:"text-end",render:i=>peso.format(i.subtotal)}], "No fuel lines.")}</tbody></table></div>
+                        <h3 class="fs-6">Payments</h3><div class="table-responsive"><table class="table app-table table-sm mb-0"><thead><tr><th>Method</th><th class="text-end">Amount</th><th>Reference</th><th>Status</th></tr></thead><tbody>${detailRows(payments, [{render:i=>escapeHtml(i.method)},{className:"text-end",render:i=>peso.format(i.amount)},{render:i=>escapeHtml(i.reference)},{render:i=>escapeHtml(i.status)}], "No payment records.")}</tbody></table></div>`;
+                } catch (error) {
+                    recentSaleDetailsBody.innerHTML = `<div class="alert alert-danger mb-0">${escapeHtml(error.message || "Unable to load sale details.")}</div>`;
+                }
+            }
 
             function clearPosDraft() {
                 if (!posDraftKey) {
@@ -1576,6 +1817,7 @@
 
                 submitSaleButton.disabled = true;
                 modalConfirmSaleButton.disabled = true;
+                setUtilityButtonsDisabled(true);
                 showSubmitMessage("Saving sale...", true);
 
                 try {
@@ -1624,6 +1866,7 @@
                     if (!saleCompleted) {
                         modalConfirmSaleButton.disabled = false;
                     }
+                    setUtilityButtonsDisabled(false);
                 }
             }
 
@@ -1727,6 +1970,33 @@
                 queuePosDraftSave();
             }));
             addFuelButton.addEventListener("click", addFuelToCart);
+            displayRefillButton.addEventListener("click", openDisplayRefill);
+            recentSalesButton.addEventListener("click", openRecentSales);
+            displayRefillSearch.addEventListener("input", renderDisplayRefillProducts);
+            displayRefillProduct.addEventListener("change", () => updateRefillSelection(displayRefillProduct.value));
+            displayRefillRows.addEventListener("click", event => {
+                const button = event.target.closest("[data-refill-product-id]");
+                if (button) updateRefillSelection(button.dataset.refillProductId);
+            });
+            confirmDisplayRefillButton.addEventListener("click", submitDisplayRefill);
+            recentSalesRows.addEventListener("click", event => {
+                const button = event.target.closest("[data-recent-sale-id]");
+                if (button) openRecentSaleDetails(button.dataset.recentSaleId);
+            });
+            clearSaleButton.addEventListener("click", () => {
+                if (window.bootstrap) {
+                    bootstrap.Modal.getOrCreateInstance(clearSaleModalElement).show();
+                }
+            });
+            confirmClearSaleButton.addEventListener("click", () => {
+                resetSale();
+                fuelChoices.forEach(choice => choice.checked = false);
+                updateTotal();
+                clearPosDraft();
+                if (window.bootstrap) {
+                    bootstrap.Modal.getInstance(clearSaleModalElement)?.hide();
+                }
+            });
             editCartButton.addEventListener("click", openCartEditModal);
             cartEditRows.addEventListener("click", event => {
                 const stepButton = event.target.closest("[data-edit-cart-step]");
