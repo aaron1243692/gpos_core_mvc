@@ -9,10 +9,7 @@
         <div class="pos-utility-toolbar d-flex flex-wrap align-items-center gap-2" aria-label="POS utilities">
             <button class="btn btn-sm btn-outline-success" id="displayRefillButton" type="button" @(!Model.CanDisplayRefill ? "disabled" : null) title="@(!Model.CanDisplayRefill ? "Display refill requires an authorized role and active Branch." : "Move current Branch warehouse stock to display using FIFO.")">Display Refill</button>
             <button class="btn btn-sm btn-outline-primary" id="recentSalesButton" type="button" @(Model.CurrentBranchId.HasValue ? null : "disabled")>Recent</button>
-            <span class="d-inline-block" title="Void is unavailable until the audited reversal workflow is completed.">
-                <button class="btn btn-sm btn-outline-danger" id="voidSalesButton" type="button" disabled aria-describedby="voidSalesUnavailable">Void</button>
-            </span>
-            <span class="visually-hidden" id="voidSalesUnavailable">Void is unavailable until the audited reversal workflow is completed.</span>
+            <button class="btn btn-sm btn-outline-danger" id="voidSalesButton" type="button" @(Model.CurrentBranchId.HasValue ? null : "disabled") title="View voided sale history">Void</button>
         </div>
         <div class="pos-order-layout">
             <section class="pos-order-menu" aria-label="Order menu">
@@ -235,12 +232,25 @@
         </div>
 
         <div class="modal fade" id="recentSalesModal" tabindex="-1" aria-labelledby="recentSalesModalLabel" aria-hidden="true">
-            <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable pos-recent-sales-dialog">
                 <div class="modal-content">
                     <div class="modal-header"><div><h2 class="modal-title fs-5" id="recentSalesModalLabel">Recent Sales</h2><p class="mb-0 text-muted">Current cashier · @Model.CurrentBranchName</p></div><button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button></div>
                     <div class="modal-body">
                         <div class="alert d-none" id="recentSalesMessage" role="alert"></div>
-                        <div class="table-responsive"><table class="table app-table table-sm align-middle mb-0"><thead><tr><th>No</th><th>Receipt No</th><th>Date / Time</th><th>Items</th><th>Payment Method</th><th class="text-end">Total</th><th>Status</th><th>Action</th></tr></thead><tbody id="recentSalesRows"><tr><td class="text-center text-muted" colspan="8">Loading recent sales...</td></tr></tbody></table></div>
+                        <div class="table-responsive"><table class="table app-table table-sm align-middle mb-0"><thead><tr><th>No</th><th>Receipt No</th><th>Date / Time</th><th>Items</th><th>Payment Method</th><th class="text-end">Total</th><th>Status</th><th>Void Eligibility</th><th>Action</th></tr></thead><tbody id="recentSalesRows"><tr><td class="text-center text-muted" colspan="9">Loading recent sales...</td></tr></tbody></table></div>
+                    </div>
+                    <div class="modal-footer"><button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Close</button></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal fade" id="voidHistoryModal" tabindex="-1" aria-labelledby="voidHistoryModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+                <div class="modal-content">
+                    <div class="modal-header"><div><h2 class="modal-title fs-5" id="voidHistoryModalLabel">Void History</h2><p class="mb-0 text-muted">Voided sales for the current cashier and Branch</p></div><button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button></div>
+                    <div class="modal-body">
+                        <div class="alert d-none" id="voidHistoryMessage" role="alert"></div>
+                        <div class="table-responsive"><table class="table app-table table-sm align-middle mb-0"><thead><tr><th>No</th><th>Receipt No</th><th>Original Cashier</th><th>Original Date</th><th>Voided Date</th><th class="text-end">Original Total</th><th>Reason</th><th>Status</th><th>Action</th></tr></thead><tbody id="voidHistoryRows"><tr><td class="text-center text-muted" colspan="9">Loading void history...</td></tr></tbody></table></div>
                     </div>
                     <div class="modal-footer"><button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Close</button></div>
                 </div>
@@ -565,6 +575,9 @@
             const recentSalesModalElement = document.getElementById("recentSalesModal");
             const recentSalesMessage = document.getElementById("recentSalesMessage");
             const recentSalesRows = document.getElementById("recentSalesRows");
+            const voidHistoryModalElement = document.getElementById("voidHistoryModal");
+            const voidHistoryMessage = document.getElementById("voidHistoryMessage");
+            const voidHistoryRows = document.getElementById("voidHistoryRows");
             const recentSaleDetailsModalElement = document.getElementById("recentSaleDetailsModal");
             const recentSaleDetailsBody = document.getElementById("recentSaleDetailsBody");
             const canDisplayRefill = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.CanDisplayRefill));
@@ -608,7 +621,7 @@
             function setUtilityButtonsDisabled(disabled) {
                 displayRefillButton.disabled = disabled || !canDisplayRefill;
                 recentSalesButton.disabled = disabled || !currentBranchId;
-                voidSalesButton.disabled = true;
+                voidSalesButton.disabled = disabled || !currentBranchId;
             }
 
             function selectedRefillProduct() {
@@ -726,17 +739,39 @@
 
             async function openRecentSales() {
                 recentSalesMessage.classList.add("d-none");
-                recentSalesRows.innerHTML = `<tr><td class="text-center text-muted" colspan="8">Loading recent sales...</td></tr>`;
+                recentSalesRows.innerHTML = `<tr><td class="text-center text-muted" colspan="9">Loading recent sales...</td></tr>`;
                 if (window.bootstrap) bootstrap.Modal.getOrCreateInstance(recentSalesModalElement).show();
                 try {
                     const response = await fetch("/Transaction/POSRecentSales", { headers: { Accept: "application/json" } });
                     const result = await response.json();
                     if (!response.ok || !result.success) throw new Error(result.message || "Unable to load recent sales.");
                     const sales = Array.isArray(result.sales) ? result.sales : [];
-                    recentSalesRows.innerHTML = sales.length ? sales.map((sale, index) => `<tr><td>${index + 1}</td><td>${escapeHtml(sale.receiptNo)}</td><td>${escapeHtml(formatDateTime(sale.createdAt))}</td><td>${sale.itemCount}</td><td>${escapeHtml(sale.paymentMethod)}</td><td class="text-end">${peso.format(sale.total)}</td><td><span class="badge text-bg-success">${escapeHtml(sale.status)}</span></td><td><button class="btn btn-sm btn-outline-primary" type="button" data-recent-sale-id="${sale.id}">View</button></td></tr>`).join("") : `<tr><td class="text-center text-muted" colspan="8">No recent completed sales found.</td></tr>`;
+                    recentSalesRows.innerHTML = sales.length ? sales.map((sale, index) => {
+                        const alreadyVoided = sale.voidEligibility === "Already Voided";
+                        const eligible = sale.voidEligibility === "Eligible";
+                        const eligibilityClass = alreadyVoided ? "text-bg-secondary" : eligible ? "text-bg-success" : "text-bg-warning";
+                        const statusClass = sale.status === "Voided" ? "text-bg-secondary" : "text-bg-success";
+                        return `<tr><td>${index + 1}</td><td>${escapeHtml(sale.receiptNo)}</td><td>${escapeHtml(formatDateTime(sale.createdAt))}</td><td>${sale.itemCount}</td><td>${escapeHtml(sale.paymentMethod)}</td><td class="text-end">${peso.format(sale.total)}</td><td><span class="badge ${statusClass}">${escapeHtml(sale.status)}</span></td><td><span class="badge ${eligibilityClass}">${escapeHtml(sale.voidEligibility)}</span><small class="d-block text-muted mt-1">${escapeHtml(sale.voidEligibilityReason)}</small></td><td><div class="d-flex gap-1 flex-nowrap"><button class="btn btn-sm btn-outline-primary" type="button" data-recent-sale-id="${sale.id}">View</button><span class="d-inline-block" title="${escapeHtml(sale.voidEligibilityReason || "Void is not available yet")}"><button class="btn btn-sm btn-outline-danger" type="button" disabled aria-label="Void ${escapeHtml(sale.receiptNo)}">Void</button></span></div></td></tr>`;
+                    }).join("") : `<tr><td class="text-center text-muted" colspan="9">No recent sales found.</td></tr>`;
                 } catch (error) {
-                    recentSalesRows.innerHTML = `<tr><td class="text-center text-muted" colspan="8">Unable to load recent sales.</td></tr>`;
+                    recentSalesRows.innerHTML = `<tr><td class="text-center text-muted" colspan="9">Unable to load recent sales.</td></tr>`;
                     showUtilityMessage(recentSalesMessage, error.message || "Unable to load recent sales.");
+                }
+            }
+
+            async function openVoidHistory() {
+                voidHistoryMessage.classList.add("d-none");
+                voidHistoryRows.innerHTML = `<tr><td class="text-center text-muted" colspan="9">Loading void history...</td></tr>`;
+                if (window.bootstrap) bootstrap.Modal.getOrCreateInstance(voidHistoryModalElement).show();
+                try {
+                    const response = await fetch("/Transaction/POSVoidHistory", { headers: { Accept: "application/json" } });
+                    const result = await response.json();
+                    if (!response.ok || !result.success) throw new Error(result.message || "Unable to load void history.");
+                    const sales = Array.isArray(result.sales) ? result.sales : [];
+                    voidHistoryRows.innerHTML = sales.length ? sales.map((sale, index) => `<tr><td>${index + 1}</td><td>${escapeHtml(sale.receiptNo)}</td><td>${escapeHtml(sale.originalCashier)}</td><td>${escapeHtml(formatDateTime(sale.originalDate))}</td><td>${escapeHtml(sale.voidedDate ? formatDateTime(sale.voidedDate) : "Not recorded")}</td><td class="text-end">${peso.format(sale.originalTotal)}</td><td>${escapeHtml(sale.reason || "Not recorded")}</td><td><span class="badge text-bg-secondary">${escapeHtml(sale.status)}</span></td><td><button class="btn btn-sm btn-outline-primary" type="button" data-void-history-sale-id="${sale.id}">View</button></td></tr>`).join("") : `<tr><td class="text-center text-muted fw-semibold" colspan="9">No voided sales found.</td></tr>`;
+                } catch (error) {
+                    voidHistoryRows.innerHTML = `<tr><td class="text-center text-muted" colspan="9">Unable to load void history.</td></tr>`;
+                    showUtilityMessage(voidHistoryMessage, error.message || "Unable to load void history.");
                 }
             }
 
@@ -744,9 +779,9 @@
                 return items.length ? items.map(item => `<tr>${columns.map(column => `<td class="${column.className || ""}">${column.render(item)}</td>`).join("")}</tr>`).join("") : `<tr><td class="text-center text-muted" colspan="${columns.length}">${emptyMessage}</td></tr>`;
             }
 
-            async function openRecentSaleDetails(saleId) {
+            async function openRecentSaleDetails(saleId, sourceModalElement = recentSalesModalElement) {
                 recentSaleDetailsBody.innerHTML = `<p class="text-muted mb-0">Loading sale details...</p>`;
-                bootstrap.Modal.getInstance(recentSalesModalElement)?.hide();
+                bootstrap.Modal.getInstance(sourceModalElement)?.hide();
                 if (window.bootstrap) bootstrap.Modal.getOrCreateInstance(recentSaleDetailsModalElement).show();
                 try {
                     const response = await fetch(`/Transaction/POSSaleDetails?id=${encodeURIComponent(saleId)}`, { headers: { Accept: "application/json" } });
@@ -2056,6 +2091,7 @@
             addFuelButton.addEventListener("click", addFuelToCart);
             displayRefillButton.addEventListener("click", openDisplayRefill);
             recentSalesButton.addEventListener("click", openRecentSales);
+            voidSalesButton.addEventListener("click", openVoidHistory);
             displayRefillSearch.addEventListener("input", renderDisplayRefillProducts);
             displayRefillRows.addEventListener("click", event => {
                 const button = event.target.closest("[data-refill-transfer-product-id]");
@@ -2080,6 +2116,10 @@
             recentSalesRows.addEventListener("click", event => {
                 const button = event.target.closest("[data-recent-sale-id]");
                 if (button) openRecentSaleDetails(button.dataset.recentSaleId);
+            });
+            voidHistoryRows.addEventListener("click", event => {
+                const button = event.target.closest("[data-void-history-sale-id]");
+                if (button) openRecentSaleDetails(button.dataset.voidHistorySaleId, voidHistoryModalElement);
             });
             clearSaleButton.addEventListener("click", () => {
                 if (window.bootstrap) {

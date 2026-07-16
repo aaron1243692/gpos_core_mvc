@@ -5730,3 +5730,9 @@ table tbody td {
   min-width: 92px;
   white-space: nowrap;
 }
+
+@media (min-width: 992px) {
+  #recentSalesModal .pos-recent-sales-dialog {
+    max-width: 90vw;
+  }
+}

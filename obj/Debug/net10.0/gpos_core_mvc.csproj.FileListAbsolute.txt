@@ -18135,4 +18135,6 @@ C:\project\gpos_core_mvc\bin\Debug\net10.0\Views\Configuration\Dispensers.cshtml
 C:\project\gpos_core_mvc\bin\Debug\net10.0\Views\Configuration\FuelPumps.cshtml
 C:\project\gpos_core_mvc\artifacts\buildcheck\Views\Configuration\Dispensers.cshtml
 C:\project\gpos_core_mvc\artifacts\buildcheck\Views\Configuration\FuelPumps.cshtml
-C:\project\gpos_core_mvc\obj\Debug\net10.0\compressed\ios0330fcj-{0}-rposwjgytk-rposwjgytk.gz
+C:\project\gpos_core_mvc\obj\Debug\net10.0\compressed\ios0330fcj-{0}-lcq8923f3t-lcq8923f3t.gz
+C:\project\gpos_core_mvc\artifacts\buildcheck\Views\Transaction\Void.cshtml
+C:\project\gpos_core_mvc\bin\Debug\net10.0\Views\Transaction\Void.cshtml

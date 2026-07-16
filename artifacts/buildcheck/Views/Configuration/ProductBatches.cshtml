@@ -1,0 +1,194 @@
+@using System.Globalization
+@model gpos.Models.ViewModels.SetupModulesPageViewModel
+
+<div class="page-header">
+    <div class="page-heading">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item">GPOS</li>
+                <li class="breadcrumb-item">Setup</li>
+                <li class="breadcrumb-item">Products</li>
+                <li class="breadcrumb-item active" aria-current="page">Product Batches</li>
+            </ol>
+        </nav>
+        <h1>Product Batches</h1>
+        <p class="page-subtitle">Manage product batch costs, prices, suppliers, and expiry dates.</p>
+    </div>
+</div>
+
+<section class="card content-card table-card full-height-card mb-0">
+    <div class="table-toolbar d-flex justify-content-between align-items-center gap-2 flex-wrap mb-3">
+        <form class="products-search-wrap" asp-action="ProductBatches" method="get">
+            <label class="visually-hidden" for="product-batch-search">Search product batches</label>
+            <input class="form-control form-control-sm products-search" id="product-batch-search" name="search" value="@Model.Search" type="search" placeholder="Search product batches" autocomplete="off" />
+        </form>
+        <div class="col-12 col-sm-auto ms-sm-auto">
+            <button class="btn btn-primary btn-sm w-100" type="button" data-bs-toggle="modal" data-bs-target="#productBatchModal">Add Batch</button>
+        </div>
+    </div>
+
+    <div class="table-responsive table-scroll-wrap flex-table-wrap gpos-table-wrap">
+        <table class="table table-sm table-hover align-middle admin-table gpos-table product-batches-table mb-0">
+            <colgroup>
+                <col class="col-no" />
+                <col class="col-product" />
+                <col class="col-batch-number" />
+                <col class="col-supplier" />
+                <col class="col-cost-price" />
+                <col class="col-selling-price" />
+                <col class="col-normal" />
+                <col class="col-normal" />
+                <col class="col-normal" />
+                <col class="col-date" />
+                <col class="col-status" />
+                <col class="col-action" />
+            </colgroup>
+            <thead>
+                <tr>
+                    <th class="col-no text-nowrap" scope="col">No</th>
+                    <th class="col-product text-nowrap" scope="col">Product</th>
+                    <th class="col-batch-number text-nowrap" scope="col">Batch No</th>
+                    <th class="col-supplier text-nowrap" scope="col">Supplier</th>
+                    <th class="col-cost-price text-nowrap" scope="col">Cost Price</th>
+                    <th class="col-selling-price text-nowrap" scope="col">Selling Price</th>
+                    <th class="number-cell text-nowrap" scope="col">Warehouse Qty</th>
+                    <th class="number-cell text-nowrap" scope="col">Display Qty</th>
+                    <th class="number-cell text-nowrap" scope="col">Total Qty</th>
+                    <th class="col-date text-nowrap" scope="col">Date Created</th>
+                    <th class="col-status status-cell text-nowrap" scope="col">Status</th>
+                    <th class="col-action text-nowrap" scope="col">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model.ProductBatches.Count == 0)
+                {
+                    <tr>
+                        <td class="text-center text-muted fw-bold" colspan="12">No product batches found.</td>
+                    </tr>
+                }
+                @for (var index = 0; index < Model.ProductBatches.Count; index += 1)
+                {
+                    <tr>
+                        <td class="col-no">@(index + 1)</td>
+                        <td class="col-product text-cell text-truncate">@(Model.ProductBatches[index].Product?.Name ?? "-")</td>
+                        <td class="col-batch-number text-nowrap">@Model.ProductBatches[index].BatchNo</td>
+                        <td class="col-supplier text-cell text-truncate">@(Model.ProductBatches[index].Supplier?.Name ?? "-")</td>
+                        <td class="col-cost-price number-cell">&#8369;@Model.ProductBatches[index].CostPrice.ToString("N2", CultureInfo.InvariantCulture)</td>
+                        <td class="col-selling-price number-cell">&#8369;@Model.ProductBatches[index].SellingPrice.ToString("N2", CultureInfo.InvariantCulture)</td>
+                        <td class="number-cell">@Model.ProductBatches[index].WarehouseStocks.Sum(stock => stock.Quantity).ToString("#,0.##", CultureInfo.InvariantCulture)</td>
+                        <td class="number-cell">@Model.ProductBatches[index].DisplayStocks.Sum(stock => stock.Quantity).ToString("#,0.##", CultureInfo.InvariantCulture)</td>
+                        <td class="number-cell">@((Model.ProductBatches[index].WarehouseStocks.Sum(stock => stock.Quantity) + Model.ProductBatches[index].DisplayStocks.Sum(stock => stock.Quantity)).ToString("#,0.##", CultureInfo.InvariantCulture))</td>
+                        <td class="col-date number-cell">@(Model.ProductBatches[index].CreatedAt.HasValue ? Model.ProductBatches[index].CreatedAt.GetValueOrDefault().ToString("MMM dd, yyyy", CultureInfo.InvariantCulture) : "-")</td>
+                        <td class="col-status status-cell">
+                            @if (Model.ProductBatches[index].Status == 1)
+                            {
+                                <span class="badge text-bg-success">Active</span>
+                            }
+                            @if (Model.ProductBatches[index].Status == 0)
+                            {
+                                <span class="badge text-bg-secondary">Inactive</span>
+                            }
+                        </td>
+                        <td class="col-action action-cell">
+                            <div class="setup-row-actions">
+                                <a class="btn btn-sm btn-outline-primary" asp-action="ProductBatches" asp-route-editId="@Model.ProductBatches[index].Id" asp-route-search="@Model.Search">Edit</a>
+                                @if (Model.ProductBatches[index].Status == 1 && Model.ProductBatches[index].IsActive)
+                                {
+                                    <form asp-action="DeleteProductBatch" method="post" data-deactivate-form>
+                                    @Html.AntiForgeryToken()
+                                    <input name="id" type="hidden" value="@Model.ProductBatches[index].Id" />
+                                    <input name="search" type="hidden" value="@Model.Search" />
+                                    <button class="btn btn-sm btn-outline-danger" type="submit">Deactivate</button>
+                                </form>
+                                }
+                                @if (!(Model.ProductBatches[index].Status == 1 && Model.ProductBatches[index].IsActive))
+                                {
+                                    <form asp-action="ActivateProductBatch" method="post">
+                                    @Html.AntiForgeryToken()
+                                    <input name="id" type="hidden" value="@Model.ProductBatches[index].Id" />
+                                    <input name="search" type="hidden" value="@Model.Search" />
+                                    <button class="btn btn-sm btn-outline-success" type="submit">Activate</button>
+                                </form>
+                                }
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<div class="modal fade" id="productBatchModal" tabindex="-1" aria-labelledby="productBatchModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <form asp-action="SaveProductBatch" method="post">
+                @Html.AntiForgeryToken()
+                <input asp-for="ProductBatchForm.Id" type="hidden" />
+                <input name="search" type="hidden" value="@Model.Search" />
+                <div class="modal-header">
+                    <h2 class="modal-title fs-5" id="productBatchModalLabel">Product Batch</h2>
+                    <button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="d-grid gap-3">
+                        <div>
+                            <label asp-for="ProductBatchForm.ProductId" class="form-label">Product</label>
+                            <select asp-for="ProductBatchForm.ProductId" asp-items="Model.ProductOptions" class="form-select">
+                                <option value="0">Select product</option>
+                            </select>
+                            <span asp-validation-for="ProductBatchForm.ProductId" class="text-danger small"></span>
+                        </div>
+                        <div>
+                            <label asp-for="ProductBatchForm.SupplierId" class="form-label">Supplier</label>
+                            <select asp-for="ProductBatchForm.SupplierId" asp-items="Model.SupplierOptions" class="form-select"></select>
+                        </div>
+                        <div>
+                            <label class="form-label">Batch No</label>
+                            <input class="form-control" value="@(Model.ProductBatchForm.Id > 0 ? Model.ProductBatchForm.BatchNo : "Auto-generated 8-digit number on save")" readonly />
+                            <input asp-for="ProductBatchForm.BatchNo" type="hidden" />
+                        </div>
+                        <div>
+                            <label asp-for="ProductBatchForm.CostPrice" class="form-label">Cost Price</label>
+                            <input asp-for="ProductBatchForm.CostPrice" class="form-control" type="number" step="0.01" min="0" />
+                            <span asp-validation-for="ProductBatchForm.CostPrice" class="text-danger small"></span>
+                        </div>
+                        <div>
+                            <label asp-for="ProductBatchForm.SellingPrice" class="form-label">Selling Price</label>
+                            <input asp-for="ProductBatchForm.SellingPrice" class="form-control" type="number" step="0.01" min="0" />
+                            <span asp-validation-for="ProductBatchForm.SellingPrice" class="text-danger small"></span>
+                        </div>
+                        <div>
+                            <label asp-for="ProductBatchForm.ExpiryDate" class="form-label">Expiry Date</label>
+                            <input asp-for="ProductBatchForm.ExpiryDate" class="form-control" type="date" />
+                        </div>
+                        <input asp-for="ProductBatchForm.Status" type="hidden" />
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button>
+                    <button class="btn btn-primary" type="submit">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            const activeModalId = "@Model.ActiveModalId";
+
+            if (!activeModalId || !window.bootstrap) {
+                return;
+            }
+
+            const activeModal = document.getElementById(activeModalId);
+
+            if (activeModal) {
+                bootstrap.Modal.getOrCreateInstance(activeModal).show();
+            }
+        });
+    </script>
+}

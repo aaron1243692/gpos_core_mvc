@@ -61,6 +61,11 @@ namespace gpos.ViewComponents
                 return "POS";
             }
 
+            if (Is(controller, "Transaction") && Is(action, "Void"))
+            {
+                return "Reports";
+            }
+
             if (Is(controller, "Transactions") || Is(controller, "Transaction"))
             {
                 return "Transactions";

@@ -47,14 +47,25 @@ namespace gpos.Controllers
                 return Unauthorized(new { success = false, message = "A valid user and active Branch are required." });
             }
 
-            var sales = await _db.Sales.AsNoTracking()
+            var canVoid = await HasVoidSalePermissionAsync(context.UserId);
+            var recentSales = await _db.Sales.AsNoTracking()
+                .Include(sale => sale.DailyCash)
+                .Include(sale => sale.ProductSales)
+                .Include(sale => sale.FuelSales)
+                .Include(sale => sale.Payments)
+                .Include(sale => sale.PointsLedger)
+                .Include(sale => sale.VoucherRedemptions)
                 .Where(sale => sale.UserId == context.UserId
                     && sale.BranchId == context.BranchId
-                    && sale.Status == "Completed")
+                    && (sale.Status == "Completed" || sale.Status == "Voided"))
                 .OrderByDescending(sale => sale.CreatedAt)
                 .ThenByDescending(sale => sale.Id)
                 .Take(20)
-                .Select(sale => new
+                .ToListAsync();
+            var sales = recentSales.Select(sale =>
+            {
+                var eligibility = VoidEligibilityFor(sale, canVoid);
+                return new
                 {
                     sale.Id,
                     sale.ReceiptNo,
@@ -62,6 +73,40 @@ namespace gpos.Controllers
                     itemCount = sale.ProductSales.Count + sale.FuelSales.Count,
                     paymentMethod = sale.Payments.OrderBy(payment => payment.Id).Select(payment => payment.PaymentType).FirstOrDefault() ?? "Cash",
                     total = sale.NetTotal,
+                    sale.Status,
+                    voidEligibility = eligibility.Status,
+                    voidEligibilityReason = eligibility.Reason
+                };
+            }).ToList();
+
+            return Ok(new { success = true, sales });
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> POSVoidHistory()
+        {
+            var context = await CurrentPosUserContextAsync();
+            if (context is null)
+            {
+                return Unauthorized(new { success = false, message = "A valid user and active Branch are required." });
+            }
+
+            var sales = await _db.Sales.AsNoTracking()
+                .Where(sale => sale.UserId == context.UserId
+                    && sale.BranchId == context.BranchId
+                    && sale.Status == "Voided")
+                .OrderByDescending(sale => sale.UpdatedAt ?? sale.CreatedAt)
+                .ThenByDescending(sale => sale.Id)
+                .Take(50)
+                .Select(sale => new
+                {
+                    sale.Id,
+                    sale.ReceiptNo,
+                    originalCashier = sale.User != null ? (sale.User.FullName ?? sale.User.Username) : "-",
+                    originalDate = sale.CreatedAt,
+                    voidedDate = (DateTime?)null,
+                    originalTotal = sale.NetTotal,
+                    reason = "Not recorded",
                     sale.Status
                 })
                 .ToListAsync();
@@ -94,10 +139,10 @@ namespace gpos.Controllers
                 .FirstOrDefaultAsync(item => item.Id == id
                     && item.UserId == context.UserId
                     && item.BranchId == context.BranchId
-                    && item.Status == "Completed");
+                    && (item.Status == "Completed" || item.Status == "Voided"));
             if (sale is null)
             {
-                return NotFound(new { success = false, message = "The completed sale was not found for the current user and Branch." });
+                return NotFound(new { success = false, message = "The sale was not found for the current user and Branch." });
             }
 
             var voucherDiscount = sale.VoucherRedemptions.Sum(item => item.DiscountAmount);
@@ -2490,9 +2535,28 @@ namespace gpos.Controllers
         public async Task<IActionResult> CancelBranchToBranchFuel(int id, string? search) => await CancelStockTransfer(id, nameof(BranchToBranchFuel), search);
         public IActionResult ProductReturn() => View();
         public IActionResult FuelReturn() => View();
-        public IActionResult VoidSale() => View();
-        public IActionResult VoidProduct() => View();
-        public IActionResult VoidFuel() => View();
+        [HttpGet]
+        public IActionResult Void(string? search, string? type, string? branch, DateTime? dateFrom, DateTime? dateTo, string? status)
+        {
+            return View(new VoidPageViewModel
+            {
+                Search = (search ?? string.Empty).Trim(),
+                Type = (type ?? string.Empty).Trim(),
+                Branch = (branch ?? string.Empty).Trim(),
+                DateFrom = dateFrom,
+                DateTo = dateTo,
+                Status = (status ?? string.Empty).Trim()
+            });
+        }
+
+        [HttpGet]
+        public IActionResult VoidSale() => RedirectToAction(nameof(Void));
+
+        [HttpGet]
+        public IActionResult VoidProduct() => RedirectToAction(nameof(Void), new { type = "Product" });
+
+        [HttpGet]
+        public IActionResult VoidFuel() => RedirectToAction(nameof(Void), new { type = "Fuel" });
         public async Task<IActionResult> DisplayStockAdjustment(string? search, int? branchId, DateTime? dateFrom, DateTime? dateTo, string? status, int? editId, int? detailsId)
             => View(await BuildStockAdjustmentPageAsync("Display", search, branchId, dateFrom, dateTo, status, editId, detailsId));
         public async Task<IActionResult> WarehouseStockAdjustment(string? search, int? branchId, DateTime? dateFrom, DateTime? dateTo, string? status, int? editId, int? detailsId)
@@ -4682,6 +4746,56 @@ namespace gpos.Controllers
                                 || rolePermission.Permission.Code.ToLower() == "warehouse.display.transfer.create"))));
         }
 
+        private async Task<bool> HasVoidSalePermissionAsync(int userId)
+        {
+            return await _db.UserRoles.AsNoTracking()
+                .AnyAsync(userRole => userRole.UserId == userId
+                    && userRole.Role != null
+                    && userRole.Role.Status == 1
+                    && userRole.Role.RolePermissions.Any(rolePermission => rolePermission.Status == 1
+                        && rolePermission.Permission != null
+                        && rolePermission.Permission.Status == 1
+                        && rolePermission.Permission.Code.ToLower() == "tranvosale.create"));
+        }
+
+        private static VoidEligibilityResult VoidEligibilityFor(Sale sale, bool canVoid)
+        {
+            if (sale.Status == "Voided")
+            {
+                return new VoidEligibilityResult("Already Voided", "Already voided");
+            }
+            if (sale.Status != "Completed")
+            {
+                return new VoidEligibilityResult("Ineligible", "Legacy sale not eligible");
+            }
+            if (!canVoid)
+            {
+                return new VoidEligibilityResult("Ineligible", "No Void permission");
+            }
+            if (!sale.DailyCashId.HasValue || sale.DailyCash is null)
+            {
+                return new VoidEligibilityResult("Ineligible", "Sale not linked to Daily Cash");
+            }
+            if (sale.DailyCash.Status != CashStatusOpen)
+            {
+                return new VoidEligibilityResult("Ineligible", "Daily Cash not open");
+            }
+            if (sale.ProductSales.Any(item => !item.DisplayStockId.HasValue || !item.BatchId.HasValue))
+            {
+                return new VoidEligibilityResult("Ineligible", "Missing exact Product stock references");
+            }
+            if (sale.FuelSales.Count > 0)
+            {
+                return new VoidEligibilityResult("Ineligible", "Fuel batch allocations unavailable");
+            }
+            if (sale.PointsLedger.Count > 0 || sale.VoucherRedemptions.Count > 0)
+            {
+                return new VoidEligibilityResult("Ineligible", "Unsupported points/voucher reversal");
+            }
+
+            return new VoidEligibilityResult("Ineligible", "Unsupported payment reversal");
+        }
+
         private async Task<List<ValidatedProductSaleItem>> BuildValidatedProductItems(List<PosProductSaleRequestItem> products)
         {
             var items = new List<ValidatedProductSaleItem>();
@@ -5646,5 +5760,6 @@ namespace gpos.Controllers
 
         private sealed record VoucherRedemptionResult(Voucher? Voucher, VoucherRule Rule, decimal DiscountAmount);
         private sealed record PosUserContext(int UserId, int BranchId, string BranchName);
+        private sealed record VoidEligibilityResult(string Status, string Reason);
     }
 }

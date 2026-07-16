@@ -1,0 +1,95 @@
+@model gpos.Models.ViewModels.VoidPageViewModel
+@{
+    ViewData["Title"] = "Void";
+}
+
+<div class="page-header">
+    <div class="page-heading">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item">GPOS</li>
+                <li class="breadcrumb-item">Reports</li>
+                <li class="breadcrumb-item active" aria-current="page">Void</li>
+            </ol>
+        </nav>
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+            <h1 class="mb-0">Void</h1>
+            <span class="badge bg-warning text-dark">UI Preview Only</span>
+        </div>
+        <p class="page-subtitle text-muted mt-2 mb-0">Void records will appear here when an audited backend workflow is available.</p>
+    </div>
+</div>
+
+<section class="transaction-ui-page">
+    <div class="alert alert-warning" role="alert">
+        <strong>Backend not connected yet.</strong> This page does not perform reversals or change operational data.
+    </div>
+
+    <div class="content-card mb-3">
+        <form method="get" asp-controller="Transaction" asp-action="Void" class="row g-2 align-items-end">
+            <div class="col-12 col-md-6 col-xl">
+                <label class="form-label" for="voidSearch">Search</label>
+                <input class="form-control" id="voidSearch" name="search" value="@Model.Search" type="search" placeholder="Search reference..." />
+            </div>
+            <div class="col-6 col-md-3 col-xl-auto">
+                <label class="form-label" for="voidType">Type</label>
+                <select class="form-select" id="voidType" name="type">
+                    <option value="">All Types</option>
+                    @foreach (var option in new[] { "Sale", "Product", "Fuel", "Warehouse" })
+                    {
+                        <option value="@option" selected="@(Model.Type == option)">@option</option>
+                    }
+                </select>
+            </div>
+            <div class="col-6 col-md-3 col-xl-auto">
+                <label class="form-label" for="voidBranch">Branch</label>
+                <select class="form-select" id="voidBranch" name="branch">
+                    <option value="">All Branches</option>
+                </select>
+            </div>
+            <div class="col-6 col-md-3 col-xl-auto">
+                <label class="form-label" for="voidDateFrom">Date From</label>
+                <input class="form-control" id="voidDateFrom" name="dateFrom" type="date" value="@(Model.DateFrom?.ToString("yyyy-MM-dd"))" />
+            </div>
+            <div class="col-6 col-md-3 col-xl-auto">
+                <label class="form-label" for="voidDateTo">Date To</label>
+                <input class="form-control" id="voidDateTo" name="dateTo" type="date" value="@(Model.DateTo?.ToString("yyyy-MM-dd"))" />
+            </div>
+            <div class="col-6 col-md-3 col-xl-auto">
+                <label class="form-label" for="voidStatus">Status</label>
+                <select class="form-select" id="voidStatus" name="status">
+                    <option value="">All Statuses</option>
+                    <option value="Voided" selected="@(Model.Status == "Voided")">Voided</option>
+                    <option value="Pending" selected="@(Model.Status == "Pending")">Pending</option>
+                </select>
+            </div>
+            <div class="col-12 col-md-auto d-flex gap-2">
+                <button class="btn btn-primary" type="submit">Search</button>
+                <a class="btn btn-outline-secondary" asp-controller="Transaction" asp-action="Void">Clear</a>
+            </div>
+        </form>
+    </div>
+
+    <div class="content-card transaction-ui-card">
+        <div class="table-responsive transaction-ui-table-wrap">
+            <table class="table app-table table-sm align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th class="text-nowrap">No</th>
+                        <th class="text-nowrap">Reference</th>
+                        <th class="text-nowrap">Type</th>
+                        <th class="text-nowrap">Branch</th>
+                        <th class="text-nowrap">Date</th>
+                        <th class="text-nowrap">Status</th>
+                        <th class="text-nowrap">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td class="text-center text-muted fw-semibold py-4" colspan="7">No void records available.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</section>
