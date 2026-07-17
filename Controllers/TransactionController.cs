@@ -1607,6 +1607,8 @@ namespace gpos.Controllers
             }
 
             var cashSales = await salesQuery.SumAsync(sale => sale.ChangeAmount.HasValue ? sale.CashAmount - sale.ChangeAmount.Value : sale.CashAmount);
+            if (dailyCashId > 0)
+                cashSales += await _db.SaleVoidCashAdjustments.AsNoTracking().Where(x => x.DailyCashId == dailyCashId).SumAsync(x => x.Amount);
 
             var cashInQuery = _db.CashIns.AsNoTracking()
                 .Where(item => item.BranchId == branchId && item.ShiftId == shiftId && item.UserId == userId && item.Status == 1);
@@ -2577,8 +2579,22 @@ namespace gpos.Controllers
         public IActionResult ProductReturn() => View();
         public IActionResult FuelReturn() => View();
         [HttpGet]
-        public IActionResult Void(string? search, string? type, string? branch, DateTime? dateFrom, DateTime? dateTo, string? status)
+        public async Task<IActionResult> Void(string? search, string? type, string? branch, DateTime? dateFrom, DateTime? dateTo, string? status)
         {
+            var context = await CurrentPosUserContextAsync();
+            if (context is null) return Unauthorized();
+            var canVoid = await HasVoidSalePermissionAsync(context.UserId);
+            var query = _db.Sales.AsNoTracking().Include(x => x.User).Include(x => x.DailyCash).Include(x => x.ProductSales)
+                .Include(x => x.FuelSales).Include(x => x.Payments).Include(x => x.PointsLedger).Include(x => x.VoucherRedemptions)
+                .Include(x => x.Voids).Where(x => x.BranchId == context.BranchId && (x.Status == "Completed" || x.Status == "Voided"));
+            var term = (search ?? string.Empty).Trim();
+            if (term.Length > 0) query = query.Where(x => x.ReceiptNo.Contains(term) || (x.User != null && (x.User.Username.Contains(term) || (x.User.FullName != null && x.User.FullName.Contains(term)))));
+            if (dateFrom.HasValue) query = query.Where(x => x.BusinessDate >= dateFrom.Value.Date);
+            if (dateTo.HasValue) query = query.Where(x => x.BusinessDate < dateTo.Value.Date.AddDays(1));
+            if (!string.IsNullOrWhiteSpace(status)) query = query.Where(x => x.Status == status);
+            if (type == "Product") query = query.Where(x => x.ProductSales.Any() && !x.FuelSales.Any());
+            if (type == "Fuel") query = query.Where(x => x.FuelSales.Any());
+            var sales = await query.OrderByDescending(x => x.BusinessDate).ThenByDescending(x => x.Id).Take(200).ToListAsync();
             return View(new VoidPageViewModel
             {
                 Search = (search ?? string.Empty).Trim(),
@@ -2586,8 +2602,79 @@ namespace gpos.Controllers
                 Branch = (branch ?? string.Empty).Trim(),
                 DateFrom = dateFrom,
                 DateTo = dateTo,
-                Status = (status ?? string.Empty).Trim()
+                Status = (status ?? string.Empty).Trim(), CanCreate = canVoid,
+                Sales = sales.Select(s => { var e = VoidEligibilityFor(s, canVoid); return new VoidSaleRowViewModel {
+                    SaleId=s.Id, SaleVoidId=s.Voids.Select(v => (int?)v.Id).FirstOrDefault(), ReceiptNo=s.ReceiptNo, BusinessDate=s.BusinessDate,
+                    Cashier=UserDisplayName(s.User), SaleType=s.FuelSales.Any() ? (s.ProductSales.Any()?"Mixed":"Fuel") : "Product",
+                    Gross=s.GrossTotal, Discount=s.DiscountAmount+s.RebateAmount, Vat=s.VatAmount??0, Net=s.NetTotal,
+                    Payment=string.Join(", ", s.Payments.Where(p=>p.Status=="Completed").Select(p=>p.PaymentType).Distinct()), Status=s.Status,
+                    Eligible=e.Status=="Eligible", EligibilityMessage=e.Reason }; }).ToList()
             });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> CreateSaleVoid(int saleId, string reason)
+        {
+            var context = await CurrentPosUserContextAsync();
+            if (context is null) return Unauthorized();
+            if (!await HasVoidSalePermissionAsync(context.UserId)) return Forbid();
+            reason = (reason ?? string.Empty).Trim();
+            if (reason.Length < 3 || reason.Length > 500) { TempData["VoidError"] = "A Void reason between 3 and 500 characters is required."; return RedirectToAction(nameof(Void)); }
+            await using var transaction = await _db.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
+            try
+            {
+                var sale = await _db.Sales.FromSqlInterpolated($"SELECT * FROM sales WHERE id = {saleId} FOR UPDATE").SingleOrDefaultAsync();
+                if (sale is null || sale.BranchId != context.BranchId) return NotFound();
+                await _db.Entry(sale).Collection(x => x.ProductSales).LoadAsync(); await _db.Entry(sale).Collection(x => x.FuelSales).LoadAsync();
+                await _db.Entry(sale).Collection(x => x.Payments).LoadAsync(); await _db.Entry(sale).Collection(x => x.PointsLedger).LoadAsync(); await _db.Entry(sale).Collection(x => x.VoucherRedemptions).LoadAsync();
+                if (sale.Status != "Completed") throw new InvalidOperationException("Only a completed Sale can be voided.");
+                if (sale.FuelSales.Count > 0) throw new InvalidOperationException("This Sale contains Fuel items and cannot be voided until Fuel FIFO allocation support is complete.");
+                if (sale.ProductSales.Count == 0) throw new InvalidOperationException("This Sale has no restorable Product allocations.");
+                if (sale.ProductSales.Any(x => !x.DisplayStockId.HasValue || !x.BatchId.HasValue)) throw new InvalidOperationException("This legacy Sale does not contain complete stock-allocation records and cannot be automatically voided.");
+                if (sale.Payments.Count == 0 || sale.Payments.Any(x => x.Status != "Completed")) throw new InvalidOperationException("Complete original Payment records are required before this Sale can be voided.");
+                if (await _db.SaleVoids.AnyAsync(x => x.SaleId == sale.Id)) throw new InvalidOperationException("This Sale already has a Void record.");
+                var currentCash = await _db.DailyCashRecords.Where(x => x.BranchId == context.BranchId && x.UserId == context.UserId && x.Status == CashStatusOpen)
+                    .OrderByDescending(x => x.BusinessDate).ThenByDescending(x => x.Id).FirstOrDefaultAsync();
+                if (currentCash is null) throw new InvalidOperationException("An open Daily Cash session for the current user and Branch is required.");
+                var now = DateTime.UtcNow; var applied = sale.Payments.Sum(x => x.AppliedAmount ?? x.Amount);
+                var saleVoid = new SaleVoid { SaleId=sale.Id, BranchId=context.BranchId, OriginalDailyCashId=sale.DailyCashId, DailyCashId=currentCash.Id,
+                    RequestedByUserId=context.UserId, Reason=reason, OriginalReceiptNo=sale.ReceiptNo, OriginalBusinessDate=sale.BusinessDate,
+                    VoidBusinessDate=currentCash.BusinessDate, OriginalGrossTotal=sale.GrossTotal, OriginalDiscountAmount=sale.DiscountAmount,
+                    OriginalRebateAmount=sale.RebateAmount, OriginalVatType=sale.VatTypeSnapshot, OriginalVatRate=sale.VatRate,
+                    OriginalTaxableAmount=sale.TaxableAmount??0, OriginalVatAmount=sale.VatAmount??0, ReversedVatAmount=sale.VatAmount??0,
+                    OriginalNetTotal=sale.NetTotal, OriginalAppliedPaymentAmount=applied, Status="Completed", CreatedAt=now, CompletedAt=now };
+                _db.SaleVoids.Add(saleVoid); await _db.SaveChangesAsync();
+                foreach (var productSale in sale.ProductSales.OrderBy(x => x.DisplayStockId).ThenBy(x => x.Id))
+                {
+                    var stock = await _db.DisplayStocks.FromSqlInterpolated($"SELECT * FROM display_stocks WHERE id = {productSale.DisplayStockId!.Value} FOR UPDATE").SingleOrDefaultAsync();
+                    if (stock is null || stock.BranchId != context.BranchId || stock.ProductId != productSale.ProductId || stock.BatchId != productSale.BatchId) throw new InvalidOperationException("A saved Product stock allocation no longer matches its Branch, Product, and batch.");
+                    var before=stock.Quantity; stock.Quantity += productSale.Quantity; stock.UpdatedAt=now;
+                    var movement=new StockMovement { ProductId=productSale.ProductId, ProductBatchId=productSale.BatchId, BranchId=context.BranchId, DisplayStockId=stock.Id,
+                        BeforeQuantity=before, AfterQuantity=stock.Quantity, SourceLocation="SaleVoid", DestinationLocation="Display", MovementType="SaleVoid", Quantity=productSale.Quantity,
+                        ReferenceType="SaleVoid", ReferenceId=saleVoid.Id, Remarks=$"Void of receipt {sale.ReceiptNo}", CreatedBy=context.UserId, CreatedAt=now };
+                    _db.StockMovements.Add(movement); await _db.SaveChangesAsync();
+                    _db.SaleVoidProductItems.Add(new SaleVoidProductItem { SaleVoidId=saleVoid.Id, ProductSaleId=productSale.Id, ProductId=productSale.ProductId,
+                        DisplayStockId=stock.Id, BatchId=productSale.BatchId.Value, QuantityRestored=productSale.Quantity, UnitCostSnapshot=productSale.UnitCost,
+                        UnitPriceSnapshot=productSale.UnitPrice>0?productSale.UnitPrice:productSale.Price, RestoredValue=productSale.Quantity*productSale.UnitCost,
+                        BeforeQuantity=before, AfterQuantity=stock.Quantity, StockMovementId=movement.Id, CreatedAt=now });
+                }
+                foreach (var payment in sale.Payments) _db.SaleVoidPayments.Add(new SaleVoidPayment { SaleVoidId=saleVoid.Id, PaymentId=payment.Id,
+                    PaymentType=payment.PaymentType, OriginalAppliedAmount=payment.AppliedAmount??payment.Amount, ReversedAmount=-(payment.AppliedAmount??payment.Amount),
+                    TenderedAmountSnapshot=payment.TenderedAmount, ChangeAmountSnapshot=payment.ChangeAmount, ReferenceNoSnapshot=payment.ReferenceNo,
+                    ExternalRefundStatus=payment.PaymentType.Equals("Cash",StringComparison.OrdinalIgnoreCase)||payment.PaymentType.Equals("Points",StringComparison.OrdinalIgnoreCase)?"Not Applicable":"Manual Required", CreatedByUserId=context.UserId, CreatedAt=now });
+                var cashApplied=sale.Payments.Where(x=>x.PaymentType.Equals("Cash",StringComparison.OrdinalIgnoreCase)).Sum(x=>x.AppliedAmount??x.Amount);
+                if(cashApplied>0) _db.SaleVoidCashAdjustments.Add(new SaleVoidCashAdjustment { SaleVoidId=saleVoid.Id, SaleId=sale.Id, DailyCashId=currentCash.Id, BranchId=context.BranchId, UserId=context.UserId, BusinessDate=currentCash.BusinessDate, Amount=-cashApplied, Reason=reason, CreatedAt=now });
+                foreach(var original in sale.PointsLedger.OrderBy(x=>x.Id)) { var member=await _db.Members.FromSqlInterpolated($"SELECT * FROM members WHERE id = {original.MemberId} FOR UPDATE").SingleAsync(); var old=member.Points; var delta=original.TransactionType=="Earned"?-original.Points:original.TransactionType=="Used"?original.Points:0; if(delta==0) throw new InvalidOperationException("An original points entry has an unsupported transaction type."); member.Points+=delta; _db.PointsLedger.Add(new PointsLedger { MemberId=member.Id, TransactionType="SaleVoid", Points=delta, OldPoints=old, NewPoints=member.Points, ReferenceType="SaleVoid", ReferenceId=saleVoid.Id, SaleId=sale.Id, SaleVoidId=saleVoid.Id, ReversedPointsLedgerId=original.Id, MonetaryValueSnapshot=original.MonetaryValueSnapshot, Remarks=reason, CreatedAt=now }); }
+                foreach(var redemption in sale.VoucherRedemptions) _db.VoucherRedemptionReversals.Add(new VoucherRedemptionReversal { SaleVoidId=saleVoid.Id, VoucherRedemptionId=redemption.Id, VoucherId=redemption.VoucherId, MemberId=sale.MemberId, VoucherCodeSnapshot=redemption.VoucherCodeSnapshot, AppliedDiscountAmount=redemption.DiscountAmount, CreatedByUserId=context.UserId, CreatedAt=now, Reason=reason });
+                sale.Status="Voided"; sale.UpdatedAt=now;
+                using (_db.BeginControlledSaleVoidTransition()) await _db.SaveChangesAsync();
+                await RefreshDailyCashSnapshotAsync(currentCash.Id); using (_db.BeginControlledSaleVoidTransition()) await _db.SaveChangesAsync();
+                await transaction.CommitAsync(); TempData["VoidMessage"]=$"Sale {sale.ReceiptNo} was voided successfully.";
+            }
+            catch (InvalidOperationException ex) { await transaction.RollbackAsync(); TempData["VoidError"]=ex.Message; }
+            catch (DbUpdateException) { await transaction.RollbackAsync(); TempData["VoidError"]="The Sale could not be voided because another Void or conflicting update was recorded."; }
+            return RedirectToAction(nameof(Void));
         }
 
         [HttpGet]
@@ -4860,28 +4947,17 @@ namespace gpos.Controllers
             {
                 return new VoidEligibilityResult("Ineligible", "No Void permission");
             }
-            if (!sale.DailyCashId.HasValue || sale.DailyCash is null)
-            {
-                return new VoidEligibilityResult("Ineligible", "Sale not linked to Daily Cash");
-            }
-            if (sale.DailyCash.Status != CashStatusOpen)
-            {
-                return new VoidEligibilityResult("Ineligible", "Daily Cash not open");
-            }
             if (sale.ProductSales.Any(item => !item.DisplayStockId.HasValue || !item.BatchId.HasValue))
             {
-                return new VoidEligibilityResult("Ineligible", "Missing exact Product stock references");
+                return new VoidEligibilityResult("Ineligible", "Complete product stock-allocation history is unavailable.");
             }
             if (sale.FuelSales.Count > 0)
             {
-                return new VoidEligibilityResult("Ineligible", "Fuel batch allocations unavailable");
+                return new VoidEligibilityResult("Ineligible", "Fuel-containing Sales cannot be voided until Fuel FIFO allocation support is complete.");
             }
-            if (sale.PointsLedger.Count > 0 || sale.VoucherRedemptions.Count > 0)
-            {
-                return new VoidEligibilityResult("Ineligible", "Unsupported points/voucher reversal");
-            }
-
-            return new VoidEligibilityResult("Ineligible", "Unsupported payment reversal");
+            if (sale.ProductSales.Count == 0) return new VoidEligibilityResult("Ineligible", "No restorable Product allocations.");
+            if (sale.Payments.Count == 0 || sale.Payments.Any(x => x.Status != "Completed")) return new VoidEligibilityResult("Ineligible", "Complete Payment records are required.");
+            return new VoidEligibilityResult("Eligible", "Eligible for controlled Product Sale Void.");
         }
 
         private async Task<List<ValidatedProductSaleItem>> BuildValidatedProductItems(List<PosProductSaleRequestItem> products, int branchId)

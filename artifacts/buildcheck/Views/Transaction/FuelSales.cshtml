@@ -91,7 +91,7 @@
                     {
                         var sale = Model.Sales[i];
                         var amountPaid = sale.PointsPaid > 0m ? 0m : sale.CashAmount;
-                        var totalPrice = sale.Cost - sale.MemberDiscount - sale.VoucherDiscount;
+                        var totalPrice = sale.Subtotal - sale.MemberDiscount - sale.VoucherDiscount;
 
                         <tr>
                             <td class="text-nowrap">@sale.ReceiptNo</td>
@@ -101,11 +101,11 @@
                             <td style="min-width: 16rem;" title="@sale.ItemSummaryTitle">@sale.ItemSummary</td>
                             <td class="text-nowrap">₱@amountPaid.ToString("N2")</td>
                             <td class="text-nowrap">@sale.PointsPaid.ToString("N0")</td>
-                            <td class="text-nowrap">₱@sale.Cost.ToString("N2")</td>
+                            <td class="text-nowrap">Cost unavailable</td>
                             <td class="text-nowrap">₱@sale.MemberDiscount.ToString("N2")</td>
                             <td class="text-nowrap">₱@sale.VoucherDiscount.ToString("N2")</td>
                             <td class="text-nowrap">₱@totalPrice.ToString("N2")</td>
-                            <td class="text-nowrap">₱@sale.Cost.ToString("N2")</td>
+                            <td class="text-nowrap">Gross profit unavailable</td>
                             <td class="text-nowrap">₱@sale.GrossTotal.ToString("N2")</td>
                             <td class="text-nowrap">₱@sale.NetSales.ToString("N2")</td>
                             <td><span class="badge @(sale.Status == "Completed" ? "text-bg-success" : sale.Status == "Voided" ? "text-bg-secondary" : sale.Status == "Returned" ? "text-bg-primary" : "text-bg-warning")">@sale.Status</span></td>

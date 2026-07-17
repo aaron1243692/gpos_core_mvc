@@ -5,6 +5,7 @@ namespace gpos.Data
 {
     public class ApplicationDbContext : DbContext
     {
+        private bool _allowControlledSaleVoidTransition;
         private readonly HashSet<int> _salesCreatedInThisContext = new();
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
             : base(options)
@@ -28,6 +29,11 @@ namespace gpos.Data
         public DbSet<StockReceiving> StockReceivings { get; set; }
         public DbSet<StockReceivingItem> StockReceivingItems { get; set; }
         public DbSet<StockMovement> StockMovements { get; set; }
+        public DbSet<SaleVoid> SaleVoids { get; set; }
+        public DbSet<SaleVoidProductItem> SaleVoidProductItems { get; set; }
+        public DbSet<SaleVoidPayment> SaleVoidPayments { get; set; }
+        public DbSet<SaleVoidCashAdjustment> SaleVoidCashAdjustments { get; set; }
+        public DbSet<VoucherRedemptionReversal> VoucherRedemptionReversals { get; set; }
         public DbSet<StockTransfer> StockTransfers { get; set; }
         public DbSet<StockTransferItem> StockTransferItems { get; set; }
         public DbSet<LowStockSetting> LowStockSettings { get; set; }
@@ -1950,6 +1956,82 @@ namespace gpos.Data
                 entity.HasOne(record => record.Tank).WithMany().HasForeignKey(record => record.TankId).OnDelete(DeleteBehavior.Restrict);
                 entity.HasOne(record => record.Fuel).WithMany().HasForeignKey(record => record.FuelId).OnDelete(DeleteBehavior.Restrict);
             });
+
+            modelBuilder.Entity<SaleVoid>(entity =>
+            {
+                entity.ToTable("sale_voids"); entity.HasKey(x => x.Id);
+                entity.Property(x => x.Id).HasColumnName("id"); entity.Property(x => x.SaleId).HasColumnName("sale_id");
+                entity.Property(x => x.BranchId).HasColumnName("branch_id"); entity.Property(x => x.OriginalDailyCashId).HasColumnName("original_daily_cash_id");
+                entity.Property(x => x.DailyCashId).HasColumnName("daily_cash_id"); entity.Property(x => x.RequestedByUserId).HasColumnName("requested_by_user_id");
+                entity.Property(x => x.ReasonCode).HasColumnName("reason_code").HasMaxLength(50); entity.Property(x => x.Reason).HasColumnName("reason").HasMaxLength(500);
+                entity.Property(x => x.OriginalReceiptNo).HasColumnName("original_receipt_no").HasMaxLength(100);
+                entity.Property(x => x.OriginalBusinessDate).HasColumnName("original_business_date"); entity.Property(x => x.VoidBusinessDate).HasColumnName("void_business_date");
+                entity.Property(x => x.OriginalGrossTotal).HasColumnName("original_gross_total").HasPrecision(18,2);
+                entity.Property(x => x.OriginalDiscountAmount).HasColumnName("original_discount_amount").HasPrecision(18,2);
+                entity.Property(x => x.OriginalRebateAmount).HasColumnName("original_rebate_amount").HasPrecision(18,2);
+                entity.Property(x => x.OriginalVatType).HasColumnName("original_vat_type").HasMaxLength(50); entity.Property(x => x.OriginalVatRate).HasColumnName("original_vat_rate").HasPrecision(18,4);
+                entity.Property(x => x.OriginalTaxableAmount).HasColumnName("original_taxable_amount").HasPrecision(18,2);
+                entity.Property(x => x.OriginalVatAmount).HasColumnName("original_vat_amount").HasPrecision(18,2); entity.Property(x => x.ReversedVatAmount).HasColumnName("reversed_vat_amount").HasPrecision(18,2);
+                entity.Property(x => x.OriginalNetTotal).HasColumnName("original_net_total").HasPrecision(18,2);
+                entity.Property(x => x.OriginalAppliedPaymentAmount).HasColumnName("original_applied_payment_amount").HasPrecision(18,2);
+                entity.Property(x => x.Status).HasColumnName("status").HasMaxLength(30); entity.Property(x => x.CreatedAt).HasColumnName("created_at"); entity.Property(x => x.CompletedAt).HasColumnName("completed_at");
+                entity.HasIndex(x => x.SaleId).IsUnique();
+                entity.HasOne(x => x.Sale).WithMany(x => x.Voids).HasForeignKey(x => x.SaleId).OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne(x => x.Branch).WithMany().HasForeignKey(x => x.BranchId).OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne(x => x.OriginalDailyCash).WithMany().HasForeignKey(x => x.OriginalDailyCashId).OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne(x => x.DailyCash).WithMany().HasForeignKey(x => x.DailyCashId).OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne(x => x.RequestedByUser).WithMany().HasForeignKey(x => x.RequestedByUserId).OnDelete(DeleteBehavior.Restrict);
+            });
+            modelBuilder.Entity<SaleVoidProductItem>(entity =>
+            {
+                entity.ToTable("sale_void_product_items"); entity.HasKey(x => x.Id);
+                entity.Property(x => x.Id).HasColumnName("id"); entity.Property(x => x.SaleVoidId).HasColumnName("sale_void_id"); entity.Property(x => x.ProductSaleId).HasColumnName("product_sale_id");
+                entity.Property(x => x.ProductId).HasColumnName("product_id"); entity.Property(x => x.DisplayStockId).HasColumnName("display_stock_id"); entity.Property(x => x.BatchId).HasColumnName("batch_id");
+                entity.Property(x => x.QuantityRestored).HasColumnName("quantity_restored").HasPrecision(18,2); entity.Property(x => x.UnitCostSnapshot).HasColumnName("unit_cost_snapshot").HasPrecision(18,2);
+                entity.Property(x => x.UnitPriceSnapshot).HasColumnName("unit_price_snapshot").HasPrecision(18,2); entity.Property(x => x.RestoredValue).HasColumnName("restored_value").HasPrecision(18,2);
+                entity.Property(x => x.BeforeQuantity).HasColumnName("before_quantity").HasPrecision(18,2); entity.Property(x => x.AfterQuantity).HasColumnName("after_quantity").HasPrecision(18,2);
+                entity.Property(x => x.StockMovementId).HasColumnName("stock_movement_id"); entity.Property(x => x.CreatedAt).HasColumnName("created_at");
+                entity.HasIndex(x => x.ProductSaleId).IsUnique(); entity.HasIndex(x => x.StockMovementId).IsUnique();
+                entity.HasOne(x => x.SaleVoid).WithMany(x => x.ProductItems).HasForeignKey(x => x.SaleVoidId).OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne(x => x.ProductSale).WithMany().HasForeignKey(x => x.ProductSaleId).OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne(x => x.Product).WithMany().HasForeignKey(x => x.ProductId).OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne(x => x.DisplayStock).WithMany().HasForeignKey(x => x.DisplayStockId).OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne(x => x.Batch).WithMany().HasForeignKey(x => x.BatchId).OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne(x => x.StockMovement).WithMany().HasForeignKey(x => x.StockMovementId).OnDelete(DeleteBehavior.Restrict);
+            });
+            modelBuilder.Entity<SaleVoidPayment>(entity =>
+            {
+                entity.ToTable("sale_void_payments"); entity.HasKey(x => x.Id);
+                entity.Property(x => x.Id).HasColumnName("id"); entity.Property(x => x.SaleVoidId).HasColumnName("sale_void_id"); entity.Property(x => x.PaymentId).HasColumnName("payment_id");
+                entity.Property(x => x.PaymentType).HasColumnName("payment_type").HasMaxLength(50); entity.Property(x => x.OriginalAppliedAmount).HasColumnName("original_applied_amount").HasPrecision(18,2);
+                entity.Property(x => x.ReversedAmount).HasColumnName("reversed_amount").HasPrecision(18,2); entity.Property(x => x.TenderedAmountSnapshot).HasColumnName("tendered_amount_snapshot").HasPrecision(18,2);
+                entity.Property(x => x.ChangeAmountSnapshot).HasColumnName("change_amount_snapshot").HasPrecision(18,2); entity.Property(x => x.ReferenceNoSnapshot).HasColumnName("reference_no_snapshot").HasMaxLength(100);
+                entity.Property(x => x.ExternalRefundStatus).HasColumnName("external_refund_status").HasMaxLength(30); entity.Property(x => x.CreatedByUserId).HasColumnName("created_by_user_id"); entity.Property(x => x.CreatedAt).HasColumnName("created_at");
+                entity.HasIndex(x => x.PaymentId).IsUnique(); entity.HasOne(x => x.SaleVoid).WithMany(x => x.Payments).HasForeignKey(x => x.SaleVoidId).OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne(x => x.Payment).WithMany().HasForeignKey(x => x.PaymentId).OnDelete(DeleteBehavior.Restrict); entity.HasOne(x => x.CreatedByUser).WithMany().HasForeignKey(x => x.CreatedByUserId).OnDelete(DeleteBehavior.Restrict);
+            });
+            modelBuilder.Entity<SaleVoidCashAdjustment>(entity =>
+            {
+                entity.ToTable("sale_void_cash_adjustments"); entity.HasKey(x => x.Id);
+                entity.Property(x => x.Id).HasColumnName("id"); entity.Property(x => x.SaleVoidId).HasColumnName("sale_void_id"); entity.Property(x => x.SaleId).HasColumnName("sale_id"); entity.Property(x => x.DailyCashId).HasColumnName("daily_cash_id");
+                entity.Property(x => x.BranchId).HasColumnName("branch_id"); entity.Property(x => x.UserId).HasColumnName("user_id"); entity.Property(x => x.BusinessDate).HasColumnName("business_date"); entity.Property(x => x.Amount).HasColumnName("amount").HasPrecision(18,2);
+                entity.Property(x => x.Reason).HasColumnName("reason").HasMaxLength(500); entity.Property(x => x.CreatedAt).HasColumnName("created_at"); entity.HasIndex(x => x.SaleVoidId).IsUnique();
+                entity.HasOne<SaleVoid>().WithMany().HasForeignKey(x => x.SaleVoidId).OnDelete(DeleteBehavior.Restrict); entity.HasOne<Sale>().WithMany().HasForeignKey(x => x.SaleId).OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne<DailyCash>().WithMany().HasForeignKey(x => x.DailyCashId).OnDelete(DeleteBehavior.Restrict); entity.HasOne<Branch>().WithMany().HasForeignKey(x => x.BranchId).OnDelete(DeleteBehavior.Restrict); entity.HasOne<User>().WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Restrict);
+            });
+            modelBuilder.Entity<VoucherRedemptionReversal>(entity =>
+            {
+                entity.ToTable("voucher_redemption_reversals"); entity.HasKey(x => x.Id);
+                entity.Property(x => x.Id).HasColumnName("id"); entity.Property(x => x.SaleVoidId).HasColumnName("sale_void_id"); entity.Property(x => x.VoucherRedemptionId).HasColumnName("voucher_redemption_id"); entity.Property(x => x.VoucherId).HasColumnName("voucher_id"); entity.Property(x => x.MemberId).HasColumnName("member_id");
+                entity.Property(x => x.VoucherCodeSnapshot).HasColumnName("voucher_code_snapshot").HasMaxLength(100); entity.Property(x => x.AppliedDiscountAmount).HasColumnName("applied_discount_amount").HasPrecision(18,2); entity.Property(x => x.CreatedByUserId).HasColumnName("created_by_user_id"); entity.Property(x => x.CreatedAt).HasColumnName("created_at"); entity.Property(x => x.Reason).HasColumnName("reason").HasMaxLength(500);
+                entity.HasIndex(x => x.VoucherRedemptionId).IsUnique(); entity.HasOne<SaleVoid>().WithMany().HasForeignKey(x => x.SaleVoidId).OnDelete(DeleteBehavior.Restrict); entity.HasOne<VoucherRedemption>().WithMany().HasForeignKey(x => x.VoucherRedemptionId).OnDelete(DeleteBehavior.Restrict); entity.HasOne<Voucher>().WithMany().HasForeignKey(x => x.VoucherId).OnDelete(DeleteBehavior.Restrict); entity.HasOne<Member>().WithMany().HasForeignKey(x => x.MemberId).OnDelete(DeleteBehavior.Restrict); entity.HasOne<User>().WithMany().HasForeignKey(x => x.CreatedByUserId).OnDelete(DeleteBehavior.Restrict);
+            });
+            modelBuilder.Entity<PointsLedger>().Property(x => x.SaleVoidId).HasColumnName("sale_void_id");
+            modelBuilder.Entity<PointsLedger>().Property(x => x.ReversedPointsLedgerId).HasColumnName("reversed_points_ledger_id");
+            modelBuilder.Entity<PointsLedger>().HasIndex(x => x.ReversedPointsLedgerId).IsUnique();
+            modelBuilder.Entity<PointsLedger>().HasOne<SaleVoid>().WithMany().HasForeignKey(x => x.SaleVoidId).OnDelete(DeleteBehavior.Restrict);
+            modelBuilder.Entity<PointsLedger>().HasOne<PointsLedger>().WithMany().HasForeignKey(x => x.ReversedPointsLedgerId).OnDelete(DeleteBehavior.Restrict);
+
         }
 
         public override int SaveChanges(bool acceptAllChangesOnSuccess)
@@ -2024,7 +2106,21 @@ namespace gpos.Data
         private void ThrowIfCompletedFinancialChange(HashSet<int> completedSaleIds)
         {
             if (completedSaleIds.Count == 0) return;
+            if (_allowControlledSaleVoidTransition && ChangeTracker.Entries<Sale>().Where(e => completedSaleIds.Contains(e.Entity.Id)).All(e =>
+                e.State == EntityState.Modified && e.Entity.Status == "Voided" && e.Properties.Where(p => p.IsModified).All(p => p.Metadata.Name is nameof(Sale.Status) or nameof(Sale.UpdatedAt)))) return;
             throw new InvalidOperationException("Completed sale financial snapshots are immutable. Use a controlled void, return, refund, or adjustment workflow.");
+        }
+
+        public IDisposable BeginControlledSaleVoidTransition()
+        {
+            if (_allowControlledSaleVoidTransition) throw new InvalidOperationException("A controlled Sale Void transition is already active.");
+            _allowControlledSaleVoidTransition = true;
+            return new SaleVoidTransitionScope(this);
+        }
+
+        private sealed class SaleVoidTransitionScope(ApplicationDbContext context) : IDisposable
+        {
+            public void Dispose() => context._allowControlledSaleVoidTransition = false;
         }
     }
 }

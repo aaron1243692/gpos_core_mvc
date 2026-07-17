@@ -99,7 +99,7 @@
                             <td class="text-nowrap">₱@sale.UnitCost.ToString("N2")</td>
                             <td class="text-nowrap">₱@sale.UnitPrice.ToString("N2")</td>
                             <td class="text-nowrap">₱@sale.Subtotal.ToString("N2")</td>
-                            <td class="text-nowrap">₱@sale.GrossProfit.ToString("N2")</td>
+                            <td class="text-nowrap">@(sale.HasCostSnapshot ? $"₱{sale.GrossProfit:N2}" : "Legacy cost unavailable")</td>
                             <td class="text-nowrap">@sale.CashierName</td>
                             <td class="text-nowrap">@sale.SaleDate?.ToString("yyyy-MM-dd HH:mm")</td>
                             <td><span class="badge @(sale.Status == "Completed" ? "text-bg-success" : sale.Status == "Voided" ? "text-bg-secondary" : sale.Status == "Returned" ? "text-bg-primary" : "text-bg-warning")">@sale.Status</span></td>
@@ -130,7 +130,7 @@
                         <dt class="col-sm-4">Cost Price</dt><dd class="col-sm-8">₱@Model.Sales[i].UnitCost.ToString("N2")</dd>
                         <dt class="col-sm-4">Selling Price</dt><dd class="col-sm-8">₱@Model.Sales[i].UnitPrice.ToString("N2")</dd>
                         <dt class="col-sm-4">Subtotal</dt><dd class="col-sm-8">₱@Model.Sales[i].Subtotal.ToString("N2")</dd>
-                        <dt class="col-sm-4">Gross Profit</dt><dd class="col-sm-8">₱@Model.Sales[i].GrossProfit.ToString("N2")</dd>
+                        <dt class="col-sm-4">Gross Profit</dt><dd class="col-sm-8">@(Model.Sales[i].HasCostSnapshot ? $"₱{Model.Sales[i].GrossProfit:N2}" : "Legacy cost unavailable")</dd>
                         <dt class="col-sm-4">Cashier/User</dt><dd class="col-sm-8">@Model.Sales[i].CashierName</dd>
                         <dt class="col-sm-4">Member</dt><dd class="col-sm-8">@Model.Sales[i].MemberName</dd>
                         <dt class="col-sm-4">Sale Date</dt><dd class="col-sm-8">@Model.Sales[i].SaleDate?.ToString("yyyy-MM-dd HH:mm")</dd>

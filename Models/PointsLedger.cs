@@ -11,6 +11,8 @@ namespace gpos.Models
         public string? ReferenceType { get; set; }
         public int? ReferenceId { get; set; }
         public int? SaleId { get; set; }
+        public int? SaleVoidId { get; set; }
+        public int? ReversedPointsLedgerId { get; set; }
         public int? RuleIdSnapshot { get; set; }
         public string? RuleNameSnapshot { get; set; }
         public decimal? PointsRequiredSnapshot { get; set; }

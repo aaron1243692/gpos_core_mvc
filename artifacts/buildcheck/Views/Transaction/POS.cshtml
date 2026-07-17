@@ -1767,21 +1767,22 @@
             }
 
             function renderReceipt() {
-                const products = selectedProducts();
+                const products = completedReceiptTotals?.products ?? selectedProducts();
+                const fuels = completedReceiptTotals?.fuels ?? fuelCart;
                 const subtotal = completedReceiptTotals?.grossTotal ?? totalAmount();
                 const totalDiscount = completedReceiptTotals?.totalDiscount ?? discountAmount();
                 const memberDiscount = currentMemberDiscountAmount();
                 const voucherDiscount = currentVoucherDiscountAmount();
                 const due = completedReceiptTotals?.netTotal ?? amountToPay();
-                const tax = completedReceiptTotals?.taxAmount ?? taxAmount();
+                const tax = completedReceiptTotals?.vatAmount ?? taxAmount();
                 const amountTendered = completedReceiptTotals?.amountTendered ?? cashAmount();
-                const change = completedReceiptTotals?.change ?? Math.max(0, amountTendered - due);
+                const change = completedReceiptTotals?.changeAmount ?? Math.max(0, amountTendered - due);
                 const pointsEarned = completedReceiptTotals?.pointsEarned ?? 0;
                 const pointsRequired = completedReceiptTotals?.pointsRequired ?? requiredPointsForPurchase();
                 const paymentMethod = completedReceiptTotals?.paymentMethod ?? selectedPaymentMethod();
 
                 receiptTransactionNo.textContent = completedReceiptNo || "Pending";
-                receiptDateTime.textContent = new Date().toLocaleString();
+                receiptDateTime.textContent = completedReceiptTotals?.completedAt ? new Date(completedReceiptTotals.completedAt).toLocaleString() : new Date().toLocaleString();
                 receiptPaymentMethod.textContent = paymentMethod;
                 receiptPaymentDetail.textContent = paymentMethod === "Points" ? `${pointsRequired.toFixed(2)} pts` : peso.format(amountTendered);
                 receiptMemberCardNo.textContent = membershipCardNoInput.value.trim() || "None";
@@ -1793,11 +1794,11 @@
                 receiptTotalAmount.textContent = peso.format(due);
                 receiptChangeAmount.textContent = peso.format(change);
                 receiptPointsEarned.textContent = `${pointsEarned.toFixed(2)} pts`;
-                receiptFuelRows.innerHTML = fuelCart.length
-                    ? fuelCart.map(fuel => `<tr><td>${fuel.type}<br><small>${peso.format(fuel.price)}/L</small></td><td>${fuel.liters.toFixed(2)} L</td><td>${peso.format(fuel.amount)}</td></tr>`).join("")
+                receiptFuelRows.innerHTML = fuels.length
+                    ? fuels.map(fuel => `<tr><td>${escapeHtml(fuel.fuel ?? fuel.type)}<br><small>${peso.format(fuel.pricePerLiter ?? fuel.price)}/L</small></td><td>${Number(fuel.liters).toFixed(2)} L</td><td>${peso.format(fuel.subtotal ?? fuel.amount)}</td></tr>`).join("")
                     : `<tr><td colspan="3">No selected fuel.</td></tr>`;
                 receiptProductRows.innerHTML = products.length
-                    ? products.map(product => `<tr><td>${product.no}</td><td>${product.name}</td><td>${formatQuantity(product.quantity)}</td><td>${peso.format(product.price)}</td><td>${peso.format(product.subtotal)}</td></tr>`).join("")
+                    ? products.map((product, index) => `<tr><td>${product.no ?? index + 1}</td><td>${escapeHtml(product.product ?? product.name)}</td><td>${formatQuantity(product.quantity)}</td><td>${peso.format(product.unitPrice ?? product.price)}</td><td>${peso.format(product.subtotal)}</td></tr>`).join("")
                     : `<tr><td colspan="5">No selected products.</td></tr>`;
             }
 
@@ -1962,28 +1963,17 @@
                         return;
                     }
 
-                    completedReceiptNo = result.receiptNo || "";
-                    completedReceiptTotals = {
-                        grossTotal: Math.max(0, Number.parseFloat(result.grossTotal) || 0),
-                        discountAmount: Math.max(0, Number.parseFloat(result.discountAmount) || 0),
-                        memberDiscountAmount: Math.max(0, Number.parseFloat(result.memberDiscountAmount) || 0),
-                        voucherDiscountAmount: Math.max(0, Number.parseFloat(result.voucherDiscountAmount) || 0),
-                        totalDiscount: Math.max(0, (Number.parseFloat(result.discountAmount) || 0) + (Number.parseFloat(result.rebateAmount) || 0)),
-                        taxAmount: Math.max(0, Number.parseFloat(result.taxAmount) || 0),
-                        netTotal: Math.max(0, Number.parseFloat(result.netTotal) || 0),
-                        amountTendered: Math.max(0, Number.parseFloat(result.amountTendered) || payload.cashAmount || 0),
-                        change: Math.max(0, Number.parseFloat(result.change) || 0),
-                        pointsEarned: Math.max(0, Number.parseFloat(result.pointsEarned) || 0),
-                        pointsRequired: Math.max(0, Number.parseFloat(result.pointsRequired) || 0),
-                        paymentMethod: result.paymentMethod || payload.paymentMethod
-                    };
+                    completedReceiptNo = result.receipt?.receiptNo || "";
+                    completedReceiptTotals = result.receipt;
+                    completedReceiptTotals.totalDiscount = Number(completedReceiptTotals.discountAmount || 0) + Number(completedReceiptTotals.rebateAmount || 0);
+                    completedReceiptTotals.amountTendered = completedReceiptTotals.tenderedAmount;
                     saleCompleted = true;
                     window.clearTimeout(draftSaveTimer);
                     clearPosDraft();
                     renderReceipt();
                     showReceipt();
                     modalPrintReceiptButton.disabled = false;
-                    showSubmitMessage(`${result.message} Receipt No: ${result.receiptNo}`, true);
+                    showSubmitMessage(`${result.message} Receipt No: ${completedReceiptNo}`, true);
                 } catch {
                     showSubmitMessage("Unable to save sale. Please try again.", false);
                     modalConfirmSaleButton.disabled = false;

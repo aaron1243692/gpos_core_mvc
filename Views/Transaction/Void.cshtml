@@ -1,95 +1,23 @@
 @model gpos.Models.ViewModels.VoidPageViewModel
-@{
-    ViewData["Title"] = "Void";
-}
-
-<div class="page-header">
-    <div class="page-heading">
-        <nav aria-label="breadcrumb">
-            <ol class="breadcrumb">
-                <li class="breadcrumb-item">GPOS</li>
-                <li class="breadcrumb-item">Reports</li>
-                <li class="breadcrumb-item active" aria-current="page">Void</li>
-            </ol>
-        </nav>
-        <div class="d-flex align-items-center gap-2 flex-wrap">
-            <h1 class="mb-0">Void</h1>
-            <span class="badge bg-warning text-dark">UI Preview Only</span>
-        </div>
-        <p class="page-subtitle text-muted mt-2 mb-0">Void records will appear here when an audited backend workflow is available.</p>
-    </div>
-</div>
-
+@{ ViewData["Title"] = "Sale Void"; }
+<div class="page-header"><div class="page-heading"><nav aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item">GPOS</li><li class="breadcrumb-item">Transaction</li><li class="breadcrumb-item active">Void</li></ol></nav><h1>Sale Void</h1><p class="page-subtitle text-muted">Controlled, append-only compensation for completed Product-only Sales.</p></div></div>
+@if (TempData["VoidMessage"] is string message) { <div class="alert alert-success">@message</div> }
+@if (TempData["VoidError"] is string error) { <div class="alert alert-danger">@error</div> }
+<div class="alert alert-info">Fuel-only and mixed Sales remain visible but cannot be voided until authoritative Fuel FIFO allocations are available.</div>
 <section class="transaction-ui-page">
-    <div class="alert alert-warning" role="alert">
-        <strong>Backend not connected yet.</strong> This page does not perform reversals or change operational data.
-    </div>
-
-    <div class="content-card mb-3">
-        <form method="get" asp-controller="Transaction" asp-action="Void" class="row g-2 align-items-end">
-            <div class="col-12 col-md-6 col-xl">
-                <label class="form-label" for="voidSearch">Search</label>
-                <input class="form-control" id="voidSearch" name="search" value="@Model.Search" type="search" placeholder="Search reference..." />
-            </div>
-            <div class="col-6 col-md-3 col-xl-auto">
-                <label class="form-label" for="voidType">Type</label>
-                <select class="form-select" id="voidType" name="type">
-                    <option value="">All Types</option>
-                    @foreach (var option in new[] { "Sale", "Product", "Fuel", "Warehouse" })
-                    {
-                        <option value="@option" selected="@(Model.Type == option)">@option</option>
-                    }
-                </select>
-            </div>
-            <div class="col-6 col-md-3 col-xl-auto">
-                <label class="form-label" for="voidBranch">Branch</label>
-                <select class="form-select" id="voidBranch" name="branch">
-                    <option value="">All Branches</option>
-                </select>
-            </div>
-            <div class="col-6 col-md-3 col-xl-auto">
-                <label class="form-label" for="voidDateFrom">Date From</label>
-                <input class="form-control" id="voidDateFrom" name="dateFrom" type="date" value="@(Model.DateFrom?.ToString("yyyy-MM-dd"))" />
-            </div>
-            <div class="col-6 col-md-3 col-xl-auto">
-                <label class="form-label" for="voidDateTo">Date To</label>
-                <input class="form-control" id="voidDateTo" name="dateTo" type="date" value="@(Model.DateTo?.ToString("yyyy-MM-dd"))" />
-            </div>
-            <div class="col-6 col-md-3 col-xl-auto">
-                <label class="form-label" for="voidStatus">Status</label>
-                <select class="form-select" id="voidStatus" name="status">
-                    <option value="">All Statuses</option>
-                    <option value="Voided" selected="@(Model.Status == "Voided")">Voided</option>
-                    <option value="Pending" selected="@(Model.Status == "Pending")">Pending</option>
-                </select>
-            </div>
-            <div class="col-12 col-md-auto d-flex gap-2">
-                <button class="btn btn-primary" type="submit">Search</button>
-                <a class="btn btn-outline-secondary" asp-controller="Transaction" asp-action="Void">Clear</a>
-            </div>
-        </form>
-    </div>
-
-    <div class="content-card transaction-ui-card">
-        <div class="table-responsive transaction-ui-table-wrap">
-            <table class="table app-table table-sm align-middle mb-0">
-                <thead>
-                    <tr>
-                        <th class="text-nowrap">No</th>
-                        <th class="text-nowrap">Reference</th>
-                        <th class="text-nowrap">Type</th>
-                        <th class="text-nowrap">Branch</th>
-                        <th class="text-nowrap">Date</th>
-                        <th class="text-nowrap">Status</th>
-                        <th class="text-nowrap">Action</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td class="text-center text-muted fw-semibold py-4" colspan="7">No void records available.</td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-    </div>
-</section>
+<div class="content-card mb-3"><form method="get" asp-action="Void" class="row g-2 align-items-end">
+ <div class="col-md-4"><label class="form-label">Receipt or cashier</label><input class="form-control" name="search" value="@Model.Search" /></div>
+ <div class="col-md-2"><label class="form-label">Sale type</label><select class="form-select" name="type"><option value="">All</option><option value="Product" selected="@(Model.Type=="Product")">Product</option><option value="Fuel" selected="@(Model.Type=="Fuel")">Fuel/Mixed</option></select></div>
+ <div class="col-md-2"><label class="form-label">From</label><input class="form-control" type="date" name="dateFrom" value="@Model.DateFrom?.ToString("yyyy-MM-dd")" /></div>
+ <div class="col-md-2"><label class="form-label">To</label><input class="form-control" type="date" name="dateTo" value="@Model.DateTo?.ToString("yyyy-MM-dd")" /></div>
+ <div class="col-md-2 d-flex gap-2"><button class="btn btn-primary">Search</button><a asp-action="Void" class="btn btn-outline-secondary">Clear</a></div>
+</form></div>
+<div class="content-card"><div class="table-responsive"><table class="table app-table table-sm align-middle mb-0"><thead><tr><th>Receipt</th><th>Business Date</th><th>Cashier</th><th>Type</th><th>Gross</th><th>Discount/Rebate</th><th>VAT</th><th>Net</th><th>Payment</th><th>Status</th><th>Action</th></tr></thead><tbody>
+@if(Model.Sales.Count==0){<tr><td colspan="11" class="text-center text-muted py-4">No Sales found.</td></tr>}
+@foreach(var row in Model.Sales){<tr><td>@row.ReceiptNo</td><td>@row.BusinessDate?.ToString("yyyy-MM-dd")</td><td>@row.Cashier</td><td>@row.SaleType</td><td>@row.Gross.ToString("N2")</td><td>@row.Discount.ToString("N2")</td><td>@row.Vat.ToString("N2")</td><td>@row.Net.ToString("N2")</td><td>@row.Payment</td><td><span class="badge @(row.Status=="Voided"?"bg-danger":"bg-success")">@row.Status</span></td><td>
+ @if(row.Eligible){<button class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#voidModal-@row.SaleId">Void</button>}
+ else {<span class="text-muted small" title="@row.EligibilityMessage">@row.EligibilityMessage</span>}
+</td></tr>
+}
+</tbody></table></div></div></section>
+@foreach(var row in Model.Sales.Where(x=>x.Eligible)){<div class="modal fade" id="voidModal-@row.SaleId" tabindex="-1"><div class="modal-dialog"><div class="modal-content"><form method="post" asp-action="CreateSaleVoid"><div class="modal-header"><h2 class="modal-title fs-5">Void @row.ReceiptNo</h2><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><input type="hidden" name="saleId" value="@row.SaleId" /><p><strong>Net:</strong> @row.Net.ToString("N2") &nbsp; <strong>Payment:</strong> @row.Payment</p><label class="form-label" for="reason-@row.SaleId">Reason</label><textarea id="reason-@row.SaleId" name="reason" class="form-control" minlength="3" maxlength="500" required></textarea><div class="form-text">Inventory, payment, Daily Cash, points, voucher, and VAT compensation will be recorded atomically.</div></div><div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button><button class="btn btn-danger">Confirm Void</button></div></form></div></div></div>}

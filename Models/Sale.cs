@@ -41,5 +41,6 @@ namespace gpos.Models
         public ICollection<PointsLedger> PointsLedger { get; set; } = new List<PointsLedger>();
         public ICollection<VoucherRedemption> VoucherRedemptions { get; set; } = new List<VoucherRedemption>();
         public ICollection<SaleDiscountApplication> DiscountApplications { get; set; } = new List<SaleDiscountApplication>();
+        public ICollection<SaleVoid> Voids { get; set; } = new List<SaleVoid>();
     }
 }
