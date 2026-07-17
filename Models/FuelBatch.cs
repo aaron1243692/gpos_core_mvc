@@ -26,5 +26,6 @@ namespace gpos.Models
         public Tank? Tank { get; set; }
         public Branch? Branch { get; set; }
         public FuelDelivery? FuelDelivery { get; set; }
+        public ICollection<FuelSaleBatchAllocation> SaleAllocations { get; set; } = new List<FuelSaleBatchAllocation>();
     }
 }

@@ -1,30 +1,509 @@
-using gpos.Data;
-using Microsoft.EntityFrameworkCore.Infrastructure;
+﻿using System;
+using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
-namespace gpos.Migrations
+
+namespace gpos_core_mvc.Migrations
 {
-    [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260717110000_AddAuditableProductSaleVoid")]
+    /// <inheritdoc />
     public partial class AddAuditableProductSaleVoid : Migration
     {
-        protected override void Up(MigrationBuilder m)
+        /// <inheritdoc />
+        protected override void Up(MigrationBuilder migrationBuilder)
         {
-            m.CreateTable(name:"sale_voids", columns:t=> new {
-                id=t.Column<int>(nullable:false).Annotation("MySql:ValueGenerationStrategy", Microsoft.EntityFrameworkCore.Metadata.MySqlValueGenerationStrategy.IdentityColumn), sale_id=t.Column<int>(), branch_id=t.Column<int>(), original_daily_cash_id=t.Column<int>(nullable:true), daily_cash_id=t.Column<int>(), requested_by_user_id=t.Column<int>(), reason_code=t.Column<string>(maxLength:50,nullable:true), reason=t.Column<string>(maxLength:500), original_receipt_no=t.Column<string>(maxLength:100), original_business_date=t.Column<DateTime>(nullable:true), void_business_date=t.Column<DateTime>(), original_gross_total=t.Column<decimal>(type:"decimal(18,2)"), original_discount_amount=t.Column<decimal>(type:"decimal(18,2)"), original_rebate_amount=t.Column<decimal>(type:"decimal(18,2)"), original_vat_type=t.Column<string>(maxLength:50,nullable:true), original_vat_rate=t.Column<decimal>(type:"decimal(18,4)",nullable:true), original_taxable_amount=t.Column<decimal>(type:"decimal(18,2)"), original_vat_amount=t.Column<decimal>(type:"decimal(18,2)"), reversed_vat_amount=t.Column<decimal>(type:"decimal(18,2)"), original_net_total=t.Column<decimal>(type:"decimal(18,2)"), original_applied_payment_amount=t.Column<decimal>(type:"decimal(18,2)"), status=t.Column<string>(maxLength:30), created_at=t.Column<DateTime>(), completed_at=t.Column<DateTime>(nullable:true)
-            }, constraints:c => { c.PrimaryKey("PK_sale_voids",x=>x.id); c.ForeignKey("FK_sale_voids_sales_sale_id",x=>x.sale_id,"sales","id",onDelete:ReferentialAction.Restrict); c.ForeignKey("FK_sale_voids_branches_branch_id",x=>x.branch_id,"branches","id",onDelete:ReferentialAction.Restrict); c.ForeignKey("FK_sale_voids_daily_cash_original",x=>x.original_daily_cash_id,"daily_cash","id",onDelete:ReferentialAction.Restrict); c.ForeignKey("FK_sale_voids_daily_cash_current",x=>x.daily_cash_id,"daily_cash","id",onDelete:ReferentialAction.Restrict); c.ForeignKey("FK_sale_voids_users_requested",x=>x.requested_by_user_id,"users","id",onDelete:ReferentialAction.Restrict); });
-            m.CreateIndex("IX_sale_voids_sale_id","sale_voids","sale_id",unique:true); m.CreateIndex("IX_sale_voids_branch_id","sale_voids","branch_id"); m.CreateIndex("IX_sale_voids_original_daily_cash_id","sale_voids","original_daily_cash_id"); m.CreateIndex("IX_sale_voids_daily_cash_id","sale_voids","daily_cash_id"); m.CreateIndex("IX_sale_voids_requested_by_user_id","sale_voids","requested_by_user_id");
-            m.CreateTable(name:"sale_void_product_items", columns:t=> new { id=t.Column<int>(nullable:false).Annotation("MySql:ValueGenerationStrategy",Microsoft.EntityFrameworkCore.Metadata.MySqlValueGenerationStrategy.IdentityColumn), sale_void_id=t.Column<int>(), product_sale_id=t.Column<int>(), product_id=t.Column<int>(), display_stock_id=t.Column<int>(), batch_id=t.Column<int>(), quantity_restored=t.Column<decimal>(type:"decimal(18,2)"), unit_cost_snapshot=t.Column<decimal>(type:"decimal(18,2)"), unit_price_snapshot=t.Column<decimal>(type:"decimal(18,2)"), restored_value=t.Column<decimal>(type:"decimal(18,2)"), before_quantity=t.Column<decimal>(type:"decimal(18,2)"), after_quantity=t.Column<decimal>(type:"decimal(18,2)"), stock_movement_id=t.Column<int>(nullable:true), created_at=t.Column<DateTime>() }, constraints:c=>{ c.PrimaryKey("PK_sale_void_product_items",x=>x.id); c.ForeignKey("FK_svpi_void",x=>x.sale_void_id,"sale_voids","id",onDelete:ReferentialAction.Restrict); c.ForeignKey("FK_svpi_product_sale",x=>x.product_sale_id,"product_sales","id",onDelete:ReferentialAction.Restrict); c.ForeignKey("FK_svpi_product",x=>x.product_id,"products","id",onDelete:ReferentialAction.Restrict); c.ForeignKey("FK_svpi_stock",x=>x.display_stock_id,"display_stocks","id",onDelete:ReferentialAction.Restrict); c.ForeignKey("FK_svpi_batch",x=>x.batch_id,"product_batches","id",onDelete:ReferentialAction.Restrict); c.ForeignKey("FK_svpi_movement",x=>x.stock_movement_id,"stock_movements","id",onDelete:ReferentialAction.Restrict); });
-            m.CreateIndex("IX_svpi_void","sale_void_product_items","sale_void_id"); m.CreateIndex("IX_svpi_product_sale","sale_void_product_items","product_sale_id",unique:true); m.CreateIndex("IX_svpi_movement","sale_void_product_items","stock_movement_id",unique:true);
-            m.CreateTable(name:"sale_void_payments", columns:t=>new{id=t.Column<int>(nullable:false).Annotation("MySql:ValueGenerationStrategy",Microsoft.EntityFrameworkCore.Metadata.MySqlValueGenerationStrategy.IdentityColumn),sale_void_id=t.Column<int>(),payment_id=t.Column<int>(),payment_type=t.Column<string>(maxLength:50),original_applied_amount=t.Column<decimal>(type:"decimal(18,2)"),reversed_amount=t.Column<decimal>(type:"decimal(18,2)"),tendered_amount_snapshot=t.Column<decimal>(type:"decimal(18,2)",nullable:true),change_amount_snapshot=t.Column<decimal>(type:"decimal(18,2)",nullable:true),reference_no_snapshot=t.Column<string>(maxLength:100,nullable:true),external_refund_status=t.Column<string>(maxLength:30),created_by_user_id=t.Column<int>(),created_at=t.Column<DateTime>()},constraints:c=>{c.PrimaryKey("PK_sale_void_payments",x=>x.id);c.ForeignKey("FK_svp_void",x=>x.sale_void_id,"sale_voids","id",onDelete:ReferentialAction.Restrict);c.ForeignKey("FK_svp_payment",x=>x.payment_id,"payments","id",onDelete:ReferentialAction.Restrict);c.ForeignKey("FK_svp_user",x=>x.created_by_user_id,"users","id",onDelete:ReferentialAction.Restrict);});
-            m.CreateIndex("IX_svp_void","sale_void_payments","sale_void_id");m.CreateIndex("IX_svp_payment","sale_void_payments","payment_id",unique:true);m.CreateIndex("IX_svp_user","sale_void_payments","created_by_user_id");
-            m.CreateTable(name:"sale_void_cash_adjustments", columns:t=>new{id=t.Column<int>(nullable:false).Annotation("MySql:ValueGenerationStrategy",Microsoft.EntityFrameworkCore.Metadata.MySqlValueGenerationStrategy.IdentityColumn),sale_void_id=t.Column<int>(),sale_id=t.Column<int>(),daily_cash_id=t.Column<int>(),branch_id=t.Column<int>(),user_id=t.Column<int>(),business_date=t.Column<DateTime>(),amount=t.Column<decimal>(type:"decimal(18,2)"),reason=t.Column<string>(maxLength:500),created_at=t.Column<DateTime>()},constraints:c=>{c.PrimaryKey("PK_sale_void_cash_adjustments",x=>x.id);c.ForeignKey("FK_svca_void",x=>x.sale_void_id,"sale_voids","id",onDelete:ReferentialAction.Restrict);c.ForeignKey("FK_svca_sale",x=>x.sale_id,"sales","id",onDelete:ReferentialAction.Restrict);c.ForeignKey("FK_svca_cash",x=>x.daily_cash_id,"daily_cash","id",onDelete:ReferentialAction.Restrict);c.ForeignKey("FK_svca_branch",x=>x.branch_id,"branches","id",onDelete:ReferentialAction.Restrict);c.ForeignKey("FK_svca_user",x=>x.user_id,"users","id",onDelete:ReferentialAction.Restrict);});
-            m.CreateIndex("IX_svca_void","sale_void_cash_adjustments","sale_void_id",unique:true);m.CreateIndex("IX_svca_cash","sale_void_cash_adjustments","daily_cash_id");
-            m.CreateTable(name:"voucher_redemption_reversals", columns:t=>new{id=t.Column<int>(nullable:false).Annotation("MySql:ValueGenerationStrategy",Microsoft.EntityFrameworkCore.Metadata.MySqlValueGenerationStrategy.IdentityColumn),sale_void_id=t.Column<int>(),voucher_redemption_id=t.Column<int>(),voucher_id=t.Column<int>(nullable:true),member_id=t.Column<int>(nullable:true),voucher_code_snapshot=t.Column<string>(maxLength:100,nullable:true),applied_discount_amount=t.Column<decimal>(type:"decimal(18,2)"),created_by_user_id=t.Column<int>(),created_at=t.Column<DateTime>(),reason=t.Column<string>(maxLength:500)},constraints:c=>{c.PrimaryKey("PK_voucher_redemption_reversals",x=>x.id);c.ForeignKey("FK_vrr_void",x=>x.sale_void_id,"sale_voids","id",onDelete:ReferentialAction.Restrict);c.ForeignKey("FK_vrr_redemption",x=>x.voucher_redemption_id,"voucher_redemptions","id",onDelete:ReferentialAction.Restrict);c.ForeignKey("FK_vrr_voucher",x=>x.voucher_id,"vouchers","id",onDelete:ReferentialAction.Restrict);c.ForeignKey("FK_vrr_member",x=>x.member_id,"members","id",onDelete:ReferentialAction.Restrict);c.ForeignKey("FK_vrr_user",x=>x.created_by_user_id,"users","id",onDelete:ReferentialAction.Restrict);});
-            m.CreateIndex("IX_vrr_redemption","voucher_redemption_reversals","voucher_redemption_id",unique:true);m.CreateIndex("IX_vrr_void","voucher_redemption_reversals","sale_void_id");
-            m.AddColumn<int>("sale_void_id","points_ledger",nullable:true);m.AddColumn<int>("reversed_points_ledger_id","points_ledger",nullable:true);m.CreateIndex("IX_points_ledger_sale_void_id","points_ledger","sale_void_id");m.CreateIndex("IX_points_ledger_reversed_points_ledger_id","points_ledger","reversed_points_ledger_id",unique:true);m.AddForeignKey("FK_points_ledger_sale_voids_sale_void_id","points_ledger","sale_void_id","sale_voids",principalColumn:"id",onDelete:ReferentialAction.Restrict);m.AddForeignKey("FK_points_ledger_points_ledger_reversed","points_ledger","reversed_points_ledger_id","points_ledger",principalColumn:"id",onDelete:ReferentialAction.Restrict);
+            migrationBuilder.AddColumn<int>(
+                name: "reversed_points_ledger_id",
+                table: "points_ledger",
+                type: "int",
+                nullable: true);
+
+            migrationBuilder.AddColumn<int>(
+                name: "sale_void_id",
+                table: "points_ledger",
+                type: "int",
+                nullable: true);
+
+            migrationBuilder.CreateTable(
+                name: "sale_voids",
+                columns: table => new
+                {
+                    id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("MySql:ValueGenerationStrategy", MySqlValueGenerationStrategy.IdentityColumn),
+                    sale_id = table.Column<int>(type: "int", nullable: false),
+                    branch_id = table.Column<int>(type: "int", nullable: false),
+                    original_daily_cash_id = table.Column<int>(type: "int", nullable: true),
+                    daily_cash_id = table.Column<int>(type: "int", nullable: false),
+                    requested_by_user_id = table.Column<int>(type: "int", nullable: false),
+                    reason_code = table.Column<string>(type: "varchar(50)", maxLength: 50, nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    reason = table.Column<string>(type: "varchar(500)", maxLength: 500, nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    original_receipt_no = table.Column<string>(type: "varchar(100)", maxLength: 100, nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    original_business_date = table.Column<DateTime>(type: "datetime(6)", nullable: true),
+                    void_business_date = table.Column<DateTime>(type: "datetime(6)", nullable: false),
+                    original_gross_total = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false),
+                    original_discount_amount = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false),
+                    original_rebate_amount = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false),
+                    original_vat_type = table.Column<string>(type: "varchar(50)", maxLength: 50, nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    original_vat_rate = table.Column<decimal>(type: "decimal(18,4)", precision: 18, scale: 4, nullable: true),
+                    original_taxable_amount = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false),
+                    original_vat_amount = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false),
+                    reversed_vat_amount = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false),
+                    original_net_total = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false),
+                    original_applied_payment_amount = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false),
+                    status = table.Column<string>(type: "varchar(30)", maxLength: 30, nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    created_at = table.Column<DateTime>(type: "datetime(6)", nullable: false),
+                    completed_at = table.Column<DateTime>(type: "datetime(6)", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_sale_voids", x => x.id);
+                    table.ForeignKey(
+                        name: "FK_sale_voids_branches_branch_id",
+                        column: x => x.branch_id,
+                        principalTable: "branches",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_sale_voids_daily_cash_daily_cash_id",
+                        column: x => x.daily_cash_id,
+                        principalTable: "daily_cash",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_sale_voids_daily_cash_original_daily_cash_id",
+                        column: x => x.original_daily_cash_id,
+                        principalTable: "daily_cash",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_sale_voids_sales_sale_id",
+                        column: x => x.sale_id,
+                        principalTable: "sales",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_sale_voids_users_requested_by_user_id",
+                        column: x => x.requested_by_user_id,
+                        principalTable: "users",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Restrict);
+                })
+                .Annotation("MySql:CharSet", "utf8mb4");
+
+            migrationBuilder.CreateTable(
+                name: "sale_void_cash_adjustments",
+                columns: table => new
+                {
+                    id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("MySql:ValueGenerationStrategy", MySqlValueGenerationStrategy.IdentityColumn),
+                    sale_void_id = table.Column<int>(type: "int", nullable: false),
+                    sale_id = table.Column<int>(type: "int", nullable: false),
+                    daily_cash_id = table.Column<int>(type: "int", nullable: false),
+                    branch_id = table.Column<int>(type: "int", nullable: false),
+                    user_id = table.Column<int>(type: "int", nullable: false),
+                    business_date = table.Column<DateTime>(type: "datetime(6)", nullable: false),
+                    amount = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false),
+                    reason = table.Column<string>(type: "varchar(500)", maxLength: 500, nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    created_at = table.Column<DateTime>(type: "datetime(6)", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_sale_void_cash_adjustments", x => x.id);
+                    table.ForeignKey(
+                        name: "FK_sale_void_cash_adjustments_branches_branch_id",
+                        column: x => x.branch_id,
+                        principalTable: "branches",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_sale_void_cash_adjustments_daily_cash_daily_cash_id",
+                        column: x => x.daily_cash_id,
+                        principalTable: "daily_cash",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_sale_void_cash_adjustments_sale_voids_sale_void_id",
+                        column: x => x.sale_void_id,
+                        principalTable: "sale_voids",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_sale_void_cash_adjustments_sales_sale_id",
+                        column: x => x.sale_id,
+                        principalTable: "sales",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_sale_void_cash_adjustments_users_user_id",
+                        column: x => x.user_id,
+                        principalTable: "users",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Restrict);
+                })
+                .Annotation("MySql:CharSet", "utf8mb4");
+
+            migrationBuilder.CreateTable(
+                name: "sale_void_payments",
+                columns: table => new
+                {
+                    id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("MySql:ValueGenerationStrategy", MySqlValueGenerationStrategy.IdentityColumn),
+                    sale_void_id = table.Column<int>(type: "int", nullable: false),
+                    payment_id = table.Column<int>(type: "int", nullable: false),
+                    payment_type = table.Column<string>(type: "varchar(50)", maxLength: 50, nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    original_applied_amount = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false),
+                    reversed_amount = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false),
+                    tendered_amount_snapshot = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: true),
+                    change_amount_snapshot = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: true),
+                    reference_no_snapshot = table.Column<string>(type: "varchar(100)", maxLength: 100, nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    external_refund_status = table.Column<string>(type: "varchar(30)", maxLength: 30, nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    created_by_user_id = table.Column<int>(type: "int", nullable: false),
+                    created_at = table.Column<DateTime>(type: "datetime(6)", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_sale_void_payments", x => x.id);
+                    table.ForeignKey(
+                        name: "FK_sale_void_payments_payments_payment_id",
+                        column: x => x.payment_id,
+                        principalTable: "payments",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_sale_void_payments_sale_voids_sale_void_id",
+                        column: x => x.sale_void_id,
+                        principalTable: "sale_voids",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_sale_void_payments_users_created_by_user_id",
+                        column: x => x.created_by_user_id,
+                        principalTable: "users",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Restrict);
+                })
+                .Annotation("MySql:CharSet", "utf8mb4");
+
+            migrationBuilder.CreateTable(
+                name: "sale_void_product_items",
+                columns: table => new
+                {
+                    id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("MySql:ValueGenerationStrategy", MySqlValueGenerationStrategy.IdentityColumn),
+                    sale_void_id = table.Column<int>(type: "int", nullable: false),
+                    product_sale_id = table.Column<int>(type: "int", nullable: false),
+                    product_id = table.Column<int>(type: "int", nullable: false),
+                    display_stock_id = table.Column<int>(type: "int", nullable: false),
+                    batch_id = table.Column<int>(type: "int", nullable: false),
+                    quantity_restored = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false),
+                    unit_cost_snapshot = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false),
+                    unit_price_snapshot = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false),
+                    restored_value = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false),
+                    before_quantity = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false),
+                    after_quantity = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false),
+                    stock_movement_id = table.Column<int>(type: "int", nullable: true),
+                    created_at = table.Column<DateTime>(type: "datetime(6)", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_sale_void_product_items", x => x.id);
+                    table.ForeignKey(
+                        name: "FK_sale_void_product_items_display_stocks_display_stock_id",
+                        column: x => x.display_stock_id,
+                        principalTable: "display_stocks",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_sale_void_product_items_product_batches_batch_id",
+                        column: x => x.batch_id,
+                        principalTable: "product_batches",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_sale_void_product_items_product_sales_product_sale_id",
+                        column: x => x.product_sale_id,
+                        principalTable: "product_sales",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_sale_void_product_items_products_product_id",
+                        column: x => x.product_id,
+                        principalTable: "products",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_sale_void_product_items_sale_voids_sale_void_id",
+                        column: x => x.sale_void_id,
+                        principalTable: "sale_voids",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_sale_void_product_items_stock_movements_stock_movement_id",
+                        column: x => x.stock_movement_id,
+                        principalTable: "stock_movements",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Restrict);
+                })
+                .Annotation("MySql:CharSet", "utf8mb4");
+
+            migrationBuilder.CreateTable(
+                name: "voucher_redemption_reversals",
+                columns: table => new
+                {
+                    id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("MySql:ValueGenerationStrategy", MySqlValueGenerationStrategy.IdentityColumn),
+                    sale_void_id = table.Column<int>(type: "int", nullable: false),
+                    voucher_redemption_id = table.Column<int>(type: "int", nullable: false),
+                    voucher_id = table.Column<int>(type: "int", nullable: true),
+                    member_id = table.Column<int>(type: "int", nullable: true),
+                    voucher_code_snapshot = table.Column<string>(type: "varchar(100)", maxLength: 100, nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    applied_discount_amount = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false),
+                    created_by_user_id = table.Column<int>(type: "int", nullable: false),
+                    created_at = table.Column<DateTime>(type: "datetime(6)", nullable: false),
+                    reason = table.Column<string>(type: "varchar(500)", maxLength: 500, nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4")
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_voucher_redemption_reversals", x => x.id);
+                    table.ForeignKey(
+                        name: "FK_voucher_redemption_reversals_members_member_id",
+                        column: x => x.member_id,
+                        principalTable: "members",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_voucher_redemption_reversals_sale_voids_sale_void_id",
+                        column: x => x.sale_void_id,
+                        principalTable: "sale_voids",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_voucher_redemption_reversals_users_created_by_user_id",
+                        column: x => x.created_by_user_id,
+                        principalTable: "users",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_voucher_redemption_reversals_voucher_redemptions_voucher_red~",
+                        column: x => x.voucher_redemption_id,
+                        principalTable: "voucher_redemptions",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_voucher_redemption_reversals_vouchers_voucher_id",
+                        column: x => x.voucher_id,
+                        principalTable: "vouchers",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Restrict);
+                })
+                .Annotation("MySql:CharSet", "utf8mb4");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_points_ledger_reversed_points_ledger_id",
+                table: "points_ledger",
+                column: "reversed_points_ledger_id",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_points_ledger_sale_void_id",
+                table: "points_ledger",
+                column: "sale_void_id");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_sale_void_cash_adjustments_branch_id",
+                table: "sale_void_cash_adjustments",
+                column: "branch_id");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_sale_void_cash_adjustments_daily_cash_id",
+                table: "sale_void_cash_adjustments",
+                column: "daily_cash_id");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_sale_void_cash_adjustments_sale_id",
+                table: "sale_void_cash_adjustments",
+                column: "sale_id");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_sale_void_cash_adjustments_sale_void_id",
+                table: "sale_void_cash_adjustments",
+                column: "sale_void_id",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_sale_void_cash_adjustments_user_id",
+                table: "sale_void_cash_adjustments",
+                column: "user_id");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_sale_void_payments_created_by_user_id",
+                table: "sale_void_payments",
+                column: "created_by_user_id");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_sale_void_payments_payment_id",
+                table: "sale_void_payments",
+                column: "payment_id",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_sale_void_payments_sale_void_id",
+                table: "sale_void_payments",
+                column: "sale_void_id");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_sale_void_product_items_batch_id",
+                table: "sale_void_product_items",
+                column: "batch_id");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_sale_void_product_items_display_stock_id",
+                table: "sale_void_product_items",
+                column: "display_stock_id");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_sale_void_product_items_product_id",
+                table: "sale_void_product_items",
+                column: "product_id");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_sale_void_product_items_product_sale_id",
+                table: "sale_void_product_items",
+                column: "product_sale_id",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_sale_void_product_items_sale_void_id",
+                table: "sale_void_product_items",
+                column: "sale_void_id");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_sale_void_product_items_stock_movement_id",
+                table: "sale_void_product_items",
+                column: "stock_movement_id",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_sale_voids_branch_id",
+                table: "sale_voids",
+                column: "branch_id");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_sale_voids_daily_cash_id",
+                table: "sale_voids",
+                column: "daily_cash_id");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_sale_voids_original_daily_cash_id",
+                table: "sale_voids",
+                column: "original_daily_cash_id");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_sale_voids_requested_by_user_id",
+                table: "sale_voids",
+                column: "requested_by_user_id");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_sale_voids_sale_id",
+                table: "sale_voids",
+                column: "sale_id",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_voucher_redemption_reversals_created_by_user_id",
+                table: "voucher_redemption_reversals",
+                column: "created_by_user_id");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_voucher_redemption_reversals_member_id",
+                table: "voucher_redemption_reversals",
+                column: "member_id");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_voucher_redemption_reversals_sale_void_id",
+                table: "voucher_redemption_reversals",
+                column: "sale_void_id");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_voucher_redemption_reversals_voucher_id",
+                table: "voucher_redemption_reversals",
+                column: "voucher_id");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_voucher_redemption_reversals_voucher_redemption_id",
+                table: "voucher_redemption_reversals",
+                column: "voucher_redemption_id",
+                unique: true);
+
+            migrationBuilder.AddForeignKey(
+                name: "FK_points_ledger_points_ledger_reversed_points_ledger_id",
+                table: "points_ledger",
+                column: "reversed_points_ledger_id",
+                principalTable: "points_ledger",
+                principalColumn: "id",
+                onDelete: ReferentialAction.Restrict);
+
+            migrationBuilder.AddForeignKey(
+                name: "FK_points_ledger_sale_voids_sale_void_id",
+                table: "points_ledger",
+                column: "sale_void_id",
+                principalTable: "sale_voids",
+                principalColumn: "id",
+                onDelete: ReferentialAction.Restrict);
         }
-        protected override void Down(MigrationBuilder m){m.DropForeignKey("FK_points_ledger_sale_voids_sale_void_id","points_ledger");m.DropForeignKey("FK_points_ledger_points_ledger_reversed","points_ledger");m.DropIndex("IX_points_ledger_sale_void_id","points_ledger");m.DropIndex("IX_points_ledger_reversed_points_ledger_id","points_ledger");m.DropColumn("sale_void_id","points_ledger");m.DropColumn("reversed_points_ledger_id","points_ledger");m.DropTable("voucher_redemption_reversals");m.DropTable("sale_void_cash_adjustments");m.DropTable("sale_void_payments");m.DropTable("sale_void_product_items");m.DropTable("sale_voids");}
+
+        /// <inheritdoc />
+        protected override void Down(MigrationBuilder migrationBuilder)
+        {
+            migrationBuilder.DropForeignKey(
+                name: "FK_points_ledger_points_ledger_reversed_points_ledger_id",
+                table: "points_ledger");
+
+            migrationBuilder.DropForeignKey(
+                name: "FK_points_ledger_sale_voids_sale_void_id",
+                table: "points_ledger");
+
+            migrationBuilder.DropTable(
+                name: "sale_void_cash_adjustments");
+
+            migrationBuilder.DropTable(
+                name: "sale_void_payments");
+
+            migrationBuilder.DropTable(
+                name: "sale_void_product_items");
+
+            migrationBuilder.DropTable(
+                name: "voucher_redemption_reversals");
+
+            migrationBuilder.DropTable(
+                name: "sale_voids");
+
+            migrationBuilder.DropIndex(
+                name: "IX_points_ledger_reversed_points_ledger_id",
+                table: "points_ledger");
+
+            migrationBuilder.DropIndex(
+                name: "IX_points_ledger_sale_void_id",
+                table: "points_ledger");
+
+            migrationBuilder.DropColumn(
+                name: "reversed_points_ledger_id",
+                table: "points_ledger");
+
+            migrationBuilder.DropColumn(
+                name: "sale_void_id",
+                table: "points_ledger");
+        }
     }
 }

@@ -12,6 +12,9 @@ namespace gpos.Models
         public decimal Liters { get; set; }
         public decimal PricePerLiter { get; set; }
         public decimal Subtotal { get; set; }
+        public decimal UnitCostSnapshot { get; set; }
+        public decimal TotalCostSnapshot { get; set; }
+        public decimal GrossProfitSnapshot { get; set; }
         public decimal? TankLitersBefore { get; set; }
         public decimal? TankLitersAfter { get; set; }
         public string Status { get; set; } = "Completed";
@@ -24,5 +27,6 @@ namespace gpos.Models
         public Nozzle? Nozzle { get; set; }
         public Pump? Pump { get; set; }
         public Dispenser? Dispenser { get; set; }
+        public ICollection<FuelSaleBatchAllocation> BatchAllocations { get; set; } = new List<FuelSaleBatchAllocation>();
     }
 }

@@ -614,7 +614,6 @@ namespace gpos.Controllers
                 }
 
                 await DeductDisplayStock(productItems, saleBranchId, userId);
-                await DeductTankFuel(fuelItems);
 
                 var sale = new Sale
                 {
@@ -665,6 +664,13 @@ namespace gpos.Controllers
                 {
                     fuelItems[i].FuelSale.SaleId = sale.Id;
                     _db.FuelSales.Add(fuelItems[i].FuelSale);
+                }
+
+                if (fuelItems.Count > 0)
+                {
+                    await _db.SaveChangesAsync();
+                    await _fuelInventory.ConsumeSaleFifoAsync(fuelItems.Select(x => x.FuelSale).ToList(), saleBranchId, userId, now);
+                    foreach (var item in fuelItems) item.Cost = item.FuelSale.TotalCostSnapshot;
                 }
 
                 AddPaymentRecords(sale.Id, paymentMethod, cashAmount, appliedAmount, changeAmount, now);
@@ -1587,7 +1593,9 @@ namespace gpos.Controllers
         {
             var nextDate = businessDate.AddDays(1);
             var salesQuery = _db.Sales.AsNoTracking()
-                .Where(sale => sale.Status == "Completed");
+                // A Voided Sale remains part of the historical drawer inflow. Its
+                // append-only SaleVoidCashAdjustment reverses that inflow exactly once.
+                .Where(sale => sale.Status == "Completed" || sale.Status == "Voided");
 
             if (dailyCashId > 0)
             {
@@ -2392,6 +2400,20 @@ namespace gpos.Controllers
 
             await using var transaction = await _db.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
             tank = await _db.Tanks.FromSqlInterpolated($"SELECT * FROM tanks WHERE id = {tank.Id} FOR UPDATE").SingleAsync();
+            var invariant = await _fuelInventory.GetLockedInvariantAsync(tank.Id);
+            if (!invariant.IsBalanced)
+            {
+                await transaction.RollbackAsync();
+                ModelState.AddModelError(string.Empty, "Tank inventory must be reconciled with its Fuel Batch layers before receiving Fuel.");
+                return await FuelReceivingValidationView(search, filterBranchId, form);
+            }
+            tankLitersAfter = tank.CurrentLiters + form.Liters;
+            if (tank.CapacityLiters > 0 && tankLitersAfter > tank.CapacityLiters)
+            {
+                await transaction.RollbackAsync();
+                ModelState.AddModelError("Form.Liters", "Receiving liters would exceed the selected tank capacity.");
+                return await FuelReceivingValidationView(search, filterBranchId, form);
+            }
             delivery.BranchId = tank.BranchId;
             delivery.SupplierId = form.SupplierId;
             delivery.FuelId = tank.FuelId;
@@ -2476,6 +2498,13 @@ namespace gpos.Controllers
             if (delivery.Tank is not null)
             {
                 delivery.Tank = await _db.Tanks.FromSqlInterpolated($"SELECT * FROM tanks WHERE id = {delivery.Tank.Id} FOR UPDATE").SingleAsync();
+                var invariant = await _fuelInventory.GetLockedInvariantAsync(delivery.Tank.Id);
+                if (!invariant.IsBalanced)
+                {
+                    await transaction.RollbackAsync();
+                    TempData["ReceivingMessage"] = "Tank inventory must be reconciled with its Fuel Batch layers before receiving Fuel.";
+                    return RedirectToAction(nameof(FuelReceiving), new { search, filterBranchId });
+                }
                 var tankLitersAfter = delivery.Tank.CurrentLiters + delivery.DeliveredLiters;
                 if (delivery.Tank.CapacityLiters > 0 && tankLitersAfter > delivery.Tank.CapacityLiters)
                 {
@@ -4669,6 +4698,8 @@ namespace gpos.Controllers
 
         private async Task MoveFuelBranchToBranch(StockTransfer transfer, StockTransferItem item, DateTime now)
         {
+            throw new InvalidOperationException("Fuel transfer is blocked until audited FIFO layer transfer allocation is implemented.");
+#pragma warning disable CS0162
             var liters = item.Liters ?? 0m;
             var source = await _db.Tanks.FirstOrDefaultAsync(tank => tank.Id == item.SourceTankId && tank.BranchId == transfer.SourceBranchId && tank.FuelId == item.FuelId);
             var destination = await _db.Tanks.FirstOrDefaultAsync(tank => tank.Id == item.DestinationTankId && tank.BranchId == transfer.DestinationBranchId && tank.FuelId == item.FuelId);
@@ -4690,6 +4721,7 @@ namespace gpos.Controllers
             destination.UpdatedAt = now;
             item.SourceAfter = source.CurrentLiters;
             item.DestinationAfter = destination.CurrentLiters;
+#pragma warning restore CS0162
         }
 
         private void AddTransferMovement(StockTransferItem item, string movementType, string source, string destination, StockTransfer transfer, int userId, DateTime now)
@@ -5181,24 +5213,6 @@ namespace gpos.Controllers
                 items[i].StockMovement.AfterQuantity = displayStock.Quantity;
                 displayStock.UpdatedAt = DateTime.Now;
                 items[i].StockMovement.CreatedBy = userId;
-            }
-
-            return Task.CompletedTask;
-        }
-
-        private static Task DeductTankFuel(List<ValidatedFuelSaleItem> items)
-        {
-            for (var i = 0; i < items.Count; i += 1)
-            {
-                if (items[i].Tank.CurrentLiters < items[i].Liters)
-                {
-                    throw new InvalidOperationException($"Tank liters are not enough for {items[i].FuelName}.");
-                }
-
-                items[i].FuelSale.TankLitersBefore = items[i].Tank.CurrentLiters;
-                items[i].Tank.CurrentLiters -= items[i].Liters;
-                items[i].FuelSale.TankLitersAfter = items[i].Tank.CurrentLiters;
-                items[i].Tank.UpdatedAt = DateTime.Now;
             }
 
             return Task.CompletedTask;
@@ -6058,7 +6072,7 @@ namespace gpos.Controllers
             public Tank Tank { get; init; } = new();
             public decimal Liters { get; init; }
             public decimal Subtotal { get; init; }
-            public decimal Cost { get; init; }
+            public decimal Cost { get; set; }
             public FuelSale FuelSale { get; init; } = new();
         }
 

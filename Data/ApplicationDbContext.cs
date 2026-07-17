@@ -6,6 +6,7 @@ namespace gpos.Data
     public class ApplicationDbContext : DbContext
     {
         private bool _allowControlledSaleVoidTransition;
+        private bool _allowFuelFifoSnapshotCompletion;
         private readonly HashSet<int> _salesCreatedInThisContext = new();
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
             : base(options)
@@ -42,6 +43,8 @@ namespace gpos.Data
         public DbSet<Nozzle> Nozzles { get; set; }
         public DbSet<FuelDelivery> FuelDeliveries { get; set; }
         public DbSet<FuelBatch> FuelBatches { get; set; }
+        public DbSet<FuelSaleBatchAllocation> FuelSaleBatchAllocations { get; set; }
+        public DbSet<FuelStockMovement> FuelStockMovements { get; set; }
         public DbSet<FuelPriceHistory> FuelPriceHistory { get; set; }
         public DbSet<BranchFuelPrice> BranchFuelPrices { get; set; }
         public DbSet<ProductPriceHistory> ProductPriceHistory { get; set; }
@@ -1704,6 +1707,9 @@ namespace gpos.Data
                 entity.Property(item => item.Liters).HasColumnName("liters").HasPrecision(18, 2);
                 entity.Property(item => item.PricePerLiter).HasColumnName("price_per_liter").HasPrecision(18, 2);
                 entity.Property(item => item.Subtotal).HasColumnName("subtotal").HasPrecision(18, 2);
+                entity.Property(item => item.UnitCostSnapshot).HasColumnName("unit_cost_snapshot").HasPrecision(18, 4);
+                entity.Property(item => item.TotalCostSnapshot).HasColumnName("total_cost_snapshot").HasPrecision(18, 2);
+                entity.Property(item => item.GrossProfitSnapshot).HasColumnName("gross_profit_snapshot").HasPrecision(18, 2);
                 entity.Property(item => item.TankLitersBefore).HasColumnName("tank_liters_before").HasPrecision(18, 2);
                 entity.Property(item => item.TankLitersAfter).HasColumnName("tank_liters_after").HasPrecision(18, 2);
                 entity.Property(item => item.Status).HasColumnName("status").HasMaxLength(50).HasDefaultValue("Completed");
@@ -1734,6 +1740,26 @@ namespace gpos.Data
                     .OnDelete(DeleteBehavior.Restrict);
                 entity.HasOne(item => item.Pump).WithMany().HasForeignKey(item => item.PumpId).OnDelete(DeleteBehavior.Restrict);
                 entity.HasOne(item => item.Dispenser).WithMany().HasForeignKey(item => item.DispenserId).OnDelete(DeleteBehavior.Restrict);
+            });
+
+            modelBuilder.Entity<FuelStockMovement>(entity =>
+            {
+                entity.ToTable("fuel_stock_movements"); entity.HasKey(x => x.Id);
+                entity.Property(x => x.Id).HasColumnName("id"); entity.Property(x => x.TankId).HasColumnName("tank_id"); entity.Property(x => x.FuelId).HasColumnName("fuel_id"); entity.Property(x => x.FuelBatchId).HasColumnName("fuel_batch_id"); entity.Property(x => x.BranchId).HasColumnName("branch_id");
+                entity.Property(x => x.MovementType).HasColumnName("movement_type").HasMaxLength(50); entity.Property(x => x.LitersIn).HasColumnName("liters_in").HasPrecision(18,2); entity.Property(x => x.LitersOut).HasColumnName("liters_out").HasPrecision(18,2);
+                entity.Property(x => x.BatchLitersBefore).HasColumnName("batch_liters_before").HasPrecision(18,2); entity.Property(x => x.BatchLitersAfter).HasColumnName("batch_liters_after").HasPrecision(18,2); entity.Property(x => x.TankLitersBefore).HasColumnName("tank_liters_before").HasPrecision(18,2); entity.Property(x => x.TankLitersAfter).HasColumnName("tank_liters_after").HasPrecision(18,2); entity.Property(x => x.UnitCostSnapshot).HasColumnName("unit_cost_snapshot").HasPrecision(18,4);
+                entity.Property(x => x.ReferenceType).HasColumnName("reference_type").HasMaxLength(50); entity.Property(x => x.ReferenceId).HasColumnName("reference_id"); entity.Property(x => x.Remarks).HasColumnName("remarks").HasMaxLength(255); entity.Property(x => x.CreatedByUserId).HasColumnName("created_by_user_id"); entity.Property(x => x.CreatedAt).HasColumnName("created_at");
+                entity.HasIndex(x => x.TankId); entity.HasIndex(x => x.FuelId); entity.HasIndex(x => x.FuelBatchId); entity.HasIndex(x => x.BranchId); entity.HasIndex(x => new { x.ReferenceType, x.ReferenceId });
+                entity.HasOne<Tank>().WithMany().HasForeignKey(x => x.TankId).OnDelete(DeleteBehavior.Restrict); entity.HasOne<Fuel>().WithMany().HasForeignKey(x => x.FuelId).OnDelete(DeleteBehavior.Restrict); entity.HasOne<FuelBatch>().WithMany().HasForeignKey(x => x.FuelBatchId).OnDelete(DeleteBehavior.Restrict); entity.HasOne<Branch>().WithMany().HasForeignKey(x => x.BranchId).OnDelete(DeleteBehavior.Restrict); entity.HasOne<User>().WithMany().HasForeignKey(x => x.CreatedByUserId).OnDelete(DeleteBehavior.Restrict);
+            });
+
+            modelBuilder.Entity<FuelSaleBatchAllocation>(entity =>
+            {
+                entity.ToTable("fuel_sale_batch_allocations"); entity.HasKey(x => x.Id);
+                entity.Property(x => x.Id).HasColumnName("id"); entity.Property(x => x.FuelSaleId).HasColumnName("fuel_sale_id"); entity.Property(x => x.FuelBatchId).HasColumnName("fuel_batch_id"); entity.Property(x => x.TankId).HasColumnName("tank_id"); entity.Property(x => x.FuelId).HasColumnName("fuel_id"); entity.Property(x => x.BranchId).HasColumnName("branch_id");
+                entity.Property(x => x.LitersAllocated).HasColumnName("liters_allocated").HasPrecision(18,2); entity.Property(x => x.BatchLitersBefore).HasColumnName("batch_liters_before").HasPrecision(18,2); entity.Property(x => x.BatchLitersAfter).HasColumnName("batch_liters_after").HasPrecision(18,2); entity.Property(x => x.UnitCostSnapshot).HasColumnName("unit_cost_snapshot").HasPrecision(18,4); entity.Property(x => x.TotalCostSnapshot).HasColumnName("total_cost_snapshot").HasPrecision(18,2); entity.Property(x => x.UnitPriceSnapshot).HasColumnName("unit_price_snapshot").HasPrecision(18,2); entity.Property(x => x.RevenueSnapshot).HasColumnName("revenue_snapshot").HasPrecision(18,2); entity.Property(x => x.GrossProfitSnapshot).HasColumnName("gross_profit_snapshot").HasPrecision(18,2); entity.Property(x => x.FuelStockMovementId).HasColumnName("fuel_stock_movement_id"); entity.Property(x => x.CreatedAt).HasColumnName("created_at");
+                entity.HasIndex(x => x.FuelSaleId); entity.HasIndex(x => x.FuelBatchId); entity.HasIndex(x => x.TankId); entity.HasIndex(x => x.FuelId); entity.HasIndex(x => x.BranchId); entity.HasIndex(x => x.FuelStockMovementId).IsUnique(); entity.HasIndex(x => new { x.FuelSaleId, x.FuelBatchId }).IsUnique();
+                entity.HasOne(x => x.FuelSale).WithMany(x => x.BatchAllocations).HasForeignKey(x => x.FuelSaleId).OnDelete(DeleteBehavior.Restrict); entity.HasOne(x => x.FuelBatch).WithMany(x => x.SaleAllocations).HasForeignKey(x => x.FuelBatchId).OnDelete(DeleteBehavior.Restrict); entity.HasOne(x => x.Tank).WithMany().HasForeignKey(x => x.TankId).OnDelete(DeleteBehavior.Restrict); entity.HasOne(x => x.Fuel).WithMany().HasForeignKey(x => x.FuelId).OnDelete(DeleteBehavior.Restrict); entity.HasOne(x => x.Branch).WithMany().HasForeignKey(x => x.BranchId).OnDelete(DeleteBehavior.Restrict); entity.HasOne(x => x.FuelStockMovement).WithMany().HasForeignKey(x => x.FuelStockMovementId).OnDelete(DeleteBehavior.Restrict);
             });
 
             modelBuilder.Entity<Payment>(entity =>
@@ -2054,6 +2080,7 @@ namespace gpos.Data
 
         private void EnforceCompletedSaleImmutability()
         {
+            EnforceFuelFifoLedgerAppendOnly();
             var ids = FinancialSaleIdsBeingChanged();
             if (ids.Count == 0) return;
             var completed = Sales.AsNoTracking().Where(sale => ids.Contains(sale.Id) && sale.Status == "Completed").Select(sale => sale.Id).ToHashSet();
@@ -2062,6 +2089,7 @@ namespace gpos.Data
 
         private async Task EnforceCompletedSaleImmutabilityAsync(CancellationToken cancellationToken)
         {
+            EnforceFuelFifoLedgerAppendOnly();
             var ids = FinancialSaleIdsBeingChanged();
             if (ids.Count == 0) return;
             var completed = (await Sales.AsNoTracking().Where(sale => ids.Contains(sale.Id) && sale.Status == "Completed").Select(sale => sale.Id).ToListAsync(cancellationToken)).ToHashSet();
@@ -2108,7 +2136,20 @@ namespace gpos.Data
             if (completedSaleIds.Count == 0) return;
             if (_allowControlledSaleVoidTransition && ChangeTracker.Entries<Sale>().Where(e => completedSaleIds.Contains(e.Entity.Id)).All(e =>
                 e.State == EntityState.Modified && e.Entity.Status == "Voided" && e.Properties.Where(p => p.IsModified).All(p => p.Metadata.Name is nameof(Sale.Status) or nameof(Sale.UpdatedAt)))) return;
+            if (_allowFuelFifoSnapshotCompletion
+                && ChangeTracker.Entries().Where(e => e.State is EntityState.Modified or EntityState.Deleted
+                    && (e.Entity is Sale || e.Entity is ProductSale || e.Entity is FuelSale || e.Entity is Payment || e.Entity is PointsLedger || e.Entity is VoucherRedemption || e.Entity is SaleDiscountApplication))
+                    .All(e => e.Entity is FuelSale fuelSale && completedSaleIds.Contains(fuelSale.SaleId)
+                        && e.State == EntityState.Modified
+                        && e.Properties.Where(p => p.IsModified).All(p => p.Metadata.Name is nameof(FuelSale.UnitCostSnapshot) or nameof(FuelSale.TotalCostSnapshot) or nameof(FuelSale.GrossProfitSnapshot) or nameof(FuelSale.TankLitersBefore) or nameof(FuelSale.TankLitersAfter) or nameof(FuelSale.UpdatedAt)))) return;
             throw new InvalidOperationException("Completed sale financial snapshots are immutable. Use a controlled void, return, refund, or adjustment workflow.");
+        }
+
+        private void EnforceFuelFifoLedgerAppendOnly()
+        {
+            if (ChangeTracker.Entries<FuelSaleBatchAllocation>().Any(x => x.State is EntityState.Modified or EntityState.Deleted)
+                || ChangeTracker.Entries<FuelStockMovement>().Any(x => x.State is EntityState.Modified or EntityState.Deleted))
+                throw new InvalidOperationException("Fuel FIFO allocations and Fuel stock movements are append-only.");
         }
 
         public IDisposable BeginControlledSaleVoidTransition()
@@ -2118,9 +2159,21 @@ namespace gpos.Data
             return new SaleVoidTransitionScope(this);
         }
 
+        public IDisposable BeginFuelFifoSnapshotCompletion()
+        {
+            if (_allowFuelFifoSnapshotCompletion) throw new InvalidOperationException("Fuel FIFO snapshot completion is already active.");
+            _allowFuelFifoSnapshotCompletion = true;
+            return new FuelFifoSnapshotScope(this);
+        }
+
         private sealed class SaleVoidTransitionScope(ApplicationDbContext context) : IDisposable
         {
             public void Dispose() => context._allowControlledSaleVoidTransition = false;
+        }
+
+        private sealed class FuelFifoSnapshotScope(ApplicationDbContext context) : IDisposable
+        {
+            public void Dispose() => context._allowFuelFifoSnapshotCompletion = false;
         }
     }
 }
