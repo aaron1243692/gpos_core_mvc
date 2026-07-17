@@ -112,6 +112,7 @@ namespace gpos.Models.ViewModels
         public decimal UnitPrice { get; set; }
         public decimal Subtotal { get; set; }
         public decimal GrossProfit { get; set; }
+        public bool HasCostSnapshot { get; set; }
         public string CashierName { get; set; } = "-";
         public string MemberName { get; set; } = "-";
         public DateTime? SaleDate { get; set; }
@@ -153,6 +154,7 @@ namespace gpos.Models.ViewModels
         public DateTime? SaleDate { get; set; }
         public string PaymentType { get; set; } = "-";
         public decimal Cost { get; set; }
+        public bool HasCostSnapshot { get; set; }
         public decimal GrossTotal { get; set; }
         public decimal RebateAmount { get; set; }
         public decimal MemberDiscount { get; set; }
@@ -184,30 +186,11 @@ namespace gpos.Models.ViewModels
 
     public class PosProductSaleRequestItem
     {
-        public int DisplayStockId { get; set; }
-
         [Range(1, int.MaxValue)]
         public int ProductId { get; set; }
 
-        public int BatchId { get; set; }
-
         [Range(typeof(decimal), "0.01", "999999999")]
         public decimal Quantity { get; set; }
-
-        [Range(typeof(decimal), "0", "999999999")]
-        public decimal Price { get; set; }
-
-        [Range(typeof(decimal), "0", "999999999")]
-        public decimal UnitCost { get; set; }
-
-        [Range(typeof(decimal), "0", "999999999")]
-        public decimal UnitPrice { get; set; }
-
-        [Range(typeof(decimal), "0", "999999999")]
-        public decimal Subtotal { get; set; }
-
-        [Range(typeof(decimal), "-999999999", "999999999")]
-        public decimal GrossProfit { get; set; }
     }
 
     public class PosFuelSaleRequestItem

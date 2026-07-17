@@ -596,6 +596,7 @@
             let voucherDiscountLookupTimer = 0;
             let voucherDiscountLookupToken = 0;
             let saleCompleted = false;
+            let isSubmittingSale = false;
             let cartEditDraft = [];
             let draftSaveTimer = 0;
             let isRestoringDraft = false;
@@ -1891,12 +1892,7 @@
                 const products = selectedProducts().map(product => {
                     return {
                         productId: product.productId,
-                        quantity: product.quantity,
-                        price: product.unitPrice,
-                        unitCost: product.unitCost,
-                        unitPrice: product.unitPrice,
-                        subtotal: product.subtotal,
-                        grossProfit: product.grossProfit
+                        quantity: product.quantity
                     };
                 });
                 const fuels = fuelCart.map(fuel => {
@@ -1920,6 +1916,9 @@
 
             async function submitSale(event) {
                 event?.preventDefault();
+                if (isSubmittingSale) {
+                    return;
+                }
                 let payload = buildSalePayload();
 
                 if (!payload.products.length && !payload.fuels.length) {
@@ -1927,10 +1926,18 @@
                     return;
                 }
 
-                await refreshCheckoutDiscounts();
+                isSubmittingSale = true;
+                try {
+                    await refreshCheckoutDiscounts();
+                } catch {
+                    isSubmittingSale = false;
+                    showSubmitMessage("Unable to refresh checkout totals. Please try again.", false);
+                    return;
+                }
                 payload = buildSalePayload();
 
                 if (!validateCheckout()) {
+                    isSubmittingSale = false;
                     return;
                 }
 
@@ -1981,6 +1988,7 @@
                     showSubmitMessage("Unable to save sale. Please try again.", false);
                     modalConfirmSaleButton.disabled = false;
                 } finally {
+                    isSubmittingSale = saleCompleted;
                     submitSaleButton.disabled = saleCompleted;
                     if (!saleCompleted) {
                         modalConfirmSaleButton.disabled = false;
@@ -2016,6 +2024,7 @@
                 completedReceiptNo = "";
                 completedReceiptTotals = null;
                 saleCompleted = false;
+                isSubmittingSale = false;
                 submitSaleButton.disabled = false;
                 modalConfirmSaleButton.disabled = false;
                 modalPrintReceiptButton.disabled = true;

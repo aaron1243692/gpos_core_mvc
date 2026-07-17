@@ -6,6 +6,7 @@ using gpos.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
+using MySqlConnector;
 using System.Security.Claims;
 
 namespace gpos.Controllers
@@ -20,12 +21,14 @@ namespace gpos.Controllers
         private readonly ApplicationDbContext _db;
         private readonly FinancialMetricsService _financialMetrics;
         private readonly ProductBatchNumberService _batchNumberService;
+        private readonly FuelInventoryService _fuelInventory;
 
-        public TransactionController(ApplicationDbContext db, FinancialMetricsService financialMetrics, ProductBatchNumberService batchNumberService)
+        public TransactionController(ApplicationDbContext db, FinancialMetricsService financialMetrics, ProductBatchNumberService batchNumberService, FuelInventoryService fuelInventory)
         {
             _db = db;
             _financialMetrics = financialMetrics;
             _batchNumberService = batchNumberService;
+            _fuelInventory = fuelInventory;
         }
 
         public async Task<IActionResult> CashRemittance(string? search, int? branchId, int? shiftId, int? userId, DateTime? dateFrom, DateTime? dateTo, string? status, int? editId)
@@ -127,6 +130,7 @@ namespace gpos.Controllers
                 .Include(item => item.Branch)
                 .Include(item => item.User)
                 .Include(item => item.DailyCash).ThenInclude(item => item!.Shift)
+                .Include(item => item.Shift)
                 .Include(item => item.Member)
                 .Include(item => item.ProductSales).ThenInclude(item => item.Product)
                 .Include(item => item.ProductSales).ThenInclude(item => item.Batch)
@@ -136,6 +140,7 @@ namespace gpos.Controllers
                 .Include(item => item.Payments)
                 .Include(item => item.PointsLedger)
                 .Include(item => item.VoucherRedemptions)
+                .Include(item => item.DiscountApplications)
                 .FirstOrDefaultAsync(item => item.Id == id
                     && item.UserId == context.UserId
                     && item.BranchId == context.BranchId
@@ -145,8 +150,9 @@ namespace gpos.Controllers
                 return NotFound(new { success = false, message = "The sale was not found for the current user and Branch." });
             }
 
-            var voucherDiscount = sale.VoucherRedemptions.Sum(item => item.DiscountAmount);
-            var paymentTotal = sale.Payments.Where(item => item.Status == "Completed").Sum(item => item.Amount);
+            var voucherDiscount = sale.DiscountApplications.Where(item => item.SourceType == "Voucher").Sum(item => item.AppliedAmount);
+            var memberDiscount = sale.DiscountApplications.Where(item => item.SourceType == "Member").Sum(item => item.AppliedAmount);
+            var paymentTotal = sale.Payments.Where(item => item.Status == "Completed").Sum(item => item.AppliedAmount ?? item.Amount);
             return Ok(new
             {
                 success = true,
@@ -154,22 +160,28 @@ namespace gpos.Controllers
                 {
                     sale.Id,
                     sale.ReceiptNo,
-                    businessDate = sale.DailyCash?.BusinessDate ?? (sale.CreatedAt ?? DateTime.Now).Date,
+                    businessDate = sale.BusinessDate,
                     sale.CreatedAt,
+                    sale.CompletedAt,
                     branch = sale.Branch?.Name ?? context.BranchName,
                     cashier = UserDisplayName(sale.User),
                     dailyCash = sale.DailyCashId?.ToString() ?? "-",
-                    shift = sale.DailyCash?.Shift?.Name ?? "-",
+                    shift = sale.Shift?.Name ?? sale.DailyCash?.Shift?.Name ?? "-",
                     sale.Status,
                     paymentMethod = PaymentTypeFor(sale),
                     sale.CashAmount,
-                    change = Math.Max(0m, sale.CashAmount - sale.NetTotal),
-                    memberDiscount = Math.Max(0m, sale.DiscountAmount - voucherDiscount),
+                    change = sale.ChangeAmount,
+                    memberDiscount,
                     voucherDiscount,
                     totalDiscount = sale.DiscountAmount,
                     sale.RebateAmount,
                     sale.NetTotal,
                     sale.GrossTotal,
+                    vatName = sale.VatNameSnapshot,
+                    vatType = sale.VatTypeSnapshot,
+                    sale.VatRate,
+                    sale.TaxableAmount,
+                    sale.VatAmount,
                     member = sale.Member?.FullName ?? "-",
                     products = sale.ProductSales.OrderBy(item => item.Id).Select(item => new
                     {
@@ -193,7 +205,10 @@ namespace gpos.Controllers
                     payments = sale.Payments.OrderBy(item => item.Id).Select(item => new
                     {
                         method = item.PaymentType,
-                        item.Amount,
+                        amount = item.AppliedAmount ?? item.Amount,
+                        item.TenderedAmount,
+                        item.AppliedAmount,
+                        item.ChangeAmount,
                         reference = item.ReferenceNo ?? "-",
                         item.Status
                     }),
@@ -306,8 +321,9 @@ namespace gpos.Controllers
 
         private async Task<PosPageViewModel> BuildPosPageAsync()
         {
-            var userId = CurrentUserId();
-            var branchId = userId.HasValue ? await CurrentUserBranchIdAsync(userId.Value) : null;
+            var context = await CurrentPosUserContextAsync();
+            var userId = context?.UserId;
+            var branchId = context?.BranchId;
             var displayStocks = await _db.DisplayStocks
                 .AsNoTracking()
                 .Include(stock => stock.Product)
@@ -324,7 +340,8 @@ namespace gpos.Controllers
                     && stock.Batch != null
                     && stock.Batch.Status == 1
                     && stock.Batch.IsActive
-                    && (!branchId.HasValue || stock.BranchId == branchId.Value))
+                    && branchId.HasValue
+                    && stock.BranchId == branchId.Value)
                 .ToListAsync();
 
             var productIds = displayStocks.Select(stock => stock.ProductId).Distinct().ToList();
@@ -382,7 +399,7 @@ namespace gpos.Controllers
             {
                 CurrentUserId = userId,
                 CurrentBranchId = branchId,
-                CurrentBranchName = branchId.HasValue ? await BranchNameAsync(branchId) : string.Empty,
+                CurrentBranchName = context?.BranchName ?? string.Empty,
                 CanDisplayRefill = userId.HasValue && branchId.HasValue && await CanManageDisplayRefillAsync(userId.Value),
                 ActiveRebate = activeRebate,
                 ActiveVat = activeVat,
@@ -454,7 +471,7 @@ namespace gpos.Controllers
             }
 
             var now = DateTime.Now;
-            var discountAmount = await CalculateMemberDiscount(member, Math.Max(0m, productTotal), Math.Max(0m, fuelTotal), now);
+            var discountAmount = (await CalculateMemberDiscount(member, Math.Max(0m, productTotal), Math.Max(0m, fuelTotal), now))?.AppliedAmount ?? 0m;
 
             return Ok(new { success = true, memberFound = true, discountAmount, points = member.Points });
         }
@@ -500,11 +517,12 @@ namespace gpos.Controllers
                 return BadRequest(new { success = false, message = "Sale payload is missing or invalid." });
             }
 
-            var userId = CurrentUserId();
-            if (!userId.HasValue)
+            var context = await CurrentPosUserContextAsync();
+            if (context is null)
             {
-                return BadRequest(new { success = false, message = "Please sign in before submitting a sale." });
+                return BadRequest(new { success = false, message = "The current user is not assigned to an active Branch." });
             }
+            var userId = context.UserId;
 
             if (request.Products.Count == 0 && request.Fuels.Count == 0)
             {
@@ -520,12 +538,12 @@ namespace gpos.Controllers
             try
             {
                 var now = DateTime.Now;
-                var saleBranchId = await CurrentUserBranchIdAsync(userId.Value);
-                var productItems = await BuildValidatedProductItems(request.Products);
+                var saleBranchId = context.BranchId;
+                var productItems = await BuildValidatedProductItems(request.Products, saleBranchId);
                 var fuelItems = await BuildValidatedFuelItems(request.Fuels, saleBranchId);
-                var productTotal = productItems.Sum(item => item.Subtotal);
-                var fuelTotal = fuelItems.Sum(item => item.Subtotal);
-                var grossTotal = productTotal + fuelTotal;
+                var productTotal = MoneyRounding.Round(productItems.Sum(item => item.Subtotal));
+                var fuelTotal = MoneyRounding.Round(fuelItems.Sum(item => item.Subtotal));
+                var grossTotal = MoneyRounding.Round(productTotal + fuelTotal);
 
                 if (grossTotal <= 0)
                 {
@@ -542,6 +560,8 @@ namespace gpos.Controllers
                 decimal voucherDiscountAmount;
                 decimal pointsRequired;
                 decimal rebateAmount;
+                DiscountSnapshotResult? memberDiscount = null;
+                RebateRule? pointsRebate = null;
 
                 if (isPointsPayment)
                 {
@@ -552,6 +572,7 @@ namespace gpos.Controllers
 
                     var pointsMember = await FindRequiredMember(request.MembershipCardNo);
                     var rebate = await FindLatestActiveRebate();
+                    pointsRebate = rebate;
                     member = pointsMember;
                     memberDiscountAmount = 0m;
                     voucherDiscountAmount = 0m;
@@ -562,7 +583,8 @@ namespace gpos.Controllers
                 else
                 {
                     member = await FindMember(request.MembershipCardNo);
-                    memberDiscountAmount = await CalculateMemberDiscount(member, productTotal, fuelTotal, now);
+                    memberDiscount = await CalculateMemberDiscount(member, productTotal, fuelTotal, now);
+                    memberDiscountAmount = memberDiscount?.AppliedAmount ?? 0m;
                     voucherDiscountAmount = 0m;
                     if (!string.IsNullOrWhiteSpace(voucherCode))
                     {
@@ -570,19 +592,20 @@ namespace gpos.Controllers
                         voucherDiscountAmount = voucherRedemption.DiscountAmount;
                     }
 
-                    discountAmount = memberDiscountAmount + voucherDiscountAmount;
+                    discountAmount = MoneyRounding.Round(memberDiscountAmount + voucherDiscountAmount);
                     pointsRequired = 0m;
                     rebateAmount = 0m;
                 }
 
-                var saleDailyCashId = saleBranchId.HasValue
-                    ? await FindOpenDailyCashForSaleAsync(saleBranchId.Value, userId.Value, now)
-                    : null;
+                var saleDailyCash = await FindOpenDailyCashForSaleAsync(saleBranchId, userId, now)
+                    ?? throw new InvalidOperationException("An open Daily Cash session for today is required before checkout.");
                 var vatSetting = await FindCurrentVatSetting();
-                var taxableAmount = Math.Max(0m, grossTotal - discountAmount - rebateAmount);
+                var taxableAmount = MoneyRounding.Round(Math.Max(0m, grossTotal - discountAmount - rebateAmount));
                 var taxAmount = CalculateVatAmount(taxableAmount, vatSetting);
-                var netTotal = Math.Max(0m, taxableAmount + ExclusiveVatAmount(taxAmount, vatSetting));
-                var cashAmount = isPointsPayment || netTotal <= 0m ? 0m : Math.Max(0m, request.CashAmount);
+                var netTotal = MoneyRounding.Round(Math.Max(0m, taxableAmount + ExclusiveVatAmount(taxAmount, vatSetting)));
+                var cashAmount = isPointsPayment || netTotal <= 0m ? 0m : MoneyRounding.Round(Math.Max(0m, request.CashAmount));
+                var appliedAmount = isPointsPayment ? rebateAmount : Math.Min(cashAmount, netTotal);
+                var changeAmount = isPointsPayment ? 0m : MoneyRounding.Round(Math.Max(0m, cashAmount - appliedAmount));
                 var pointsEarned = isPointsPayment ? 0m : await CalculateMemberEarnings(member, productTotal, fuelTotal, netTotal, now);
 
                 if (!isPointsPayment && netTotal > 0m && cashAmount < netTotal)
@@ -590,24 +613,35 @@ namespace gpos.Controllers
                     return BadRequest(new { success = false, message = "Cash amount is not enough to checkout." });
                 }
 
-                await DeductDisplayStock(productItems, userId.Value);
+                await DeductDisplayStock(productItems, saleBranchId, userId);
                 await DeductTankFuel(fuelItems);
 
                 var sale = new Sale
                 {
                     ReceiptNo = await GenerateReceiptNo(now),
-                    UserId = userId.Value,
+                    UserId = userId,
                     BranchId = saleBranchId,
-                    DailyCashId = saleDailyCashId,
+                    DailyCashId = saleDailyCash.Id,
+                    ShiftId = saleDailyCash.ShiftId,
+                    BusinessDate = saleDailyCash.BusinessDate,
+                    VatSettingId = vatSetting?.Id,
+                    VatNameSnapshot = vatSetting?.Name,
+                    VatTypeSnapshot = vatSetting?.Type ?? "None",
+                    VatRate = vatSetting is null ? 0m : MoneyRounding.Round(vatSetting.Rate),
+                    TaxableAmount = taxableAmount,
+                    VatAmount = taxAmount,
+                    VatExemptAmount = vatSetting is not null && IsVatExempt(vatSetting.Type) ? taxableAmount : 0m,
                     MemberId = member?.Id,
                     GrossTotal = grossTotal,
                     DiscountAmount = discountAmount,
                     RebateAmount = rebateAmount,
                     NetTotal = netTotal,
                     CashAmount = cashAmount,
+                    ChangeAmount = changeAmount,
                     Status = "Completed",
                     CreatedAt = now,
-                    UpdatedAt = now
+                    UpdatedAt = now,
+                    CompletedAt = now
                 };
 
                 _db.Sales.Add(sale);
@@ -616,8 +650,14 @@ namespace gpos.Controllers
                 for (var i = 0; i < productItems.Count; i += 1)
                 {
                     productItems[i].SaleId = sale.Id;
-                    productItems[i].StockMovement.ReferenceId = sale.Id;
                     _db.ProductSales.Add(productItems[i].ProductSale);
+                }
+
+                await _db.SaveChangesAsync();
+                for (var i = 0; i < productItems.Count; i += 1)
+                {
+                    productItems[i].StockMovement.ReferenceType = "ProductSale";
+                    productItems[i].StockMovement.ReferenceId = productItems[i].ProductSale.Id;
                     _db.StockMovements.Add(productItems[i].StockMovement);
                 }
 
@@ -627,46 +667,40 @@ namespace gpos.Controllers
                     _db.FuelSales.Add(fuelItems[i].FuelSale);
                 }
 
-                AddPaymentRecords(sale.Id, paymentMethod, cashAmount, rebateAmount, now);
+                AddPaymentRecords(sale.Id, paymentMethod, cashAmount, appliedAmount, changeAmount, now);
 
-                await ApplyPointsChanges(member, pointsRequired, pointsEarned, sale.Id, now);
+                if (memberDiscount is not null)
+                    AddDiscountApplication(sale.Id, "Member", memberDiscount.Rule.Id, memberDiscount.Rule.Name, memberDiscount.Rule.DiscountType, memberDiscount.Rule.DiscountValue, memberDiscount.EligibleBase, memberDiscount.AppliedAmount, now);
+                if (voucherRedemption is not null)
+                    AddDiscountApplication(sale.Id, "Voucher", voucherRedemption.Rule.Id, voucherRedemption.Rule.Name, voucherRedemption.Rule.RewardType, voucherRedemption.Rule.RewardValue, EligibleVoucherBase(voucherRedemption.Rule, productTotal, fuelTotal), voucherRedemption.DiscountAmount, now);
+                if (pointsRebate is not null)
+                    AddDiscountApplication(sale.Id, "PointsRebate", pointsRebate.Id, pointsRebate.Name, "Points", pointsRebate.RebateValue, grossTotal, rebateAmount, now);
+
+                await ApplyPointsChanges(member, pointsRequired, pointsEarned, sale.Id, pointsRebate, rebateAmount, now);
                 ApplyVoucherRedemption(voucherRedemption, sale.Id, now);
 
                 await _db.SaveChangesAsync();
-                if (saleDailyCashId.HasValue)
-                {
-                    await RefreshDailyCashSnapshotAsync(saleDailyCashId.Value);
-                    await _db.SaveChangesAsync();
-                }
+                await RefreshDailyCashSnapshotAsync(saleDailyCash.Id);
+                await _db.SaveChangesAsync();
                 await UpdateFinancialMetricsForSale(sale, productItems, fuelItems, discountAmount, rebateAmount, isPointsPayment);
                 await dbTransaction.CommitAsync();
 
-                return Ok(new
-                {
-                    success = true,
-                    message = "Sale saved successfully.",
-                    receiptNo = sale.ReceiptNo,
-                    grossTotal,
-                    discountAmount,
-                    memberDiscountAmount,
-                    voucherDiscountAmount,
-                    rebateAmount,
-                    taxAmount,
-                    vatRate = vatSetting?.Rate ?? 0m,
-                    vatType = vatSetting?.Type ?? "None",
-                    netTotal,
-                    pointsEarned,
-                    pointsRequired,
-                    paymentMethod,
-                    voucherCode = voucherRedemption?.Rule.Code ?? voucherRedemption?.Voucher?.Code,
-                    amountTendered = cashAmount,
-                    change = Math.Max(0m, cashAmount - netTotal)
-                });
+                return Ok(new { success = true, message = "Sale saved successfully.", receipt = await BuildPersistedReceiptAsync(sale.Id) });
             }
             catch (InvalidOperationException ex)
             {
                 await dbTransaction.RollbackAsync();
                 return BadRequest(new { success = false, message = ex.Message });
+            }
+            catch (MySqlException ex) when (ex.Number is 1205 or 1213)
+            {
+                await dbTransaction.RollbackAsync();
+                return Conflict(new { success = false, message = "Display stock changed during checkout. Please review the cart and try again." });
+            }
+            catch (MySqlException ex) when (ex.Number == 1062)
+            {
+                await dbTransaction.RollbackAsync();
+                return Conflict(new { success = false, message = "This checkout could not be completed because a duplicate sale reference was detected. Please refresh recent sales before retrying." });
             }
             catch
             {
@@ -976,6 +1010,12 @@ namespace gpos.Controllers
             {
                 await transaction.RollbackAsync();
                 ModelState.AddModelError(string.Empty, ex.Message);
+                return View("CashRemittance", await BuildCashRemittancePageAsync(search, filterBranchId, filterShiftId, filterUserId, dateFrom, dateTo, status, form, "cashRemittanceModal"));
+            }
+            catch (MySqlException ex) when (ex.Number is 1205 or 1213)
+            {
+                await transaction.RollbackAsync();
+                ModelState.AddModelError(string.Empty, "Cash Remittance was changed by another request. Please review and try again.");
                 return View("CashRemittance", await BuildCashRemittancePageAsync(search, filterBranchId, filterShiftId, filterUserId, dateFrom, dateTo, status, form, "cashRemittanceModal"));
             }
 
@@ -1566,7 +1606,7 @@ namespace gpos.Controllers
                     && (sale.CreatedAt ?? DateTime.MinValue) < nextDate);
             }
 
-            var cashSales = await salesQuery.SumAsync(sale => sale.CashAmount);
+            var cashSales = await salesQuery.SumAsync(sale => sale.ChangeAmount.HasValue ? sale.CashAmount - sale.ChangeAmount.Value : sale.CashAmount);
 
             var cashInQuery = _db.CashIns.AsNoTracking()
                 .Where(item => item.BranchId == branchId && item.ShiftId == shiftId && item.UserId == userId && item.Status == 1);
@@ -1587,7 +1627,7 @@ namespace gpos.Controllers
             return (cashSales, await cashInQuery.SumAsync(item => item.Amount), await cashOutQuery.SumAsync(item => item.Amount));
         }
 
-        private async Task<int?> FindOpenDailyCashForSaleAsync(int branchId, int userId, DateTime saleDateTime)
+        private async Task<DailyCash?> FindOpenDailyCashForSaleAsync(int branchId, int userId, DateTime saleDateTime)
         {
             return await _db.DailyCashRecords.AsNoTracking()
                 .Where(item => item.Status == CashStatusOpen
@@ -1596,7 +1636,6 @@ namespace gpos.Controllers
                     && item.BusinessDate == saleDateTime.Date)
                 .OrderByDescending(item => item.OpenedAt ?? item.CreatedAt ?? DateTime.MinValue)
                 .ThenByDescending(item => item.Id)
-                .Select(item => (int?)item.Id)
                 .FirstOrDefaultAsync();
         }
 
@@ -2349,7 +2388,8 @@ namespace gpos.Controllers
                 return RedirectToAction(nameof(FuelReceiving), new { search, filterBranchId });
             }
 
-            await using var transaction = await _db.Database.BeginTransactionAsync();
+            await using var transaction = await _db.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
+            tank = await _db.Tanks.FromSqlInterpolated($"SELECT * FROM tanks WHERE id = {tank.Id} FOR UPDATE").SingleAsync();
             delivery.BranchId = tank.BranchId;
             delivery.SupplierId = form.SupplierId;
             delivery.FuelId = tank.FuelId;
@@ -2429,10 +2469,11 @@ namespace gpos.Controllers
                 return RedirectToAction(nameof(FuelReceiving), new { search, filterBranchId });
             }
 
-            await using var transaction = await _db.Database.BeginTransactionAsync();
+            await using var transaction = await _db.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
             var now = DateTime.Now;
             if (delivery.Tank is not null)
             {
+                delivery.Tank = await _db.Tanks.FromSqlInterpolated($"SELECT * FROM tanks WHERE id = {delivery.Tank.Id} FOR UPDATE").SingleAsync();
                 var tankLitersAfter = delivery.Tank.CurrentLiters + delivery.DeliveredLiters;
                 if (delivery.Tank.CapacityLiters > 0 && tankLitersAfter > delivery.Tank.CapacityLiters)
                 {
@@ -2605,7 +2646,7 @@ namespace gpos.Controllers
                     }).ToListAsync());
             }
 
-            return Json(await _db.Tanks.AsNoTracking()
+            var tanks = await _db.Tanks.AsNoTracking()
                 .Where(x => x.BranchId == branchId && x.IsActive && x.Status == 1
                     && (term == "" || x.TankNo.Contains(term) || (x.Fuel != null && x.Fuel.Name.Contains(term))))
                 .OrderBy(x => x.TankNo).Take(100)
@@ -2615,18 +2656,39 @@ namespace gpos.Controllers
                     fuelName = x.Fuel != null ? x.Fuel.Name : string.Empty,
                     currentQuantity = x.CurrentLiters, capacity = x.CapacityLiters,
                     availableSpace = x.CapacityLiters - x.CurrentLiters, status = "Active"
-                }).ToListAsync());
+                }).ToListAsync();
+            var result = new List<object>();
+            foreach (var tank in tanks)
+            {
+                var invariant = await _fuelInventory.GetInvariantAsync(tank.id);
+                result.Add(new { tank.id, tank.branchId, tank.tankName, tank.fuelId, tank.fuelName, tank.currentQuantity, tank.capacity, tank.availableSpace, tank.status, activeBatchLiters = invariant.ActiveBatchLiters, difference = invariant.Difference, activeBatchCount = invariant.ActiveBatchCount, inventoryState = invariant.InventoryState });
+            }
+            return Json(result);
         }
 
         [HttpPost, ValidateAntiForgeryToken]
         public async Task<IActionResult> SaveStockAdjustment([Bind(Prefix = "Form")] StockAdjustmentForm form)
         {
             var scope = NormalizeAdjustmentScope(form.Scope);
+            var isReconciliation = scope == "Fuel" && form.AdjustmentType == FuelInventoryService.ReconciliationType;
+            if (scope == "Fuel" && !isReconciliation) ModelState.AddModelError(string.Empty, "Fuel quantity adjustments are blocked until audited FIFO layer allocation is implemented. Use Opening Balance / Reconciliation for positive legacy differences.");
             ValidateAdjustmentTarget(form, scope);
             var userId = CurrentUserId();
             if (!userId.HasValue) ModelState.AddModelError(string.Empty, "Please sign in before saving an adjustment.");
             var target = await LoadAdjustmentTargetAsync(form, scope, false);
             if (target is null) ModelState.AddModelError(string.Empty, "Select a valid stock item for the selected branch.");
+            if (isReconciliation && userId.HasValue)
+            {
+                if (!await HasPermissionAsync(userId.Value, FuelInventoryService.PreparePermission)) ModelState.AddModelError(string.Empty, "You are not authorized to prepare an Opening Balance / Reconciliation.");
+                if (target is Tank tank)
+                {
+                    var invariant = await _fuelInventory.GetInvariantAsync(tank.Id);
+                    ModelState.Remove("Form.AdjustmentQuantity");
+                    form.AdjustmentQuantity = invariant.Difference;
+                    if (invariant.Difference <= 0m) ModelState.AddModelError(string.Empty, invariant.Difference == 0m ? "This Tank is already balanced." : "Negative reconciliation is blocked until audited FIFO layer reduction is implemented.");
+                    NormalizeReconciliationCost(form, invariant.Difference);
+                }
+            }
             if (!ModelState.IsValid) return View(AdjustmentViewName(scope), await BuildStockAdjustmentPageAsync(scope, null, form.BranchId, null, null, null, form.Id, null, form));
 
             var adjustment = form.Id > 0 ? await _db.StockAdjustments.FirstOrDefaultAsync(x => x.Id == form.Id && x.Scope == scope) : null;
@@ -2634,6 +2696,13 @@ namespace gpos.Controllers
             var now = DateTime.Now;
             adjustment ??= new StockAdjustment { AdjustmentNo = await GenerateAdjustmentNoAsync(now), Scope = scope, AdjustedBy = userId!.Value, CreatedAt = now };
             PopulateAdjustment(adjustment, form, target!, scope, now);
+            if (isReconciliation && target is Tank reconciliationTank)
+            {
+                var invariant = await _fuelInventory.GetInvariantAsync(reconciliationTank.Id);
+                adjustment.BeforeQuantity = invariant.ActiveBatchLiters;
+                adjustment.SignedQuantity = invariant.Difference;
+                adjustment.AfterQuantity = invariant.TankLiters;
+            }
             if (adjustment.Id == 0) _db.StockAdjustments.Add(adjustment);
             await _db.SaveChangesAsync();
             return AdjustmentRedirect(scope, "Adjustment draft saved.");
@@ -2649,6 +2718,21 @@ namespace gpos.Controllers
             await using var transaction = await _db.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
             try
             {
+                adjustment = await _db.StockAdjustments.FromSqlInterpolated($"SELECT * FROM stock_adjustments WHERE id = {id} FOR UPDATE").SingleAsync();
+                if (adjustment.Status != "Draft") throw new InvalidOperationException("Only draft adjustments can be applied.");
+                if (adjustment.AdjustmentType == FuelInventoryService.ReconciliationType)
+                {
+                    if (!await HasPermissionAsync(userId.Value, FuelInventoryService.ApprovePermission)) throw new InvalidOperationException("You are not authorized to approve an Opening Balance / Reconciliation.");
+                    var invariant = await _fuelInventory.GetLockedInvariantAsync(adjustment.TankId ?? 0);
+                    await _fuelInventory.CreatePositiveReconciliationLayerAsync(adjustment, invariant, DateTime.Now);
+                    adjustment.Status = "Posted"; adjustment.PostedBy = userId.Value; adjustment.PostedAt = DateTime.Now;
+                    adjustment.ApprovedBy = userId.Value; adjustment.ApprovedAt = adjustment.PostedAt; adjustment.UpdatedAt = adjustment.PostedAt;
+                    await _db.SaveChangesAsync();
+                    var finalInvariant = await _fuelInventory.GetInvariantAsync(adjustment.TankId!.Value, true);
+                    if (!finalInvariant.IsBalanced) throw new InvalidOperationException("Reconciliation did not balance the Tank and cost layers.");
+                    await transaction.CommitAsync();
+                    return AdjustmentApplyResponse(adjustment.Scope, "Opening Balance / Reconciliation applied successfully.", true);
+                }
                 var target = await LoadAdjustmentTargetAsync(adjustment, true) ?? throw new InvalidOperationException("The stock item no longer exists.");
                 ApplyPostedAdjustment(adjustment, target, userId.Value, DateTime.Now);
                 if (adjustment.ReversalOfAdjustmentId.HasValue)
@@ -2683,6 +2767,7 @@ namespace gpos.Controllers
             var userId = CurrentUserId();
             if (original is null || !userId.HasValue) return AdjustmentRedirect(original?.Scope ?? "Warehouse", "Adjustment was not found.");
             if (original.Status != "Posted" || original.ReversedByAdjustmentId.HasValue) return AdjustmentRedirect(original.Scope, "Only an unreversed applied adjustment can be reversed.");
+            if (original.AdjustmentType == FuelInventoryService.ReconciliationType) return AdjustmentRedirect(original.Scope, "Opening Balance / Reconciliation cannot be reversed through quantity reversal. Use a controlled follow-up reconciliation.");
             var now = DateTime.Now;
             var reversal = new StockAdjustment
             {
@@ -3037,8 +3122,9 @@ namespace gpos.Controllers
             var totalDiscount = sale?.DiscountAmount ?? 0m;
             var memberDiscount = Math.Max(0m, totalDiscount - voucherDiscount);
             var unitPrice = item.UnitPrice > 0m ? item.UnitPrice : item.Price;
-            var unitCost = item.UnitCost > 0m ? item.UnitCost : item.Batch?.CostPrice ?? 0m;
-            var grossProfit = item.GrossProfit != 0m ? item.GrossProfit : (unitPrice - unitCost) * item.Quantity;
+            var hasCostSnapshot = item.DisplayStockId.HasValue;
+            var unitCost = hasCostSnapshot ? item.UnitCost : 0m;
+            var grossProfit = hasCostSnapshot ? item.GrossProfit : 0m;
 
             return new ProductSaleRowViewModel
             {
@@ -3054,6 +3140,7 @@ namespace gpos.Controllers
                 UnitPrice = unitPrice,
                 Subtotal = item.Subtotal,
                 GrossProfit = grossProfit,
+                HasCostSnapshot = hasCostSnapshot,
                 CashierName = UserDisplayName(sale?.User),
                 MemberName = sale?.Member?.FullName ?? "-",
                 SaleDate = sale?.CreatedAt ?? item.CreatedAt,
@@ -3096,7 +3183,8 @@ namespace gpos.Controllers
                 MemberName = sale?.Member?.FullName ?? "-",
                 SaleDate = sale?.CreatedAt ?? item.CreatedAt,
                 PaymentType = PaymentTypeFor(sale),
-                Cost = sale?.GrossTotal ?? item.Subtotal,
+                Cost = 0m,
+                HasCostSnapshot = false,
                 GrossTotal = sale?.GrossTotal ?? 0m,
                 RebateAmount = sale?.RebateAmount ?? 0m,
                 MemberDiscount = memberDiscount,
@@ -3144,7 +3232,7 @@ namespace gpos.Controllers
                     item.Quantity,
                     item.Subtotal,
                     item.UnitCost,
-                    Cost = item.UnitCost > 0m ? item.UnitCost * item.Quantity : item.Batch == null ? 0m : item.Batch.CostPrice * item.Quantity
+                    Cost = item.DisplayStockId.HasValue ? item.UnitCost * item.Quantity : 0m
                 })
                 .ToListAsync();
 
@@ -3231,7 +3319,7 @@ namespace gpos.Controllers
                 return 0m;
             }
 
-            return Math.Max(0m, (sale?.CashAmount ?? 0m) - (sale?.NetTotal ?? 0m));
+            return sale?.ChangeAmount ?? Math.Max(0m, (sale?.CashAmount ?? 0m) - (sale?.NetTotal ?? 0m));
         }
 
         private static List<SelectListItem> BuildStatusOptions(string? selectedStatus)
@@ -4796,13 +4884,14 @@ namespace gpos.Controllers
             return new VoidEligibilityResult("Ineligible", "Unsupported payment reversal");
         }
 
-        private async Task<List<ValidatedProductSaleItem>> BuildValidatedProductItems(List<PosProductSaleRequestItem> products)
+        private async Task<List<ValidatedProductSaleItem>> BuildValidatedProductItems(List<PosProductSaleRequestItem> products, int branchId)
         {
             var items = new List<ValidatedProductSaleItem>();
             var requestedProducts = products
                 .Where(item => item.ProductId > 0)
                 .GroupBy(item => item.ProductId)
                 .Select(group => new { ProductId = group.Key, Quantity = group.Sum(item => item.Quantity) })
+                .OrderBy(item => item.ProductId)
                 .ToList();
 
             for (var i = 0; i < requestedProducts.Count; i += 1)
@@ -4815,7 +4904,14 @@ namespace gpos.Controllers
 
                 var product = await _db.Products
                     .AsNoTracking()
-                    .FirstOrDefaultAsync(item => item.Id == request.ProductId && item.Status == 1 && item.IsActive);
+                    .Include(item => item.Category)
+                    .FirstOrDefaultAsync(item => item.Id == request.ProductId
+                        && item.Status == 1
+                        && item.IsActive
+                        && item.CategoryId.HasValue
+                        && item.Category != null
+                        && item.Category.Status == 1
+                        && item.Category.IsActive);
 
                 if (product is null)
                 {
@@ -4835,19 +4931,29 @@ namespace gpos.Controllers
                     throw new InvalidOperationException($"Not enough display stock for {product.Name}.");
                 }
 
+                // Parameters are supplied by EF. InnoDB locks the latest eligible rows in
+                // the same product/FIFO order for every checkout, preventing lost updates.
                 var fifoStocks = await _db.DisplayStocks
-                    .AsNoTracking()
-                    .Include(stock => stock.Batch)
-                    .Where(stock => stock.ProductId == request.ProductId
-                        && stock.Quantity > 0
-                        && stock.Batch != null
-                        && stock.Batch.Status == 1
-                        && stock.Batch.IsActive
-                        && stock.Batch.ProductId == request.ProductId)
-                    .OrderBy(stock => stock.Batch!.CreatedAt ?? DateTime.MinValue)
-                    .ThenBy(stock => stock.Batch!.Id)
-                    .ThenBy(stock => stock.Id)
+                    .FromSqlInterpolated($@"SELECT ds.*
+                        FROM display_stocks AS ds
+                        INNER JOIN product_batches AS pb ON pb.id = ds.batch_id
+                        WHERE ds.branch_id = {branchId}
+                          AND ds.product_id = {request.ProductId}
+                          AND ds.quantity > 0
+                          AND pb.product_id = {request.ProductId}
+                          AND pb.status = 1
+                          AND pb.is_active = TRUE
+                        ORDER BY COALESCE(pb.created_at, '1000-01-01'), pb.id, ds.id
+                        FOR UPDATE")
                     .ToListAsync();
+
+                var batchIds = fifoStocks.Select(stock => stock.BatchId).Distinct().ToList();
+                var batches = await _db.ProductBatches.AsNoTracking()
+                    .Where(batch => batchIds.Contains(batch.Id)
+                        && batch.ProductId == request.ProductId
+                        && batch.Status == 1
+                        && batch.IsActive)
+                    .ToDictionaryAsync(batch => batch.Id);
 
                 var totalDisplayStock = fifoStocks.Sum(stock => stock.Quantity);
                 if (totalDisplayStock < request.Quantity)
@@ -4859,16 +4965,21 @@ namespace gpos.Controllers
                 for (var stockIndex = 0; stockIndex < fifoStocks.Count && remainingQuantity > 0; stockIndex += 1)
                 {
                     var stock = fifoStocks[stockIndex];
+                    if (stock.BranchId != branchId || !batches.TryGetValue(stock.BatchId, out var batch))
+                    {
+                        throw new InvalidOperationException($"Display stock ownership changed for {product.Name}.");
+                    }
                     var consumedQuantity = Math.Min(remainingQuantity, stock.Quantity);
                     var unitPrice = currentSellingPrice.Value;
-                    var unitCost = stock.Batch!.CostPrice;
-                    var subtotal = unitPrice * consumedQuantity;
-                    var cost = unitCost * consumedQuantity;
+                    var unitCost = batch.CostPrice;
+                    var subtotal = MoneyRounding.Multiply(unitPrice, consumedQuantity);
+                    var cost = MoneyRounding.Multiply(unitCost, consumedQuantity);
                     var grossProfit = subtotal - cost;
 
                     items.Add(new ValidatedProductSaleItem
                     {
                         DisplayStockId = stock.Id,
+                        DisplayStock = stock,
                         ProductId = stock.ProductId,
                         CategoryId = product.CategoryId,
                         ProductName = product.Name,
@@ -4879,7 +4990,7 @@ namespace gpos.Controllers
                         {
                             DisplayStockId = stock.Id,
                             ProductId = stock.ProductId,
-                            BatchId = stock.BatchId,
+                            BatchId = batch.Id,
                             Quantity = consumedQuantity,
                             Price = unitPrice,
                             UnitCost = unitCost,
@@ -4893,11 +5004,12 @@ namespace gpos.Controllers
                         StockMovement = new StockMovement
                         {
                             ProductId = stock.ProductId,
-                            ProductBatchId = stock.BatchId,
+                            ProductBatchId = batch.Id,
+                            BranchId = branchId,
+                            DisplayStockId = stock.Id,
                             SourceLocation = "Display",
                             MovementType = "Sale",
                             Quantity = consumedQuantity,
-                            ReferenceType = "POS",
                             Remarks = $"POS FIFO sale for {product.Name}",
                             CreatedAt = DateTime.Now
                         }
@@ -4939,18 +5051,9 @@ namespace gpos.Controllers
                     .Select(item => (decimal?)item.CurrentPricePerLiter)
                     .FirstOrDefaultAsync();
                 var price = branchPrice ?? tank.Fuel.CurrentPricePerLiter;
-                var subtotal = request.Liters * price;
-                var costPerLiter = await _db.FuelDeliveries
-                    .AsNoTracking()
-                    .Where(item => item.TankId == tank.Id
-                        && item.FuelId == tank.FuelId
-                        && item.Status == 1
-                        && item.CostPerLiter.HasValue)
-                    .OrderByDescending(item => item.DeliveryDate)
-                    .ThenByDescending(item => item.Id)
-                    .Select(item => item.CostPerLiter)
-                    .FirstOrDefaultAsync();
-                var cost = request.Liters * (costPerLiter ?? 0m);
+                var subtotal = MoneyRounding.Multiply(request.Liters, price);
+                // Fuel cost is intentionally unavailable until authoritative Fuel FIFO allocation exists.
+                var cost = 0m;
 
                 items.Add(new ValidatedFuelSaleItem
                 {
@@ -4979,25 +5082,32 @@ namespace gpos.Controllers
             return items;
         }
 
-        private async Task DeductDisplayStock(List<ValidatedProductSaleItem> items, int userId)
+        private Task DeductDisplayStock(List<ValidatedProductSaleItem> items, int branchId, int userId)
         {
             for (var i = 0; i < items.Count; i += 1)
             {
                 var saleItem = items[i].ProductSale;
-                var displayStock = await _db.DisplayStocks
-                    .FirstOrDefaultAsync(stock => stock.Id == items[i].DisplayStockId && stock.ProductId == saleItem.ProductId && stock.BatchId == saleItem.BatchId);
+                var displayStock = items[i].DisplayStock;
 
-                if (displayStock is null || displayStock.Quantity < items[i].Quantity)
+                if (displayStock.Id != items[i].DisplayStockId
+                    || displayStock.BranchId != branchId
+                    || displayStock.ProductId != saleItem.ProductId
+                    || displayStock.BatchId != saleItem.BatchId
+                    || displayStock.Quantity < items[i].Quantity)
                 {
                     throw new InvalidOperationException($"Not enough display stock for {items[i].ProductName}.");
                 }
 
                 saleItem.DisplayStockBefore = displayStock.Quantity;
+                items[i].StockMovement.BeforeQuantity = displayStock.Quantity;
                 displayStock.Quantity -= items[i].Quantity;
                 saleItem.DisplayStockAfter = displayStock.Quantity;
+                items[i].StockMovement.AfterQuantity = displayStock.Quantity;
                 displayStock.UpdatedAt = DateTime.Now;
                 items[i].StockMovement.CreatedBy = userId;
             }
+
+            return Task.CompletedTask;
         }
 
         private static Task DeductTankFuel(List<ValidatedFuelSaleItem> items)
@@ -5141,7 +5251,7 @@ namespace gpos.Controllers
             return rebate ?? throw new InvalidOperationException("No active rebate configuration is available for points payment.");
         }
 
-        private async Task ApplyPointsChanges(Member? member, decimal pointsRedeemed, decimal pointsEarned, int saleId, DateTime now)
+        private async Task ApplyPointsChanges(Member? member, decimal pointsRedeemed, decimal pointsEarned, int saleId, RebateRule? rebateRule, decimal monetaryValue, DateTime now)
         {
             if (member is null)
             {
@@ -5164,6 +5274,10 @@ namespace gpos.Controllers
                     ReferenceType = "POS",
                     ReferenceId = saleId,
                     SaleId = saleId,
+                    RuleIdSnapshot = rebateRule?.Id,
+                    RuleNameSnapshot = rebateRule?.Name,
+                    PointsRequiredSnapshot = rebateRule?.PointsRequired,
+                    MonetaryValueSnapshot = MoneyRounding.Round(monetaryValue),
                     Remarks = "Used as points payment in POS",
                     CreatedAt = now
                 });
@@ -5195,6 +5309,7 @@ namespace gpos.Controllers
                     ReferenceType = "POS",
                     ReferenceId = saleId,
                     SaleId = saleId,
+                    MonetaryValueSnapshot = 0m,
                     Remarks = "Earned from POS sale",
                     CreatedAt = now
                 });
@@ -5286,11 +5401,11 @@ namespace gpos.Controllers
             return Math.Round(Math.Max(0m, earnedPoints), 2, MidpointRounding.AwayFromZero);
         }
 
-        private async Task<decimal> CalculateMemberDiscount(Member? member, decimal productTotal, decimal fuelTotal, DateTime now)
+        private async Task<DiscountSnapshotResult?> CalculateMemberDiscount(Member? member, decimal productTotal, decimal fuelTotal, DateTime now)
         {
             if (member is null || !member.DiscountId.HasValue)
             {
-                return 0m;
+                return null;
             }
 
             var rules = await _db.DiscountRules
@@ -5301,9 +5416,17 @@ namespace gpos.Controllers
                 .ToListAsync();
 
             return rules
-                .Select(rule => ValidateAndCalculateDiscount(member, rule, productTotal, fuelTotal, now))
-                .DefaultIfEmpty(0m)
-                .Max();
+                .Select(rule => new DiscountSnapshotResult(rule, EligibleDiscountBase(rule, productTotal, fuelTotal), ValidateAndCalculateDiscount(member, rule, productTotal, fuelTotal, now)))
+                .Where(result => result.AppliedAmount > 0m)
+                .OrderByDescending(result => result.AppliedAmount)
+                .FirstOrDefault();
+        }
+
+        private static decimal EligibleDiscountBase(DiscountRule rule, decimal productTotal, decimal fuelTotal)
+        {
+            if (AppliesToProductOnly(rule.AppliesTo)) return productTotal;
+            if (AppliesToFuelOnly(rule.AppliesTo)) return fuelTotal;
+            return productTotal + fuelTotal;
         }
 
         private async Task<VoucherRedemptionResult> ValidateAndCalculateVoucherRedemption(
@@ -5344,8 +5467,9 @@ namespace gpos.Controllers
                 throw new InvalidOperationException("Member required.");
             }
 
+            var eligibleBase = EligibleVoucherBase(rule, productTotal, fuelTotal);
             var discountAmount = ValidateAndCalculateVoucherDiscount(rule, voucher, member, productTotal, fuelTotal, now);
-            return new VoucherRedemptionResult(voucher, rule, discountAmount);
+            return new VoucherRedemptionResult(voucher, rule, eligibleBase, discountAmount);
         }
 
         private static decimal ValidateAndCalculateVoucherDiscount(
@@ -5422,6 +5546,11 @@ namespace gpos.Controllers
                 VoucherRuleId = redemption.Rule.Id,
                 SaleId = saleId,
                 DiscountAmount = redemption.DiscountAmount,
+                VoucherCodeSnapshot = redemption.Voucher?.Code ?? redemption.Rule.Code,
+                RuleNameSnapshot = redemption.Rule.Name,
+                RewardTypeSnapshot = redemption.Rule.RewardType,
+                RewardValueSnapshot = redemption.Rule.RewardValue,
+                EligibleBaseSnapshot = redemption.EligibleBase,
                 CreatedAt = now
             });
 
@@ -5511,7 +5640,7 @@ namespace gpos.Controllers
                 ? discountBase * (discountValue / 100m)
                 : discountValue;
 
-            return Math.Min(discountBase, discountAmount);
+            return MoneyRounding.Round(Math.Min(discountBase, discountAmount));
         }
 
         private static bool AppliesToProductOnly(string appliesTo)
@@ -5607,17 +5736,24 @@ namespace gpos.Controllers
             if (form is null && editId.HasValue)
             {
                 var x = await _db.StockAdjustments.AsNoTracking().FirstOrDefaultAsync(a => a.Id == editId && a.Scope == scope && a.Status == "Draft");
-                if (x != null) form = new StockAdjustmentForm { Id = x.Id, Scope = scope, BusinessDate = x.BusinessDate, BranchId = x.BranchId, WarehouseStockId = x.WarehouseStockId, DisplayStockId = x.DisplayStockId, TankId = x.TankId, AdjustmentType = x.AdjustmentType, AdjustmentQuantity = x.AdjustmentQuantity, Reason = x.Reason, Remarks = x.Remarks };
+                if (x != null) form = new StockAdjustmentForm { Id = x.Id, Scope = scope, BusinessDate = x.BusinessDate, BranchId = x.BranchId, WarehouseStockId = x.WarehouseStockId, DisplayStockId = x.DisplayStockId, TankId = x.TankId, AdjustmentType = x.AdjustmentType, AdjustmentQuantity = x.AdjustmentQuantity, Reason = x.Reason, Remarks = x.Remarks, CostInputMode = x.CostInputMode, UnitCost = x.UnitCost, TotalCost = x.TotalCost, EvidenceReference = x.EvidenceReference };
             }
             form ??= new StockAdjustmentForm { Scope = scope, BusinessDate = DateTime.Today, BranchId = branchId ?? 0 };
-            return new StockAdjustmentPageViewModel { Scope = scope, Title = scope == "Fuel" ? "Fuel Stock Adjustment" : $"{scope} Stock Adjustment", PageAction = AdjustmentViewName(scope), Search = search ?? "", BranchId = branchId, DateFrom = dateFrom, DateTo = dateTo, Status = status, Form = form, Rows = await query.OrderByDescending(x => x.BusinessDate).ThenByDescending(x => x.Id).ToListAsync(), BranchOptions = await BuildBranchFilterOptionsAsync(), Targets = await BuildAdjustmentTargetsAsync(scope), DetailsId = detailsId };
+            var userId = CurrentUserId();
+            return new StockAdjustmentPageViewModel { Scope = scope, Title = scope == "Fuel" ? "Fuel Stock Adjustment" : $"{scope} Stock Adjustment", PageAction = AdjustmentViewName(scope), Search = search ?? "", BranchId = branchId, DateFrom = dateFrom, DateTo = dateTo, Status = status, Form = form, Rows = await query.OrderByDescending(x => x.BusinessDate).ThenByDescending(x => x.Id).ToListAsync(), BranchOptions = await BuildBranchFilterOptionsAsync(), Targets = await BuildAdjustmentTargetsAsync(scope), DetailsId = detailsId, CanPrepareReconciliation = userId.HasValue && await HasPermissionAsync(userId.Value, FuelInventoryService.PreparePermission), CanApproveReconciliation = userId.HasValue && await HasPermissionAsync(userId.Value, FuelInventoryService.ApprovePermission) };
         }
 
         private async Task<List<StockAdjustmentTargetOption>> BuildAdjustmentTargetsAsync(string scope)
         {
             if (scope == "Warehouse") return await _db.WarehouseStocks.AsNoTracking().Include(x => x.Product).Include(x => x.Batch).Where(x => x.BranchId.HasValue).Select(x => new StockAdjustmentTargetOption { Id = x.Id, BranchId = x.BranchId!.Value, Label = x.Product!.Name + " / " + x.Batch!.BatchNo, ProductOrFuel = x.Product.Name, BatchOrTank = x.Batch.BatchNo, CurrentQuantity = x.Quantity }).ToListAsync();
             if (scope == "Display") return await _db.DisplayStocks.AsNoTracking().Include(x => x.Product).Include(x => x.Batch).Where(x => x.BranchId.HasValue).Select(x => new StockAdjustmentTargetOption { Id = x.Id, BranchId = x.BranchId!.Value, Label = x.Product!.Name + " / " + x.Batch!.BatchNo, ProductOrFuel = x.Product.Name, BatchOrTank = x.Batch.BatchNo, CurrentQuantity = x.Quantity }).ToListAsync();
-            return await _db.Tanks.AsNoTracking().Include(x => x.Fuel).Where(x => x.BranchId.HasValue && x.IsActive && x.Status == 1).Select(x => new StockAdjustmentTargetOption { Id = x.Id, BranchId = x.BranchId!.Value, Label = x.TankNo + " / " + x.Fuel!.Name, ProductOrFuel = x.Fuel.Name, BatchOrTank = x.TankNo, CurrentQuantity = x.CurrentLiters, Capacity = x.CapacityLiters }).ToListAsync();
+            var tanks = await _db.Tanks.AsNoTracking().Include(x => x.Fuel).Where(x => x.BranchId.HasValue && x.IsActive && x.Status == 1).Select(x => new StockAdjustmentTargetOption { Id = x.Id, BranchId = x.BranchId!.Value, Label = x.TankNo + " / " + x.Fuel!.Name, ProductOrFuel = x.Fuel.Name, BatchOrTank = x.TankNo, CurrentQuantity = x.CurrentLiters, Capacity = x.CapacityLiters }).ToListAsync();
+            foreach (var tank in tanks)
+            {
+                var invariant = await _fuelInventory.GetInvariantAsync(tank.Id);
+                tank.ActiveBatchLiters = invariant.ActiveBatchLiters; tank.Difference = invariant.Difference; tank.ActiveBatchCount = invariant.ActiveBatchCount; tank.InventoryState = invariant.InventoryState;
+            }
+            return tanks;
         }
 
         private static string NormalizeAdjustmentScope(string? scope) => scope is "Display" or "Fuel" ? scope : "Warehouse";
@@ -5653,7 +5789,8 @@ namespace gpos.Controllers
         private static decimal TargetQuantity(object target) => target is WarehouseStock w ? w.Quantity : target is DisplayStock d ? d.Quantity : ((Tank)target).CurrentLiters;
         private static void PopulateAdjustment(StockAdjustment x, StockAdjustmentForm f, object target, string scope, DateTime now)
         {
-            x.BusinessDate = f.BusinessDate!.Value.Date; x.BranchId = f.BranchId; x.AdjustmentType = f.AdjustmentType == "Increase" ? "Increase" : "Decrease"; x.AdjustmentQuantity = f.AdjustmentQuantity; x.Reason = f.Reason.Trim(); x.Remarks = f.Remarks?.Trim(); x.UpdatedAt = now;
+            x.BusinessDate = f.BusinessDate!.Value.Date; x.BranchId = f.BranchId; x.AdjustmentType = scope == "Fuel" && f.AdjustmentType == FuelInventoryService.ReconciliationType ? FuelInventoryService.ReconciliationType : f.AdjustmentType == "Increase" ? "Increase" : "Decrease"; x.AdjustmentQuantity = f.AdjustmentQuantity; x.Reason = f.Reason.Trim(); x.Remarks = f.Remarks?.Trim(); x.UpdatedAt = now;
+            x.CostInputMode = x.AdjustmentType == FuelInventoryService.ReconciliationType ? f.CostInputMode : null; x.UnitCost = x.AdjustmentType == FuelInventoryService.ReconciliationType ? f.UnitCost : null; x.TotalCost = x.AdjustmentType == FuelInventoryService.ReconciliationType ? f.TotalCost : null; x.EvidenceReference = x.AdjustmentType == FuelInventoryService.ReconciliationType ? f.EvidenceReference?.Trim() : null;
             x.WarehouseStockId = target is WarehouseStock w ? w.Id : null; x.DisplayStockId = target is DisplayStock d ? d.Id : null; x.TankId = target is Tank t ? t.Id : null;
             x.ProductId = target is WarehouseStock ww ? ww.ProductId : target is DisplayStock dd ? dd.ProductId : null; x.BatchId = target is WarehouseStock wb ? wb.BatchId : target is DisplayStock db ? db.BatchId : null; x.FuelId = target is Tank ft ? ft.FuelId : null;
         }
@@ -5664,6 +5801,40 @@ namespace gpos.Controllers
             if (target is Tank tank && tank.CapacityLiters > 0 && after > tank.CapacityLiters) throw new InvalidOperationException("Adjustment would exceed tank capacity.");
             if (target is WarehouseStock w) { w.Quantity = after; w.UpdatedAt = now; } else if (target is DisplayStock d) { d.Quantity = after; d.UpdatedAt = now; } else { var t = (Tank)target; t.CurrentLiters = after; t.UpdatedAt = now; }
             x.BeforeQuantity = before; x.SignedQuantity = signed; x.AfterQuantity = after; x.Status = "Posted"; x.PostedBy = userId; x.PostedAt = now; x.UpdatedAt = now;
+        }
+
+        private void NormalizeReconciliationCost(StockAdjustmentForm form, decimal difference)
+        {
+            form.CostInputMode = form.CostInputMode == "TotalCost" ? "TotalCost" : form.CostInputMode == "UnitCost" ? "UnitCost" : null;
+            if (form.CostInputMode is null)
+            {
+                ModelState.AddModelError("Form.CostInputMode", "Select how the approved cost is entered.");
+                return;
+            }
+            if (difference <= 0m) return;
+            if (form.CostInputMode == "UnitCost")
+            {
+                if (!form.UnitCost.HasValue || form.UnitCost <= 0m) { ModelState.AddModelError("Form.UnitCost", "Approved Cost per Liter must be greater than zero."); return; }
+                form.UnitCost = decimal.Round(form.UnitCost.Value, 2, MidpointRounding.AwayFromZero);
+                form.TotalCost = decimal.Round(difference * form.UnitCost.Value, 2, MidpointRounding.AwayFromZero);
+            }
+            else
+            {
+                if (!form.TotalCost.HasValue || form.TotalCost <= 0m) { ModelState.AddModelError("Form.TotalCost", "Approved Total Cost must be greater than zero."); return; }
+                form.TotalCost = decimal.Round(form.TotalCost.Value, 2, MidpointRounding.AwayFromZero);
+                form.UnitCost = decimal.Round(form.TotalCost.Value / difference, 2, MidpointRounding.AwayFromZero);
+                if (form.UnitCost <= 0m) ModelState.AddModelError("Form.TotalCost", "Total Cost is too small to produce a supported nonzero unit cost.");
+            }
+            ModelState.Remove("Form.UnitCost"); ModelState.Remove("Form.TotalCost"); ModelState.Remove("Form.CostInputMode");
+        }
+
+        private async Task<bool> HasPermissionAsync(int userId, string permissionCode)
+        {
+            var code = permissionCode.ToLower();
+            return await _db.UserRoles.AsNoTracking().AnyAsync(userRole => userRole.UserId == userId
+                && userRole.Role != null && userRole.Role.Status == 1
+                && userRole.Role.RolePermissions.Any(rolePermission => rolePermission.Status == 1 && rolePermission.Permission != null
+                    && rolePermission.Permission.Status == 1 && rolePermission.Permission.Code.ToLower() == code));
         }
         private async Task<string> GenerateAdjustmentNoAsync(DateTime now)
         {
@@ -5702,7 +5873,7 @@ namespace gpos.Controllers
                 .FirstOrDefaultAsync();
         }
 
-        private void AddPaymentRecords(int saleId, string paymentMethod, decimal cashAmount, decimal rebateAmount, DateTime now)
+        private void AddPaymentRecords(int saleId, string paymentMethod, decimal tenderedAmount, decimal appliedAmount, decimal changeAmount, DateTime now)
         {
             if (paymentMethod == "Cash")
             {
@@ -5710,7 +5881,10 @@ namespace gpos.Controllers
                 {
                     SaleId = saleId,
                     PaymentType = "Cash",
-                    Amount = cashAmount,
+                    Amount = appliedAmount,
+                    TenderedAmount = tenderedAmount,
+                    AppliedAmount = appliedAmount,
+                    ChangeAmount = changeAmount,
                     Status = "Completed",
                     CreatedAt = now,
                     UpdatedAt = now
@@ -5723,7 +5897,10 @@ namespace gpos.Controllers
                 {
                     SaleId = saleId,
                     PaymentType = "Points",
-                    Amount = rebateAmount,
+                    Amount = appliedAmount,
+                    TenderedAmount = appliedAmount,
+                    AppliedAmount = appliedAmount,
+                    ChangeAmount = 0m,
                     Status = "Completed",
                     CreatedAt = now,
                     UpdatedAt = now
@@ -5731,9 +5908,60 @@ namespace gpos.Controllers
             }
         }
 
+        private void AddDiscountApplication(int saleId, string sourceType, int? ruleId, string? ruleName, string? calculationType, decimal? rateOrValue, decimal eligibleBase, decimal appliedAmount, DateTime now)
+        {
+            _db.SaleDiscountApplications.Add(new SaleDiscountApplication
+            {
+                SaleId = saleId,
+                SourceType = sourceType,
+                RuleId = ruleId,
+                RuleNameSnapshot = ruleName,
+                CalculationTypeSnapshot = calculationType,
+                RateOrValueSnapshot = rateOrValue.HasValue ? MoneyRounding.Round(rateOrValue.Value) : null,
+                EligibleBaseSnapshot = MoneyRounding.Round(eligibleBase),
+                AppliedAmount = MoneyRounding.Round(appliedAmount),
+                CreatedAt = now
+            });
+        }
+
+        private async Task<object> BuildPersistedReceiptAsync(int saleId)
+        {
+            var sale = await _db.Sales.AsNoTracking()
+                .Include(item => item.Branch).Include(item => item.User)
+                .Include(item => item.Shift)
+                .Include(item => item.ProductSales).ThenInclude(item => item.Product)
+                .Include(item => item.FuelSales).ThenInclude(item => item.Fuel)
+                .Include(item => item.FuelSales).ThenInclude(item => item.Nozzle)
+                .Include(item => item.Payments)
+                .Include(item => item.PointsLedger)
+                .Include(item => item.VoucherRedemptions)
+                .Include(item => item.DiscountApplications)
+                .SingleAsync(item => item.Id == saleId);
+
+            var memberDiscount = sale.DiscountApplications.Where(item => item.SourceType == "Member").Sum(item => item.AppliedAmount);
+            var voucherDiscount = sale.DiscountApplications.Where(item => item.SourceType == "Voucher").Sum(item => item.AppliedAmount);
+            var payment = sale.Payments.Where(item => item.Status == "Completed").OrderBy(item => item.Id).FirstOrDefault();
+            var points = sale.PointsLedger.Where(item => item.TransactionType == "Used").Sum(item => item.Points);
+            return new
+            {
+                saleId = sale.Id, sale.ReceiptNo,
+                branch = sale.Branch?.Name ?? "-", cashier = UserDisplayName(sale.User),
+                sale.BusinessDate, shift = sale.Shift?.Name ?? "-", sale.CompletedAt, sale.Status,
+                products = sale.ProductSales.GroupBy(item => new { item.ProductId, Name = item.Product != null ? item.Product.Name : "-", Price = item.UnitPrice > 0m ? item.UnitPrice : item.Price })
+                    .Select(group => new { product = group.Key.Name, quantity = group.Sum(item => item.Quantity), unitPrice = group.Key.Price, subtotal = group.Sum(item => item.Subtotal) }).ToList(),
+                fuels = sale.FuelSales.OrderBy(item => item.Id).Select(item => new { nozzle = item.Nozzle != null ? item.Nozzle.NozzleNo : "-", fuel = item.Fuel != null ? item.Fuel.Name : "-", item.Liters, item.PricePerLiter, item.Subtotal }).ToList(),
+                sale.GrossTotal, sale.DiscountAmount, memberDiscountAmount = memberDiscount, voucherDiscountAmount = voucherDiscount,
+                sale.RebateAmount, vatName = sale.VatNameSnapshot, vatType = sale.VatTypeSnapshot, sale.VatRate, sale.TaxableAmount, sale.VatAmount, sale.NetTotal,
+                paymentMethod = payment?.PaymentType ?? "-", appliedAmount = payment?.AppliedAmount, tenderedAmount = payment?.TenderedAmount,
+                changeAmount = payment?.ChangeAmount ?? sale.ChangeAmount, pointsRequired = points,
+                voucherCode = sale.VoucherRedemptions.OrderBy(item => item.Id).Select(item => item.VoucherCodeSnapshot).FirstOrDefault()
+            };
+        }
+
         private sealed class ValidatedProductSaleItem
         {
             public int DisplayStockId { get; init; }
+            public DisplayStock DisplayStock { get; init; } = new();
             public int ProductId { get; init; }
             public int? CategoryId { get; init; }
             public string ProductName { get; init; } = string.Empty;
@@ -5758,7 +5986,8 @@ namespace gpos.Controllers
             public FuelSale FuelSale { get; init; } = new();
         }
 
-        private sealed record VoucherRedemptionResult(Voucher? Voucher, VoucherRule Rule, decimal DiscountAmount);
+        private sealed record DiscountSnapshotResult(DiscountRule Rule, decimal EligibleBase, decimal AppliedAmount);
+        private sealed record VoucherRedemptionResult(Voucher? Voucher, VoucherRule Rule, decimal EligibleBase, decimal DiscountAmount);
         private sealed record PosUserContext(int UserId, int BranchId, string BranchName);
         private sealed record VoidEligibilityResult(string Status, string Reason);
     }

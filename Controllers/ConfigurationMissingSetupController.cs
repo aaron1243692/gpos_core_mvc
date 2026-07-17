@@ -288,8 +288,6 @@ namespace gpos.Controllers
                 return View("FuelBatches", await BuildFuelBatchesPageAsync(search, filterBranchId, form: form, activeModalId: "fuelBatchModal"));
             }
 
-            batch.SupplierId = form.SupplierId;
-            batch.CostPricePerLiter = form.CostPricePerLiter!.Value;
             batch.ExpiryDate = form.ExpiryDate;
             batch.Remarks = CleanOptional(form.Remarks);
             batch.UpdatedAt = DateTime.UtcNow;
@@ -301,13 +299,22 @@ namespace gpos.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteFuelBatch(int id, string? search, int? filterBranchId)
         {
-            var batch = await _db.FuelBatches.FindAsync(id);
+            var tankId = await _db.FuelBatches.AsNoTracking().Where(x => x.Id == id).Select(x => x.TankId).SingleOrDefaultAsync();
+            await using var transaction = await _db.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
+            if (tankId.HasValue) await _db.Tanks.FromSqlInterpolated($"SELECT * FROM tanks WHERE id = {tankId.Value} FOR UPDATE").SingleAsync();
+            var batch = await _db.FuelBatches.FromSqlInterpolated($"SELECT * FROM fuel_batches WHERE id = {id} FOR UPDATE").SingleOrDefaultAsync();
             if (batch is not null)
             {
+                if (batch.RemainingLiters > 0m)
+                {
+                    TempData["FuelBatchMessage"] = "This Fuel Batch still contains remaining liters and cannot be deactivated.";
+                    return RedirectToAction(nameof(FuelBatches), new { search, filterBranchId });
+                }
                 batch.Status = 0;
                 batch.IsActive = false;
                 batch.UpdatedAt = DateTime.UtcNow;
                 await _db.SaveChangesAsync();
+                await transaction.CommitAsync();
             }
             return RedirectToAction(nameof(FuelBatches), new { search, filterBranchId });
         }
@@ -316,13 +323,32 @@ namespace gpos.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> ActivateFuelBatch(int id, string? search, int? filterBranchId)
         {
-            var batch = await _db.FuelBatches.FindAsync(id);
+            var tankId = await _db.FuelBatches.AsNoTracking().Where(x => x.Id == id).Select(x => x.TankId).SingleOrDefaultAsync();
+            await using var transaction = await _db.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
+            if (tankId.HasValue) await _db.Tanks.FromSqlInterpolated($"SELECT * FROM tanks WHERE id = {tankId.Value} FOR UPDATE").SingleAsync();
+            var batch = await _db.FuelBatches.FromSqlInterpolated($"SELECT * FROM fuel_batches WHERE id = {id} FOR UPDATE").SingleOrDefaultAsync();
             if (batch is not null)
             {
+                if (batch.RemainingLiters > 0m)
+                {
+                    if (!batch.TankId.HasValue)
+                    {
+                        TempData["FuelBatchMessage"] = "This Fuel Batch cannot be activated because it is not linked to a valid Tank.";
+                        return RedirectToAction(nameof(FuelBatches), new { search, filterBranchId });
+                    }
+                    var activeLiters = await _db.FuelBatches.AsNoTracking().Where(x => x.TankId == batch.TankId && x.Id != batch.Id && x.Status == 1 && x.IsActive && x.RemainingLiters > 0m).SumAsync(x => (decimal?)x.RemainingLiters) ?? 0m;
+                    var tank = await _db.Tanks.AsNoTracking().Where(x => x.Id == batch.TankId).Select(x => new { x.CurrentLiters, x.BranchId, x.FuelId }).SingleOrDefaultAsync();
+                    if (tank is null || tank.BranchId != batch.BranchId || tank.FuelId != batch.FuelId || decimal.Round(activeLiters + batch.RemainingLiters, 2) > decimal.Round(tank.CurrentLiters, 2))
+                    {
+                        TempData["FuelBatchMessage"] = "This Fuel Batch cannot be activated because its remaining liters would exceed the physical Tank balance.";
+                        return RedirectToAction(nameof(FuelBatches), new { search, filterBranchId });
+                    }
+                }
                 batch.Status = 1;
                 batch.IsActive = true;
                 batch.UpdatedAt = DateTime.UtcNow;
                 await _db.SaveChangesAsync();
+                await transaction.CommitAsync();
             }
             return RedirectToAction(nameof(FuelBatches), new { search, filterBranchId });
         }

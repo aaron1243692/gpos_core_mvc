@@ -1,0 +1,58 @@
+@{
+    ViewData["Title"] = "Open Shift";
+    ViewData["Section"] = "Salesman";
+}
+
+<section class="salesman-page salesman-narrow">
+    <div class="salesman-warning-card">
+        <strong>Open shift detected</strong>
+        <span>Frontend placeholder: Morning Shift is already open. The submit button is disabled to prevent duplicate open shifts visually.</span>
+    </div>
+
+    <section class="content-card">
+        <div class="card-title-row">
+            <div>
+                <h2>Open Shift</h2>
+                <p>Select a shift and enter opening cash before accepting sales.</p>
+            </div>
+            <span class="status-badge">Shift Open</span>
+        </div>
+        <div class="row g-3">
+            <div class="col-12 col-md-6">
+                <label class="form-label" for="shiftSelect">Shift</label>
+                <select class="form-select" id="shiftSelect">
+                    <option>Morning Shift</option>
+                    <option>Afternoon Shift</option>
+                    <option>Night Shift</option>
+                </select>
+            </div>
+            <div class="col-12 col-md-6">
+                <label class="form-label" for="openingCash">Opening cash</label>
+                <input class="form-control" id="openingCash" type="number" value="5000" min="0" />
+            </div>
+            <div class="col-12">
+                <label class="form-label" for="remarks">Remarks</label>
+                <textarea class="form-control" id="remarks" rows="3" placeholder="Optional shift notes"></textarea>
+            </div>
+        </div>
+        <div class="salesman-form-actions">
+            <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#openShiftModal" disabled>Open Shift</button>
+        </div>
+    </section>
+</section>
+
+<div class="modal fade" id="openShiftModal" tabindex="-1" aria-labelledby="openShiftModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content pos-modal">
+            <div class="modal-header">
+                <h5 class="modal-title" id="openShiftModalLabel">Confirm Open Shift</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">Open this shift with the entered opening cash?</div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Confirm</button>
+            </div>
+        </div>
+    </div>
+</div>

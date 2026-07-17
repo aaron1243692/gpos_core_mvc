@@ -40,22 +40,13 @@ namespace gpos.Models.ViewModels
         [Range(typeof(decimal), "0.01", "79228162514264337593543950335", ErrorMessage = "Capacity Liters must be greater than 0.")]
         public decimal? CapacityLiters { get; set; }
 
-        [Required(ErrorMessage = "Current Liters is required.")]
-        [Range(typeof(decimal), "0", "79228162514264337593543950335", ErrorMessage = "Current Liters must be 0 or greater.")]
         public decimal? CurrentLiters { get; set; }
 
         public bool IsActive { get; set; } = true;
 
         public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
         {
-            if (CapacityLiters.HasValue
-                && CurrentLiters.HasValue
-                && CurrentLiters.Value > CapacityLiters.Value)
-            {
-                yield return new ValidationResult(
-                    "Current Liters must not be greater than Capacity Liters.",
-                    new[] { nameof(CurrentLiters) });
-            }
+            yield break;
         }
     }
 

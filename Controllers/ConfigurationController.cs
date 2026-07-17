@@ -14,12 +14,14 @@ namespace gpos.Controllers
     {
         private readonly ApplicationDbContext _db;
         private readonly ProductBatchNumberService _batchNumberService;
+        private readonly FuelInventoryService _fuelInventory;
         private static readonly string[] VatTypeValues = { "Inclusive", "Exclusive", "Exempt", "ZeroRated" };
 
-        public ConfigurationController(ApplicationDbContext db, ProductBatchNumberService batchNumberService)
+        public ConfigurationController(ApplicationDbContext db, ProductBatchNumberService batchNumberService, FuelInventoryService fuelInventory)
         {
             _db = db;
             _batchNumberService = batchNumberService;
+            _fuelInventory = fuelInventory;
         }
 
         public IActionResult Products() => View();
@@ -1140,11 +1142,26 @@ namespace gpos.Controllers
                 return NotFound();
             }
 
+            if (form.Id > 0)
+            {
+                var invariant = await _fuelInventory.GetInvariantAsync(tank.Id);
+                var hasHistory = await _db.FuelSales.AnyAsync(x => x.TankId == tank.Id)
+                    || await _db.FuelDeliveries.AnyAsync(x => x.TankId == tank.Id)
+                    || await _db.FuelBatches.AnyAsync(x => x.TankId == tank.Id);
+                var hasEquipment = await _db.Pumps.AnyAsync(x => x.TankId == tank.Id);
+                if (tank.FuelId != form.FuelId && (tank.CurrentLiters > 0m || invariant.ActiveBatchLiters > 0m || hasHistory))
+                    ModelState.AddModelError("TankForm.FuelId", "Fuel cannot be changed while the Tank has inventory, cost layers, or historical fuel transactions.");
+                if (tank.BranchId != form.BranchId && (tank.CurrentLiters > 0m || invariant.ActiveBatchLiters > 0m || hasEquipment))
+                    ModelState.AddModelError("TankForm.BranchId", "Branch cannot be changed while the Tank has inventory, cost layers, or linked equipment.");
+                if (form.CapacityLiters < tank.CurrentLiters) ModelState.AddModelError("TankForm.CapacityLiters", "Capacity cannot be lower than the current physical liters.");
+                if (!ModelState.IsValid) return View("Tanks", await BuildTanksPageAsync(search, filterBranchId, form, activeModalId: "tankModal"));
+            }
+
             tank.FuelId = form.FuelId;
             tank.BranchId = form.BranchId;
             tank.TankNo = form.TankNo.Trim();
             tank.CapacityLiters = form.CapacityLiters!.Value;
-            tank.CurrentLiters = form.CurrentLiters!.Value;
+            if (form.Id == 0) tank.CurrentLiters = 0m;
             tank.IsActive = form.IsActive;
             tank.Status = form.IsActive ? 1 : 0;
             tank.UpdatedAt = now;

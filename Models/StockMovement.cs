@@ -5,6 +5,10 @@ namespace gpos.Models
         public int Id { get; set; }
         public int ProductId { get; set; }
         public int? ProductBatchId { get; set; }
+        public int? BranchId { get; set; }
+        public int? DisplayStockId { get; set; }
+        public decimal? BeforeQuantity { get; set; }
+        public decimal? AfterQuantity { get; set; }
         public string? SourceLocation { get; set; }
         public string? DestinationLocation { get; set; }
         public string MovementType { get; set; } = string.Empty;
@@ -17,5 +21,7 @@ namespace gpos.Models
 
         public Product? Product { get; set; }
         public ProductBatch? ProductBatch { get; set; }
+        public Branch? Branch { get; set; }
+        public DisplayStock? DisplayStock { get; set; }
     }
 }

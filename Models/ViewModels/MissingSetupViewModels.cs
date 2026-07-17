@@ -32,8 +32,6 @@ namespace gpos.Models.ViewModels
     {
         public int Id { get; set; }
         public int? SupplierId { get; set; }
-        [Required(ErrorMessage = "Cost Price is required.")]
-        [Range(0, double.MaxValue, ErrorMessage = "Cost Price cannot be negative.")]
         public decimal? CostPricePerLiter { get; set; }
         [Range(0, double.MaxValue, ErrorMessage = "Selling Price cannot be negative.")]
         public decimal? SellingPricePerLiter { get; set; }

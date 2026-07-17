@@ -32,6 +32,13 @@
     const type = root.querySelector("[data-adjustment-type]");
     const quantity = root.querySelector("[data-adjustment-quantity]");
     const after = root.querySelector("[data-adjustment-after]");
+    const activeBatch = root.querySelector("[data-adjustment-active-batch]");
+    const difference = root.querySelector("[data-adjustment-difference]");
+    const batchCount = root.querySelector("[data-adjustment-batch-count]");
+    const inventoryState = root.querySelector("[data-adjustment-inventory-state]");
+    const costMode = root.querySelector("[data-reconciliation-cost-mode]");
+    const unitCost = root.querySelector("[data-reconciliation-unit-cost]");
+    const totalCost = root.querySelector("[data-reconciliation-total-cost]");
     const message = root.querySelector("[data-adjustment-target-message]");
     const search = selectorElement.querySelector("[data-adjustment-selector-search]");
     const searchButton = selectorElement.querySelector("[data-adjustment-selector-search-button]");
@@ -50,7 +57,8 @@
     }
 
     function calculate() {
-      const result = number(current.value) + (type.value === "Increase" ? number(quantity.value) : -number(quantity.value));
+      if (scope === "Fuel" && type.value === "Reconciliation") quantity.value = Math.max(0, number(difference?.value)).toFixed(2);
+      const result = scope === "Fuel" && type.value === "Reconciliation" ? number(current.value) : number(current.value) + (type.value === "Increase" ? number(quantity.value) : -number(quantity.value));
       after.value = result.toFixed(3);
       after.classList.toggle("is-invalid", result < 0 || (scope === "Fuel" && number(capacity.value) > 0 && result > number(capacity.value)));
     }
@@ -64,6 +72,10 @@
       if (batch) batch.value = "";
       current.value = "0.000";
       if (capacity) capacity.value = "";
+      if (activeBatch) activeBatch.value = "0.00";
+      if (difference) difference.value = "0.00";
+      if (batchCount) batchCount.value = "0";
+      if (inventoryState) inventoryState.value = "";
       if (clearQuantity) quantity.value = "";
       calculate();
     }
@@ -74,6 +86,10 @@
         targetDisplay.value = item.tankName;
         product.value = item.fuelName;
         capacity.value = number(item.capacity).toFixed(3);
+        activeBatch.value = number(item.activeBatchLiters).toFixed(2);
+        difference.value = number(item.difference).toFixed(2);
+        batchCount.value = item.activeBatchCount ?? 0;
+        inventoryState.value = item.inventoryState || "";
       } else {
         targetDisplay.value = `${item.productName} - Batch ${item.batchNumber}`;
         product.value = item.productName;
@@ -130,6 +146,14 @@
     branch.addEventListener("change", function () { message.classList.add("d-none"); clearTarget(true); });
     quantity.addEventListener("input", calculate);
     type.addEventListener("change", calculate);
+    function calculateCost(changed) {
+      const liters = Math.max(0, number(difference?.value));
+      if (costMode?.value === "UnitCost" && changed !== "total") totalCost.value = (liters * number(unitCost.value)).toFixed(2);
+      if (costMode?.value === "TotalCost" && changed !== "unit") unitCost.value = liters > 0 ? (number(totalCost.value) / liters).toFixed(2) : "";
+    }
+    costMode?.addEventListener("change", function () { calculateCost(); });
+    unitCost?.addEventListener("input", function () { calculateCost("unit"); });
+    totalCost?.addEventListener("input", function () { calculateCost("total"); });
 
     if (root.dataset.initialTargetId) {
       targetDisplay.value = root.dataset.initialTargetName || "";
@@ -137,6 +161,10 @@
       if (batch) batch.value = root.dataset.initialBatch || "";
       current.value = number(root.dataset.initialCurrent).toFixed(3);
       if (capacity) capacity.value = root.dataset.initialCapacity ? number(root.dataset.initialCapacity).toFixed(3) : "";
+      if (activeBatch) activeBatch.value = number(root.dataset.initialActiveBatch).toFixed(2);
+      if (difference) difference.value = number(root.dataset.initialDifference).toFixed(2);
+      if (batchCount) batchCount.value = root.dataset.initialBatchCount || "0";
+      if (inventoryState) inventoryState.value = root.dataset.initialInventoryState || "";
     }
     calculate();
 

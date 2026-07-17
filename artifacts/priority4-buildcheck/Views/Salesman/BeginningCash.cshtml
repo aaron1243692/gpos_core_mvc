@@ -1,0 +1,52 @@
+@{
+    ViewData["Title"] = "Beginning Cash";
+    ViewData["Section"] = "Salesman";
+}
+
+<section class="salesman-page salesman-narrow">
+    <section class="content-card">
+        <div class="card-title-row">
+            <div>
+                <h2>Beginning Cash</h2>
+                <p>Beginning cash is required before selling. This is frontend validation only.</p>
+            </div>
+            <span class="status-badge status-badge-muted">Already Added</span>
+        </div>
+        <div class="salesman-warning-card mb-3">
+            <strong>Beginning cash already recorded</strong>
+            <span>Duplicate beginning cash is visually prevented for the active shift.</span>
+        </div>
+        <div class="row g-3">
+            <div class="col-12 col-md-6">
+                <label class="form-label" for="cashDate">Date</label>
+                <input class="form-control" id="cashDate" type="date" value="2026-06-15" />
+            </div>
+            <div class="col-12 col-md-6">
+                <label class="form-label" for="currentShift">Current shift</label>
+                <input class="form-control" id="currentShift" value="Morning Shift" readonly />
+            </div>
+            <div class="col-12 col-md-6">
+                <label class="form-label" for="beginningCash">Beginning cash</label>
+                <input class="form-control" id="beginningCash" type="number" value="5000" min="0" />
+                <div class="pos-validation" id="cashValidation"></div>
+            </div>
+            <div class="col-12">
+                <label class="form-label" for="cashRemarks">Remarks</label>
+                <textarea class="form-control" id="cashRemarks" rows="3"></textarea>
+            </div>
+        </div>
+        <div class="salesman-form-actions">
+            <button class="btn btn-primary" id="saveBeginningCash" type="button" disabled>Save Beginning Cash</button>
+        </div>
+    </section>
+</section>
+
+@section Scripts {
+    <script>
+        const cashInput = document.getElementById("beginningCash");
+        const validation = document.getElementById("cashValidation");
+        cashInput.addEventListener("input", () => {
+            validation.textContent = Number(cashInput.value) <= 0 ? "Beginning cash must be greater than zero." : "";
+        });
+    </script>
+}

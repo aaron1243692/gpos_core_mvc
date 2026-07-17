@@ -1890,6 +1890,16 @@ namespace gpos.Migrations
                         .HasColumnType("decimal(18,2)")
                         .HasColumnName("amount");
 
+                    b.Property<decimal?>("AppliedAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("applied_amount");
+
+                    b.Property<decimal?>("ChangeAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("change_amount");
+
                     b.Property<DateTime?>("CreatedAt")
                         .HasColumnType("datetime(6)")
                         .HasColumnName("created_at");
@@ -1920,6 +1930,11 @@ namespace gpos.Migrations
                         .HasColumnType("varchar(50)")
                         .HasDefaultValue("Completed")
                         .HasColumnName("status");
+
+                    b.Property<decimal?>("TenderedAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("tendered_amount");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime(6)")
@@ -2041,6 +2056,11 @@ namespace gpos.Migrations
                         .HasColumnType("int")
                         .HasColumnName("member_id");
 
+                    b.Property<decimal?>("MonetaryValueSnapshot")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("monetary_value_snapshot");
+
                     b.Property<decimal>("NewPoints")
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)")
@@ -2056,6 +2076,11 @@ namespace gpos.Migrations
                         .HasColumnType("decimal(18,2)")
                         .HasColumnName("points");
 
+                    b.Property<decimal?>("PointsRequiredSnapshot")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("points_required_snapshot");
+
                     b.Property<int?>("ReferenceId")
                         .HasColumnType("int")
                         .HasColumnName("reference_id");
@@ -2069,6 +2094,15 @@ namespace gpos.Migrations
                         .HasMaxLength(255)
                         .HasColumnType("varchar(255)")
                         .HasColumnName("remarks");
+
+                    b.Property<int?>("RuleIdSnapshot")
+                        .HasColumnType("int")
+                        .HasColumnName("rule_id_snapshot");
+
+                    b.Property<string>("RuleNameSnapshot")
+                        .HasMaxLength(150)
+                        .HasColumnType("varchar(150)")
+                        .HasColumnName("rule_name_snapshot");
 
                     b.Property<int?>("SaleId")
                         .HasColumnType("int")
@@ -2801,12 +2835,25 @@ namespace gpos.Migrations
                         .HasColumnType("int")
                         .HasColumnName("branch_id");
 
+                    b.Property<DateTime?>("BusinessDate")
+                        .HasColumnType("date")
+                        .HasColumnName("business_date");
+
                     b.Property<decimal>("CashAmount")
                         .ValueGeneratedOnAdd()
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)")
                         .HasDefaultValue(0m)
                         .HasColumnName("cash_amount");
+
+                    b.Property<decimal?>("ChangeAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("change_amount");
+
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("completed_at");
 
                     b.Property<DateTime?>("CreatedAt")
                         .HasColumnType("datetime(6)")
@@ -2850,6 +2897,10 @@ namespace gpos.Migrations
                         .HasColumnType("varchar(100)")
                         .HasColumnName("receipt_no");
 
+                    b.Property<int?>("ShiftId")
+                        .HasColumnType("int")
+                        .HasColumnName("shift_id");
+
                     b.Property<string>("Status")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
@@ -2858,6 +2909,11 @@ namespace gpos.Migrations
                         .HasDefaultValue("Completed")
                         .HasColumnName("status");
 
+                    b.Property<decimal?>("TaxableAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("taxable_amount");
+
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime(6)")
                         .HasColumnName("updated_at");
@@ -2865,6 +2921,35 @@ namespace gpos.Migrations
                     b.Property<int>("UserId")
                         .HasColumnType("int")
                         .HasColumnName("user_id");
+
+                    b.Property<decimal?>("VatAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("vat_amount");
+
+                    b.Property<decimal?>("VatExemptAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("vat_exempt_amount");
+
+                    b.Property<string>("VatNameSnapshot")
+                        .HasMaxLength(100)
+                        .HasColumnType("varchar(100)")
+                        .HasColumnName("vat_name_snapshot");
+
+                    b.Property<decimal?>("VatRate")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)")
+                        .HasColumnName("vat_rate");
+
+                    b.Property<int?>("VatSettingId")
+                        .HasColumnType("int")
+                        .HasColumnName("vat_setting_id");
+
+                    b.Property<string>("VatTypeSnapshot")
+                        .HasMaxLength(50)
+                        .HasColumnType("varchar(50)")
+                        .HasColumnName("vat_type_snapshot");
 
                     b.HasKey("Id");
 
@@ -2877,9 +2962,72 @@ namespace gpos.Migrations
                     b.HasIndex("ReceiptNo")
                         .IsUnique();
 
+                    b.HasIndex("ShiftId");
+
                     b.HasIndex("UserId");
 
+                    b.HasIndex("VatSettingId");
+
                     b.ToTable("sales", (string)null);
+                });
+
+            modelBuilder.Entity("gpos.Models.SaleDiscountApplication", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("id");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal>("AppliedAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("applied_amount");
+
+                    b.Property<string>("CalculationTypeSnapshot")
+                        .HasMaxLength(50)
+                        .HasColumnType("varchar(50)")
+                        .HasColumnName("calculation_type_snapshot");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("created_at");
+
+                    b.Property<decimal>("EligibleBaseSnapshot")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("eligible_base_snapshot");
+
+                    b.Property<decimal?>("RateOrValueSnapshot")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("rate_or_value_snapshot");
+
+                    b.Property<int?>("RuleId")
+                        .HasColumnType("int")
+                        .HasColumnName("rule_id");
+
+                    b.Property<string>("RuleNameSnapshot")
+                        .HasMaxLength(150)
+                        .HasColumnType("varchar(150)")
+                        .HasColumnName("rule_name_snapshot");
+
+                    b.Property<int>("SaleId")
+                        .HasColumnType("int")
+                        .HasColumnName("sale_id");
+
+                    b.Property<string>("SourceType")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("varchar(30)")
+                        .HasColumnName("source_type");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SaleId");
+
+                    b.ToTable("sale_discount_applications", (string)null);
                 });
 
             modelBuilder.Entity("gpos.Models.SaleItem", b =>
@@ -3245,14 +3393,22 @@ namespace gpos.Migrations
 
                     b.Property<string>("AdjustmentType")
                         .IsRequired()
-                        .HasMaxLength(10)
-                        .HasColumnType("varchar(10)")
+                        .HasMaxLength(30)
+                        .HasColumnType("varchar(30)")
                         .HasColumnName("adjustment_type");
 
                     b.Property<decimal>("AfterQuantity")
                         .HasPrecision(18, 3)
                         .HasColumnType("decimal(18,3)")
                         .HasColumnName("after_quantity");
+
+                    b.Property<DateTime?>("ApprovedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("approved_at");
+
+                    b.Property<int?>("ApprovedBy")
+                        .HasColumnType("int")
+                        .HasColumnName("approved_by");
 
                     b.Property<int?>("BatchId")
                         .HasColumnType("int")
@@ -3279,13 +3435,27 @@ namespace gpos.Migrations
                         .HasColumnType("int")
                         .HasColumnName("cancelled_by");
 
+                    b.Property<string>("CostInputMode")
+                        .HasMaxLength(20)
+                        .HasColumnType("varchar(20)")
+                        .HasColumnName("cost_input_mode");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime(6)")
                         .HasColumnName("created_at");
 
+                    b.Property<int?>("CreatedFuelBatchId")
+                        .HasColumnType("int")
+                        .HasColumnName("created_fuel_batch_id");
+
                     b.Property<int?>("DisplayStockId")
                         .HasColumnType("int")
                         .HasColumnName("display_stock_id");
+
+                    b.Property<string>("EvidenceReference")
+                        .HasMaxLength(255)
+                        .HasColumnType("varchar(255)")
+                        .HasColumnName("evidence_reference");
 
                     b.Property<int?>("FuelId")
                         .HasColumnType("int")
@@ -3343,6 +3513,16 @@ namespace gpos.Migrations
                         .HasColumnType("int")
                         .HasColumnName("tank_id");
 
+                    b.Property<decimal?>("TotalCost")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("total_cost");
+
+                    b.Property<decimal?>("UnitCost")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("unit_cost");
+
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime(6)")
                         .HasColumnName("updated_at");
@@ -3358,9 +3538,14 @@ namespace gpos.Migrations
                     b.HasIndex("AdjustmentNo")
                         .IsUnique();
 
+                    b.HasIndex("ApprovedBy");
+
                     b.HasIndex("BatchId");
 
                     b.HasIndex("BranchId");
+
+                    b.HasIndex("CreatedFuelBatchId")
+                        .IsUnique();
 
                     b.HasIndex("DisplayStockId");
 
@@ -3390,6 +3575,20 @@ namespace gpos.Migrations
 
                     MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<decimal?>("AfterQuantity")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("after_quantity");
+
+                    b.Property<decimal?>("BeforeQuantity")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("before_quantity");
+
+                    b.Property<int?>("BranchId")
+                        .HasColumnType("int")
+                        .HasColumnName("branch_id");
+
                     b.Property<DateTime?>("CreatedAt")
                         .HasColumnType("datetime(6)")
                         .HasColumnName("created_at");
@@ -3402,6 +3601,10 @@ namespace gpos.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("varchar(50)")
                         .HasColumnName("destination_location");
+
+                    b.Property<int?>("DisplayStockId")
+                        .HasColumnType("int")
+                        .HasColumnName("display_stock_id");
 
                     b.Property<string>("MovementType")
                         .IsRequired()
@@ -3442,6 +3645,10 @@ namespace gpos.Migrations
                         .HasColumnName("source_location");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("BranchId");
+
+                    b.HasIndex("DisplayStockId");
 
                     b.HasIndex("ProductBatchId");
 
@@ -4103,9 +4310,34 @@ namespace gpos.Migrations
                         .HasColumnType("decimal(18,2)")
                         .HasColumnName("discount_amount");
 
+                    b.Property<decimal?>("EligibleBaseSnapshot")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("eligible_base_snapshot");
+
+                    b.Property<string>("RewardTypeSnapshot")
+                        .HasMaxLength(50)
+                        .HasColumnType("varchar(50)")
+                        .HasColumnName("reward_type_snapshot");
+
+                    b.Property<decimal?>("RewardValueSnapshot")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("reward_value_snapshot");
+
+                    b.Property<string>("RuleNameSnapshot")
+                        .HasMaxLength(150)
+                        .HasColumnType("varchar(150)")
+                        .HasColumnName("rule_name_snapshot");
+
                     b.Property<int>("SaleId")
                         .HasColumnType("int")
                         .HasColumnName("sale_id");
+
+                    b.Property<string>("VoucherCodeSnapshot")
+                        .HasMaxLength(50)
+                        .HasColumnType("varchar(50)")
+                        .HasColumnName("voucher_code_snapshot");
 
                     b.Property<int?>("VoucherId")
                         .HasColumnType("int")
@@ -5096,11 +5328,21 @@ namespace gpos.Migrations
                         .HasForeignKey("MemberId")
                         .OnDelete(DeleteBehavior.Restrict);
 
+                    b.HasOne("gpos.Models.ShiftSetting", "Shift")
+                        .WithMany()
+                        .HasForeignKey("ShiftId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("gpos.Models.User", "User")
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.HasOne("gpos.Models.VatSetting", "VatSetting")
+                        .WithMany()
+                        .HasForeignKey("VatSettingId")
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("Branch");
 
@@ -5108,7 +5350,22 @@ namespace gpos.Migrations
 
                     b.Navigation("Member");
 
+                    b.Navigation("Shift");
+
                     b.Navigation("User");
+
+                    b.Navigation("VatSetting");
+                });
+
+            modelBuilder.Entity("gpos.Models.SaleDiscountApplication", b =>
+                {
+                    b.HasOne("gpos.Models.Sale", "Sale")
+                        .WithMany("DiscountApplications")
+                        .HasForeignKey("SaleId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Sale");
                 });
 
             modelBuilder.Entity("gpos.Models.SaleItem", b =>
@@ -5186,6 +5443,11 @@ namespace gpos.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("gpos.Models.User", "ApprovedByUser")
+                        .WithMany()
+                        .HasForeignKey("ApprovedBy")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("gpos.Models.ProductBatch", "Batch")
                         .WithMany()
                         .HasForeignKey("BatchId")
@@ -5196,6 +5458,11 @@ namespace gpos.Migrations
                         .HasForeignKey("BranchId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.HasOne("gpos.Models.FuelBatch", "CreatedFuelBatch")
+                        .WithMany()
+                        .HasForeignKey("CreatedFuelBatchId")
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("gpos.Models.DisplayStock", "DisplayStock")
                         .WithMany()
@@ -5234,9 +5501,13 @@ namespace gpos.Migrations
 
                     b.Navigation("AdjustedByUser");
 
+                    b.Navigation("ApprovedByUser");
+
                     b.Navigation("Batch");
 
                     b.Navigation("Branch");
+
+                    b.Navigation("CreatedFuelBatch");
 
                     b.Navigation("DisplayStock");
 
@@ -5255,6 +5526,16 @@ namespace gpos.Migrations
 
             modelBuilder.Entity("gpos.Models.StockMovement", b =>
                 {
+                    b.HasOne("gpos.Models.Branch", "Branch")
+                        .WithMany()
+                        .HasForeignKey("BranchId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("gpos.Models.DisplayStock", "DisplayStock")
+                        .WithMany()
+                        .HasForeignKey("DisplayStockId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("gpos.Models.ProductBatch", "ProductBatch")
                         .WithMany("StockMovements")
                         .HasForeignKey("ProductBatchId")
@@ -5265,6 +5546,10 @@ namespace gpos.Migrations
                         .HasForeignKey("ProductId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.Navigation("Branch");
+
+                    b.Navigation("DisplayStock");
 
                     b.Navigation("Product");
 
@@ -5655,6 +5940,8 @@ namespace gpos.Migrations
 
             modelBuilder.Entity("gpos.Models.Sale", b =>
                 {
+                    b.Navigation("DiscountApplications");
+
                     b.Navigation("FuelSales");
 
                     b.Navigation("Items");

@@ -30,6 +30,13 @@ namespace gpos.Models
         public DateTime? CancelledAt { get; set; }
         public int? ReversalOfAdjustmentId { get; set; }
         public int? ReversedByAdjustmentId { get; set; }
+        public decimal? UnitCost { get; set; }
+        public decimal? TotalCost { get; set; }
+        public string? CostInputMode { get; set; }
+        public string? EvidenceReference { get; set; }
+        public int? CreatedFuelBatchId { get; set; }
+        public int? ApprovedBy { get; set; }
+        public DateTime? ApprovedAt { get; set; }
 
         public Branch? Branch { get; set; }
         public WarehouseStock? WarehouseStock { get; set; }
@@ -41,5 +48,7 @@ namespace gpos.Models
         public User? AdjustedByUser { get; set; }
         public User? PostedByUser { get; set; }
         public StockAdjustment? ReversalOfAdjustment { get; set; }
+        public FuelBatch? CreatedFuelBatch { get; set; }
+        public User? ApprovedByUser { get; set; }
     }
 }

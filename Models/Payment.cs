@@ -7,6 +7,9 @@ namespace gpos.Models
         public int? PaymentMethodId { get; set; }
         public string PaymentType { get; set; } = "Cash";
         public decimal Amount { get; set; }
+        public decimal? TenderedAmount { get; set; }
+        public decimal? AppliedAmount { get; set; }
+        public decimal? ChangeAmount { get; set; }
         public string? ReferenceNo { get; set; }
         public string Status { get; set; } = "Completed";
         public DateTime? CreatedAt { get; set; }

@@ -11,14 +11,31 @@
         </div>
 
         <form asp-action="ProductSales" method="get" class="row g-2 mb-3">
-            <div class="col-12 col-lg-4">
-                <input class="form-control" name="search" value="@Model.Search" type="search" placeholder="Search receipt, product, batch, cashier, member..." />
+            <div class="col-12 col-lg-3">
+                <input class="form-control" name="search" value="@Model.Search" type="search" placeholder="Search receipt, product, batch, cashier, member, branch..." />
             </div>
             <div class="col-6 col-lg-2">
                 <input class="form-control" name="dateFrom" value="@Model.DateFrom?.ToString("yyyy-MM-dd")" type="date" />
             </div>
             <div class="col-6 col-lg-2">
                 <input class="form-control" name="dateTo" value="@Model.DateTo?.ToString("yyyy-MM-dd")" type="date" />
+            </div>
+            <div class="col-6 col-lg-2">
+                <select class="form-select" name="branchId">
+                    @for (var i = 0; i < Model.BranchOptions.Count; i += 1)
+                    {
+                        var option = Model.BranchOptions[i];
+                        var selected = option.Value == (Model.BranchId?.ToString() ?? string.Empty);
+                        if (selected)
+                        {
+                            <option value="@option.Value" selected>@option.Text</option>
+                        }
+                        else
+                        {
+                            <option value="@option.Value">@option.Text</option>
+                        }
+                    }
+                </select>
             </div>
             <div class="col-6 col-lg-2">
                 <select class="form-select" name="status">
@@ -35,8 +52,11 @@
                     }
                 </select>
             </div>
-            <div class="col-6 col-lg-2 d-grid">
+            <div class="col-6 col-lg-1 d-grid">
                 <button class="btn btn-primary" type="submit">Filter</button>
+            </div>
+            <div class="col-6 col-lg-1 d-grid">
+                <a class="btn btn-outline-secondary" asp-action="ProductSales">Clear</a>
             </div>
         </form>
 
@@ -46,6 +66,7 @@
                     <tr>
                         <th>No</th>
                         <th>Receipt No.</th>
+                        <th>Branch</th>
                         <th>Product</th>
                         <th>Batch</th>
                         <th>Quantity</th>
@@ -62,7 +83,7 @@
                 <tbody>
                     @if (Model.Sales.Count == 0)
                     {
-                        <tr><td class="text-center text-muted fw-bold" colspan="13">No sales found.</td></tr>
+                        <tr><td class="text-center text-muted fw-bold" colspan="14">No sales found.</td></tr>
                     }
                     @for (var i = 0; i < Model.Sales.Count; i += 1)
                     {
@@ -71,13 +92,14 @@
                         <tr>
                             <td class="text-nowrap">@((i + 1).ToString())</td>
                             <td class="text-nowrap">@sale.ReceiptNo</td>
+                            <td class="text-nowrap">@sale.BranchName</td>
                             <td style="min-width: 12rem;">@sale.ProductName</td>
                             <td class="text-nowrap">@sale.BatchNo</td>
                             <td class="text-nowrap">@sale.Quantity.ToString("N2")</td>
                             <td class="text-nowrap">₱@sale.UnitCost.ToString("N2")</td>
                             <td class="text-nowrap">₱@sale.UnitPrice.ToString("N2")</td>
                             <td class="text-nowrap">₱@sale.Subtotal.ToString("N2")</td>
-                            <td class="text-nowrap">₱@sale.GrossProfit.ToString("N2")</td>
+                            <td class="text-nowrap">@(sale.HasCostSnapshot ? $"₱{sale.GrossProfit:N2}" : "Legacy cost unavailable")</td>
                             <td class="text-nowrap">@sale.CashierName</td>
                             <td class="text-nowrap">@sale.SaleDate?.ToString("yyyy-MM-dd HH:mm")</td>
                             <td><span class="badge @(sale.Status == "Completed" ? "text-bg-success" : sale.Status == "Voided" ? "text-bg-secondary" : sale.Status == "Returned" ? "text-bg-primary" : "text-bg-warning")">@sale.Status</span></td>
@@ -108,7 +130,7 @@
                         <dt class="col-sm-4">Cost Price</dt><dd class="col-sm-8">₱@Model.Sales[i].UnitCost.ToString("N2")</dd>
                         <dt class="col-sm-4">Selling Price</dt><dd class="col-sm-8">₱@Model.Sales[i].UnitPrice.ToString("N2")</dd>
                         <dt class="col-sm-4">Subtotal</dt><dd class="col-sm-8">₱@Model.Sales[i].Subtotal.ToString("N2")</dd>
-                        <dt class="col-sm-4">Gross Profit</dt><dd class="col-sm-8">₱@Model.Sales[i].GrossProfit.ToString("N2")</dd>
+                        <dt class="col-sm-4">Gross Profit</dt><dd class="col-sm-8">@(Model.Sales[i].HasCostSnapshot ? $"₱{Model.Sales[i].GrossProfit:N2}" : "Legacy cost unavailable")</dd>
                         <dt class="col-sm-4">Cashier/User</dt><dd class="col-sm-8">@Model.Sales[i].CashierName</dd>
                         <dt class="col-sm-4">Member</dt><dd class="col-sm-8">@Model.Sales[i].MemberName</dd>
                         <dt class="col-sm-4">Sale Date</dt><dd class="col-sm-8">@Model.Sales[i].SaleDate?.ToString("yyyy-MM-dd HH:mm")</dd>

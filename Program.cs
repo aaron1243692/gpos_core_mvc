@@ -34,6 +34,7 @@ builder.Services.AddScoped<UserAuthService>();
 builder.Services.AddScoped<ProductBatchNumberService>();
 builder.Services.AddScoped<FinancialMetricsService>();
 builder.Services.AddScoped<VoucherCodeService>();
+builder.Services.AddScoped<FuelInventoryService>();
 
 builder.Services.Configure<CookieAuthenticationOptions>(CookieAuthenticationDefaults.AuthenticationScheme, options =>
 {

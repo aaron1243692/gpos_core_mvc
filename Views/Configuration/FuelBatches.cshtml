@@ -17,6 +17,7 @@
 </div>
 
 <section class="card content-card table-card full-height-card mb-0">
+    @if (TempData["FuelBatchMessage"] is string fuelBatchMessage) { <div class="alert alert-warning m-3" role="alert">@fuelBatchMessage</div> }
     <div class="table-toolbar d-flex justify-content-between align-items-center gap-2 flex-wrap mb-3">
         <form class="products-search-wrap d-flex gap-2 flex-wrap" asp-action="FuelBatches" method="get">
             <label class="visually-hidden" for="fuel-batch-search">Search fuel batches</label>
@@ -134,15 +135,7 @@
                 </div>
                 <div class="modal-body">
                     <div class="d-grid gap-3">
-                        <div>
-                            <label asp-for="FuelBatchForm.SupplierId" class="form-label">Supplier</label>
-                            <select asp-for="FuelBatchForm.SupplierId" asp-items="Model.SupplierOptions" class="form-select"></select>
-                        </div>
-                        <div>
-                            <label asp-for="FuelBatchForm.CostPricePerLiter" class="form-label">Cost Price / Liter</label>
-                            <input asp-for="FuelBatchForm.CostPricePerLiter" class="form-control" type="number" step="0.01" min="0" />
-                            <span asp-validation-for="FuelBatchForm.CostPricePerLiter" class="text-danger small"></span>
-                        </div>
+                        <div class="alert alert-secondary mb-0">Tank, Fuel, Branch, quantities, acquisition cost, and selling price are immutable accounting fields. Use an audited adjustment for corrections.</div>
                         <div>
                             <label asp-for="FuelBatchForm.ExpiryDate" class="form-label">Expiry Date</label>
                             <input asp-for="FuelBatchForm.ExpiryDate" class="form-control" type="date" />

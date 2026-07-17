@@ -1,0 +1,156 @@
+@model gpos.Models.ViewModels.FuelSetupPageViewModel
+@{
+    var pumpFormBranchName = Model.PumpForm.BranchId > 0 ? Model.PumpFormBranchName : string.Empty;
+}
+
+<div class="page-header">
+    <div class="page-heading">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item">GPOS</li>
+                <li class="breadcrumb-item">Setup</li>
+                <li class="breadcrumb-item">Config</li>
+                <li class="breadcrumb-item active" aria-current="page">Dispensers</li>
+            </ol>
+        </nav>
+        <h1>Dispensers</h1>
+        <p class="page-subtitle">Manage dispenser names used by nozzles and meter readings.</p>
+    </div>
+</div>
+
+<section class="content-card setup-crud-card setup-table-card">
+    @if (TempData["FuelSetupFeedback"] is string feedback)
+    {
+        <div class="alert alert-info mb-0" role="alert">@feedback</div>
+    }
+    <div class="table-actions fuel-toolbar">
+        <form asp-action="Pumps" method="get" class="setup-search-form fuel-toolbar-search flex-wrap">
+            <input class="form-control" name="search" value="@Model.Search" placeholder="Search dispensers" />
+            <select class="form-select" name="filterBranchId">
+                @foreach (var branch in Model.BranchOptions)
+                {
+                    <option value="@branch.Value" selected="@((Model.BranchId?.ToString() ?? string.Empty) == branch.Value ? "selected" : null)">@branch.Text</option>
+                }
+            </select>
+            <button class="btn btn-outline-primary" type="submit">Search</button>
+            <a class="btn btn-outline-secondary" asp-action="Pumps">Clear</a>
+        </form>
+        <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#pumpModal">Add Dispenser</button>
+    </div>
+    <div class="setup-table-scroll">
+        <table class="table app-table table-sm align-middle admin-table mb-0">
+            <colgroup>
+                <col class="col-no" />
+                <col class="col-id" />
+                <col class="col-name" />
+                <col class="col-normal" />
+                <col class="col-status" />
+                <col class="col-action" />
+            </colgroup>
+            <thead>
+                <tr>
+                    <th class="col-no">No</th>
+                    <th class="col-id">ID</th>
+                    <th class="col-name">Dispenser</th>
+                    <th>Branch</th>
+                    <th class="col-status">Status</th>
+                    <th class="col-action">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model.Pumps.Count == 0)
+                {
+                    <tr><td class="text-center text-muted fw-bold" colspan="6">No dispensers yet.</td></tr>
+                }
+                @for (var i = 0; i < Model.Pumps.Count; i++)
+                {
+                    <tr>
+                        <td class="col-no">@(i + 1)</td>
+                        <td class="col-id">@Model.Pumps[i].Id</td>
+                        <td>@Model.Pumps[i].Name</td>
+                        <td>@(Model.Pumps[i].Branch?.Name ?? "Unassigned")</td>
+                        <td><span class="badge @(Model.Pumps[i].Status == 1 ? "text-bg-success" : "text-bg-secondary")">@(Model.Pumps[i].Status == 1 ? "Active" : "Inactive")</span></td>
+                        <td class="col-action">
+                            <div class="setup-row-actions">
+                                <a class="btn btn-sm btn-outline-primary" asp-action="Pumps" asp-route-editId="@Model.Pumps[i].Id" asp-route-search="@Model.Search" asp-route-filterBranchId="@Model.BranchId">Edit</a>
+                                @if (Model.Pumps[i].Status == 1)
+                                {
+                                    <form asp-action="DeletePump" method="post" data-deactivate-form>
+                                        @Html.AntiForgeryToken()
+                                        <input name="id" type="hidden" value="@Model.Pumps[i].Id" />
+                                        <input name="search" type="hidden" value="@Model.Search" />
+                                        <button class="btn btn-sm btn-outline-danger" type="submit">Deactivate</button>
+                                    </form>
+                                }
+                                @if (Model.Pumps[i].Status != 1)
+                                {
+                                    <form asp-action="ActivatePump" method="post">
+                                        @Html.AntiForgeryToken()
+                                        <input name="id" type="hidden" value="@Model.Pumps[i].Id" />
+                                        <input name="search" type="hidden" value="@Model.Search" />
+                                        <button class="btn btn-sm btn-outline-success" type="submit">Activate</button>
+                                    </form>
+                                }
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<div class="modal fade" id="pumpModal" tabindex="-1" aria-labelledby="pumpModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <form asp-action="SavePump" method="post">
+                @Html.AntiForgeryToken()
+                <input asp-for="PumpForm.Id" type="hidden" />
+                <input name="search" type="hidden" value="@Model.Search" />
+                <input name="filterBranchId" type="hidden" value="@Model.BranchId" />
+                <div class="modal-header">
+                    <h2 class="modal-title fs-5" id="pumpModalLabel">Dispenser</h2>
+                    <button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label asp-for="PumpForm.BranchId" class="form-label">Branch</label>
+                        <input asp-for="PumpForm.BranchId" id="pumpBranchId" type="hidden" />
+                        <div class="input-group" data-branch-selector data-branch-hidden="#pumpBranchId" data-branch-display="#pumpBranchDisplay" data-branch-empty-text="Select branch">
+                            <input id="pumpBranchDisplay" class="form-control" type="text" value="@pumpFormBranchName" placeholder="Select branch" readonly />
+                            <button type="button" class="btn btn-outline-secondary branch-select-btn" data-branch-open>
+                                <img src="/icons/search.png" alt="Search" style="width:16px;height:16px;" />
+                            </button>
+                        </div>
+                        <span asp-validation-for="PumpForm.BranchId" class="text-danger"></span>
+                    </div>
+                    <div class="mb-3">
+                        <label asp-for="PumpForm.Name" class="form-label">Dispenser Name</label>
+                        <input asp-for="PumpForm.Name" class="form-control" placeholder="Enter dispenser name" />
+                        <span asp-validation-for="PumpForm.Name" class="text-danger"></span>
+                    </div>
+                    <input asp-for="PumpForm.Status" type="hidden" />
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button>
+                    <button class="btn btn-primary" type="submit">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            const modalId = "@Model.ActiveModalId";
+            const modalElement = modalId ? document.getElementById(modalId) : null;
+
+            if (modalElement && window.bootstrap) {
+                bootstrap.Modal.getOrCreateInstance(modalElement).show();
+            }
+
+        });
+    </script>
+}

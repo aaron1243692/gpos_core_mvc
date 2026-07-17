@@ -18,6 +18,8 @@ namespace gpos.Models.ViewModels
         public List<SelectListItem> BranchOptions { get; set; } = new();
         public List<StockAdjustmentTargetOption> Targets { get; set; } = new();
         public int? DetailsId { get; set; }
+        public bool CanPrepareReconciliation { get; set; }
+        public bool CanApproveReconciliation { get; set; }
     }
 
     public class StockAdjustmentForm
@@ -34,6 +36,10 @@ namespace gpos.Models.ViewModels
         public decimal AdjustmentQuantity { get; set; }
         [Required, StringLength(100)] public string Reason { get; set; } = string.Empty;
         [StringLength(1000)] public string? Remarks { get; set; }
+        public string? CostInputMode { get; set; }
+        public decimal? UnitCost { get; set; }
+        public decimal? TotalCost { get; set; }
+        [StringLength(255)] public string? EvidenceReference { get; set; }
     }
 
     public class StockAdjustmentTargetOption
@@ -45,5 +51,9 @@ namespace gpos.Models.ViewModels
         public string BatchOrTank { get; set; } = string.Empty;
         public decimal CurrentQuantity { get; set; }
         public decimal? Capacity { get; set; }
+        public decimal ActiveBatchLiters { get; set; }
+        public decimal Difference { get; set; }
+        public int ActiveBatchCount { get; set; }
+        public string InventoryState { get; set; } = string.Empty;
     }
 }
