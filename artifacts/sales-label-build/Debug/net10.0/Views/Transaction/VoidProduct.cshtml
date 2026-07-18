@@ -1,0 +1,182 @@
+@{
+    ViewData["Title"] = "Void Product";
+}
+
+<div class="page-header">
+    <div class="page-heading">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item">GPOS</li>
+                <li class="breadcrumb-item">Transaction</li>
+                <li class="breadcrumb-item active" aria-current="page">Void Product</li>
+            </ol>
+        </nav>
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+            <h1 class="mb-0">Void Product</h1>
+            <span class="badge bg-warning text-dark">UI Preview Only</span>
+            <span class="badge bg-secondary">Backend not connected yet</span>
+        </div>
+        <p class="page-subtitle text-muted mt-2">Void single merchandise items from completed receipts.</p>
+    </div>
+    <div class="page-actions">
+        <button class="btn btn-danger" type="button" data-bs-toggle="modal" data-bs-target="#voidProductModal">Void a Product</button>
+    </div>
+</div>
+
+<section class="transaction-ui-page">
+    <div class="content-card mb-3">
+        <form class="row g-2 align-items-center" onsubmit="return false;">
+            <div class="col-md-3">
+                <input class="form-control" type="search" placeholder="Search void products..." id="voidProductSearch" />
+            </div>
+            <div class="col-md-2">
+                <select class="form-select" id="voidProductBranch">
+                    <option value="">All Branches</option>
+                    <option>Main Branch</option>
+                    <option>Branch 2</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <input class="form-control" type="date" value="2026-07-09" id="voidProductDateFrom" />
+            </div>
+            <div class="col-md-2">
+                <input class="form-control" type="date" value="2026-07-09" id="voidProductDateTo" />
+            </div>
+            <div class="col-md-1">
+                <select class="form-select" id="voidProductStatus">
+                    <option value="">All Statuses</option>
+                    <option>Voided</option>
+                    <option>Pending</option>
+                </select>
+            </div>
+            <div class="col-md-auto d-flex gap-1">
+                <button class="btn btn-primary" type="button">Search</button>
+                <button class="btn btn-outline-secondary" type="button">Clear</button>
+            </div>
+        </form>
+    </div>
+
+    <div class="content-card transaction-ui-card">
+        <div class="table-responsive transaction-ui-table-wrap">
+            <table class="table app-table table-sm align-middle mb-0" id="voidProductTable">
+                <thead>
+                    <tr>
+                        <th class="text-nowrap">No</th>
+                        <th class="text-nowrap">Date</th>
+                        <th class="text-nowrap">Branch</th>
+                        <th class="text-nowrap">Receipt No</th>
+                        <th class="text-nowrap">Product</th>
+                        <th class="text-nowrap">Batch</th>
+                        <th class="text-nowrap">Quantity</th>
+                        <th class="text-nowrap">Amount</th>
+                        <th class="text-nowrap">Reason</th>
+                        <th class="text-nowrap">Voided By</th>
+                        <th class="text-nowrap">Status</th>
+                        <th class="text-nowrap">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>1</td>
+                        <td class="text-nowrap">2026-07-09</td>
+                        <td>Main Branch</td>
+                        <td>RCPT-20260709-0022</td>
+                        <td>Coolant 1L</td>
+                        <td>B-CLT-002</td>
+                        <td>1.00</td>
+                        <td>₱180.00</td>
+                        <td>Customer overcharged</td>
+                        <td>admin</td>
+                        <td><span class="badge bg-danger text-nowrap">Voided</span></td>
+                        <td class="text-nowrap">
+                            <button class="btn btn-sm btn-outline-primary" type="button" data-bs-toggle="modal" data-bs-target="#voidProductViewModal">View</button>
+                        </td>
+                    </tr>
+                    <tr class="d-none">
+                        <td class="text-center text-muted fw-bold" colspan="12">No records found.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</section>
+
+<!-- Add/Void Modal -->
+<div class="modal fade" id="voidProductModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title fs-5">Void Product Item</h2>
+                <button class="btn-close" type="button" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Branch</label>
+                        <select class="form-select">
+                            <option>Main Branch</option>
+                            <option>Branch 2</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Receipt No</label>
+                        <div class="input-group">
+                            <input class="form-control" type="text" placeholder="Search/select receipt..." readonly />
+                            <button class="btn btn-outline-secondary" type="button" onclick="alert('Selector backend not connected yet.');"><img src="/icons/search.png" alt="Search" style="width:16px;height:16px;" /></button>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Product</label>
+                        <div class="input-group">
+                            <input class="form-control" type="text" placeholder="Select product from receipt..." readonly />
+                            <button class="btn btn-outline-secondary" type="button" onclick="alert('Selector backend not connected yet.');"><img src="/icons/search.png" alt="Search" style="width:16px;height:16px;" /></button>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Batch</label>
+                        <input class="form-control" placeholder="Auto-populated from selection" readonly />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Quantity</label>
+                        <input class="form-control" type="number" value="1" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Reason</label>
+                        <select class="form-select">
+                            <option>Cashier mistake</option>
+                            <option>Customer changed mind at counter</option>
+                            <option>Wrong product scanned</option>
+                            <option>Other</option>
+                        </select>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">Remarks</label>
+                        <textarea class="form-control" rows="3" placeholder="Enter remarks..."></textarea>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button>
+                <button class="btn btn-danger" type="button" onclick="alert('Backend not connected yet.');" data-bs-dismiss="modal">Confirm Void</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- View Modal -->
+<div class="modal fade" id="voidProductViewModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title fs-5">Void Product Details</h2>
+                <button class="btn-close" type="button" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>This is a UI preview. Void product backend is not connected yet.</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>

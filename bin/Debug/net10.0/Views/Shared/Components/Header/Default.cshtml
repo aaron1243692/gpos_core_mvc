@@ -185,17 +185,7 @@
             <div class="dropdown eg-rb-nav-dropdown">
                 <button class="eg-rb-tab dropdown-toggle @(Model.ActiveTab == "Reports" ? "is-active" : "")" type="button" id="gposReportsDropdown" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">Reports</button>
                 <div class="dropdown-menu eg-rb-setup-menu" aria-labelledby="gposReportsDropdown">
-                    <div class="dropend eg-rb-dropdown-group">
-                        <button class="dropdown-item eg-rb-dropdown-group-toggle nav-group-not-working" type="button">Sales Reports <span class="nav-status-pill">Not Working</span></button>
-                        <div class="dropdown-menu eg-rb-submenu">
-                            @* UI-only / not working yet *@
-                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Reports.DailySales" ? "active" : "")" asp-controller="Reports" asp-action="DailySales">Sales</a>
-                            @* UI-only / not working yet *@
-                            <a class="dropdown-item eg-rb-dropdown-link nav-page-not-working @(Model.ActivePage == "Reports.FuelSales" ? "active" : "")" asp-controller="Reports" asp-action="FuelSales">Fuel Sales <span class="nav-status-pill">Not Working</span></a>
-                            @* UI-only / not working yet *@
-                            <a class="dropdown-item eg-rb-dropdown-link nav-page-not-working @(Model.ActivePage == "Reports.ProductSales" ? "active" : "")" asp-controller="Reports" asp-action="ProductSales">Product Sales <span class="nav-status-pill">Not Working</span></a>
-                        </div>
-                    </div>
+                    <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Reports.DailySales" ? "active" : "")" asp-controller="Reports" asp-action="DailySales">Sales</a>
                     <div class="dropend eg-rb-dropdown-group">
                         <button class="dropdown-item eg-rb-dropdown-group-toggle" type="button">Fuel Reports</button>
                         <div class="dropdown-menu eg-rb-submenu">

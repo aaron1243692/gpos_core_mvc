@@ -1,0 +1,143 @@
+@model gpos.Models.ViewModels.EmployeeSetupPageViewModel
+
+<div class="page-header">
+    <div class="page-heading">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item">GPOS</li>
+                <li class="breadcrumb-item">Setup</li>
+                <li class="breadcrumb-item">Config</li>
+                <li class="breadcrumb-item active" aria-current="page">Department</li>
+            </ol>
+        </nav>
+        <h1>Department</h1>
+        <p class="page-subtitle">Manage department setup records.</p>
+    </div>
+</div>
+
+<section class="content-card setup-crud-card setup-table-card">
+    @if (TempData["ConfigSetupFeedback"] is string feedback)
+    {
+        <div class="alert alert-info mb-0" role="alert">@feedback</div>
+    }
+    <div class="table-actions fuel-toolbar">
+        <form asp-action="Department" method="get" class="setup-search-form fuel-toolbar-search">
+            <input class="form-control" name="search" value="@Model.Search" placeholder="Search departments" />
+        </form>
+        <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#departmentModal">Add Department</button>
+    </div>
+    <div class="setup-table-scroll">
+        <table class="table app-table table-sm align-middle admin-table mb-0">
+            <colgroup>
+                <col class="col-no" />
+                <col class="col-id" />
+                <col class="col-name" />
+                <col class="col-normal" />
+                <col class="col-normal" />
+                <col class="col-action" />
+            </colgroup>
+            <thead>
+                <tr>
+                    <th>No</th>
+                    <th>ID</th>
+                    <th>Name</th>
+                    <th>Branch</th>
+                    <th>Status</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model.Departments.Count == 0)
+                {
+                    <tr><td class="text-center text-muted fw-bold" colspan="6">No department records yet.</td></tr>
+                }
+                @for (var i = 0; i < Model.Departments.Count; i++)
+                {
+                    <tr>
+                        <td>@(i + 1)</td>
+                        <td>@Model.Departments[i].Id</td>
+                        <td>@Model.Departments[i].Name</td>
+                        <td>@Model.Departments[i].Branch?.Name</td>
+                        <td>@(Model.Departments[i].Status == 1 ? "Active" : "Inactive")</td>
+                        <td>
+                            <div class="setup-row-actions">
+                                <a class="btn btn-sm btn-outline-primary" asp-action="Department" asp-route-editId="@Model.Departments[i].Id" asp-route-search="@Model.Search">Edit</a>
+                                @if (Model.Departments[i].Status == 1)
+                                {
+                                    <form asp-action="DeleteDepartment" method="post" data-deactivate-form>
+                                    @Html.AntiForgeryToken()
+                                    <input name="id" type="hidden" value="@Model.Departments[i].Id" />
+                                    <input name="search" type="hidden" value="@Model.Search" />
+                                    <button class="btn btn-sm btn-outline-danger" type="submit">Deactivate</button>
+                                </form>
+                                }
+                                @if (!(Model.Departments[i].Status == 1))
+                                {
+                                    <form asp-action="ActivateDepartment" method="post">
+                                    @Html.AntiForgeryToken()
+                                    <input name="id" type="hidden" value="@Model.Departments[i].Id" />
+                                    <input name="search" type="hidden" value="@Model.Search" />
+                                    <button class="btn btn-sm btn-outline-success" type="submit">Activate</button>
+                                </form>
+                                }
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<div class="modal fade" id="departmentModal" tabindex="-1" aria-labelledby="departmentModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <form asp-action="SaveDepartment" method="post">
+                @Html.AntiForgeryToken()
+                <input asp-for="DepartmentForm.Id" type="hidden" />
+                <input name="search" type="hidden" value="@Model.Search" />
+                <div class="modal-header">
+                    <h2 class="modal-title fs-5" id="departmentModalLabel">Department</h2>
+                    <button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label asp-for="DepartmentForm.BranchId" class="form-label">Branch</label>
+                        <select asp-for="DepartmentForm.BranchId" asp-items="Model.BranchOptions" class="form-select">
+                            <option value="0">Select branch</option>
+                        </select>
+                        <span asp-validation-for="DepartmentForm.BranchId" class="text-danger"></span>
+                    </div>
+                    <div class="mb-3">
+                        <label asp-for="DepartmentForm.Name" class="form-label">Name</label>
+                        <input asp-for="DepartmentForm.Name" class="form-control" autocomplete="off" />
+                        <span asp-validation-for="DepartmentForm.Name" class="text-danger"></span>
+                    </div>
+                    <div class="mb-3">
+                        <label asp-for="DepartmentForm.Description" class="form-label">Description</label>
+                        <textarea asp-for="DepartmentForm.Description" class="form-control" rows="3"></textarea>
+                    </div>
+                    <input asp-for="DepartmentForm.Status" type="hidden" />
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button>
+                    <button class="btn btn-primary" type="submit">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            const modalId = "@Model.ActiveModalId";
+            const modalElement = modalId ? document.getElementById(modalId) : null;
+
+            if (modalElement && window.bootstrap) {
+                bootstrap.Modal.getOrCreateInstance(modalElement).show();
+            }
+        });
+    </script>
+}

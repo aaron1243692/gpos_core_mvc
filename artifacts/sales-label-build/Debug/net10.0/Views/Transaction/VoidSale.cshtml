@@ -1,0 +1,163 @@
+@{
+    ViewData["Title"] = "Void Sale";
+}
+
+<div class="page-header">
+    <div class="page-heading">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item">GPOS</li>
+                <li class="breadcrumb-item">Transaction</li>
+                <li class="breadcrumb-item active" aria-current="page">Void Sale</li>
+            </ol>
+        </nav>
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+            <h1 class="mb-0">Void Sale</h1>
+            <span class="badge bg-warning text-dark">UI Preview Only</span>
+            <span class="badge bg-secondary">Backend not connected yet</span>
+        </div>
+        <p class="page-subtitle text-muted mt-2">Void entire completed transactions and reverse receipts.</p>
+    </div>
+    <div class="page-actions">
+        <button class="btn btn-danger" type="button" data-bs-toggle="modal" data-bs-target="#voidSaleModal">Void a Receipt</button>
+    </div>
+</div>
+
+<section class="transaction-ui-page">
+    <div class="content-card mb-3">
+        <form class="row g-2 align-items-center" onsubmit="return false;">
+            <div class="col-md-3">
+                <input class="form-control" type="search" placeholder="Search void sales..." id="voidSaleSearch" />
+            </div>
+            <div class="col-md-2">
+                <select class="form-select" id="voidSaleBranch">
+                    <option value="">All Branches</option>
+                    <option>Main Branch</option>
+                    <option>Branch 2</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <input class="form-control" type="date" value="2026-07-09" id="voidSaleDateFrom" />
+            </div>
+            <div class="col-md-2">
+                <input class="form-control" type="date" value="2026-07-09" id="voidSaleDateTo" />
+            </div>
+            <div class="col-md-1">
+                <select class="form-select" id="voidSaleStatus">
+                    <option value="">All Statuses</option>
+                    <option>Voided</option>
+                    <option>Pending</option>
+                </select>
+            </div>
+            <div class="col-md-auto d-flex gap-1">
+                <button class="btn btn-primary" type="button">Search</button>
+                <button class="btn btn-outline-secondary" type="button">Clear</button>
+            </div>
+        </form>
+    </div>
+
+    <div class="content-card transaction-ui-card">
+        <div class="table-responsive transaction-ui-table-wrap">
+            <table class="table app-table table-sm align-middle mb-0" id="voidSaleTable">
+                <thead>
+                    <tr>
+                        <th class="text-nowrap">No</th>
+                        <th class="text-nowrap">Date</th>
+                        <th class="text-nowrap">Branch</th>
+                        <th class="text-nowrap">Receipt No</th>
+                        <th class="text-nowrap">Sale Type</th>
+                        <th class="text-nowrap">Total Amount</th>
+                        <th class="text-nowrap">Reason</th>
+                        <th class="text-nowrap">Voided By</th>
+                        <th class="text-nowrap">Status</th>
+                        <th class="text-nowrap">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>1</td>
+                        <td class="text-nowrap">2026-07-09</td>
+                        <td>Main Branch</td>
+                        <td>RCPT-20260709-0041</td>
+                        <td>POS Sale</td>
+                        <td>₱1,250.00</td>
+                        <td>Cashier error / double ring</td>
+                        <td>admin</td>
+                        <td><span class="badge bg-danger text-nowrap">Voided</span></td>
+                        <td class="text-nowrap">
+                            <button class="btn btn-sm btn-outline-primary" type="button" data-bs-toggle="modal" data-bs-target="#voidSaleViewModal">View</button>
+                        </td>
+                    </tr>
+                    <tr class="d-none">
+                        <td class="text-center text-muted fw-bold" colspan="10">No records found.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</section>
+
+<!-- Add/Void Modal -->
+<div class="modal fade" id="voidSaleModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title fs-5">Void Receipt</h2>
+                <button class="btn-close" type="button" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row g-3">
+                    <div class="col-12">
+                        <label class="form-label">Branch</label>
+                        <select class="form-select">
+                            <option>Main Branch</option>
+                            <option>Branch 2</option>
+                        </select>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">Receipt No</label>
+                        <div class="input-group">
+                            <input class="form-control" type="text" placeholder="Search/select receipt to void..." readonly />
+                            <button class="btn btn-outline-secondary" type="button" onclick="alert('Selector backend not connected yet.');"><img src="/icons/search.png" alt="Search" style="width:16px;height:16px;" /></button>
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">Reason</label>
+                        <select class="form-select">
+                            <option>Customer billing correction</option>
+                            <option>Double entry</option>
+                            <option>Wrong payment method selected</option>
+                            <option>Other</option>
+                        </select>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">Remarks</label>
+                        <textarea class="form-control" rows="3" placeholder="Enter remarks..."></textarea>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button>
+                <button class="btn btn-danger" type="button" onclick="alert('Backend not connected yet.');" data-bs-dismiss="modal">Confirm Void</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- View Modal -->
+<div class="modal fade" id="voidSaleViewModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title fs-5">Void Sale Details</h2>
+                <button class="btn-close" type="button" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>This is a UI preview. Void sale backend is not connected yet.</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
