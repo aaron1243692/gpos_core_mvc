@@ -1,0 +1,146 @@
+@model gpos.Models.ViewModels.DiscountSetupPageViewModel
+
+<div class="page-header">
+    <div class="page-heading">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item">GPOS</li>
+                <li class="breadcrumb-item">Setup</li>
+                <li class="breadcrumb-item">Discounts</li>
+                <li class="breadcrumb-item active" aria-current="page">Earnings</li>
+            </ol>
+        </nav>
+        <h1>Earnings</h1>
+        <p class="page-subtitle">Manage member point earning profiles.</p>
+    </div>
+</div>
+
+<section class="content-card setup-crud-card setup-table-card">
+    @if (TempData["DiscountSetupFeedback"] is string feedback)
+    {
+        <div class="alert alert-info mb-0" role="alert">@feedback</div>
+    }
+    <div class="table-actions fuel-toolbar">
+        <form asp-action="Earnings" method="get" class="setup-search-form fuel-toolbar-search">
+            <input class="form-control" name="search" value="@Model.Search" placeholder="Search earnings" />
+        </form>
+        <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#earningsModal">Add Earnings</button>
+    </div>
+    <div class="setup-table-scroll">
+        <table class="table app-table table-sm align-middle admin-table mb-0">
+            <colgroup>
+                <col class="col-no" />
+                <col class="col-id" />
+                <col class="col-name" />
+                <col class="col-normal" />
+                <col class="col-status" />
+                <col class="col-action" />
+            </colgroup>
+            <thead>
+                <tr>
+                    <th class="col-no">No</th>
+                    <th class="col-id">ID</th>
+                    <th class="col-name">Name</th>
+                    <th>Description</th>
+                    <th class="col-status">Status</th>
+                    <th class="col-action">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model.Earnings.Count == 0)
+                {
+                    <tr><td class="text-center text-muted fw-bold" colspan="6">No earnings yet.</td></tr>
+                }
+                @for (var i = 0; i < Model.Earnings.Count; i++)
+                {
+                    <tr>
+                        <td class="col-no">@(i + 1)</td>
+                        <td class="col-id">@Model.Earnings[i].Id</td>
+                        <td>@Model.Earnings[i].Name</td>
+                        <td>@(Model.Earnings[i].Description ?? "-")</td>
+                        <td class="col-status">
+                            @if (Model.Earnings[i].Status == 1)
+                            {
+                                <span class="badge text-bg-success">Active</span>
+                            }
+                            @if (Model.Earnings[i].Status == 0)
+                            {
+                                <span class="badge text-bg-secondary">Inactive</span>
+                            }
+                        </td>
+                        <td class="col-action">
+                            <div class="setup-row-actions">
+                                <a class="btn btn-sm btn-outline-primary" asp-action="Earnings" asp-route-editId="@Model.Earnings[i].Id" asp-route-search="@Model.Search">Edit</a>
+                                @if (Model.Earnings[i].Status == 1)
+                                {
+                                    <form asp-action="DeleteEarnings" method="post" data-deactivate-form>
+                                    @Html.AntiForgeryToken()
+                                    <input name="id" type="hidden" value="@Model.Earnings[i].Id" />
+                                    <input name="search" type="hidden" value="@Model.Search" />
+                                    <button class="btn btn-sm btn-outline-danger" type="submit">Deactivate</button>
+                                </form>
+                                }
+                                @if (!(Model.Earnings[i].Status == 1))
+                                {
+                                    <form asp-action="ActivateEarnings" method="post">
+                                    @Html.AntiForgeryToken()
+                                    <input name="id" type="hidden" value="@Model.Earnings[i].Id" />
+                                    <input name="search" type="hidden" value="@Model.Search" />
+                                    <button class="btn btn-sm btn-outline-success" type="submit">Activate</button>
+                                </form>
+                                }
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<div class="modal fade" id="earningsModal" tabindex="-1" aria-labelledby="earningsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <form asp-action="SaveEarnings" method="post">
+                @Html.AntiForgeryToken()
+                <input asp-for="EarningsForm.Id" type="hidden" />
+                <input name="search" type="hidden" value="@Model.Search" />
+                <div class="modal-header">
+                    <h2 class="modal-title fs-5" id="earningsModalLabel">Earnings</h2>
+                    <button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label asp-for="EarningsForm.Name" class="form-label">Name</label>
+                        <input asp-for="EarningsForm.Name" class="form-control" autocomplete="off" />
+                        <span asp-validation-for="EarningsForm.Name" class="text-danger"></span>
+                    </div>
+                    <div class="mb-3">
+                        <label asp-for="EarningsForm.Description" class="form-label">Description</label>
+                        <input asp-for="EarningsForm.Description" class="form-control" autocomplete="off" />
+                        <span asp-validation-for="EarningsForm.Description" class="text-danger"></span>
+                    </div>
+                    <input asp-for="EarningsForm.Status" type="hidden" />
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button>
+                    <button class="btn btn-primary" type="submit">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            const modalId = "@Model.ActiveModalId";
+            const modalElement = modalId ? document.getElementById(modalId) : null;
+
+            if (modalElement && window.bootstrap) {
+                bootstrap.Modal.getOrCreateInstance(modalElement).show();
+            }
+        });
+    </script>
+}

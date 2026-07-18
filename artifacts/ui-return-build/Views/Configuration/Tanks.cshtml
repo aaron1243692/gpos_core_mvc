@@ -1,0 +1,185 @@
+@using System.Globalization
+@model gpos.Models.ViewModels.FuelSetupPageViewModel
+@{
+    var tankFormBranchName = Model.TankForm.BranchId > 0 ? Model.FormBranchName : string.Empty;
+}
+
+<div class="page-header">
+    <div class="page-heading">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item">GPOS</li>
+                <li class="breadcrumb-item">Setup</li>
+                <li class="breadcrumb-item">Fuel</li>
+                <li class="breadcrumb-item active" aria-current="page">Tanks</li>
+            </ol>
+        </nav>
+        <h1>Tanks</h1>
+        <p class="page-subtitle">Connect tanks to the fuel they store.</p>
+    </div>
+</div>
+
+<section class="content-card setup-crud-card setup-table-card">
+    @if (TempData["FuelSetupFeedback"] is string feedback)
+    {
+        <div class="alert alert-info mb-0" role="alert">@feedback</div>
+    }
+    <div class="table-actions fuel-toolbar">
+        <form asp-action="Tanks" method="get" class="setup-search-form fuel-toolbar-search flex-wrap">
+            <input class="form-control" name="search" value="@Model.Search" placeholder="Search by tank, fuel, or branch" />
+            <select class="form-select" name="filterBranchId">
+                @foreach (var branch in Model.BranchOptions)
+                {
+                    <option value="@branch.Value" selected="@((Model.BranchId?.ToString() ?? string.Empty) == branch.Value ? "selected" : null)">@branch.Text</option>
+                }
+            </select>
+            <button class="btn btn-outline-primary" type="submit">Search</button>
+            <a class="btn btn-outline-secondary" asp-action="Tanks">Clear</a>
+        </form>
+        <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#tankModal">Add Tank</button>
+    </div>
+    <div class="setup-table-scroll gpos-table-wrap">
+        <table class="table app-table table-sm align-middle admin-table gpos-table inventory-tanks-table mb-0">
+            <colgroup>
+                <col class="col-no" />
+                <col class="col-name" />
+                <col class="col-normal" />
+                <col class="col-normal" />
+                <col class="col-qty" />
+                <col class="col-qty" />
+                <col class="col-qty" />
+                <col class="col-normal" />
+                <col class="col-action" />
+            </colgroup>
+            <thead>
+                <tr>
+                    <th class="col-no">No</th>
+                    <th class="col-name">Tank</th>
+                    <th>Branch</th>
+                    <th>Fuel</th>
+                    <th class="number-cell">Capacity</th>
+                    <th class="number-cell">Current Liters</th>
+                    <th class="number-cell">Available Space</th>
+                    <th class="col-status status-cell">Status</th>
+                    <th class="col-action">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model.Tanks.Count == 0)
+                {
+                    <tr><td class="text-center text-muted fw-bold" colspan="9">No records yet.</td></tr>
+                }
+                @for (var i = 0; i < Model.Tanks.Count; i++)
+                {
+                    <tr>
+                        <td class="col-no">@(i + 1)</td>
+                        <td class="text-cell">@Model.Tanks[i].TankNo</td>
+                        <td class="text-cell">@(Model.Tanks[i].Branch?.Name ?? "-")</td>
+                        <td class="text-cell">@Model.Tanks[i].Fuel?.Name</td>
+                        <td class="number-cell">@Model.Tanks[i].CapacityLiters.ToString("#,0.##", CultureInfo.InvariantCulture) L</td>
+                        <td class="number-cell">@Model.Tanks[i].CurrentLiters.ToString("#,0.##", CultureInfo.InvariantCulture) L</td>
+                        <td class="number-cell">@((Model.Tanks[i].CapacityLiters - Model.Tanks[i].CurrentLiters).ToString("#,0.##", CultureInfo.InvariantCulture)) L</td>
+                        <td class="status-cell"><span class="badge @(Model.Tanks[i].Status == 1 ? "text-bg-success" : "text-bg-secondary")">@(Model.Tanks[i].Status == 1 ? "Active" : "Inactive")</span></td>
+                        <td class="col-action action-cell">
+                            <div class="setup-row-actions">
+                                <a class="btn btn-sm btn-outline-primary" asp-action="Tanks" asp-route-editId="@Model.Tanks[i].Id" asp-route-search="@Model.Search" asp-route-filterBranchId="@Model.BranchId">Edit</a>
+                                @if (Model.Tanks[i].Status == 1 && Model.Tanks[i].IsActive)
+                                {
+                                    <form asp-action="DeleteTank" method="post" data-deactivate-form>
+                                    @Html.AntiForgeryToken()
+                                    <input name="id" type="hidden" value="@Model.Tanks[i].Id" />
+                                    <input name="search" type="hidden" value="@Model.Search" />
+                                    <button class="btn btn-sm btn-outline-danger" type="submit">Deactivate</button>
+                                </form>
+                                }
+                                @if (!(Model.Tanks[i].Status == 1 && Model.Tanks[i].IsActive))
+                                {
+                                    <form asp-action="ActivateTank" method="post">
+                                    @Html.AntiForgeryToken()
+                                    <input name="id" type="hidden" value="@Model.Tanks[i].Id" />
+                                    <input name="search" type="hidden" value="@Model.Search" />
+                                    <button class="btn btn-sm btn-outline-success" type="submit">Activate</button>
+                                </form>
+                                }
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<div class="modal fade" id="tankModal" tabindex="-1" aria-labelledby="tankModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <form asp-action="SaveTank" method="post">
+                @Html.AntiForgeryToken()
+                <input asp-for="TankForm.Id" type="hidden" />
+                <input name="search" type="hidden" value="@Model.Search" />
+                <input name="filterBranchId" type="hidden" value="@Model.BranchId" />
+                <div class="modal-header">
+                    <h2 class="modal-title fs-5" id="tankModalLabel">@(Model.TankForm.Id > 0 ? "Edit Tank" : "Add Tank")</h2>
+                    <button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label asp-for="TankForm.BranchId" class="form-label">Branch</label>
+                        <input asp-for="TankForm.BranchId" id="tankBranchId" type="hidden" />
+                        <div class="input-group" data-branch-selector data-branch-hidden="#tankBranchId" data-branch-display="#tankBranchDisplay" data-branch-empty-text="Select branch">
+                            <input id="tankBranchDisplay" class="form-control" type="text" value="@tankFormBranchName" placeholder="Select branch" readonly />
+                            <button type="button" class="btn btn-outline-secondary branch-select-btn" data-branch-open>
+                                <img src="/icons/search.png" alt="Search" style="width:16px;height:16px;" />
+                            </button>
+                        </div>
+                        <span asp-validation-for="TankForm.BranchId" class="text-danger"></span>
+                    </div>
+                    <div class="mb-3">
+                        <label asp-for="TankForm.FuelId" class="form-label">Fuel</label>
+                        <select asp-for="TankForm.FuelId" asp-items="Model.FuelOptions" class="form-select">
+                            <option value="0">Select fuel</option>
+                        </select>
+                        <span asp-validation-for="TankForm.FuelId" class="text-danger"></span>
+                    </div>
+                    <div class="mb-3">
+                        <label asp-for="TankForm.TankNo" class="form-label">Tank No</label>
+                        <input asp-for="TankForm.TankNo" class="form-control" placeholder="Tank 1" />
+                        <span asp-validation-for="TankForm.TankNo" class="text-danger"></span>
+                    </div>
+                    <div class="mb-3">
+                        <label asp-for="TankForm.CapacityLiters" class="form-label">Capacity Liters</label>
+                        <input asp-for="TankForm.CapacityLiters" class="form-control" type="number" min="0.01" step="0.01" placeholder="1000.00" />
+                        <span asp-validation-for="TankForm.CapacityLiters" class="text-danger"></span>
+                    </div>
+                    <div class="mb-3">
+                        <label asp-for="TankForm.CurrentLiters" class="form-label">Current Liters</label>
+                        <input value="@((Model.TankForm.Id > 0 ? Model.TankForm.CurrentLiters : 0m)?.ToString("0.00", CultureInfo.InvariantCulture))" class="form-control" type="number" step="0.01" readonly />
+                        <div class="form-text">Use Tank Fuel Adjustment for audited inventory changes.</div>
+                    </div>
+                    <label class="form-check">
+                        <input asp-for="TankForm.IsActive" class="form-check-input" />
+                        <span class="form-check-label">Active</span>
+                    </label>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button>
+                    <button class="btn btn-primary" type="submit">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            const modalId = "@Model.ActiveModalId";
+            const modalElement = modalId ? document.getElementById(modalId) : null;
+
+            if (modalElement && window.bootstrap) {
+                bootstrap.Modal.getOrCreateInstance(modalElement).show();
+            }
+        });
+    </script>
+}

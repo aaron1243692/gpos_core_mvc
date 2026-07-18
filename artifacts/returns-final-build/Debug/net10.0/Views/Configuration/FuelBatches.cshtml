@@ -1,0 +1,213 @@
+@using System.Globalization
+@model gpos.Models.ViewModels.SetupModulesPageViewModel
+
+<div class="page-header">
+    <div class="page-heading">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item">GPOS</li>
+                <li class="breadcrumb-item">Setup</li>
+                <li class="breadcrumb-item">Fuel</li>
+                <li class="breadcrumb-item active" aria-current="page">Fuel Batches</li>
+            </ol>
+        </nav>
+        <h1>Fuel Batches</h1>
+        <p class="page-subtitle">View received fuel batches by tank, fuel, supplier, and remaining liters.</p>
+    </div>
+</div>
+
+<section class="card content-card table-card full-height-card mb-0">
+    @if (TempData["FuelBatchMessage"] is string fuelBatchMessage) { <div class="alert alert-warning m-3" role="alert">@fuelBatchMessage</div> }
+    <div class="table-toolbar d-flex justify-content-between align-items-center gap-2 flex-wrap mb-3">
+        <form class="products-search-wrap d-flex gap-2 flex-wrap" asp-action="FuelBatches" method="get">
+            <label class="visually-hidden" for="fuel-batch-search">Search fuel batches</label>
+            <input class="form-control form-control-sm products-search" id="fuel-batch-search" name="search" value="@Model.Search" type="search" placeholder="Search fuel batches" autocomplete="off" />
+            <select class="form-select form-select-sm" name="filterBranchId">
+                @foreach (var branch in Model.BranchOptions)
+                {
+                    <option value="@branch.Value" selected="@((Model.BranchId?.ToString() ?? string.Empty) == branch.Value ? "selected" : null)">@branch.Text</option>
+                }
+            </select>
+            <button class="btn btn-sm btn-outline-primary" type="submit">Search</button>
+            <a class="btn btn-sm btn-outline-secondary" asp-action="FuelBatches">Clear</a>
+        </form>
+    </div>
+
+    <div class="table-responsive table-scroll-wrap flex-table-wrap gpos-table-wrap">
+        <table class="table table-sm table-hover align-middle admin-table gpos-table fuel-batches-table mb-0">
+            <colgroup>
+                <col class="col-no" />
+                <col class="col-normal" />
+                <col class="col-normal" />
+                <col class="col-fuel" />
+                <col class="col-batch-number" />
+                <col class="col-supplier" />
+                <col class="col-received-liters" />
+                <col class="col-received-liters" />
+                <col class="col-cost-price" />
+                <col class="col-received-date" />
+                <col class="col-status" />
+                <col class="col-action" />
+            </colgroup>
+            <thead>
+                <tr>
+                    <th class="col-no text-nowrap" scope="col">No</th>
+                    <th class="text-nowrap" scope="col">Branch</th>
+                    <th class="text-nowrap" scope="col">Tank</th>
+                    <th class="col-fuel text-nowrap" scope="col">Fuel</th>
+                    <th class="col-batch-number text-nowrap" scope="col">Batch No</th>
+                    <th class="col-supplier text-nowrap" scope="col">Supplier</th>
+                    <th class="col-received-liters text-nowrap" scope="col">Liters</th>
+                    <th class="col-received-liters text-nowrap" scope="col">Remaining Liters</th>
+                    <th class="col-cost-price text-nowrap" scope="col">Cost/Liter</th>
+                    <th class="col-received-date text-nowrap" scope="col">Received Date</th>
+                    <th class="col-status status-cell text-nowrap" scope="col">Status</th>
+                    <th class="col-action text-nowrap" scope="col">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model.FuelBatches.Count == 0)
+                {
+                    <tr>
+                        <td class="text-center text-muted fw-bold" colspan="12">No fuel batches found.</td>
+                    </tr>
+                }
+                @for (var index = 0; index < Model.FuelBatches.Count; index += 1)
+                {
+                    <tr>
+                        <td class="col-no">@(index + 1)</td>
+                        <td class="text-cell">@(Model.FuelBatches[index].Tank?.Branch?.Name ?? "-")</td>
+                        <td class="text-cell">@(Model.FuelBatches[index].Tank?.TankNo ?? "-")</td>
+                        <td class="col-fuel text-cell text-truncate">@(Model.FuelBatches[index].Tank?.Fuel?.Name ?? "-")</td>
+                        <td class="col-batch-number text-nowrap">@Model.FuelBatches[index].BatchNo</td>
+                        <td class="col-supplier text-cell text-truncate">@(Model.FuelBatches[index].Supplier?.Name ?? "-")</td>
+                        <td class="col-received-liters number-cell">@Model.FuelBatches[index].ReceivedLiters.ToString("#,0.##", CultureInfo.InvariantCulture) L</td>
+                        <td class="col-received-liters number-cell">@Model.FuelBatches[index].RemainingLiters.ToString("#,0.##", CultureInfo.InvariantCulture) L</td>
+                        <td class="col-cost-price number-cell">&#8369;@Model.FuelBatches[index].CostPricePerLiter.ToString("N2", CultureInfo.InvariantCulture)</td>
+                        <td class="col-received-date number-cell">@Model.FuelBatches[index].ReceivedDate.ToString("MMM dd, yyyy", CultureInfo.InvariantCulture)</td>
+                        <td class="col-status status-cell">
+                            @if (Model.FuelBatches[index].Status == 1 && Model.FuelBatches[index].IsActive)
+                            {
+                                <span class="badge text-bg-success">Active</span>
+                            }
+                            @if (!(Model.FuelBatches[index].Status == 1 && Model.FuelBatches[index].IsActive))
+                            {
+                                <span class="badge text-bg-secondary">Inactive</span>
+                            }
+                        </td>
+                        <td class="col-action action-cell">
+                            <div class="setup-row-actions">
+                                <a class="btn btn-sm btn-outline-primary" asp-action="FuelBatches" asp-route-editId="@Model.FuelBatches[index].Id" asp-route-search="@Model.Search" asp-route-filterBranchId="@Model.BranchId">Edit</a>
+                                @if (Model.FuelBatches[index].Status == 1 && Model.FuelBatches[index].IsActive)
+                                {
+                                    <button class="btn btn-sm btn-outline-danger fuel-batch-deactivate-button" type="button" data-bs-toggle="modal" data-bs-target="#fuelBatchStatusModal" data-batch-id="@Model.FuelBatches[index].Id" data-batch-no="@Model.FuelBatches[index].BatchNo">Deactivate</button>
+                                }
+                                @if (!(Model.FuelBatches[index].Status == 1 && Model.FuelBatches[index].IsActive))
+                                {
+                                    <form asp-action="ActivateFuelBatch" method="post">
+                                        @Html.AntiForgeryToken()
+                                        <input name="id" type="hidden" value="@Model.FuelBatches[index].Id" />
+                                        <input name="search" type="hidden" value="@Model.Search" />
+                                        <input name="filterBranchId" type="hidden" value="@Model.BranchId" />
+                                        <button class="btn btn-sm btn-outline-success" type="submit">Activate</button>
+                                    </form>
+                                }
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<div class="modal fade" id="fuelBatchModal" tabindex="-1" aria-labelledby="fuelBatchModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <form asp-action="SaveFuelBatch" method="post">
+                @Html.AntiForgeryToken()
+                <input asp-for="FuelBatchForm.Id" type="hidden" />
+                <input name="search" type="hidden" value="@Model.Search" />
+                <input name="filterBranchId" type="hidden" value="@Model.BranchId" />
+                <div class="modal-header">
+                    <h2 class="modal-title fs-5" id="fuelBatchModalLabel">Fuel Batch</h2>
+                    <button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="d-grid gap-3">
+                        <div class="alert alert-secondary mb-0">Tank, Fuel, Branch, quantities, acquisition cost, and selling price are immutable accounting fields. Use an audited adjustment for corrections.</div>
+                        <div>
+                            <label asp-for="FuelBatchForm.ExpiryDate" class="form-label">Expiry Date</label>
+                            <input asp-for="FuelBatchForm.ExpiryDate" class="form-control" type="date" />
+                        </div>
+                        <div>
+                            <label asp-for="FuelBatchForm.Remarks" class="form-label">Remarks</label>
+                            <textarea asp-for="FuelBatchForm.Remarks" class="form-control" rows="3"></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button>
+                    <button class="btn btn-primary" type="submit">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="fuelBatchStatusModal" tabindex="-1" aria-labelledby="fuelBatchStatusModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <form asp-action="DeleteFuelBatch" method="post" id="fuelBatchStatusForm">
+                @Html.AntiForgeryToken()
+                <input id="fuelBatchStatusId" name="id" type="hidden" />
+                <input name="search" type="hidden" value="@Model.Search" />
+                <input name="filterBranchId" type="hidden" value="@Model.BranchId" />
+                <div class="modal-header">
+                    <h2 class="modal-title fs-5" id="fuelBatchStatusModalLabel">Deactivate Record</h2>
+                    <button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="mb-0" id="fuelBatchStatusMessage">Are you sure you want to deactivate this record?</p>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button>
+                    <button class="btn btn-danger deactivate-confirm-btn" type="submit">Deactivate</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            const activeModalId = "@Model.ActiveModalId";
+            const idInput = document.getElementById("fuelBatchStatusId");
+            const message = document.getElementById("fuelBatchStatusMessage");
+
+            document.querySelectorAll(".fuel-batch-deactivate-button").forEach(button => {
+                button.addEventListener("click", () => {
+                    if (idInput) {
+                        idInput.value = button.dataset.batchId || "";
+                    }
+
+                    if (message) {
+                        message.textContent = `Are you sure you want to deactivate fuel batch "${button.dataset.batchNo || "Fuel Batch"}"?`;
+                    }
+                });
+            });
+
+            if (!activeModalId || !window.bootstrap) {
+                return;
+            }
+
+            const activeModal = document.getElementById(activeModalId);
+
+            if (activeModal) {
+                bootstrap.Modal.getOrCreateInstance(activeModal).show();
+            }
+        });
+    </script>
+}

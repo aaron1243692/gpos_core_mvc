@@ -2605,8 +2605,6 @@ namespace gpos.Controllers
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> CancelBranchToBranchFuel(int id, string? search) => await CancelStockTransfer(id, nameof(BranchToBranchFuel), search);
-        public IActionResult ProductReturn() => View();
-        public IActionResult FuelReturn() => View();
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> CreateSaleVoid(int saleId, string reason)

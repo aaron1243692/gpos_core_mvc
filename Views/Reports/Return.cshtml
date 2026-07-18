@@ -1,0 +1,171 @@
+@model gpos.Models.ViewModels.ReturnCreatePageViewModel
+@{
+    ViewData["Title"] = "Return";
+    var isWalkIn = Model.Sale?.Customer == "Walk-in";
+}
+
+<style>
+    .return-workflow { --return-green: #198754; --return-green-soft: #eaf7f0; padding-bottom: 5.5rem; }
+    .return-workflow .workflow-card { padding: 0; overflow: hidden; border-color: #d7e2dc; }
+    .return-workflow .workflow-card-header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: .9rem 1.1rem; border-bottom: 1px solid #e1e9e5; background: #fbfdfc; }
+    .return-workflow .workflow-title { display: flex; align-items: center; gap: .65rem; margin: 0; font-size: 1rem; font-weight: 700; }
+    .return-workflow .section-marker { display: inline-grid; place-items: center; width: 1.8rem; height: 1.8rem; border-radius: 50%; background: var(--return-green-soft); color: var(--return-green); font-size: .8rem; font-weight: 800; }
+    .return-workflow .workflow-card-body { padding: 1.1rem; }
+    .return-workflow .sale-detail { height: 100%; padding: .75rem .85rem; border: 1px solid #e4ebe7; border-radius: .6rem; background: #fff; }
+    .return-workflow .sale-detail-label { display: block; margin-bottom: .2rem; color: #65736c; font-size: .74rem; font-weight: 700; letter-spacing: .035em; text-transform: uppercase; }
+    .return-workflow .sale-detail-value { font-weight: 650; overflow-wrap: anywhere; }
+    .return-workflow .items-table { margin-bottom: 0; white-space: nowrap; }
+    .return-workflow .items-table thead th { padding: .7rem .65rem; border-bottom-width: 1px; background: #f4f8f6; color: #46534c; font-size: .76rem; font-weight: 750; vertical-align: middle; }
+    .return-workflow .items-table tbody td { padding: .65rem; }
+    .return-workflow .remaining-value { color: var(--return-green); font-weight: 800; }
+    .return-workflow .return-quantity { min-width: 7.25rem; border-color: #91bda5; background: #f8fffb; text-align: right; font-weight: 700; }
+    .return-workflow .return-quantity:focus { border-color: var(--return-green); box-shadow: 0 0 0 .2rem rgba(25,135,84,.13); }
+    .return-workflow .return-quantity.is-invalid { background: #fff6f6; }
+    .return-workflow .amount-cell { min-width: 7rem; font-weight: 750; }
+    .return-workflow .empty-state { padding: 2rem 1rem; text-align: center; color: #6c757d; }
+    .return-workflow .reason-box { min-height: 10rem; resize: vertical; }
+    .return-workflow .summary-panel { height: 100%; padding: 1rem 1.1rem; border: 1px solid #cfe2d7; border-radius: .75rem; background: var(--return-green-soft); }
+    .return-workflow .summary-row { display: flex; justify-content: space-between; gap: 1rem; padding: .35rem 0; }
+    .return-workflow .summary-total { margin-top: .45rem; padding-top: .8rem; border-top: 1px solid #b9d7c6; font-size: 1.25rem; font-weight: 800; }
+    .return-workflow .pending-note { display: flex; gap: .6rem; margin-top: 1rem; color: #40554a; font-size: .875rem; line-height: 1.45; }
+    .return-workflow .action-bar { position: fixed; right: 0; bottom: 0; left: 0; z-index: 1020; padding: .75rem max(1rem, calc((100vw - 1320px) / 2)); border-top: 1px solid #cedbd4; background: rgba(255,255,255,.96); box-shadow: 0 -.35rem 1rem rgba(28,57,42,.08); backdrop-filter: blur(8px); }
+    .return-workflow .action-bar-inner { display: flex; align-items: center; justify-content: flex-end; gap: .65rem; }
+    .return-workflow .btn-create { min-width: 9.5rem; }
+    @@media (max-width: 767.98px) { .return-workflow .workflow-card-body { padding: .9rem; } .return-workflow .action-bar { padding: .7rem 1rem; } .return-workflow .action-bar-inner .btn { flex: 1; } }
+</style>
+
+<div class="return-workflow">
+    <div class="page-header">
+        <div class="page-heading">
+            <nav aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item">Returns</li><li class="breadcrumb-item active" aria-current="page">Create Return</li></ol></nav>
+            <h1>Create Return</h1>
+            <p class="page-subtitle text-muted">Follow the steps below to create a return for inspection.</p>
+        </div>
+    </div>
+
+    @if (TempData["ReturnError"] is string error) { <div class="alert alert-danger" role="alert">@error</div> }
+    <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+    <section class="content-card workflow-card mb-4" aria-labelledby="original-sale-heading">
+        <div class="workflow-card-header">
+            <h2 class="workflow-title" id="original-sale-heading"><span class="section-marker">1</span> Original Sale</h2>
+            @if (Model.Sale is not null) { <span class="badge text-bg-success">Sale loaded</span> }
+        </div>
+        <div class="workflow-card-body">
+            <form method="get" class="row g-2 align-items-end">
+                <div class="col-lg-9">
+                    <label class="form-label fw-semibold" for="receiptNo">Receipt No. <span class="text-danger" aria-hidden="true">*</span></label>
+                    <div class="input-group">
+                        <span class="input-group-text" aria-hidden="true">#</span>
+                        <input class="form-control" id="receiptNo" name="receiptNo" value="@Model.ReceiptNo" placeholder="Enter the original receipt number" autocomplete="off" required />
+                        <button class="btn btn-primary px-4" type="submit">Find Sale</button>
+                    </div>
+                </div>
+                <div class="col-lg-3"><a class="btn btn-outline-secondary w-100" asp-action="Return">Clear search</a></div>
+            </form>
+
+            @if (Model.Sale is { } loadedSale)
+            {
+                <div class="row row-cols-1 row-cols-sm-2 row-cols-xl-4 g-2 mt-3">
+                    <div class="col"><div class="sale-detail"><span class="sale-detail-label">Receipt No.</span><span class="sale-detail-value">@loadedSale.ReceiptNo</span></div></div>
+                    <div class="col"><div class="sale-detail"><span class="sale-detail-label">Branch</span><span class="sale-detail-value">@loadedSale.Branch</span></div></div>
+                    <div class="col"><div class="sale-detail"><span class="sale-detail-label">Cashier</span><span class="sale-detail-value">@loadedSale.Cashier</span></div></div>
+                    <div class="col"><div class="sale-detail"><span class="sale-detail-label">Customer</span><span class="sale-detail-value">@loadedSale.Customer</span> <span class="badge @(isWalkIn ? "text-bg-secondary" : "text-bg-success") ms-1">@(isWalkIn ? "Walk-in" : "Member")</span></div></div>
+                </div>
+            }
+        </div>
+    </section>
+
+    @if (Model.Sale is { } sale)
+    {
+        <form method="post" asp-action="CreateReturn" id="returnForm" novalidate>
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="saleId" value="@sale.SaleId" />
+
+            <section class="mb-4" aria-labelledby="return-items-heading">
+                <h2 class="visually-hidden" id="return-items-heading">Return Items</h2>
+                <div class="content-card workflow-card mb-3">
+                    <div class="workflow-card-header"><h3 class="workflow-title"><span class="section-marker">2</span> Product Items</h3><span class="badge text-bg-success">Product</span></div>
+                    @if (sale.Products.Count == 0)
+                    {
+                        <div class="empty-state"><div class="fw-semibold text-body mb-1">No products on this sale</div><small>There are no product items available to return.</small></div>
+                    }
+                    else
+                    {
+                        <div class="table-responsive"><table class="table table-sm align-middle items-table"><thead><tr><th>#</th><th>Product</th><th>Batch</th><th class="text-end">Sold</th><th class="text-end">Previously Returned</th><th class="text-end">Remaining</th><th class="text-end">Original Price</th><th class="text-end">Qty to Return</th><th class="text-end">Return Amount</th></tr></thead><tbody>
+                        @for (var index = 0; index < sale.Products.Count; index++) { var item = sale.Products[index]; <tr><td class="text-muted">@(index + 1)</td><td class="fw-semibold">@item.Product</td><td>@item.Batch</td><td class="text-end">@item.Sold.ToString("N2")</td><td class="text-end">@item.Returned.ToString("N2")</td><td class="text-end remaining-value">@item.Remaining.ToString("N2")</td><td class="text-end">@item.UnitPrice.ToString("N2")</td><td><input class="form-control form-control-sm return-quantity ms-auto" type="number" min="0" max="@item.Remaining" step="0.01" name="productQuantities[@item.ProductSaleId]" value="0" data-return-input data-kind="product" data-price="@item.UnitPrice.ToString(System.Globalization.CultureInfo.InvariantCulture)" aria-label="Quantity of @item.Product to return" @(item.Remaining <= 0 ? "disabled" : null) /><div class="invalid-feedback text-end">Enter 0 to @item.Remaining.ToString("N2").</div></td><td class="text-end amount-cell" data-line-amount>0.00</td></tr> }
+                        </tbody></table></div>
+                    }
+                </div>
+
+                <div class="content-card workflow-card">
+                    <div class="workflow-card-header"><h3 class="workflow-title"><span class="section-marker">2</span> Fuel Items</h3><span class="badge text-bg-warning">Fuel</span></div>
+                    @if (sale.Fuels.Count == 0)
+                    {
+                        <div class="empty-state"><div class="fw-semibold text-body mb-1">No fuel on this sale</div><small>There are no fuel items available to return.</small></div>
+                    }
+                    else
+                    {
+                        <div class="table-responsive"><table class="table table-sm align-middle items-table"><thead><tr><th>#</th><th>Fuel</th><th>Original Source</th><th class="text-end">Liters Sold</th><th class="text-end">Previously Returned</th><th class="text-end">Remaining</th><th class="text-end">Original Price/Liter</th><th class="text-end">Liters to Return</th><th class="text-end">Return Amount</th></tr></thead><tbody>
+                        @for (var index = 0; index < sale.Fuels.Count; index++) { var item = sale.Fuels[index]; <tr><td class="text-muted">@(index + 1)</td><td class="fw-semibold">@item.Fuel</td><td>@item.Source</td><td class="text-end">@item.Sold.ToString("N2")</td><td class="text-end">@item.Returned.ToString("N2")</td><td class="text-end remaining-value">@item.Remaining.ToString("N2")</td><td class="text-end">@item.UnitPrice.ToString("N2")</td><td><input class="form-control form-control-sm return-quantity ms-auto" type="number" min="0" max="@item.Remaining" step="0.01" name="fuelQuantities[@item.FuelSaleId]" value="0" data-return-input data-kind="fuel" data-price="@item.UnitPrice.ToString(System.Globalization.CultureInfo.InvariantCulture)" aria-label="Liters of @item.Fuel to return" @(item.Remaining <= 0 ? "disabled" : null) /><div class="invalid-feedback text-end">Enter 0 to @item.Remaining.ToString("N2").</div></td><td class="text-end amount-cell" data-line-amount>0.00</td></tr> }
+                        </tbody></table></div>
+                    }
+                </div>
+            </section>
+
+            <section class="content-card workflow-card mb-4" aria-labelledby="return-details-heading">
+                <div class="workflow-card-header"><h2 class="workflow-title" id="return-details-heading"><span class="section-marker">3</span> Return Details</h2><span class="badge text-bg-secondary">Pending</span></div>
+                <div class="workflow-card-body"><div class="row g-4">
+                    <div class="col-lg-7"><label class="form-label fw-semibold" for="reason">Reason <span class="text-danger">*</span></label><textarea class="form-control reason-box" id="reason" name="reason" minlength="3" maxlength="500" placeholder="Describe why these items are being returned..." required aria-describedby="reasonHelp reasonCounter"></textarea><div class="d-flex justify-content-between mt-1"><small class="text-muted" id="reasonHelp">Enter 3–500 characters.</small><small class="text-muted" id="reasonCounter">0 / 500</small></div><div class="invalid-feedback d-block visually-hidden" id="reasonError">Please enter at least 3 characters.</div></div>
+                    <div class="col-lg-5"><aside class="summary-panel" aria-labelledby="summary-heading"><h3 class="fs-6 fw-bold mb-2" id="summary-heading">Return Summary</h3><div class="summary-row"><span>Product Refund</span><strong id="productRefund">0.00</strong></div><div class="summary-row"><span>Fuel Refund</span><strong id="fuelRefund">0.00</strong></div><div class="summary-row summary-total"><span>Total Refund</span><span id="totalRefund">0.00</span></div><div class="pending-note"><span aria-hidden="true">ⓘ</span><span>This return will be created as <strong>Pending Inspection</strong>.<br />No inventory or payment changes will be made yet.</span></div></aside></div>
+                </div></div>
+            </section>
+
+            <div class="action-bar" aria-label="Return actions"><div class="action-bar-inner"><a class="btn btn-outline-secondary" asp-action="Return">Cancel</a><button class="btn btn-primary btn-create" type="submit" id="createReturnButton" disabled>Create Return</button></div></div>
+        </form>
+    }
+</div>
+
+@section Scripts {
+<script>
+(() => {
+    const form = document.getElementById('returnForm');
+    if (!form) return;
+    const inputs = [...form.querySelectorAll('[data-return-input]')];
+    const reason = document.getElementById('reason');
+    const submit = document.getElementById('createReturnButton');
+    const formatAmount = value => value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+    function refresh() {
+        let product = 0, fuel = 0, hasSelection = false, quantitiesValid = true;
+        inputs.forEach(input => {
+            const raw = input.value.trim();
+            const value = Number(raw);
+            const max = Number(input.max);
+            const valid = raw !== '' && Number.isFinite(value) && value >= 0 && value <= max;
+            input.classList.toggle('is-invalid', !valid);
+            input.setAttribute('aria-invalid', String(!valid));
+            quantitiesValid = quantitiesValid && valid;
+            const amount = valid && value > 0 ? value * Number(input.dataset.price) : 0;
+            input.closest('tr').querySelector('[data-line-amount]').textContent = formatAmount(amount);
+            if (valid && value > 0) hasSelection = true;
+            if (input.dataset.kind === 'product') product += amount; else fuel += amount;
+        });
+        const reasonLength = reason.value.trim().length;
+        document.getElementById('reasonCounter').textContent = `${reason.value.length} / 500`;
+        const reasonValid = reasonLength >= 3 && reasonLength <= 500;
+        reason.classList.toggle('is-invalid', reason.value.length > 0 && !reasonValid);
+        document.getElementById('reasonError').classList.toggle('visually-hidden', reason.value.length === 0 || reasonValid);
+        document.getElementById('productRefund').textContent = formatAmount(product);
+        document.getElementById('fuelRefund').textContent = formatAmount(fuel);
+        document.getElementById('totalRefund').textContent = formatAmount(product + fuel);
+        submit.disabled = !(hasSelection && quantitiesValid && reasonValid);
+    }
+
+    inputs.forEach(input => input.addEventListener('input', refresh));
+    reason.addEventListener('input', refresh);
+    form.addEventListener('submit', event => { refresh(); if (submit.disabled) event.preventDefault(); });
+    refresh();
+})();
+</script>
+}

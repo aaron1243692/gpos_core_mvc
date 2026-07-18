@@ -85,10 +85,38 @@ namespace gpos.Data
         public DbSet<CashOut> CashOuts { get; set; }
         public DbSet<CashRemittance> CashRemittances { get; set; }
         public DbSet<StockAdjustment> StockAdjustments { get; set; }
+        public DbSet<CustomerReturn> CustomerReturns { get; set; }
+        public DbSet<CustomerProductReturnItem> CustomerProductReturnItems { get; set; }
+        public DbSet<CustomerFuelReturnItem> CustomerFuelReturnItems { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
+
+            modelBuilder.Entity<CustomerReturn>(entity =>
+            {
+                entity.ToTable("customer_returns"); entity.HasKey(x => x.Id);
+                entity.Property(x => x.Id).HasColumnName("id"); entity.Property(x => x.ReturnNo).HasColumnName("return_no").HasMaxLength(40); entity.Property(x => x.SaleId).HasColumnName("sale_id"); entity.Property(x => x.OriginalReceiptNo).HasColumnName("original_receipt_no").HasMaxLength(100);
+                entity.Property(x => x.BranchId).HasColumnName("branch_id"); entity.Property(x => x.MemberId).HasColumnName("member_id"); entity.Property(x => x.ReturnType).HasColumnName("return_type").HasMaxLength(20); entity.Property(x => x.RefundAmount).HasColumnName("refund_amount").HasPrecision(18,2);
+                entity.Property(x => x.Reason).HasColumnName("reason").HasMaxLength(500); entity.Property(x => x.Status).HasColumnName("status").HasMaxLength(30); entity.Property(x => x.CreatedByUserId).HasColumnName("created_by_user_id"); entity.Property(x => x.CreatedAt).HasColumnName("created_at");
+                entity.Property(x => x.InspectedByUserId).HasColumnName("inspected_by_user_id"); entity.Property(x => x.InspectedAt).HasColumnName("inspected_at"); entity.Property(x => x.InspectionDecision).HasColumnName("inspection_decision").HasMaxLength(30); entity.Property(x => x.InspectionNotes).HasColumnName("inspection_notes").HasMaxLength(1000);
+                entity.Property(x => x.ProcessedByUserId).HasColumnName("processed_by_user_id"); entity.Property(x => x.CompletedAt).HasColumnName("completed_at");
+                entity.HasIndex(x => x.ReturnNo).IsUnique(); entity.HasIndex(x => x.SaleId); entity.HasIndex(x => new { x.BranchId, x.Status, x.CreatedAt });
+                entity.HasOne(x => x.Sale).WithMany().HasForeignKey(x => x.SaleId).OnDelete(DeleteBehavior.Restrict); entity.HasOne(x => x.Branch).WithMany().HasForeignKey(x => x.BranchId).OnDelete(DeleteBehavior.Restrict); entity.HasOne(x => x.Member).WithMany().HasForeignKey(x => x.MemberId).OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne(x => x.CreatedByUser).WithMany().HasForeignKey(x => x.CreatedByUserId).OnDelete(DeleteBehavior.Restrict); entity.HasOne(x => x.InspectedByUser).WithMany().HasForeignKey(x => x.InspectedByUserId).OnDelete(DeleteBehavior.Restrict); entity.HasOne(x => x.ProcessedByUser).WithMany().HasForeignKey(x => x.ProcessedByUserId).OnDelete(DeleteBehavior.Restrict);
+            });
+            modelBuilder.Entity<CustomerProductReturnItem>(entity =>
+            {
+                entity.ToTable("customer_product_return_items"); entity.HasKey(x => x.Id); entity.Property(x => x.Id).HasColumnName("id"); entity.Property(x => x.CustomerReturnId).HasColumnName("customer_return_id"); entity.Property(x => x.ProductSaleId).HasColumnName("product_sale_id"); entity.Property(x => x.ProductId).HasColumnName("product_id"); entity.Property(x => x.OriginalBatchId).HasColumnName("original_batch_id"); entity.Property(x => x.OriginalDisplayStockId).HasColumnName("original_display_stock_id");
+                entity.Property(x => x.Quantity).HasColumnName("quantity").HasPrecision(18,2); entity.Property(x => x.OriginalUnitPrice).HasColumnName("original_unit_price").HasPrecision(18,2); entity.Property(x => x.ReturnAmount).HasColumnName("return_amount").HasPrecision(18,2); entity.Property(x => x.InspectionResult).HasColumnName("inspection_result").HasMaxLength(50); entity.Property(x => x.Disposition).HasColumnName("disposition").HasMaxLength(100); entity.Property(x => x.StockMovementId).HasColumnName("stock_movement_id");
+                entity.HasIndex(x => x.CustomerReturnId); entity.HasIndex(x => x.ProductSaleId); entity.HasIndex(x => x.StockMovementId).IsUnique(); entity.HasOne(x => x.CustomerReturn).WithMany(x => x.ProductItems).HasForeignKey(x => x.CustomerReturnId).OnDelete(DeleteBehavior.Restrict); entity.HasOne(x => x.ProductSale).WithMany().HasForeignKey(x => x.ProductSaleId).OnDelete(DeleteBehavior.Restrict); entity.HasOne(x => x.Product).WithMany().HasForeignKey(x => x.ProductId).OnDelete(DeleteBehavior.Restrict); entity.HasOne(x => x.OriginalBatch).WithMany().HasForeignKey(x => x.OriginalBatchId).OnDelete(DeleteBehavior.Restrict); entity.HasOne(x => x.OriginalDisplayStock).WithMany().HasForeignKey(x => x.OriginalDisplayStockId).OnDelete(DeleteBehavior.Restrict); entity.HasOne(x => x.StockMovement).WithMany().HasForeignKey(x => x.StockMovementId).OnDelete(DeleteBehavior.Restrict);
+            });
+            modelBuilder.Entity<CustomerFuelReturnItem>(entity =>
+            {
+                entity.ToTable("customer_fuel_return_items"); entity.HasKey(x => x.Id); entity.Property(x => x.Id).HasColumnName("id"); entity.Property(x => x.CustomerReturnId).HasColumnName("customer_return_id"); entity.Property(x => x.FuelSaleId).HasColumnName("fuel_sale_id"); entity.Property(x => x.FuelId).HasColumnName("fuel_id"); entity.Property(x => x.OriginalTankId).HasColumnName("original_tank_id"); entity.Property(x => x.OriginalPumpId).HasColumnName("original_pump_id"); entity.Property(x => x.OriginalNozzleId).HasColumnName("original_nozzle_id");
+                entity.Property(x => x.Liters).HasColumnName("liters").HasPrecision(18,2); entity.Property(x => x.OriginalPricePerLiter).HasColumnName("original_price_per_liter").HasPrecision(18,2); entity.Property(x => x.ReturnAmount).HasColumnName("return_amount").HasPrecision(18,2); entity.Property(x => x.InspectionResult).HasColumnName("inspection_result").HasMaxLength(80); entity.Property(x => x.Disposition).HasColumnName("disposition").HasMaxLength(100);
+                entity.HasIndex(x => x.CustomerReturnId); entity.HasIndex(x => x.FuelSaleId); entity.HasOne(x => x.CustomerReturn).WithMany(x => x.FuelItems).HasForeignKey(x => x.CustomerReturnId).OnDelete(DeleteBehavior.Restrict); entity.HasOne(x => x.FuelSale).WithMany().HasForeignKey(x => x.FuelSaleId).OnDelete(DeleteBehavior.Restrict); entity.HasOne(x => x.Fuel).WithMany().HasForeignKey(x => x.FuelId).OnDelete(DeleteBehavior.Restrict); entity.HasOne(x => x.OriginalTank).WithMany().HasForeignKey(x => x.OriginalTankId).OnDelete(DeleteBehavior.Restrict); entity.HasOne(x => x.OriginalPump).WithMany().HasForeignKey(x => x.OriginalPumpId).OnDelete(DeleteBehavior.Restrict); entity.HasOne(x => x.OriginalNozzle).WithMany().HasForeignKey(x => x.OriginalNozzleId).OnDelete(DeleteBehavior.Restrict);
+            });
 
             modelBuilder.Entity<StockAdjustment>(entity =>
             {

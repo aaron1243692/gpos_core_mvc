@@ -1,8 +1,7 @@
 
 
-pos void
 
-transaction/return
+reports
 
 permissions
 

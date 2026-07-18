@@ -1,0 +1,336 @@
+@model gpos.Models.ViewModels.DailyCashPageViewModel
+@{
+    ViewData["Title"] = "Daily Cash";
+    string Money(decimal value) => value.ToString("N2");
+    string UserName(gpos.Models.User? user) => user is null ? "-" : string.IsNullOrWhiteSpace(user.FullName) ? user.Username : user.FullName;
+}
+
+<div class="page-header">
+    <div class="page-heading">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item">GPOS</li>
+                <li class="breadcrumb-item">Transaction</li>
+                <li class="breadcrumb-item active" aria-current="page">Daily Cash</li>
+            </ol>
+        </nav>
+        <h1 class="mb-0">Daily Cash</h1>
+        <p class="page-subtitle text-muted mt-2">Expected Cash = Opening Cash + Cash Sales + Cash In - Cash Out.</p>
+    </div>
+    <div class="page-actions">
+        <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#dailyCashFormModal">Add Daily Cash</button>
+    </div>
+</div>
+
+<section class="transaction-ui-page">
+    <div class="content-card mb-3">
+        <form asp-action="DailyCash" method="get" class="row g-2 align-items-center">
+            <div class="col-md-2"><input class="form-control" name="search" value="@Model.Filter.Search" type="search" placeholder="Search daily cash..." /></div>
+            <div class="col-md-2"><select class="form-select" name="branchId" asp-items="Model.BranchOptions"><option></option></select></div>
+            <div class="col-md-2"><select class="form-select" name="shiftId" asp-items="Model.ShiftOptions"><option></option></select></div>
+            <div class="col-md-2"><select class="form-select" name="userId" asp-items="Model.UserOptions"><option></option></select></div>
+            <div class="col-md-2"><input class="form-control" name="dateFrom" value="@Model.Filter.DateFrom?.ToString("yyyy-MM-dd")" type="date" /></div>
+            <div class="col-md-1">
+                <select class="form-select" name="status">
+                    <option value="">All Statuses</option>
+                    <option value="Open" selected="@(Model.Filter.Status == "Open")">Open</option>
+                    <option value="Remitted" selected="@(Model.Filter.Status == "Remitted")">Remitted</option>
+                </select>
+            </div>
+            <div class="col-md-auto d-flex gap-1">
+                <button class="btn btn-primary" type="submit">Search</button>
+                <a class="btn btn-outline-secondary" asp-action="DailyCash">Clear</a>
+            </div>
+        </form>
+    </div>
+
+    <div class="content-card transaction-ui-card">
+        <div class="table-responsive transaction-ui-table-wrap">
+            <table class="table app-table table-sm align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>No</th><th>Date</th><th>Branch</th><th>Shift</th><th>Cashier</th>
+                        <th class="text-end">Opening Cash</th><th class="text-end">Cash In</th><th class="text-end">Cash Out</th>
+                        <th class="text-end">Cash Sales</th><th class="text-end">Expected Cash</th><th class="text-end">Actual Cash</th>
+                        <th class="text-end">Difference</th><th>Status</th><th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.Records.Count == 0)
+                    {
+                        <tr><td class="text-center text-muted fw-bold" colspan="14">No records found.</td></tr>
+                    }
+                    else
+                    {
+                        @for (var i = 0; i < Model.Records.Count; i++)
+                        {
+                            var item = Model.Records[i];
+                            <tr>
+                                <td>@(i + 1)</td>
+                                <td>@item.BusinessDate.ToString("yyyy-MM-dd")</td>
+                                <td>@item.Branch?.Name</td>
+                                <td>@item.Shift?.Name</td>
+                                <td>@UserName(item.User)</td>
+                                <td class="text-end">@Money(item.OpeningCash)</td>
+                                <td class="text-end">@Money(item.TotalCashIn)</td>
+                                <td class="text-end">@Money(item.TotalCashOut)</td>
+                                <td class="text-end">@Money(item.CashSales)</td>
+                                <td class="text-end">@Money(item.ExpectedCash)</td>
+                                <td class="text-end">@Money(item.ActualCash)</td>
+                                <td class="text-end">@Money(item.Difference)</td>
+                                <td><span class="badge @gpos.Controllers.TransactionController.CashStatusBadge(item.Status)">@gpos.Controllers.TransactionController.CashStatusName(item.Status)</span></td>
+                                <td class="text-nowrap">
+                                    @if (item.Status == 1)
+                                    {
+                                        <a class="btn btn-sm btn-outline-secondary" asp-action="DailyCash" asp-route-editId="@item.Id">Edit</a>
+                                    }
+                                    else
+                                    {
+                                        <button class="btn btn-sm btn-outline-primary daily-cash-view-button" type="button" data-bs-toggle="modal" data-bs-target="#dailyCashViewModal"
+                                                data-no="DC-@item.Id.ToString("000000")" data-date="@item.BusinessDate.ToString("yyyy-MM-dd")" data-branch="@item.Branch?.Name" data-shift="@item.Shift?.Name" data-cashier="@UserName(item.User)"
+                                                data-opening="@Money(item.OpeningCash)" data-in="@Money(item.TotalCashIn)" data-out="@Money(item.TotalCashOut)" data-sales="@Money(item.CashSales)"
+                                                data-expected="@Money(item.ExpectedCash)" data-actual="@Money(item.ActualCash)" data-difference="@Money(item.Difference)" data-remarks="@item.Remarks">View</button>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</section>
+
+<div class="modal fade" id="dailyCashViewModal" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-dialog-centered modal-lg"><div class="modal-content">
+    <div class="modal-header"><h2 class="modal-title fs-5">View Daily Cash</h2><button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button></div>
+    <div class="modal-body"><div class="row g-3">
+        <div class="col-md-6"><label class="form-label">Daily Cash No</label><input id="viewDailyCashNo" class="form-control" readonly /></div>
+        <div class="col-md-6"><label class="form-label">Business Date</label><input id="viewDailyCashDate" class="form-control" readonly /></div>
+        <div class="col-md-4"><label class="form-label">Branch</label><input id="viewDailyCashBranch" class="form-control" readonly /></div>
+        <div class="col-md-4"><label class="form-label">Shift</label><input id="viewDailyCashShift" class="form-control" readonly /></div>
+        <div class="col-md-4"><label class="form-label">Cashier</label><input id="viewDailyCashCashier" class="form-control" readonly /></div>
+        <div class="col-md-4"><label class="form-label">Opening Cash</label><input id="viewDailyCashOpening" class="form-control" readonly /></div>
+        <div class="col-md-4"><label class="form-label">Cash In</label><input id="viewDailyCashIn" class="form-control" readonly /></div>
+        <div class="col-md-4"><label class="form-label">Cash Out</label><input id="viewDailyCashOut" class="form-control" readonly /></div>
+        <div class="col-md-4"><label class="form-label">Cash Sales</label><input id="viewDailyCashSales" class="form-control" readonly /></div>
+        <div class="col-md-4"><label class="form-label">Expected Cash</label><input id="viewDailyCashExpected" class="form-control" readonly /></div>
+        <div class="col-md-4"><label class="form-label">Actual Cash</label><input id="viewDailyCashActual" class="form-control" readonly /></div>
+        <div class="col-md-4"><label class="form-label">Difference</label><input id="viewDailyCashDifference" class="form-control" readonly /></div>
+        <div class="col-md-4"><label class="form-label">Status</label><input class="form-control" value="Remitted" readonly /></div>
+        <div class="col-12"><label class="form-label">Remarks</label><textarea id="viewDailyCashRemarks" class="form-control" rows="3" readonly></textarea></div>
+    </div></div>
+    <div class="modal-footer"><button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Close</button></div>
+</div></div></div>
+
+<div class="modal fade" id="dailyCashFormModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <form asp-action="SaveDailyCash" method="post">
+                @Html.AntiForgeryToken()
+                <input asp-for="Form.Id" type="hidden" />
+                <input asp-for="Form.Status" type="hidden" />
+                <div class="modal-header"><h2 class="modal-title fs-5">Daily Cash</h2><button class="btn-close" type="button" data-bs-dismiss="modal"></button></div>
+                <div class="modal-body">
+                    <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label asp-for="Form.BranchId" class="form-label">Branch</label>
+                            <input asp-for="Form.BranchId" id="dailyCashBranchId" type="hidden" />
+                            <div class="input-group" data-branch-selector data-branch-hidden="#dailyCashBranchId" data-branch-display="#dailyCashBranchDisplay" data-branch-empty-text="Select branch">
+                                <input asp-for="Form.BranchName" id="dailyCashBranchDisplay" class="form-control" placeholder="Select branch" readonly />
+                                <button type="button" class="btn btn-outline-secondary branch-select-btn" data-branch-open>
+                                    <img src="/icons/search.png" alt="Search" style="width:16px;height:16px;" />
+                                </button>
+                            </div>
+                            <span asp-validation-for="Form.BranchId" class="text-danger"></span>
+                        </div>
+                        <div class="col-md-6"><label asp-for="Form.BusinessDate" class="form-label">Business Date</label><input asp-for="Form.BusinessDate" class="form-control" type="date" /><span asp-validation-for="Form.BusinessDate" class="text-danger"></span></div>
+                        <div class="col-md-6">
+                            <label asp-for="Form.ShiftId" class="form-label">Shift</label>
+                            <select asp-for="Form.ShiftId" class="form-select" id="dailyCashShiftSelect">
+                                <option value="0">Select shift</option>
+                                @foreach (var shift in Model.ShiftOptions.Where(item => !string.IsNullOrWhiteSpace(item.Value)))
+                                {
+                                    <option value="@shift.Value" selected="@(Model.Form.ShiftId.ToString() == shift.Value)">@shift.Text</option>
+                                }
+                            </select>
+                            <span asp-validation-for="Form.ShiftId" class="text-danger"></span>
+                        </div>
+                        <div class="col-md-6">
+                            <label asp-for="Form.UserId" class="form-label">User/Cashier</label>
+                            <input asp-for="Form.UserId" id="dailyCashUserId" type="hidden" />
+                            <div class="input-group" data-cash-user-selector data-user-hidden="#dailyCashUserId" data-user-display="#dailyCashUserDisplay">
+                                <input asp-for="Form.UserName" id="dailyCashUserDisplay" class="form-control" placeholder="Select user/cashier" readonly />
+                                <button type="button" class="btn btn-outline-secondary" data-user-open>
+                                    <img src="/icons/search.png" alt="Search" style="width:16px;height:16px;" />
+                                </button>
+                            </div>
+                            <span asp-validation-for="Form.UserId" class="text-danger"></span>
+                        </div>
+                        <div class="col-md-6"><label asp-for="Form.OpeningCash" class="form-label">Opening Cash</label><input asp-for="Form.OpeningCash" class="form-control" type="number" step="0.01" min="0" id="dailyCashOpeningCash" /><span asp-validation-for="Form.OpeningCash" class="text-danger"></span></div>
+                        <div class="col-md-6"><label asp-for="Form.ActualCash" class="form-label">Actual Cash</label><input asp-for="Form.ActualCash" class="form-control" type="number" step="0.01" min="0" /><span asp-validation-for="Form.ActualCash" class="text-danger"></span></div>
+                        <div class="col-12"><label asp-for="Form.Remarks" class="form-label">Remarks</label><textarea asp-for="Form.Remarks" class="form-control" rows="3"></textarea></div>
+                    </div>
+                </div>
+                <div class="modal-footer"><button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button><button class="btn btn-primary" type="submit">Save</button></div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="cashUserSelectorModal" tabindex="-1" aria-labelledby="cashUserSelectorModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title fs-5" id="cashUserSelectorModalLabel">Select User/Cashier</h2>
+                <button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="input-group mb-3">
+                    <input class="form-control" type="search" placeholder="Search name, username, or email" data-user-search-input />
+                    <button class="btn btn-outline-primary" type="button" data-user-search-button>Search</button>
+                </div>
+                <div class="table-responsive">
+                    <table class="table app-table table-sm align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>No</th>
+                                <th>Name</th>
+                                <th>Username</th>
+                                <th>Email</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody data-user-search-results>
+                            <tr><td class="text-center text-muted fw-bold" colspan="5">Search for a user.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        function escapeDailyCashHtml(value) {
+            return String(value ?? "")
+                .replaceAll("&", "&amp;")
+                .replaceAll("<", "&lt;")
+                .replaceAll(">", "&gt;")
+                .replaceAll('"', "&quot;")
+                .replaceAll("'", "&#039;");
+        }
+
+        function restoreDailyCashModalOpenState() {
+            if (document.querySelector(".modal.show")) {
+                document.body.classList.add("modal-open");
+            }
+        }
+
+        document.getElementById('dailyCashShiftSelect')?.addEventListener('change', async function () {
+            const openingInput = document.getElementById('dailyCashOpeningCash');
+            if (!this.value || this.value === '0' || !openingInput) return;
+            const response = await fetch(`/Transaction/ShiftOpeningCash?shiftId=${this.value}`);
+            if (response.ok) openingInput.value = (await response.json()).openingCash.toFixed(2);
+        });
+
+        document.addEventListener('DOMContentLoaded', function () {
+            document.querySelectorAll('.daily-cash-view-button').forEach(button => button.addEventListener('click', function () {
+                const fields = { No: 'no', Date: 'date', Branch: 'branch', Shift: 'shift', Cashier: 'cashier', Opening: 'opening', In: 'in', Out: 'out', Sales: 'sales', Expected: 'expected', Actual: 'actual', Difference: 'difference', Remarks: 'remarks' };
+                Object.entries(fields).forEach(([field, key]) => { const element = document.getElementById(`viewDailyCash${field}`); if (element) element.value = this.dataset[key] || '-'; });
+            }));
+            const selector = document.querySelector('[data-cash-user-selector]');
+            const userModalElement = document.getElementById('cashUserSelectorModal');
+            const searchInput = userModalElement?.querySelector('[data-user-search-input]');
+            const searchButton = userModalElement?.querySelector('[data-user-search-button]');
+            const results = userModalElement?.querySelector('[data-user-search-results]');
+
+            function setUser(user) {
+                const hidden = document.querySelector(selector.dataset.userHidden);
+                const display = document.querySelector(selector.dataset.userDisplay);
+                if (hidden) {
+                    hidden.value = user ? user.id : '';
+                    hidden.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+                if (display) {
+                    display.value = user ? user.name : '';
+                    display.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+            }
+
+            function renderUsers(users) {
+                if (!results) return;
+                results.innerHTML = '';
+                if (!users.length) {
+                    results.innerHTML = '<tr><td class="text-center text-muted fw-bold" colspan="5">No users found.</td></tr>';
+                    return;
+                }
+
+                users.forEach((user, index) => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${index + 1}</td>
+                        <td>${escapeDailyCashHtml(user.name || '-')}</td>
+                        <td>${escapeDailyCashHtml(user.username || '-')}</td>
+                        <td>${escapeDailyCashHtml(user.email || '-')}</td>
+                        <td><button class="btn btn-sm btn-outline-primary" type="button" data-user-select-row>Select</button></td>
+                    `;
+                    row.querySelector('[data-user-select-row]').addEventListener('click', function () {
+                        setUser(user);
+                        bootstrap.Modal.getOrCreateInstance(userModalElement).hide();
+                        setTimeout(restoreDailyCashModalOpenState, 150);
+                    });
+                    results.appendChild(row);
+                });
+            }
+
+            async function searchUsers() {
+                if (!results) return;
+                const query = searchInput ? searchInput.value.trim() : '';
+                results.innerHTML = '<tr><td class="text-center text-muted fw-bold" colspan="5">Loading users...</td></tr>';
+                try {
+                    const response = await fetch(`/Transaction/SearchCashUsers?search=${encodeURIComponent(query)}`, {
+                        headers: { 'Accept': 'application/json' }
+                    });
+                    if (!response.ok) throw new Error();
+                    renderUsers(await response.json());
+                } catch {
+                    results.innerHTML = '<tr><td class="text-center text-danger fw-bold" colspan="5">Unable to load users.</td></tr>';
+                }
+            }
+
+            selector?.querySelector('[data-user-open]')?.addEventListener('click', function (event) {
+                event.preventDefault();
+                event.stopPropagation();
+                bootstrap.Modal.getOrCreateInstance(userModalElement).show();
+                searchUsers();
+            });
+
+            searchButton?.addEventListener('click', function (event) {
+                event.preventDefault();
+                event.stopPropagation();
+                searchUsers();
+            });
+
+            searchInput?.addEventListener('keydown', function (event) {
+                if (event.key === 'Enter') {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    searchUsers();
+                }
+            });
+
+            userModalElement?.addEventListener('hidden.bs.modal', restoreDailyCashModalOpenState);
+        });
+
+        @if (!string.IsNullOrWhiteSpace(Model.ActiveModalId))
+        {
+            <text>document.addEventListener('DOMContentLoaded', () => bootstrap.Modal.getOrCreateInstance(document.getElementById('@Model.ActiveModalId')).show());</text>
+        }
+    </script>
+}

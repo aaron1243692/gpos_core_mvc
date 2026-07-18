@@ -153,15 +153,6 @@
                         </div>
                     </div>
                     <div class="dropend eg-rb-dropdown-group">
-                        <button class="dropdown-item eg-rb-dropdown-group-toggle nav-group-not-working" type="button">Returns <span class="nav-status-pill">Not Working</span></button>
-                        <div class="dropdown-menu eg-rb-submenu">
-                            @* UI-only / not working yet *@
-                            <a class="dropdown-item eg-rb-dropdown-link nav-page-not-working @(Model.ActivePage == "Transaction.ProductReturn" ? "active" : "")" asp-controller="Transaction" asp-action="ProductReturn">Product Return <span class="nav-status-pill">UI Only</span></a>
-                            @* UI-only / not working yet *@
-                            <a class="dropdown-item eg-rb-dropdown-link nav-page-not-working @(Model.ActivePage == "Transaction.FuelReturn" ? "active" : "")" asp-controller="Transaction" asp-action="FuelReturn">Fuel Return <span class="nav-status-pill">UI Only</span></a>
-                        </div>
-                    </div>
-                    <div class="dropend eg-rb-dropdown-group">
                         <button class="dropdown-item eg-rb-dropdown-group-toggle nav-group-partial" type="button">Price Adjustment <span class="nav-status-pill">Partial</span></button>
                         <div class="dropdown-menu eg-rb-submenu">
                             <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Transaction.FuelPriceAdjustment" ? "active" : "")" asp-controller="Transaction" asp-action="FuelPriceAdjustment">Fuel Price Adjustment</a>
@@ -186,6 +177,13 @@
                 <button class="eg-rb-tab dropdown-toggle @(Model.ActiveTab == "Reports" ? "is-active" : "")" type="button" id="gposReportsDropdown" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">Reports</button>
                 <div class="dropdown-menu eg-rb-setup-menu" aria-labelledby="gposReportsDropdown">
                     <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Reports.DailySales" ? "active" : "")" asp-controller="Reports" asp-action="DailySales">Sales</a>
+                    <div class="dropend eg-rb-dropdown-group">
+                        <button class="dropdown-item eg-rb-dropdown-group-toggle" type="button">Returns</button>
+                        <div class="dropdown-menu eg-rb-submenu">
+                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Reports.Return" ? "active" : "")" asp-controller="Reports" asp-action="Return">Return</a>
+                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Reports.ReturnManagement" ? "active" : "")" asp-controller="Reports" asp-action="ReturnManagement">Return Management</a>
+                        </div>
+                    </div>
                     <div class="dropend eg-rb-dropdown-group">
                         <button class="dropdown-item eg-rb-dropdown-group-toggle" type="button">Fuel Reports</button>
                         <div class="dropdown-menu eg-rb-submenu">

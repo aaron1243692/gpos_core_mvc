@@ -82,6 +82,127 @@ namespace gpos.Controllers
             if (detailsId.HasValue) model.Details = await BuildSalesReportDetailsAsync(detailsId.Value);
             return View(model);
         }
+
+        [HttpGet]
+        public async Task<IActionResult> Return(string? receiptNo)
+        {
+            var model = new ReturnCreatePageViewModel { ReceiptNo = (receiptNo ?? string.Empty).Trim() };
+            if (model.ReceiptNo.Length == 0) return View(model);
+            var userId = CurrentUserId();
+            if (!userId.HasValue) return Unauthorized();
+            var userBranchId = await _db.Users.AsNoTracking().Where(x => x.Id == userId).Select(x => x.BranchId).FirstOrDefaultAsync();
+            var sale = await _db.Sales.AsNoTracking().Where(x => x.ReceiptNo == model.ReceiptNo && x.Status == "Completed" && (!userBranchId.HasValue || x.BranchId == userBranchId))
+                .Select(x => new ReturnSaleViewModel
+                {
+                    SaleId = x.Id, ReceiptNo = x.ReceiptNo,
+                    Customer = x.Member == null ? "Walk-in" : x.Member.FullName + " (" + x.Member.MemberNo + ")",
+                    Branch = x.Branch != null ? x.Branch.Name : "Unassigned", Cashier = x.User != null ? (x.User.FullName ?? x.User.Username) : "Unknown",
+                    Products = x.ProductSales.Select(item => new ReturnableProductViewModel { ProductSaleId = item.Id, Product = item.Product != null ? item.Product.Name : "Unknown", Batch = item.Batch != null ? item.Batch.BatchNo : "Not recorded", Sold = item.Quantity, UnitPrice = item.UnitPrice > 0 ? item.UnitPrice : item.Price }).ToList(),
+                    Fuels = x.FuelSales.Select(item => new ReturnableFuelViewModel { FuelSaleId = item.Id, Fuel = item.Fuel != null ? item.Fuel.Name : "Unknown", Source = (item.Tank != null ? "Tank " + item.Tank.TankNo : "") + (item.Pump != null ? " / Pump " + item.Pump.PumpNo : "") + (item.Nozzle != null ? " / Nozzle " + item.Nozzle.NozzleNo : ""), Sold = item.Liters, UnitPrice = item.PricePerLiter }).ToList()
+                }).FirstOrDefaultAsync();
+            if (sale is null) { ModelState.AddModelError(string.Empty, "No eligible completed Sale was found for this receipt and Branch."); return View(model); }
+            var productIds = sale.Products.Select(x => x.ProductSaleId).ToList();
+            var fuelIds = sale.Fuels.Select(x => x.FuelSaleId).ToList();
+            var productReturned = await _db.CustomerProductReturnItems.AsNoTracking().Where(x => productIds.Contains(x.ProductSaleId) && x.CustomerReturn!.Status != "Rejected").GroupBy(x => x.ProductSaleId).Select(x => new { Id = x.Key, Quantity = x.Sum(y => y.Quantity) }).ToDictionaryAsync(x => x.Id, x => x.Quantity);
+            var fuelReturned = await _db.CustomerFuelReturnItems.AsNoTracking().Where(x => fuelIds.Contains(x.FuelSaleId) && x.CustomerReturn!.Status != "Rejected").GroupBy(x => x.FuelSaleId).Select(x => new { Id = x.Key, Quantity = x.Sum(y => y.Liters) }).ToDictionaryAsync(x => x.Id, x => x.Quantity);
+            sale.Products.ForEach(x => x.Returned = productReturned.GetValueOrDefault(x.ProductSaleId)); sale.Fuels.ForEach(x => x.Returned = fuelReturned.GetValueOrDefault(x.FuelSaleId));
+            model.Sale = sale; return View(model);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> CreateReturn(int saleId, string reason, Dictionary<int, decimal>? productQuantities, Dictionary<int, decimal>? fuelQuantities)
+        {
+            var userId = CurrentUserId(); if (!userId.HasValue) return Unauthorized();
+            reason = (reason ?? string.Empty).Trim(); if (reason.Length < 3 || reason.Length > 500) { TempData["ReturnError"] = "A reason between 3 and 500 characters is required."; return RedirectToAction(nameof(Return)); }
+            productQuantities ??= new(); fuelQuantities ??= new();
+            productQuantities = productQuantities.Where(x => x.Value > 0).ToDictionary(); fuelQuantities = fuelQuantities.Where(x => x.Value > 0).ToDictionary();
+            if (productQuantities.Count == 0 && fuelQuantities.Count == 0) { TempData["ReturnError"] = "Select at least one item and enter a positive return quantity."; return RedirectToAction(nameof(Return)); }
+            await using var transaction = await _db.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
+            try
+            {
+                var userBranchId = await _db.Users.Where(x => x.Id == userId).Select(x => x.BranchId).FirstOrDefaultAsync();
+                var sale = await _db.Sales.Include(x => x.ProductSales).Include(x => x.FuelSales).FirstOrDefaultAsync(x => x.Id == saleId && x.Status == "Completed" && x.BranchId.HasValue && (!userBranchId.HasValue || x.BranchId == userBranchId));
+                if (sale is null) throw new InvalidOperationException("The Sale is not eligible for return in this Branch.");
+                var productItems = new List<CustomerProductReturnItem>(); var fuelItems = new List<CustomerFuelReturnItem>();
+                foreach (var pair in productQuantities)
+                {
+                    var original = sale.ProductSales.SingleOrDefault(x => x.Id == pair.Key) ?? throw new InvalidOperationException("A selected Product item is not part of the Sale.");
+                    var prior = await _db.CustomerProductReturnItems.Where(x => x.ProductSaleId == original.Id && x.CustomerReturn!.Status != "Rejected").SumAsync(x => (decimal?)x.Quantity) ?? 0;
+                    if (pair.Value > original.Quantity - prior) throw new InvalidOperationException("A Product return quantity exceeds the remaining returnable quantity.");
+                    var price = original.UnitPrice > 0 ? original.UnitPrice : original.Price; productItems.Add(new CustomerProductReturnItem { ProductSaleId = original.Id, ProductId = original.ProductId, OriginalBatchId = original.BatchId, OriginalDisplayStockId = original.DisplayStockId, Quantity = pair.Value, OriginalUnitPrice = price, ReturnAmount = pair.Value * price });
+                }
+                foreach (var pair in fuelQuantities)
+                {
+                    var original = sale.FuelSales.SingleOrDefault(x => x.Id == pair.Key) ?? throw new InvalidOperationException("A selected Fuel item is not part of the Sale.");
+                    var prior = await _db.CustomerFuelReturnItems.Where(x => x.FuelSaleId == original.Id && x.CustomerReturn!.Status != "Rejected").SumAsync(x => (decimal?)x.Liters) ?? 0;
+                    if (pair.Value > original.Liters - prior) throw new InvalidOperationException("Returned Fuel liters exceed the remaining returnable liters.");
+                    fuelItems.Add(new CustomerFuelReturnItem { FuelSaleId = original.Id, FuelId = original.FuelId, OriginalTankId = original.TankId, OriginalPumpId = original.PumpId, OriginalNozzleId = original.NozzleId, Liters = pair.Value, OriginalPricePerLiter = original.PricePerLiter, ReturnAmount = pair.Value * original.PricePerLiter });
+                }
+                var now = DateTime.UtcNow; var record = new CustomerReturn { ReturnNo = $"RET-{now:yyyyMMddHHmmssfff}", SaleId = sale.Id, OriginalReceiptNo = sale.ReceiptNo, BranchId = sale.BranchId!.Value, MemberId = sale.MemberId, ReturnType = productItems.Count > 0 && fuelItems.Count > 0 ? "Mixed" : productItems.Count > 0 ? "Product" : "Fuel", RefundAmount = productItems.Sum(x => x.ReturnAmount) + fuelItems.Sum(x => x.ReturnAmount), Reason = reason, Status = "Pending Inspection", CreatedByUserId = userId.Value, CreatedAt = now, ProductItems = productItems, FuelItems = fuelItems };
+                _db.CustomerReturns.Add(record); await _db.SaveChangesAsync(); await transaction.CommitAsync(); TempData["ReturnMessage"] = $"Return {record.ReturnNo} was created for inspection."; return RedirectToAction(nameof(ReturnManagement), new { detailsId = record.Id });
+            }
+            catch (InvalidOperationException ex) { await transaction.RollbackAsync(); TempData["ReturnError"] = ex.Message; return RedirectToAction(nameof(Return)); }
+        }
+
+        public async Task<IActionResult> ReturnManagement(string? search, int? branchId, string? returnType, string? status, DateTime? from, DateTime? to, int? detailsId)
+        {
+            search = (search ?? "").Trim(); returnType = (returnType ?? "").Trim(); status = (status ?? "").Trim();
+            if (returnType is not ("" or "Product" or "Fuel" or "Mixed")) returnType = string.Empty;
+            if (status is not ("" or "Pending Inspection" or "Approved" or "Rejected" or "Completed")) status = string.Empty;
+            if (from.HasValue && to.HasValue && from.Value.Date > to.Value.Date) ModelState.AddModelError(string.Empty, "From date cannot be later than To date.");
+            var query = _db.CustomerReturns.AsNoTracking().AsQueryable();
+            if (search.Length > 0) query = query.Where(x => x.ReturnNo.Contains(search) || x.OriginalReceiptNo.Contains(search) || (x.Member != null && (x.Member.MemberNo.Contains(search) || x.Member.FullName.Contains(search))));
+            if (branchId.HasValue) query = query.Where(x => x.BranchId == branchId); if (returnType.Length > 0) query = query.Where(x => x.ReturnType == returnType); if (status.Length > 0) query = query.Where(x => x.Status == status);
+            if (from.HasValue) query = query.Where(x => x.CreatedAt >= from.Value.Date); if (to.HasValue) { var until = to.Value.Date.AddDays(1); query = query.Where(x => x.CreatedAt < until); }
+            var model = new ReturnManagementPageViewModel { Search = search, BranchId = branchId, ReturnType = returnType, Status = status, From = from, To = to, BranchOptions = await BuildBranchFilterOptionsAsync(), Rows = await query.OrderByDescending(x => x.CreatedAt).ThenByDescending(x => x.Id).Select(x => new CustomerReturnRowViewModel { Id = x.Id, ReturnNo = x.ReturnNo, ReceiptNo = x.OriginalReceiptNo, ReturnDate = x.CreatedAt, Branch = x.Branch != null ? x.Branch.Name : "Unknown", Customer = x.Member == null ? "Walk-in" : x.Member.FullName + " (" + x.Member.MemberNo + ")", ReturnType = x.ReturnType, RefundAmount = x.RefundAmount, Status = x.Status }).ToListAsync() };
+            foreach (var option in model.BranchOptions) option.Selected = option.Value == branchId?.ToString();
+            if (detailsId.HasValue) model.Details = await BuildReturnDetailsAsync(detailsId.Value); return View(model);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> InspectReturn(int id, string decision, string notes, Dictionary<int, string>? productResults, Dictionary<int, string>? fuelResults)
+        {
+            var userId = CurrentUserId(); if (!userId.HasValue) return Unauthorized(); notes = (notes ?? "").Trim();
+            if (decision is not ("Approved" or "Rejected") || notes.Length < 3) { TempData["ReturnError"] = "Select Approved or Rejected and enter inspection notes."; return RedirectToAction(nameof(ReturnManagement), new { detailsId = id }); }
+            var userBranchId = await _db.Users.AsNoTracking().Where(x => x.Id == userId).Select(x => x.BranchId).FirstOrDefaultAsync();
+            var record = await _db.CustomerReturns.Include(x => x.ProductItems).Include(x => x.FuelItems).FirstOrDefaultAsync(x => x.Id == id && (!userBranchId.HasValue || x.BranchId == userBranchId));
+            if (record is null) return NotFound(); if (record.Status != "Pending Inspection") { TempData["ReturnError"] = "Only pending Returns can be inspected."; return RedirectToAction(nameof(ReturnManagement), new { detailsId = id }); }
+            productResults ??= new(); fuelResults ??= new();
+            var productAllowed = new[] { "Restockable", "Damaged", "Expired", "Rejected", "Disposal" }; var fuelAllowed = new[] { "Approved for controlled handling", "Contaminated", "Wrong Fuel", "Water Suspected", "Rejected", "Disposal" };
+            foreach (var item in record.ProductItems) { var result = productResults.GetValueOrDefault(item.Id); if (!productAllowed.Contains(result)) { TempData["ReturnError"] = "Choose an inspection result for every Product item."; return RedirectToAction(nameof(ReturnManagement), new { detailsId = id }); } item.InspectionResult = result; item.Disposition = result == "Restockable" && decision == "Approved" ? "Warehouse Stock" : result; }
+            foreach (var item in record.FuelItems) { var result = fuelResults.GetValueOrDefault(item.Id); if (!fuelAllowed.Contains(result)) { TempData["ReturnError"] = "Choose an inspection result for every Fuel item."; return RedirectToAction(nameof(ReturnManagement), new { detailsId = id }); } item.InspectionResult = result; item.Disposition = result; }
+            record.InspectedByUserId = userId; record.InspectedAt = DateTime.UtcNow; record.InspectionDecision = decision; record.InspectionNotes = notes; record.Status = decision;
+            await _db.SaveChangesAsync(); TempData["ReturnMessage"] = $"Return {record.ReturnNo} was {decision.ToLowerInvariant()}."; return RedirectToAction(nameof(ReturnManagement), new { detailsId = id });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ProcessReturn(int id)
+        {
+            var userId = CurrentUserId(); if (!userId.HasValue) return Unauthorized();
+            await using var transaction = await _db.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
+            try
+            {
+                var userBranchId = await _db.Users.AsNoTracking().Where(x => x.Id == userId).Select(x => x.BranchId).FirstOrDefaultAsync();
+                var record = await _db.CustomerReturns.Include(x => x.ProductItems).Include(x => x.FuelItems).FirstOrDefaultAsync(x => x.Id == id && (!userBranchId.HasValue || x.BranchId == userBranchId));
+                if (record is null) return NotFound(); if (record.Status != "Approved" || record.CompletedAt.HasValue) throw new InvalidOperationException("Only an approved, unprocessed Return can be completed.");
+                var now = DateTime.UtcNow;
+                foreach (var item in record.ProductItems.Where(x => x.InspectionResult == "Restockable"))
+                {
+                    if (!item.OriginalBatchId.HasValue) throw new InvalidOperationException("A restockable Product has no original Batch reference.");
+                    var stock = await _db.WarehouseStocks.FirstOrDefaultAsync(x => x.BranchId == record.BranchId && x.ProductId == item.ProductId && x.BatchId == item.OriginalBatchId);
+                    if (stock is null) { stock = new WarehouseStock { BranchId = record.BranchId, ProductId = item.ProductId, BatchId = item.OriginalBatchId.Value, Quantity = 0, CreatedAt = now }; _db.WarehouseStocks.Add(stock); await _db.SaveChangesAsync(); }
+                    var before = stock.Quantity; stock.Quantity += item.Quantity; stock.UpdatedAt = now;
+                    var movement = new StockMovement { ProductId = item.ProductId, ProductBatchId = item.OriginalBatchId, BranchId = record.BranchId, BeforeQuantity = before, AfterQuantity = stock.Quantity, SourceLocation = "Customer Return", DestinationLocation = "Warehouse", MovementType = "CustomerReturn", Quantity = item.Quantity, ReferenceType = "CustomerReturn", ReferenceId = record.Id, Remarks = $"Approved restockable return {record.ReturnNo}", CreatedBy = userId, CreatedAt = now };
+                    _db.StockMovements.Add(movement); await _db.SaveChangesAsync(); item.StockMovementId = movement.Id;
+                }
+                record.ProcessedByUserId = userId; record.CompletedAt = now; record.Status = "Completed"; await _db.SaveChangesAsync(); await transaction.CommitAsync(); TempData["ReturnMessage"] = $"Return {record.ReturnNo} was completed.";
+            }
+            catch (InvalidOperationException ex) { await transaction.RollbackAsync(); TempData["ReturnError"] = ex.Message; }
+            return RedirectToAction(nameof(ReturnManagement), new { detailsId = id });
+        }
         public IActionResult ShiftSalesReport() => View();
         public IActionResult ShiftReport() => View();
         public IActionResult FuelSalesReport() => View();
@@ -896,6 +1017,17 @@ namespace gpos.Controllers
                 .Where(option => !string.IsNullOrWhiteSpace(option.TankNo))
                 .Select(option => new SelectListItem { Value = option.Id.ToString(), Text = string.IsNullOrWhiteSpace(option.FuelName) ? option.TankNo : $"{option.TankNo} - {option.FuelName}" })
                 .ToList();
+        }
+
+        private async Task<CustomerReturnDetailsViewModel?> BuildReturnDetailsAsync(int id)
+        {
+            return await _db.CustomerReturns.AsNoTracking().Where(x => x.Id == id).Select(x => new CustomerReturnDetailsViewModel
+            {
+                Id = x.Id, ReturnNo = x.ReturnNo, ReceiptNo = x.OriginalReceiptNo, ReturnDate = x.CreatedAt, Branch = x.Branch != null ? x.Branch.Name : "Unknown", Customer = x.Member == null ? "Walk-in" : x.Member.FullName + " (" + x.Member.MemberNo + ")", ReturnType = x.ReturnType, RefundAmount = x.RefundAmount, Status = x.Status, Reason = x.Reason,
+                CreatedBy = x.CreatedByUser != null ? (x.CreatedByUser.FullName ?? x.CreatedByUser.Username) : "Unknown", Inspector = x.InspectedByUser != null ? (x.InspectedByUser.FullName ?? x.InspectedByUser.Username) : "", InspectedAt = x.InspectedAt, Decision = x.InspectionDecision ?? "", InspectionNotes = x.InspectionNotes ?? "", ProcessedBy = x.ProcessedByUser != null ? (x.ProcessedByUser.FullName ?? x.ProcessedByUser.Username) : "", CompletedAt = x.CompletedAt,
+                Products = x.ProductItems.Select(item => new CustomerProductReturnDetailViewModel { Id = item.Id, Product = item.Product != null ? item.Product.Name : "Unknown", Batch = item.OriginalBatch != null ? item.OriginalBatch.BatchNo : "Not recorded", Quantity = item.Quantity, UnitPrice = item.OriginalUnitPrice, Amount = item.ReturnAmount, InspectionResult = item.InspectionResult ?? "Pending", Disposition = item.Disposition ?? "Pending" }).ToList(),
+                Fuels = x.FuelItems.Select(item => new CustomerFuelReturnDetailViewModel { Id = item.Id, Fuel = item.Fuel != null ? item.Fuel.Name : "Unknown", Source = (item.OriginalTank != null ? "Tank " + item.OriginalTank.TankNo : "") + (item.OriginalPump != null ? " / Pump " + item.OriginalPump.PumpNo : "") + (item.OriginalNozzle != null ? " / Nozzle " + item.OriginalNozzle.NozzleNo : ""), Liters = item.Liters, UnitPrice = item.OriginalPricePerLiter, Amount = item.ReturnAmount, InspectionResult = item.InspectionResult ?? "Pending", Disposition = item.Disposition ?? "Pending" }).ToList()
+            }).FirstOrDefaultAsync();
         }
 
         private async Task<SalesReportDetailsViewModel?> BuildSalesReportDetailsAsync(int saleId)
