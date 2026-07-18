@@ -19330,7 +19330,6 @@ C:\project\gpos_core_mvc\artifacts\sales-report-build\Debug\net10.0\ru\Microsoft
 C:\project\gpos_core_mvc\artifacts\sales-report-build\Debug\net10.0\tr\Microsoft.CodeAnalysis.Workspaces.MSBuild.BuildHost.resources.dll
 C:\project\gpos_core_mvc\artifacts\sales-report-build\Debug\net10.0\zh-Hans\Microsoft.CodeAnalysis.Workspaces.MSBuild.BuildHost.resources.dll
 C:\project\gpos_core_mvc\artifacts\sales-report-build\Debug\net10.0\zh-Hant\Microsoft.CodeAnalysis.Workspaces.MSBuild.BuildHost.resources.dll
-C:\project\gpos_core_mvc\obj\Debug\net10.0\compressed\ios0330fcj-{0}-tlthv3k5no-tlthv3k5no.gz
 C:\project\gpos_core_mvc\artifacts\sales-label-build\Debug\net10.0\wwwroot\css\site.css
 C:\project\gpos_core_mvc\artifacts\sales-label-build\Debug\net10.0\wwwroot\favicon.ico
 C:\project\gpos_core_mvc\artifacts\sales-label-build\Debug\net10.0\wwwroot\icons\academic-success.png
@@ -21433,3 +21432,4 @@ C:\project\gpos_core_mvc\artifacts\ui-return-build\ru\Microsoft.CodeAnalysis.Wor
 C:\project\gpos_core_mvc\artifacts\ui-return-build\tr\Microsoft.CodeAnalysis.Workspaces.MSBuild.BuildHost.resources.dll
 C:\project\gpos_core_mvc\artifacts\ui-return-build\zh-Hans\Microsoft.CodeAnalysis.Workspaces.MSBuild.BuildHost.resources.dll
 C:\project\gpos_core_mvc\artifacts\ui-return-build\zh-Hant\Microsoft.CodeAnalysis.Workspaces.MSBuild.BuildHost.resources.dll
+C:\project\gpos_core_mvc\obj\Debug\net10.0\compressed\ios0330fcj-{0}-i29pa0jpko-i29pa0jpko.gz

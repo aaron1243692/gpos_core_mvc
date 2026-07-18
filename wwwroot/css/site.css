@@ -4362,6 +4362,10 @@ textarea.form-control {
   --bs-btn-color: #ffffff;
 }
 
+#returnDetails .return-reject-btn {
+  --bs-btn-color: #ffffff;
+}
+
 .deactivate-confirm-btn,
 .btn-danger.deactivate-confirm-btn {
   min-width: 96px;
