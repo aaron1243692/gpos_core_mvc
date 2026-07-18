@@ -25,7 +25,63 @@ namespace gpos.Controllers
         }
 
         public IActionResult DailySalesReport() => View();
-        public IActionResult DailySales() => View();
+        public async Task<IActionResult> DailySales(string? search, int? branchId, int? userId, string? status, DateTime? from, DateTime? to, int page = 1, int? detailsId = null)
+        {
+            const int pageSize = 20;
+            var term = (search ?? string.Empty).Trim();
+            status = (status ?? string.Empty).Trim();
+            if (status is not ("" or "Completed" or "Voided")) status = string.Empty;
+            if (from.HasValue && to.HasValue && from.Value.Date > to.Value.Date)
+                ModelState.AddModelError(string.Empty, "From date cannot be later than To date.");
+
+            var query = _db.Sales.AsNoTracking().Where(sale => sale.Status == "Completed" || sale.Status == "Voided");
+            if (term.Length > 0)
+                query = query.Where(sale => sale.ReceiptNo.Contains(term)
+                    || (sale.Member != null && (sale.Member.MemberNo.Contains(term) || sale.Member.FullName.Contains(term)))
+                    || sale.Payments.Any(payment => payment.ReferenceNo != null && payment.ReferenceNo.Contains(term)));
+            if (branchId.HasValue) query = query.Where(sale => sale.BranchId == branchId.Value);
+            if (userId.HasValue) query = query.Where(sale => sale.UserId == userId.Value);
+            if (status.Length > 0) query = query.Where(sale => sale.Status == status);
+            if (from.HasValue) query = query.Where(sale => (sale.BusinessDate ?? sale.CreatedAt) >= from.Value.Date);
+            if (to.HasValue) { var exclusiveTo = to.Value.Date.AddDays(1); query = query.Where(sale => (sale.BusinessDate ?? sale.CreatedAt) < exclusiveTo); }
+
+            var summary = await query.GroupBy(_ => 1).Select(group => new
+            {
+                Total = group.Count(), Completed = group.Count(sale => sale.Status == "Completed"), Voided = group.Count(sale => sale.Status == "Voided"),
+                CompletedAmount = group.Where(sale => sale.Status == "Completed").Sum(sale => sale.NetTotal),
+                VoidedAmount = group.Where(sale => sale.Status == "Voided").Sum(sale => sale.NetTotal)
+            }).FirstOrDefaultAsync();
+            var total = summary?.Total ?? 0;
+            var totalPages = Math.Max(1, (int)Math.Ceiling(total / (double)pageSize));
+            page = Math.Clamp(page, 1, totalPages);
+            var rows = await query.OrderByDescending(sale => sale.BusinessDate ?? sale.CreatedAt).ThenByDescending(sale => sale.Id)
+                .Skip((page - 1) * pageSize).Take(pageSize).Select(sale => new SalesReportRowViewModel
+                {
+                    Id = sale.Id, ReceiptNo = sale.ReceiptNo, SaleDate = sale.BusinessDate ?? sale.CreatedAt,
+                    Branch = sale.Branch != null ? sale.Branch.Name : "Unassigned",
+                    User = sale.User != null ? (sale.User.FullName ?? sale.User.Username) : "Unknown",
+                    HasProducts = sale.ProductSales.Any(), HasFuel = sale.FuelSales.Any(),
+                    PaymentMethod = sale.Payments.OrderBy(payment => payment.Id).Select(payment => payment.PaymentType).FirstOrDefault() ?? "Not recorded",
+                    OriginalTotal = sale.NetTotal, Status = sale.Status,
+                    VoidDate = sale.Voids.OrderByDescending(item => item.CompletedAt ?? item.CreatedAt).Select(item => (DateTime?)(item.CompletedAt ?? item.CreatedAt)).FirstOrDefault(),
+                    VoidedBy = sale.Voids.OrderByDescending(item => item.CompletedAt ?? item.CreatedAt).Select(item => item.RequestedByUser != null ? (item.RequestedByUser.FullName ?? item.RequestedByUser.Username) : "Unknown").FirstOrDefault() ?? string.Empty
+                }).ToListAsync();
+
+            var model = new SalesReportPageViewModel
+            {
+                Search = term, BranchId = branchId, UserId = userId, Status = status, From = from, To = to,
+                Page = page, PageSize = pageSize, TotalPages = totalPages, TotalRecords = total,
+                CompletedCount = summary?.Completed ?? 0, VoidedCount = summary?.Voided ?? 0,
+                CompletedAmount = summary?.CompletedAmount ?? 0, VoidedOriginalAmount = summary?.VoidedAmount ?? 0,
+                Rows = rows, BranchOptions = await BuildBranchFilterOptionsAsync(),
+                UserOptions = await _db.Users.AsNoTracking().OrderBy(user => user.FullName ?? user.Username).Select(user => new SelectListItem { Value = user.Id.ToString(), Text = user.FullName ?? user.Username }).ToListAsync()
+            };
+            model.UserOptions.Insert(0, new SelectListItem { Value = "", Text = "All Users" });
+            foreach (var option in model.BranchOptions) option.Selected = option.Value == branchId?.ToString();
+            foreach (var option in model.UserOptions) option.Selected = option.Value == userId?.ToString();
+            if (detailsId.HasValue) model.Details = await BuildSalesReportDetailsAsync(detailsId.Value);
+            return View(model);
+        }
         public IActionResult ShiftSalesReport() => View();
         public IActionResult ShiftReport() => View();
         public IActionResult FuelSalesReport() => View();
@@ -840,6 +896,36 @@ namespace gpos.Controllers
                 .Where(option => !string.IsNullOrWhiteSpace(option.TankNo))
                 .Select(option => new SelectListItem { Value = option.Id.ToString(), Text = string.IsNullOrWhiteSpace(option.FuelName) ? option.TankNo : $"{option.TankNo} - {option.FuelName}" })
                 .ToList();
+        }
+
+        private async Task<SalesReportDetailsViewModel?> BuildSalesReportDetailsAsync(int saleId)
+        {
+            var details = await _db.Sales.AsNoTracking().Where(sale => sale.Id == saleId && (sale.Status == "Completed" || sale.Status == "Voided"))
+                .Select(sale => new SalesReportDetailsViewModel
+                {
+                    Id = sale.Id, ReceiptNo = sale.ReceiptNo, SaleDate = sale.BusinessDate ?? sale.CreatedAt,
+                    Branch = sale.Branch != null ? sale.Branch.Name : "Unassigned",
+                    User = sale.User != null ? (sale.User.FullName ?? sale.User.Username) : "Unknown",
+                    HasProducts = sale.ProductSales.Any(), HasFuel = sale.FuelSales.Any(),
+                    PaymentMethod = sale.Payments.OrderBy(payment => payment.Id).Select(payment => payment.PaymentType).FirstOrDefault() ?? "Not recorded",
+                    OriginalTotal = sale.NetTotal, Status = sale.Status,
+                    SaleVoidId = sale.Voids.OrderByDescending(item => item.CompletedAt ?? item.CreatedAt).Select(item => (int?)item.Id).FirstOrDefault(),
+                    VoidDate = sale.Voids.OrderByDescending(item => item.CompletedAt ?? item.CreatedAt).Select(item => (DateTime?)(item.CompletedAt ?? item.CreatedAt)).FirstOrDefault(),
+                    VoidedBy = sale.Voids.OrderByDescending(item => item.CompletedAt ?? item.CreatedAt).Select(item => item.RequestedByUser != null ? (item.RequestedByUser.FullName ?? item.RequestedByUser.Username) : "Unknown").FirstOrDefault() ?? string.Empty,
+                    VoidReason = sale.Voids.OrderByDescending(item => item.CompletedAt ?? item.CreatedAt).Select(item => item.Reason).FirstOrDefault() ?? string.Empty,
+                    SaleVoidStatus = sale.Voids.OrderByDescending(item => item.CompletedAt ?? item.CreatedAt).Select(item => item.Status).FirstOrDefault() ?? string.Empty,
+                    ProductItems = sale.ProductSales.OrderBy(item => item.Id).Select(item => new SalesReportProductItemViewModel
+                    {
+                        Product = item.Product != null ? item.Product.Name : "Unknown", BatchNo = item.Batch != null ? item.Batch.BatchNo : string.Empty,
+                        Quantity = item.Quantity, SellingPrice = item.UnitPrice > 0 ? item.UnitPrice : item.Price, LineTotal = item.Subtotal
+                    }).ToList(),
+                    FuelItems = sale.FuelSales.OrderBy(item => item.Id).Select(item => new SalesReportFuelItemViewModel
+                    {
+                        Fuel = item.Fuel != null ? item.Fuel.Name : "Unknown", Tank = item.Tank != null ? item.Tank.TankNo : string.Empty,
+                        Pump = item.Pump != null ? item.Pump.PumpNo : string.Empty, Liters = item.Liters, PricePerLiter = item.PricePerLiter, LineTotal = item.Subtotal
+                    }).ToList()
+                }).FirstOrDefaultAsync();
+            return details;
         }
 
         private async Task<List<SelectListItem>> BuildBranchFilterOptionsAsync()

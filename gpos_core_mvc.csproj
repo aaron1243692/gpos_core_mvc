@@ -22,6 +22,8 @@
     <EmbeddedResource Remove="artifacts\**\*" />
     <None Remove="artifacts\**\*" />
     <RazorGenerate Remove="artifacts\**\*.cshtml" />
+    <Content Remove="bin\**\*" />
+    <RazorGenerate Remove="bin\**\*.cshtml" />
   </ItemGroup>
   <ItemGroup>
     <Content Update="Views\**\*.cshtml">

@@ -627,10 +627,6 @@ build_metadata.AdditionalFiles.CssScope =
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcVHJhbnNhY3Rpb25cVGFua0Z1ZWxBZGp1c3RtZW50LmNzaHRtbA==
 build_metadata.AdditionalFiles.CssScope = 
 
-[C:/project/gpos_core_mvc/Views/Transaction/Void.cshtml]
-build_metadata.AdditionalFiles.TargetPath = Vmlld3NcVHJhbnNhY3Rpb25cVm9pZC5jc2h0bWw=
-build_metadata.AdditionalFiles.CssScope = 
-
 [C:/project/gpos_core_mvc/Views/Transaction/VoidFuel.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcVHJhbnNhY3Rpb25cVm9pZEZ1ZWwuY3NodG1s
 build_metadata.AdditionalFiles.CssScope = 

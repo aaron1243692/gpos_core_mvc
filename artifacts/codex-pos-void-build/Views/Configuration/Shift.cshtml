@@ -1,0 +1,200 @@
+@model gpos.Models.ViewModels.ShiftPageViewModel
+@{
+    ViewData["Title"] = "Shift Configuration";
+
+    string FormatTime(TimeSpan? value)
+    {
+        return value.HasValue ? DateTime.Today.Add(value.Value).ToString("hh:mm tt") : "";
+    }
+}
+
+<div class="page-header">
+    <div class="page-heading">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item">GPOS</li>
+                <li class="breadcrumb-item">Setup</li>
+                <li class="breadcrumb-item">Config</li>
+                <li class="breadcrumb-item active" aria-current="page">Shift</li>
+            </ol>
+        </nav>
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+            <h1 class="mb-0">Shift</h1>
+        </div>
+        <p class="page-subtitle text-muted mt-2">Manage reusable cashier shift settings and default opening cash amounts.</p>
+    </div>
+    <div class="page-actions">
+        <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#shiftFormModal">Add Shift</button>
+    </div>
+</div>
+
+@if (TempData["ConfigSetupFeedback"] is string feedback)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        @feedback
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+<section class="transaction-ui-page">
+    <div class="content-card mb-3">
+        <form asp-action="Shift" method="get" class="row g-2 align-items-center">
+            <div class="col-md-4">
+                <input class="form-control" name="search" value="@Model.Search" type="search" placeholder="Search shift name or remarks..." />
+            </div>
+            <div class="col-md-3">
+                <select class="form-select" name="status">
+                    <option value="">All Statuses</option>
+                    <option value="Active" selected="@(Model.Status == "Active")">Active</option>
+                    <option value="Inactive" selected="@(Model.Status == "Inactive")">Inactive</option>
+                </select>
+            </div>
+            <div class="col-md-auto d-flex gap-1">
+                <button class="btn btn-primary" type="submit">Search</button>
+                <a class="btn btn-outline-secondary" asp-action="Shift">Clear</a>
+            </div>
+        </form>
+    </div>
+
+    <div class="content-card transaction-ui-card">
+        <div class="table-responsive transaction-ui-table-wrap">
+            <table class="table app-table table-sm align-middle mb-0" id="shiftTable">
+                <thead>
+                    <tr>
+                        <th class="text-nowrap">No</th>
+                        <th class="text-nowrap">Shift Name</th>
+                        <th class="text-nowrap">Start Time</th>
+                        <th class="text-nowrap">End Time</th>
+                        <th class="text-nowrap text-end">Opening Cash Amount</th>
+                        <th class="text-nowrap">Status</th>
+                        <th class="text-nowrap">Remarks</th>
+                        <th class="text-nowrap">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.Shifts.Count == 0)
+                    {
+                        <tr>
+                            <td class="text-center text-muted fw-bold" colspan="8">No records found.</td>
+                        </tr>
+                    }
+                    else
+                    {
+                        @for (var i = 0; i < Model.Shifts.Count; i++)
+                        {
+                            var shift = Model.Shifts[i];
+                            <tr>
+                                <td>@(i + 1)</td>
+                                <td class="text-nowrap fw-bold">@shift.Name</td>
+                                <td>@FormatTime(shift.StartTime)</td>
+                                <td>@FormatTime(shift.EndTime)</td>
+                                <td class="text-end">@(shift.OpeningCashAmount.HasValue ? shift.OpeningCashAmount.Value.ToString("N2") : "")</td>
+                                <td>
+                                    @if (shift.Status == 1)
+                                    {
+                                        <span class="badge bg-success text-nowrap">Active</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-secondary text-nowrap">Inactive</span>
+                                    }
+                                </td>
+                                <td>@shift.Remarks</td>
+                                <td class="text-nowrap">
+                                    <a class="btn btn-sm btn-outline-secondary" asp-action="Shift" asp-route-editId="@shift.Id" asp-route-search="@Model.Search" asp-route-status="@Model.Status">Edit</a>
+                                    @if (shift.Status == 1)
+                                    {
+                                        <form asp-action="DeleteShift" method="post" class="d-inline" data-deactivate-form>
+                                            @Html.AntiForgeryToken()
+                                            <input name="id" type="hidden" value="@shift.Id" />
+                                            <input name="search" type="hidden" value="@Model.Search" />
+                                            <input name="status" type="hidden" value="@Model.Status" />
+                                            <button class="btn btn-sm btn-outline-danger" type="submit">Deactivate</button>
+                                        </form>
+                                    }
+                                    else
+                                    {
+                                        <form asp-action="ActivateShift" method="post" class="d-inline">
+                                            @Html.AntiForgeryToken()
+                                            <input name="id" type="hidden" value="@shift.Id" />
+                                            <input name="search" type="hidden" value="@Model.Search" />
+                                            <input name="status" type="hidden" value="@Model.Status" />
+                                            <button class="btn btn-sm btn-outline-success" type="submit">Activate</button>
+                                        </form>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</section>
+
+<div class="modal fade" id="shiftFormModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <form asp-action="SaveShift" method="post">
+                @Html.AntiForgeryToken()
+                <input asp-for="ShiftForm.Id" type="hidden" />
+                <input asp-for="ShiftForm.Status" type="hidden" />
+                <input name="search" type="hidden" value="@Model.Search" />
+                <input name="status" type="hidden" value="@Model.Status" />
+                <div class="modal-header">
+                    <h2 class="modal-title fs-5">Shift</h2>
+                    <button class="btn-close" type="button" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+                    <div class="row g-3">
+                        <div class="col-md-12">
+                            <label asp-for="ShiftForm.Name" class="form-label">Shift Name</label>
+                            <input asp-for="ShiftForm.Name" class="form-control" placeholder="e.g. Morning Shift" autocomplete="off" />
+                            <span asp-validation-for="ShiftForm.Name" class="text-danger"></span>
+                        </div>
+                        <div class="col-md-6">
+                            <label asp-for="ShiftForm.StartTime" class="form-label">Start Time</label>
+                            <input asp-for="ShiftForm.StartTime" class="form-control" type="time" />
+                            <span asp-validation-for="ShiftForm.StartTime" class="text-danger"></span>
+                        </div>
+                        <div class="col-md-6">
+                            <label asp-for="ShiftForm.EndTime" class="form-label">End Time</label>
+                            <input asp-for="ShiftForm.EndTime" class="form-control" type="time" />
+                            <span asp-validation-for="ShiftForm.EndTime" class="text-danger"></span>
+                        </div>
+                        <div class="col-md-6">
+                            <label asp-for="ShiftForm.OpeningCashAmount" class="form-label">Opening Cash Amount</label>
+                            <input asp-for="ShiftForm.OpeningCashAmount" class="form-control" type="number" step="0.01" min="0" placeholder="1000.00" />
+                            <span asp-validation-for="ShiftForm.OpeningCashAmount" class="text-danger"></span>
+                        </div>
+                        <div class="col-md-12">
+                            <label asp-for="ShiftForm.Remarks" class="form-label">Remarks</label>
+                            <textarea asp-for="ShiftForm.Remarks" class="form-control" rows="3" placeholder="Enter remarks..."></textarea>
+                            <span asp-validation-for="ShiftForm.Remarks" class="text-danger"></span>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button>
+                    <button class="btn btn-primary" type="submit">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    @if (!string.IsNullOrWhiteSpace(Model.ActiveModalId))
+    {
+        <script>
+            document.addEventListener('DOMContentLoaded', function () {
+                const modalElement = document.getElementById('@Model.ActiveModalId');
+                if (modalElement) {
+                    bootstrap.Modal.getOrCreateInstance(modalElement).show();
+                }
+            });
+        </script>
+    }
+}

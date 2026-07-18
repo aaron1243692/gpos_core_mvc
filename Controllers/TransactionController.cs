@@ -2607,54 +2607,30 @@ namespace gpos.Controllers
         public async Task<IActionResult> CancelBranchToBranchFuel(int id, string? search) => await CancelStockTransfer(id, nameof(BranchToBranchFuel), search);
         public IActionResult ProductReturn() => View();
         public IActionResult FuelReturn() => View();
-        [HttpGet]
-        public async Task<IActionResult> Void(string? search, string? type, string? branch, DateTime? dateFrom, DateTime? dateTo, string? status)
-        {
-            var context = await CurrentPosUserContextAsync();
-            if (context is null) return Unauthorized();
-            var canVoid = await HasVoidSalePermissionAsync(context.UserId);
-            var query = _db.Sales.AsNoTracking().Include(x => x.User).Include(x => x.DailyCash).Include(x => x.ProductSales)
-                .Include(x => x.FuelSales).Include(x => x.Payments).Include(x => x.PointsLedger).Include(x => x.VoucherRedemptions)
-                .Include(x => x.Voids).Where(x => x.BranchId == context.BranchId && (x.Status == "Completed" || x.Status == "Voided"));
-            var term = (search ?? string.Empty).Trim();
-            if (term.Length > 0) query = query.Where(x => x.ReceiptNo.Contains(term) || (x.User != null && (x.User.Username.Contains(term) || (x.User.FullName != null && x.User.FullName.Contains(term)))));
-            if (dateFrom.HasValue) query = query.Where(x => x.BusinessDate >= dateFrom.Value.Date);
-            if (dateTo.HasValue) query = query.Where(x => x.BusinessDate < dateTo.Value.Date.AddDays(1));
-            if (!string.IsNullOrWhiteSpace(status)) query = query.Where(x => x.Status == status);
-            if (type == "Product") query = query.Where(x => x.ProductSales.Any() && !x.FuelSales.Any());
-            if (type == "Fuel") query = query.Where(x => x.FuelSales.Any());
-            var sales = await query.OrderByDescending(x => x.BusinessDate).ThenByDescending(x => x.Id).Take(200).ToListAsync();
-            return View(new VoidPageViewModel
-            {
-                Search = (search ?? string.Empty).Trim(),
-                Type = (type ?? string.Empty).Trim(),
-                Branch = (branch ?? string.Empty).Trim(),
-                DateFrom = dateFrom,
-                DateTo = dateTo,
-                Status = (status ?? string.Empty).Trim(), CanCreate = canVoid,
-                Sales = sales.Select(s => { var e = VoidEligibilityFor(s, canVoid); return new VoidSaleRowViewModel {
-                    SaleId=s.Id, SaleVoidId=s.Voids.Select(v => (int?)v.Id).FirstOrDefault(), ReceiptNo=s.ReceiptNo, BusinessDate=s.BusinessDate,
-                    Cashier=UserDisplayName(s.User), SaleType=s.FuelSales.Any() ? (s.ProductSales.Any()?"Mixed":"Fuel") : "Product",
-                    Gross=s.GrossTotal, Discount=s.DiscountAmount+s.RebateAmount, Vat=s.VatAmount??0, Net=s.NetTotal,
-                    Payment=string.Join(", ", s.Payments.Where(p=>p.Status=="Completed").Select(p=>p.PaymentType).Distinct()), Status=s.Status,
-                    Eligible=e.Status=="Eligible", EligibilityMessage=e.Reason }; }).ToList()
-            });
-        }
-
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> CreateSaleVoid(int saleId, string reason)
         {
+            var wantsJson = Request.Headers.Accept.Any(value => value?.Contains("application/json", StringComparison.OrdinalIgnoreCase) == true);
             var context = await CurrentPosUserContextAsync();
-            if (context is null) return Unauthorized();
-            if (!await HasVoidSalePermissionAsync(context.UserId)) return Forbid();
+            if (context is null) return wantsJson ? Unauthorized(new { success = false, message = "Please sign in before voiding a Sale." }) : Unauthorized();
+            if (!await HasVoidSalePermissionAsync(context.UserId)) return wantsJson ? StatusCode(StatusCodes.Status403Forbidden, new { success = false, message = "You are not authorized to void Sales." }) : Forbid();
             reason = (reason ?? string.Empty).Trim();
-            if (reason.Length < 3 || reason.Length > 500) { TempData["VoidError"] = "A Void reason between 3 and 500 characters is required."; return RedirectToAction(nameof(Void)); }
+            if (reason.Length < 3 || reason.Length > 500)
+            {
+                const string validationMessage = "A Void reason between 3 and 500 characters is required.";
+                if (wantsJson) return BadRequest(new { success = false, message = validationMessage });
+                TempData["VoidError"] = validationMessage;
+                return RedirectToAction(nameof(POS));
+            }
+            var responseMessage = string.Empty;
+            var restoredProducts = new List<object>();
+            var succeeded = false;
             await using var transaction = await _db.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
             try
             {
                 var sale = await _db.Sales.FromSqlInterpolated($"SELECT * FROM sales WHERE id = {saleId} FOR UPDATE").SingleOrDefaultAsync();
-                if (sale is null || sale.BranchId != context.BranchId) return NotFound();
+                if (sale is null || sale.BranchId != context.BranchId) throw new InvalidOperationException("The Sale was not found in the current Branch.");
                 await _db.Entry(sale).Collection(x => x.ProductSales).LoadAsync(); await _db.Entry(sale).Collection(x => x.FuelSales).LoadAsync();
                 await _db.Entry(sale).Collection(x => x.Payments).LoadAsync(); await _db.Entry(sale).Collection(x => x.PointsLedger).LoadAsync(); await _db.Entry(sale).Collection(x => x.VoucherRedemptions).LoadAsync();
                 if (sale.Status != "Completed") throw new InvalidOperationException("Only a completed Sale can be voided.");
@@ -2699,21 +2675,17 @@ namespace gpos.Controllers
                 sale.Status="Voided"; sale.UpdatedAt=now;
                 using (_db.BeginControlledSaleVoidTransition()) await _db.SaveChangesAsync();
                 await RefreshDailyCashSnapshotAsync(currentCash.Id); using (_db.BeginControlledSaleVoidTransition()) await _db.SaveChangesAsync();
-                await transaction.CommitAsync(); TempData["VoidMessage"]=$"Sale {sale.ReceiptNo} was voided successfully.";
+                restoredProducts = sale.ProductSales.GroupBy(x => x.ProductId).Select(group => (object)new { productId = group.Key, quantity = group.Sum(x => x.Quantity) }).ToList();
+                await transaction.CommitAsync();
+                responseMessage = $"Sale {sale.ReceiptNo} was voided successfully.";
+                succeeded = true;
+                if (!wantsJson) TempData["VoidMessage"] = responseMessage;
             }
-            catch (InvalidOperationException ex) { await transaction.RollbackAsync(); TempData["VoidError"]=ex.Message; }
-            catch (DbUpdateException) { await transaction.RollbackAsync(); TempData["VoidError"]="The Sale could not be voided because another Void or conflicting update was recorded."; }
-            return RedirectToAction(nameof(Void));
+            catch (InvalidOperationException ex) { await transaction.RollbackAsync(); responseMessage = ex.Message; if (!wantsJson) TempData["VoidError"] = responseMessage; }
+            catch (DbUpdateException) { await transaction.RollbackAsync(); responseMessage = "The Sale could not be voided because another Void or conflicting update was recorded."; if (!wantsJson) TempData["VoidError"] = responseMessage; }
+            if (wantsJson) return StatusCode(succeeded ? StatusCodes.Status200OK : StatusCodes.Status409Conflict, new { success = succeeded, message = responseMessage, restoredProducts });
+            return RedirectToAction(nameof(POS));
         }
-
-        [HttpGet]
-        public IActionResult VoidSale() => RedirectToAction(nameof(Void));
-
-        [HttpGet]
-        public IActionResult VoidProduct() => RedirectToAction(nameof(Void), new { type = "Product" });
-
-        [HttpGet]
-        public IActionResult VoidFuel() => RedirectToAction(nameof(Void), new { type = "Fuel" });
         public async Task<IActionResult> DisplayStockAdjustment(string? search, int? branchId, DateTime? dateFrom, DateTime? dateTo, string? status, int? editId, int? detailsId)
             => View(await BuildStockAdjustmentPageAsync("Display", search, branchId, dateFrom, dateTo, status, editId, detailsId));
         public async Task<IActionResult> WarehouseStockAdjustment(string? search, int? branchId, DateTime? dateFrom, DateTime? dateTo, string? status, int? editId, int? detailsId)

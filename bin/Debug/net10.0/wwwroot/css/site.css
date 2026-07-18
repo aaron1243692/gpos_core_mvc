@@ -4358,6 +4358,10 @@ textarea.form-control {
   --bs-btn-hover-border-color: #dc3545;
 }
 
+#confirmRecentSaleVoid.btn-danger {
+  --bs-btn-color: #ffffff;
+}
+
 .deactivate-confirm-btn,
 .btn-danger.deactivate-confirm-btn {
   min-width: 96px;

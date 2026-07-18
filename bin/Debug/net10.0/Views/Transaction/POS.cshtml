@@ -237,7 +237,15 @@
                     <div class="modal-header"><div><h2 class="modal-title fs-5" id="recentSalesModalLabel">Recent Sales</h2><p class="mb-0 text-muted">Current cashier · @Model.CurrentBranchName</p></div><button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button></div>
                     <div class="modal-body">
                         <div class="alert d-none" id="recentSalesMessage" role="alert"></div>
-                        <div class="table-responsive"><table class="table app-table table-sm align-middle mb-0"><thead><tr><th>No</th><th>Receipt No</th><th>Date / Time</th><th>Items</th><th>Payment Method</th><th class="text-end">Total</th><th>Status</th><th>Void Eligibility</th><th>Action</th></tr></thead><tbody id="recentSalesRows"><tr><td class="text-center text-muted" colspan="9">Loading recent sales...</td></tr></tbody></table></div>
+                        <div id="recentSalesListPanel"><div class="table-responsive"><table class="table app-table table-sm align-middle mb-0"><thead><tr><th>No</th><th>Receipt No</th><th>Date / Time</th><th>Items</th><th>Payment Method</th><th class="text-end">Total</th><th>Status</th><th>Void Eligibility</th><th>Action</th></tr></thead><tbody id="recentSalesRows"><tr><td class="text-center text-muted" colspan="9">Loading recent sales...</td></tr></tbody></table></div></div>
+                        <div class="d-none" id="recentSaleVoidPanel">
+                            <h3 class="fs-5">Confirm Product Sale Void</h3>
+                            <p>Void Sale <strong id="recentSaleVoidReceipt"></strong>? This restores its original Product batch allocations and reverses its completed payment.</p>
+                            <div class="alert alert-danger d-none" id="recentSaleVoidMessage" role="alert"></div>
+                            <label class="form-label" for="recentSaleVoidReason">Reason</label>
+                            <textarea class="form-control" id="recentSaleVoidReason" rows="3" minlength="3" maxlength="500" required></textarea>
+                            <div class="d-flex justify-content-end gap-2 mt-3"><button class="btn btn-outline-secondary" id="cancelRecentSaleVoid" type="button">Cancel</button><button class="btn btn-danger" id="confirmRecentSaleVoid" type="button">Confirm Void</button></div>
+                        </div>
                     </div>
                     <div class="modal-footer"><button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Close</button></div>
                 </div>
@@ -575,6 +583,13 @@
             const recentSalesModalElement = document.getElementById("recentSalesModal");
             const recentSalesMessage = document.getElementById("recentSalesMessage");
             const recentSalesRows = document.getElementById("recentSalesRows");
+            const recentSalesListPanel = document.getElementById("recentSalesListPanel");
+            const recentSaleVoidPanel = document.getElementById("recentSaleVoidPanel");
+            const recentSaleVoidReceipt = document.getElementById("recentSaleVoidReceipt");
+            const recentSaleVoidReason = document.getElementById("recentSaleVoidReason");
+            const recentSaleVoidMessage = document.getElementById("recentSaleVoidMessage");
+            const cancelRecentSaleVoid = document.getElementById("cancelRecentSaleVoid");
+            const confirmRecentSaleVoid = document.getElementById("confirmRecentSaleVoid");
             const voidHistoryModalElement = document.getElementById("voidHistoryModal");
             const voidHistoryMessage = document.getElementById("voidHistoryMessage");
             const voidHistoryRows = document.getElementById("voidHistoryRows");
@@ -585,6 +600,7 @@
             let activeMode = "hot";
             let activeCategoryId = "";
             let activeFuelInput = "amount";
+            let pendingRecentSaleVoid = null;
             let completedReceiptNo = "";
             let completedReceiptTotals = null;
             let memberDiscountAmount = 0;
@@ -739,6 +755,9 @@
             }
 
             async function openRecentSales() {
+                recentSaleVoidPanel.classList.add("d-none");
+                recentSalesListPanel.classList.remove("d-none");
+                pendingRecentSaleVoid = null;
                 recentSalesMessage.classList.add("d-none");
                 recentSalesRows.innerHTML = `<tr><td class="text-center text-muted" colspan="9">Loading recent sales...</td></tr>`;
                 if (window.bootstrap) bootstrap.Modal.getOrCreateInstance(recentSalesModalElement).show();
@@ -752,11 +771,71 @@
                         const eligible = sale.voidEligibility === "Eligible";
                         const eligibilityClass = alreadyVoided ? "text-bg-secondary" : eligible ? "text-bg-success" : "text-bg-warning";
                         const statusClass = sale.status === "Voided" ? "text-bg-secondary" : "text-bg-success";
-                        return `<tr><td>${index + 1}</td><td>${escapeHtml(sale.receiptNo)}</td><td>${escapeHtml(formatDateTime(sale.createdAt))}</td><td>${sale.itemCount}</td><td>${escapeHtml(sale.paymentMethod)}</td><td class="text-end">${peso.format(sale.total)}</td><td><span class="badge ${statusClass}">${escapeHtml(sale.status)}</span></td><td><span class="badge ${eligibilityClass}">${escapeHtml(sale.voidEligibility)}</span><small class="d-block text-muted mt-1">${escapeHtml(sale.voidEligibilityReason)}</small></td><td><div class="d-flex gap-1 flex-nowrap"><button class="btn btn-sm btn-outline-primary" type="button" data-recent-sale-id="${sale.id}">View</button><span class="d-inline-block" title="${escapeHtml(sale.voidEligibilityReason || "Void is not available yet")}"><button class="btn btn-sm btn-outline-danger" type="button" disabled aria-label="Void ${escapeHtml(sale.receiptNo)}">Void</button></span></div></td></tr>`;
+                        const voidAction = eligible
+                            ? `<button class="btn btn-sm btn-outline-danger pos-recent-sale-void" type="button" data-pos-recent-sale-void-id="${sale.id}" data-pos-recent-sale-receipt="${escapeHtml(sale.receiptNo)}" aria-label="Void ${escapeHtml(sale.receiptNo)}">Void</button>`
+                            : `<span class="d-inline-block" title="${escapeHtml(sale.voidEligibilityReason || "Void is not available yet")}"><button class="btn btn-sm btn-outline-danger" type="button" disabled aria-label="Void ${escapeHtml(sale.receiptNo)}">Void</button></span>`;
+                        return `<tr><td>${index + 1}</td><td>${escapeHtml(sale.receiptNo)}</td><td>${escapeHtml(formatDateTime(sale.createdAt))}</td><td>${sale.itemCount}</td><td>${escapeHtml(sale.paymentMethod)}</td><td class="text-end">${peso.format(sale.total)}</td><td><span class="badge ${statusClass}">${escapeHtml(sale.status)}</span></td><td><span class="badge ${eligibilityClass}">${escapeHtml(sale.voidEligibility)}</span><small class="d-block text-muted mt-1">${escapeHtml(sale.voidEligibilityReason)}</small></td><td><div class="d-flex gap-1 flex-nowrap"><button class="btn btn-sm btn-outline-primary" type="button" data-recent-sale-id="${sale.id}">View</button>${voidAction}</div></td></tr>`;
                     }).join("") : `<tr><td class="text-center text-muted" colspan="9">No recent sales found.</td></tr>`;
                 } catch (error) {
                     recentSalesRows.innerHTML = `<tr><td class="text-center text-muted" colspan="9">Unable to load recent sales.</td></tr>`;
                     showUtilityMessage(recentSalesMessage, error.message || "Unable to load recent sales.");
+                }
+            }
+
+            function openRecentSaleVoidConfirmation(saleId, receiptNo) {
+                pendingRecentSaleVoid = { saleId, receiptNo };
+                recentSaleVoidReceipt.textContent = receiptNo;
+                recentSaleVoidReason.value = "";
+                recentSaleVoidMessage.classList.add("d-none");
+                recentSalesListPanel.classList.add("d-none");
+                recentSaleVoidPanel.classList.remove("d-none");
+                recentSaleVoidReason.focus();
+            }
+
+            function cancelRecentSaleVoidConfirmation() {
+                pendingRecentSaleVoid = null;
+                recentSaleVoidPanel.classList.add("d-none");
+                recentSalesListPanel.classList.remove("d-none");
+            }
+
+            async function submitRecentSaleVoid() {
+                const reason = recentSaleVoidReason.value.trim();
+                if (!pendingRecentSaleVoid || reason.length < 3 || reason.length > 500) {
+                    showUtilityMessage(recentSaleVoidMessage, "A Void reason between 3 and 500 characters is required.");
+                    return;
+                }
+                confirmRecentSaleVoid.disabled = true;
+                cancelRecentSaleVoid.disabled = true;
+                try {
+                    const body = new URLSearchParams({ saleId: String(pendingRecentSaleVoid.saleId), reason });
+                    const response = await fetch("/Transaction/CreateSaleVoid", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8", "RequestVerificationToken": antiForgeryToken, Accept: "application/json" },
+                        body
+                    });
+                    const result = await response.json();
+                    if (!response.ok || !result.success) throw new Error(result.message || "Unable to void the Sale.");
+                    (Array.isArray(result.restoredProducts) ? result.restoredProducts : []).forEach(product => {
+                        const input = productInputByProductId(String(product.productId));
+                        if (!input) return;
+                        const nextAvailable = availableDisplayQuantity(input) + Number(product.quantity || 0);
+                        input.dataset.available = String(nextAvailable);
+                        input.max = String(nextAvailable);
+                        const card = input.closest(".pos-menu-product-card");
+                        if (card) {
+                            card.dataset.available = String(nextAvailable);
+                            card.dataset.availableQuantity = String(nextAvailable);
+                            const availableLabel = card.querySelector("small");
+                            if (availableLabel) availableLabel.textContent = `Available: ${formatQuantity(nextAvailable)}`;
+                        }
+                    });
+                    await openRecentSales();
+                    showUtilityMessage(recentSalesMessage, result.message || "Sale voided successfully.", true);
+                } catch (error) {
+                    showUtilityMessage(recentSaleVoidMessage, error.message || "Unable to void the Sale.");
+                } finally {
+                    confirmRecentSaleVoid.disabled = false;
+                    cancelRecentSaleVoid.disabled = false;
                 }
             }
 
@@ -2113,9 +2192,21 @@
             cancelDisplayRefillSelectorButton.addEventListener("click", returnToRefillTransfer);
             confirmDisplayRefillButton.addEventListener("click", submitDisplayRefill);
             recentSalesRows.addEventListener("click", event => {
-                const button = event.target.closest("[data-recent-sale-id]");
-                if (button) openRecentSaleDetails(button.dataset.recentSaleId);
+                const voidButton = event.target.closest("[data-pos-recent-sale-void-id]");
+                if (voidButton && recentSalesRows.contains(voidButton)) {
+                    const saleId = Number.parseInt(voidButton.dataset.posRecentSaleVoidId, 10);
+                    const receiptNo = voidButton.dataset.posRecentSaleReceipt || "";
+                    if (saleId > 0 && receiptNo) {
+                        openRecentSaleVoidConfirmation(saleId, receiptNo);
+                    }
+                    return;
+                }
+
+                const viewButton = event.target.closest("[data-recent-sale-id]");
+                if (viewButton) openRecentSaleDetails(viewButton.dataset.recentSaleId);
             });
+            cancelRecentSaleVoid.addEventListener("click", cancelRecentSaleVoidConfirmation);
+            confirmRecentSaleVoid.addEventListener("click", submitRecentSaleVoid);
             voidHistoryRows.addEventListener("click", event => {
                 const button = event.target.closest("[data-void-history-sale-id]");
                 if (button) openRecentSaleDetails(button.dataset.voidHistorySaleId, voidHistoryModalElement);
