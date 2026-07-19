@@ -223,22 +223,22 @@ namespace gpos.Controllers
         public IActionResult CashDifferenceReport() => View();
         public IActionResult VoidTransactionReport() => View();
 
-        public async Task<IActionResult> WarehouseDailyStock(string? search, int? editId, int? branchId, int? filterBranchId)
+        public async Task<IActionResult> WarehouseDailyStock(string? search, int? editId, int? detailsId, int? branchId, int? filterBranchId)
         {
             branchId = filterBranchId ?? branchId;
-            return View(await BuildDailyStockPageAsync(WarehouseStockType, search, branchId, editId: editId, activeModalId: editId.HasValue ? DailyStockModalId : string.Empty));
+            return View(await BuildDailyStockPageAsync(WarehouseStockType, search, branchId, editId: editId, detailsId: detailsId, activeModalId: editId.HasValue ? DailyStockModalId : detailsId.HasValue ? "dailyStockDetailsModal" : string.Empty));
         }
 
-        public async Task<IActionResult> DisplayDailyStock(string? search, int? editId, int? branchId, int? filterBranchId)
+        public async Task<IActionResult> DisplayDailyStock(string? search, int? editId, int? detailsId, int? branchId, int? filterBranchId)
         {
             branchId = filterBranchId ?? branchId;
-            return View(await BuildDailyStockPageAsync(DisplayStockType, search, branchId, editId: editId, activeModalId: editId.HasValue ? DailyStockModalId : string.Empty));
+            return View(await BuildDailyStockPageAsync(DisplayStockType, search, branchId, editId: editId, detailsId: detailsId, activeModalId: editId.HasValue ? DailyStockModalId : detailsId.HasValue ? "dailyStockDetailsModal" : string.Empty));
         }
 
-        public async Task<IActionResult> TankDailyStock(string? search, int? editId, int? branchId, int? filterBranchId)
+        public async Task<IActionResult> TankDailyStock(string? search, int? editId, int? detailsId, int? branchId, int? filterBranchId)
         {
             branchId = filterBranchId ?? branchId;
-            return View(await BuildDailyStockPageAsync(TankStockType, search, branchId, editId: editId, activeModalId: editId.HasValue ? DailyStockModalId : string.Empty));
+            return View(await BuildDailyStockPageAsync(TankStockType, search, branchId, editId: editId, detailsId: detailsId, activeModalId: editId.HasValue ? DailyStockModalId : detailsId.HasValue ? "dailyStockDetailsModal" : string.Empty));
         }
 
         [HttpPost]
@@ -354,28 +354,49 @@ namespace gpos.Controllers
             }
 
             var now = DateTime.UtcNow;
+            var userId = CurrentUserId();
+            if (!userId.HasValue)
+            {
+                ModelState.AddModelError(string.Empty, "Please sign in before recording Daily Stock.");
+                return View(ActionViewFor(stockType), await BuildDailyStockPageAsync(stockType, search, filterBranchId, form, activeModalId: DailyStockModalId));
+            }
             if (!await BranchExistsAsync(form.BranchId))
             {
                 ModelState.AddModelError("Form.BranchId", "Branch is required.");
                 return View(ActionViewFor(stockType), await BuildDailyStockPageAsync(stockType, search, filterBranchId, form, activeModalId: DailyStockModalId));
             }
 
-            await using var transaction = await _db.Database.BeginTransactionAsync();
             var selectedStock = await ValidateAndLoadSelectedStockAsync(stockType, form);
             if (selectedStock is null)
             {
                 return View(ActionViewFor(stockType), await BuildDailyStockPageAsync(stockType, search, filterBranchId, form, activeModalId: DailyStockModalId));
             }
 
-            var sold = await ComputeSoldAsync(stockType, form.StockDate!.Value.Date, form.BatchId, form.TankId, form.BranchId);
-            var record = form.Id > 0
-                ? await _db.DailyStockRecords.FirstOrDefaultAsync(item => item.Id == form.Id && item.StockType == stockType)
-                : new DailyStockRecord { CreatedAt = now, CreatedBy = CurrentUserId() };
-
-            if (record is null)
+            var existing = form.Id > 0 ? await _db.DailyStockRecords.FirstOrDefaultAsync(item => item.Id == form.Id && item.StockType == stockType) : null;
+            if (form.Id > 0 && existing is null) return NotFound();
+            if (existing is not null && existing.Status != "Draft")
             {
-                return NotFound();
+                TempData["DailyStockError"] = "Confirmed Daily Stock records are read-only.";
+                return RedirectToAction(redirectAction, new { search, filterBranchId });
             }
+
+            var duplicate = await DailyStockScopeQuery(stockType, form.BranchId, form.ProductId, form.BatchId, form.TankId)
+                .AnyAsync(item => item.StockDate == form.StockDate!.Value.Date && item.Id != form.Id && (item.Status == "Draft" || item.Status == "Confirmed" || item.Status == "Locked"));
+            if (duplicate)
+            {
+                ModelState.AddModelError(string.Empty, "A Daily Stock record already exists for this date, branch, and stock item.");
+                return View(ActionViewFor(stockType), await BuildDailyStockPageAsync(stockType, search, filterBranchId, form, activeModalId: DailyStockModalId));
+            }
+
+            var components = await BuildDailyStockComponentsAsync(stockType, form.StockDate!.Value.Date, form.BranchId, form.ProductId, form.BatchId, form.TankId, selectedStock);
+            if (stockType == TankStockType && selectedStock is Tank draftTank && form.Ending > draftTank.CapacityLiters)
+            {
+                ModelState.AddModelError("Form.Ending", "Ending Liters cannot exceed Tank capacity.");
+                return View(ActionViewFor(stockType), await BuildDailyStockPageAsync(stockType, search, filterBranchId, form, activeModalId: DailyStockModalId));
+            }
+            var record = form.Id > 0
+                ? existing!
+                : new DailyStockRecord { RecordNo = await GenerateDailyStockNoAsync(now), Status = "Draft", CreatedAt = now, CreatedBy = userId };
 
             record.StockType = stockType;
             record.BranchId = form.BranchId;
@@ -384,6 +405,8 @@ namespace gpos.Controllers
             record.BatchId = stockType == TankStockType ? null : form.BatchId;
             record.TankId = stockType == TankStockType ? form.TankId : null;
             record.FuelId = null;
+            record.WarehouseStockId = stockType == WarehouseStockType ? form.WarehouseStockId : null;
+            record.DisplayStockId = stockType == DisplayStockType ? form.DisplayStockId : null;
             if (stockType == TankStockType && form.TankId.HasValue)
             {
                 record.FuelId = await _db.Tanks.AsNoTracking()
@@ -391,11 +414,20 @@ namespace gpos.Controllers
                     .Select(tank => (int?)tank.FuelId)
                     .FirstOrDefaultAsync();
             }
-            record.Beginning = form.Beginning!.Value;
-            record.Sold = sold;
-            record.Actual = record.Beginning - record.Sold;
+            record.Beginning = components.Beginning;
+            record.Received = components.Received;
+            record.TransferIn = components.TransferIn;
+            record.TransferOut = components.TransferOut;
+            record.Sold = components.Sold;
+            record.Adjustment = components.Adjustment;
+            record.Expected = components.Expected;
+            record.Actual = components.Expected;
             record.Ending = form.Ending!.Value;
-            record.Loss = record.Actual - record.Ending;
+            record.Variance = record.Ending - record.Expected;
+            record.Loss = Math.Max(record.Expected - record.Ending, 0m);
+            record.CurrentOfficialQuantity = components.CurrentOfficial;
+            record.ReconciliationAdjustment = record.Ending - components.CurrentOfficial;
+            record.NewOfficialQuantity = record.Ending;
             record.Remarks = CleanOptional(form.Remarks);
             record.UpdatedAt = now;
 
@@ -405,10 +437,6 @@ namespace gpos.Controllers
             }
 
             await _db.SaveChangesAsync();
-            ApplyOfficialStockCorrection(stockType, selectedStock, record.Ending, now);
-            AddDailyStockMovementIfSupported(stockType, record, selectedStock, now);
-            await _db.SaveChangesAsync();
-            await transaction.CommitAsync();
             return RedirectToAction(redirectAction, new { search, filterBranchId });
         }
 
@@ -417,6 +445,16 @@ namespace gpos.Controllers
             ModelState.Remove("Form.Sold");
             ModelState.Remove("Form.Actual");
             ModelState.Remove("Form.Loss");
+            ModelState.Remove("Form.Beginning");
+            ModelState.Remove("Form.Received");
+            ModelState.Remove("Form.TransferIn");
+            ModelState.Remove("Form.TransferOut");
+            ModelState.Remove("Form.Adjustment");
+            ModelState.Remove("Form.Expected");
+            ModelState.Remove("Form.Variance");
+            ModelState.Remove("Form.CurrentOfficialQuantity");
+            ModelState.Remove("Form.ReconciliationAdjustment");
+            ModelState.Remove("Form.NewOfficialQuantity");
 
             form.Sold = 0m;
             form.Actual = form.Beginning;
@@ -483,7 +521,7 @@ namespace gpos.Controllers
             form.ProductId = batch.ProductId;
         }
 
-        private async Task<DailyStockPageViewModel> BuildDailyStockPageAsync(string stockType, string? search, int? branchId = null, DailyStockForm? form = null, int? editId = null, string activeModalId = "")
+        private async Task<DailyStockPageViewModel> BuildDailyStockPageAsync(string stockType, string? search, int? branchId = null, DailyStockForm? form = null, int? editId = null, int? detailsId = null, string activeModalId = "")
         {
             var searchText = (search ?? string.Empty).Trim();
             var recordsQuery = _db.DailyStockRecords
@@ -493,6 +531,8 @@ namespace gpos.Controllers
                 .Include(record => record.Batch)
                 .Include(record => record.Tank)
                 .ThenInclude(tank => tank!.Fuel)
+                .Include(record => record.CreatedByUser)
+                .Include(record => record.ConfirmedByUser)
                 .Where(record => record.StockType == stockType);
 
             if (!string.IsNullOrWhiteSpace(searchText))
@@ -521,6 +561,9 @@ namespace gpos.Controllers
                 ? await BuildTankStockOptionsAsync()
                 : await BuildProductStockOptionsAsync(stockType);
 
+            var details = detailsId.HasValue
+                ? await recordsQuery.FirstOrDefaultAsync(record => record.Id == detailsId.Value)
+                : null;
             return new DailyStockPageViewModel
             {
                 StockType = stockType,
@@ -533,6 +576,8 @@ namespace gpos.Controllers
                 BranchId = branchId,
                 FormBranchName = await BranchNameAsync(dailyStockForm.BranchId),
                 ActiveModalId = activeModalId,
+                Details = details,
+                AdjustmentBreakdown = details is null ? new() : await BuildDailyStockAdjustmentBreakdownAsync(details),
                 Form = dailyStockForm,
                 Records = await recordsQuery.OrderByDescending(record => record.StockDate).ThenByDescending(record => record.Id).ToListAsync(),
                 ProductOptions = BuildProductSelectList(stockOptions),
@@ -568,10 +613,19 @@ namespace gpos.Controllers
                 DisplayStockId = stockType == DisplayStockType ? await ResolveDisplayStockIdAsync(record.BranchId, record.ProductId, record.BatchId) : null,
                 TankId = record.TankId,
                 Beginning = record.Beginning,
+                Received = record.Received,
+                TransferIn = record.TransferIn,
+                TransferOut = record.TransferOut,
                 Sold = record.Sold,
+                Adjustment = record.Adjustment,
+                Expected = record.Expected,
                 Actual = record.Actual,
                 Ending = record.Ending,
                 Loss = record.Loss,
+                Variance = record.Variance,
+                CurrentOfficialQuantity = record.CurrentOfficialQuantity,
+                ReconciliationAdjustment = record.ReconciliationAdjustment,
+                NewOfficialQuantity = record.NewOfficialQuantity,
                 Remarks = record.Remarks
             };
         }
@@ -597,6 +651,12 @@ namespace gpos.Controllers
                 .FirstOrDefaultAsync();
 
             var currentQuantity = stockInfo?.Quantity ?? 0m;
+            object? selectedStock = stockInfo is null ? null : stockType == WarehouseStockType
+                ? await _db.WarehouseStocks.AsNoTracking().FirstOrDefaultAsync(x => x.Id == stockInfo.Id)
+                : await _db.DisplayStocks.AsNoTracking().FirstOrDefaultAsync(x => x.Id == stockInfo.Id);
+            var components = selectedStock is null
+                ? new DailyStockComponents(previousEnding ?? currentQuantity, 0m, 0m, 0m, sold, 0m, previousEnding ?? currentQuantity, currentQuantity)
+                : await BuildDailyStockComponentsAsync(stockType, date, branchId ?? 0, productId, batchId, null, selectedStock);
 
             return new
             {
@@ -604,8 +664,14 @@ namespace gpos.Controllers
                 branchId,
                 productId = productId ?? batch?.ProductId ?? 0,
                 productName = batch?.Product?.Name ?? string.Empty,
-                beginning = previousEnding ?? currentQuantity,
-                sold,
+                beginning = components.Beginning,
+                received = components.Received,
+                transferIn = components.TransferIn,
+                transferOut = components.TransferOut,
+                sold = components.Sold,
+                adjustment = components.Adjustment,
+                expected = components.Expected,
+                currentOfficial = components.CurrentOfficial,
                 source = previousEnding.HasValue
                     ? "Previous Ending"
                     : stockType == WarehouseStockType ? "Current Warehouse Stock" : "Current Display Stock"
@@ -627,6 +693,9 @@ namespace gpos.Controllers
                 .ThenByDescending(record => record.Id)
                 .Select(record => (decimal?)record.Ending)
                 .FirstOrDefaultAsync();
+            var components = tank is null
+                ? new DailyStockComponents(previousEnding ?? 0m, 0m, 0m, 0m, sold, 0m, previousEnding ?? 0m, 0m)
+                : await BuildDailyStockComponentsAsync(TankStockType, date, effectiveBranchId ?? 0, null, null, tankId, tank);
 
             return new
             {
@@ -634,8 +703,15 @@ namespace gpos.Controllers
                 branchId = effectiveBranchId,
                 fuelId = tank?.FuelId ?? 0,
                 fuelName = tank?.Fuel?.Name ?? string.Empty,
-                beginning = previousEnding ?? tank?.CurrentLiters ?? 0m,
-                sold,
+                beginning = components.Beginning,
+                received = components.Received,
+                transferIn = components.TransferIn,
+                transferOut = components.TransferOut,
+                sold = components.Sold,
+                adjustment = components.Adjustment,
+                expected = components.Expected,
+                currentOfficial = components.CurrentOfficial,
+                capacity = tank?.CapacityLiters ?? 0m,
                 source = previousEnding.HasValue ? "Previous Ending" : "Current Tank Liters"
             };
         }
@@ -689,6 +765,210 @@ namespace gpos.Controllers
 
             return 0m;
         }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ConfirmDailyStock(int id, string stockType, string? search, int? filterBranchId)
+        {
+            var redirectAction = ActionViewFor(stockType);
+            var userId = CurrentUserId();
+            if (!userId.HasValue) return Unauthorized();
+            await using var transaction = await _db.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
+            try
+            {
+                var record = await _db.DailyStockRecords.FirstOrDefaultAsync(x => x.Id == id && x.StockType == stockType)
+                    ?? throw new InvalidOperationException("Daily Stock record was not found.");
+                if (record.Status != "Draft") throw new InvalidOperationException("Only a Draft Daily Stock record can be confirmed.");
+                if (await DailyStockScopeQuery(stockType, record.BranchId ?? 0, record.ProductId, record.BatchId, record.TankId)
+                    .AnyAsync(x => x.Id != record.Id && (x.Status == "Confirmed" || x.Status == "Locked") && x.StockDate >= record.StockDate))
+                    throw new InvalidOperationException("A newer or duplicate confirmed Daily Stock record exists. This Draft cannot overwrite current inventory.");
+
+                var selectedStock = await LoadDailyStockTargetAsync(record) ?? throw new InvalidOperationException("The selected stock item no longer exists.");
+                var components = await BuildDailyStockComponentsAsync(stockType, record.StockDate, record.BranchId ?? 0, record.ProductId, record.BatchId, record.TankId, selectedStock);
+                if (components.CurrentOfficial != record.CurrentOfficialQuantity
+                    || components.Beginning != record.Beginning || components.Received != record.Received
+                    || components.TransferIn != record.TransferIn || components.TransferOut != record.TransferOut
+                    || components.Sold != record.Sold || components.Adjustment != record.Adjustment)
+                    throw new InvalidOperationException("Inventory or source movements changed after this Draft was reviewed. Reopen and save the Draft to recalculate it.");
+                if (stockType == TankStockType && selectedStock is Tank capacityTank && record.Ending > capacityTank.CapacityLiters)
+                    throw new InvalidOperationException("Ending Liters cannot exceed Tank capacity.");
+
+                record.Expected = components.Expected;
+                record.Actual = components.Expected;
+                record.Variance = record.Ending - record.Expected;
+                record.Loss = Math.Max(record.Expected - record.Ending, 0m);
+                record.ReconciliationAdjustment = record.Ending - components.CurrentOfficial;
+                record.NewOfficialQuantity = record.Ending;
+                if (record.ReconciliationAdjustment != 0m)
+                {
+                    if (stockType == TankStockType) await ApplyTankDailyStockReconciliationAsync(record, (Tank)selectedStock, userId.Value, DateTime.UtcNow);
+                    else ApplyProductDailyStockReconciliation(record, selectedStock, userId.Value, DateTime.UtcNow);
+                    AddDailyStockAdjustmentAudit(record, selectedStock, userId.Value, DateTime.UtcNow);
+                }
+                record.Status = "Confirmed";
+                record.ConfirmedBy = userId;
+                record.ConfirmedAt = DateTime.UtcNow;
+                record.UpdatedAt = record.ConfirmedAt;
+                await _db.SaveChangesAsync();
+                await VerifyDailyStockInventoryPersistedAsync(record);
+                await transaction.CommitAsync();
+                TempData["DailyStockMessage"] = $"{record.RecordNo} was confirmed and inventory was reconciled.";
+            }
+            catch (Exception ex)
+            {
+                await transaction.RollbackAsync();
+                TempData["DailyStockError"] = ex.Message;
+            }
+            return RedirectToAction(redirectAction, new { search, filterBranchId });
+        }
+
+        private IQueryable<DailyStockRecord> DailyStockScopeQuery(string stockType, int branchId, int? productId, int? batchId, int? tankId)
+            => _db.DailyStockRecords.Where(x => x.StockType == stockType && x.BranchId == branchId
+                && (stockType == TankStockType ? x.TankId == tankId : x.ProductId == productId && x.BatchId == batchId));
+
+        private async Task<object?> LoadDailyStockTargetAsync(DailyStockRecord record)
+        {
+            if (record.StockType == WarehouseStockType)
+                return await _db.WarehouseStocks.AsTracking().FirstOrDefaultAsync(x => x.Id == record.WarehouseStockId && x.BranchId == record.BranchId && x.ProductId == record.ProductId && x.BatchId == record.BatchId);
+            if (record.StockType == DisplayStockType)
+                return await _db.DisplayStocks.AsTracking().FirstOrDefaultAsync(x => x.Id == record.DisplayStockId && x.BranchId == record.BranchId && x.ProductId == record.ProductId && x.BatchId == record.BatchId);
+            return await _db.Tanks.AsTracking().FirstOrDefaultAsync(x => x.Id == record.TankId && x.BranchId == record.BranchId);
+        }
+
+        private async Task<DailyStockComponents> BuildDailyStockComponentsAsync(string stockType, DateTime date, int branchId, int? productId, int? batchId, int? tankId, object selectedStock)
+        {
+            date = date.Date;
+            var end = date.AddDays(1);
+            var current = selectedStock is WarehouseStock w ? w.Quantity : selectedStock is DisplayStock d ? d.Quantity : ((Tank)selectedStock).CurrentLiters;
+            var previous = await DailyStockScopeQuery(stockType, branchId, productId, batchId, tankId)
+                .AsNoTracking().Where(x => (x.Status == "Confirmed" || x.Status == "Locked" || x.Status == "Legacy") && x.StockDate < date)
+                .OrderByDescending(x => x.StockDate).ThenByDescending(x => x.Id).Select(x => (decimal?)x.Ending).FirstOrDefaultAsync();
+            decimal received = 0m, transferIn = 0m, transferOut = 0m, sold = 0m, adjustment = 0m;
+            if (stockType == TankStockType)
+            {
+                received = await _db.FuelDeliveries.AsNoTracking().Where(x => x.TankId == tankId && x.BranchId == branchId && x.Status == 1 && x.DeliveryDate >= date && x.DeliveryDate < end).SumAsync(x => (decimal?)x.DeliveredLiters) ?? 0m;
+                sold = await ComputeSoldAsync(stockType, date, null, tankId, branchId);
+                adjustment = await _db.StockAdjustments.AsNoTracking().Where(x => x.Scope == "Fuel" && x.TankId == tankId && x.BranchId == branchId && x.Status == "Posted" && x.BusinessDate == date).SumAsync(x => (decimal?)x.SignedQuantity) ?? 0m;
+            }
+            else
+            {
+                received = stockType == WarehouseStockType
+                    ? await _db.StockMovements.AsNoTracking().Where(x => x.ProductBatchId == batchId && x.MovementType == "Receiving" && x.CreatedAt >= date && x.CreatedAt < end && _db.StockReceivings.Any(r => r.Id == x.ReferenceId && r.BranchId == branchId && r.Status == 1)).SumAsync(x => (decimal?)x.Quantity) ?? 0m
+                    : 0m;
+                transferIn = await _db.StockTransfers.AsNoTracking().Where(x => x.Status == "Completed" && x.CompletedAt >= date && x.CompletedAt < end && x.DestinationBranchId == branchId && x.DestinationLocation == stockType)
+                    .SelectMany(x => x.Items).Where(x => x.ProductId == productId && x.BatchId == batchId).SumAsync(x => x.Quantity) ?? 0m;
+                transferOut = await _db.StockTransfers.AsNoTracking().Where(x => x.Status == "Completed" && x.CompletedAt >= date && x.CompletedAt < end && x.SourceBranchId == branchId && x.SourceLocation == stockType)
+                    .SelectMany(x => x.Items).Where(x => x.ProductId == productId && x.BatchId == batchId).SumAsync(x => x.Quantity) ?? 0m;
+                sold = stockType == DisplayStockType ? await ComputeSoldAsync(stockType, date, batchId, null, branchId) : 0m;
+                adjustment = await _db.StockAdjustments.AsNoTracking().Where(x => x.Scope == stockType && x.BranchId == branchId && x.BatchId == batchId && x.ProductId == productId && x.Status == "Posted" && x.BusinessDate == date).SumAsync(x => (decimal?)x.SignedQuantity) ?? 0m;
+                adjustment += await _db.StockMovements.AsNoTracking().Where(x => x.ProductBatchId == batchId && x.BranchId == branchId && x.CreatedAt >= date && x.CreatedAt < end && x.MovementType == "CustomerReturn" && x.DestinationLocation == stockType).SumAsync(x => (decimal?)x.Quantity) ?? 0m;
+            }
+            var beginning = previous ?? current;
+            var expected = beginning + received + transferIn - transferOut - sold + adjustment;
+            return new DailyStockComponents(beginning, received, transferIn, transferOut, sold, adjustment, expected, current);
+        }
+
+        private void ApplyProductDailyStockReconciliation(DailyStockRecord record, object target, int userId, DateTime now)
+        {
+            if (target is WarehouseStock warehouse)
+            {
+                warehouse.Quantity = record.Ending;
+                warehouse.UpdatedAt = now;
+                _db.Entry(warehouse).Property(x => x.Quantity).IsModified = true;
+                _db.Entry(warehouse).Property(x => x.UpdatedAt).IsModified = true;
+            }
+            else
+            {
+                var display = (DisplayStock)target;
+                display.Quantity = record.Ending;
+                display.UpdatedAt = now;
+                _db.Entry(display).Property(x => x.Quantity).IsModified = true;
+                _db.Entry(display).Property(x => x.UpdatedAt).IsModified = true;
+            }
+            record.NewOfficialQuantity = record.Ending;
+        }
+
+        private async Task ApplyTankDailyStockReconciliationAsync(DailyStockRecord record, Tank tank, int userId, DateTime now)
+        {
+            var difference = record.ReconciliationAdjustment;
+            var batches = await _db.FuelBatches.Where(x => x.TankId == tank.Id && x.BranchId == tank.BranchId && x.Status == 1 && x.IsActive)
+                .OrderBy(x => x.ReceivedDate).ThenBy(x => x.Id).ToListAsync();
+            if (difference > 0m)
+            {
+                var batch = batches.LastOrDefault() ?? throw new InvalidOperationException("Tank overage cannot be confirmed because no active Fuel cost layer exists.");
+                var beforeBatch = batch.RemainingLiters; batch.RemainingLiters += difference; batch.UpdatedAt = now;
+                _db.FuelStockMovements.Add(NewFuelDailyStockMovement(record, tank, batch, difference, 0m, beforeBatch, batch.RemainingLiters, tank.CurrentLiters, record.Ending, userId, now));
+            }
+            else
+            {
+                var remaining = -difference;
+                var runningTank = tank.CurrentLiters;
+                foreach (var batch in batches.Where(x => x.RemainingLiters > 0m))
+                {
+                    if (remaining <= 0m) break;
+                    var used = Math.Min(remaining, batch.RemainingLiters); var beforeBatch = batch.RemainingLiters; batch.RemainingLiters -= used; batch.UpdatedAt = now;
+                    var tankAfter = runningTank - used;
+                    _db.FuelStockMovements.Add(NewFuelDailyStockMovement(record, tank, batch, 0m, used, beforeBatch, batch.RemainingLiters, runningTank, tankAfter, userId, now));
+                    runningTank = tankAfter;
+                    remaining -= used;
+                }
+                if (remaining > 0m) throw new InvalidOperationException("Active Fuel Batch layers are insufficient for this Tank shortage reconciliation.");
+            }
+            tank.CurrentLiters = record.Ending;
+            tank.UpdatedAt = now;
+            _db.Entry(tank).Property(x => x.CurrentLiters).IsModified = true;
+            _db.Entry(tank).Property(x => x.UpdatedAt).IsModified = true;
+        }
+
+        private async Task VerifyDailyStockInventoryPersistedAsync(DailyStockRecord record)
+        {
+            decimal? persisted = record.StockType switch
+            {
+                WarehouseStockType => await _db.WarehouseStocks.AsNoTracking()
+                    .Where(x => x.Id == record.WarehouseStockId).Select(x => (decimal?)x.Quantity).SingleOrDefaultAsync(),
+                DisplayStockType => await _db.DisplayStocks.AsNoTracking()
+                    .Where(x => x.Id == record.DisplayStockId).Select(x => (decimal?)x.Quantity).SingleOrDefaultAsync(),
+                TankStockType => await _db.Tanks.AsNoTracking()
+                    .Where(x => x.Id == record.TankId).Select(x => (decimal?)x.CurrentLiters).SingleOrDefaultAsync(),
+                _ => null
+            };
+            if (!persisted.HasValue || persisted.Value != record.Ending)
+                throw new InvalidOperationException($"Inventory reconciliation did not persist. Expected {record.Ending:N2}, but the inventory row contains {(persisted.HasValue ? persisted.Value.ToString("N2") : "no value")}.");
+        }
+
+        private static FuelStockMovement NewFuelDailyStockMovement(DailyStockRecord record, Tank tank, FuelBatch batch, decimal litersIn, decimal litersOut, decimal batchBefore, decimal batchAfter, decimal tankBefore, decimal tankAfter, int userId, DateTime now)
+            => new() { TankId = tank.Id, FuelId = tank.FuelId, FuelBatchId = batch.Id, BranchId = record.BranchId!.Value, MovementType = litersIn > 0 ? "DailyStockIncrease" : "DailyStockDecrease", LitersIn = litersIn, LitersOut = litersOut, BatchLitersBefore = batchBefore, BatchLitersAfter = batchAfter, TankLitersBefore = tankBefore, TankLitersAfter = tankAfter, UnitCostSnapshot = batch.CostPricePerLiter, ReferenceType = "DailyStockRecord", ReferenceId = record.Id, Remarks = $"Daily Stock reconciliation {record.RecordNo}", CreatedByUserId = userId, CreatedAt = now };
+
+        private void AddDailyStockAdjustmentAudit(DailyStockRecord record, object target, int userId, DateTime now)
+        {
+            _db.StockAdjustments.Add(new StockAdjustment { AdjustmentNo = $"{record.RecordNo}-ADJ", Scope = record.StockType == TankStockType ? "Fuel" : record.StockType, BusinessDate = record.StockDate, BranchId = record.BranchId!.Value, WarehouseStockId = record.WarehouseStockId, DisplayStockId = record.DisplayStockId, TankId = record.TankId, ProductId = record.ProductId, BatchId = record.BatchId, FuelId = record.FuelId, AdjustmentType = record.ReconciliationAdjustment > 0 ? "Increase" : "Decrease", BeforeQuantity = record.CurrentOfficialQuantity, AdjustmentQuantity = Math.Abs(record.ReconciliationAdjustment), SignedQuantity = record.ReconciliationAdjustment, AfterQuantity = record.Ending, Reason = $"Daily Stock reconciliation {record.RecordNo}", Remarks = record.Remarks, Status = "Posted", AdjustedBy = userId, CreatedAt = now, UpdatedAt = now, PostedBy = userId, PostedAt = now });
+            if (record.StockType != TankStockType)
+                _db.StockMovements.Add(new StockMovement { ProductId = record.ProductId!.Value, ProductBatchId = record.BatchId, BranchId = record.BranchId, BeforeQuantity = record.CurrentOfficialQuantity, AfterQuantity = record.Ending, SourceLocation = record.StockType, DestinationLocation = record.StockType, MovementType = record.ReconciliationAdjustment > 0 ? "DailyStockIncrease" : "DailyStockDecrease", Quantity = Math.Abs(record.ReconciliationAdjustment), ReferenceType = "DailyStockRecord", ReferenceId = record.Id, Remarks = $"Daily Stock reconciliation {record.RecordNo}", CreatedBy = userId, CreatedAt = now });
+        }
+
+        private async Task<string> GenerateDailyStockNoAsync(DateTime now)
+        {
+            var prefix = $"DS-{now:yyyyMMdd}-";
+            var last = await _db.DailyStockRecords.Where(x => x.RecordNo.StartsWith(prefix)).OrderByDescending(x => x.Id).Select(x => x.RecordNo).FirstOrDefaultAsync();
+            var next = last is not null && int.TryParse(last[(last.LastIndexOf('-') + 1)..], out var value) ? value + 1 : 1;
+            return $"{prefix}{next:000000}";
+        }
+
+        private async Task<List<DailyStockAdjustmentBreakdownRow>> BuildDailyStockAdjustmentBreakdownAsync(DailyStockRecord record)
+        {
+            var rows = await _db.StockAdjustments.AsNoTracking().Where(x => x.Status == "Posted" && x.BusinessDate == record.StockDate && x.BranchId == record.BranchId
+                && x.AdjustmentNo != record.RecordNo + "-ADJ"
+                && (record.StockType == TankStockType ? x.TankId == record.TankId : x.Scope == record.StockType && x.ProductId == record.ProductId && x.BatchId == record.BatchId))
+                .OrderBy(x => x.PostedAt).Select(x => new DailyStockAdjustmentBreakdownRow { Date = x.PostedAt ?? x.CreatedAt, Type = x.AdjustmentType, Direction = x.SignedQuantity >= 0 ? "In" : "Out", Quantity = Math.Abs(x.SignedQuantity), Reason = x.Reason, Reference = x.AdjustmentNo }).ToListAsync();
+            if (record.StockType != TankStockType)
+            {
+                rows.AddRange(await _db.StockMovements.AsNoTracking().Where(x => x.ProductBatchId == record.BatchId && x.BranchId == record.BranchId && x.CreatedAt >= record.StockDate && x.CreatedAt < record.StockDate.AddDays(1) && x.MovementType == "CustomerReturn" && x.DestinationLocation == record.StockType)
+                    .Select(x => new DailyStockAdjustmentBreakdownRow { Date = x.CreatedAt ?? record.StockDate, Type = "Approved Return", Direction = "In", Quantity = x.Quantity, Reason = x.Remarks ?? "Approved customer return", Reference = (x.ReferenceType ?? "CustomerReturn") + " #" + x.ReferenceId }).ToListAsync());
+            }
+            return rows.OrderBy(x => x.Date).ToList();
+        }
+
+        private sealed record DailyStockComponents(decimal Beginning, decimal Received, decimal TransferIn, decimal TransferOut, decimal Sold, decimal Adjustment, decimal Expected, decimal CurrentOfficial);
 
         private async Task<object?> ValidateAndLoadSelectedStockAsync(string stockType, DailyStockForm form)
         {

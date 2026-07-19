@@ -21,11 +21,21 @@
         const tankInput = document.querySelector("[data-daily-stock-tank]");
         const tankDisplay = document.querySelector("[data-daily-stock-tank-display]");
         const fuelInput = document.querySelector("[data-daily-stock-fuel]");
+        const capacityInput = document.querySelector("[data-daily-stock-capacity]");
         const beginningInput = document.querySelector("[data-daily-stock-beginning]");
         const soldInput = document.querySelector("[data-daily-stock-sold]");
         const actualInput = document.querySelector("[data-daily-stock-actual]");
         const endingInput = document.querySelector("[data-daily-stock-ending]");
         const lossInput = document.querySelector("[data-daily-stock-loss]");
+        const receivedInput = document.querySelector("[data-daily-stock-received]");
+        const transferInInput = document.querySelector("[data-daily-stock-transfer-in]");
+        const transferOutInput = document.querySelector("[data-daily-stock-transfer-out]");
+        const adjustmentInput = document.querySelector("[data-daily-stock-adjustment]");
+        const expectedInput = document.querySelector("[data-daily-stock-expected]");
+        const varianceInput = document.querySelector("[data-daily-stock-variance]");
+        const currentOfficialInput = document.querySelector("[data-daily-stock-current-official]");
+        const reconciliationInput = document.querySelector("[data-daily-stock-reconciliation]");
+        const newOfficialInput = document.querySelector("[data-daily-stock-new-official]");
         const selectorSearch = document.querySelector("[data-daily-stock-selector-search]");
         const selectorBody = document.querySelector("[data-daily-stock-selector-body]");
         const productSelectorButton = document.querySelector("[data-daily-stock-open-product-selector]");
@@ -40,10 +50,14 @@
             if (input) input.value = Number(value || 0).toFixed(2);
         };
         const compute = () => {
-            const actual = numberValue(beginningInput) - numberValue(soldInput);
-            const loss = actual - numberValue(endingInput);
-            setNumber(actualInput, actual);
-            setNumber(lossInput, loss);
+            const expected = numberValue(beginningInput) + numberValue(receivedInput) + numberValue(transferInInput) - numberValue(transferOutInput) - numberValue(soldInput) + numberValue(adjustmentInput);
+            const ending = numberValue(endingInput);
+            setNumber(actualInput, expected);
+            setNumber(expectedInput, expected);
+            setNumber(varianceInput, ending - expected);
+            setNumber(lossInput, Math.max(expected - ending, 0));
+            setNumber(reconciliationInput, ending - numberValue(currentOfficialInput));
+            setNumber(newOfficialInput, ending);
         };
         const optionText = option => [
             valueOf(option, "BranchName"),
@@ -83,6 +97,7 @@
             if (productDisplay) productDisplay.value = "";
             setNumber(beginningInput, 0);
             setNumber(soldInput, 0);
+            setNumber(receivedInput, 0); setNumber(transferInInput, 0); setNumber(transferOutInput, 0); setNumber(adjustmentInput, 0); setNumber(expectedInput, 0); setNumber(currentOfficialInput, 0);
             setNumber(actualInput, 0);
             if (endingInput) endingInput.value = "";
             setNumber(lossInput, 0);
@@ -94,8 +109,10 @@
             if (tankInput) tankInput.value = "";
             if (tankDisplay) tankDisplay.value = "";
             if (fuelInput) fuelInput.value = "";
+            if (capacityInput) capacityInput.value = "";
             setNumber(beginningInput, 0);
             setNumber(soldInput, 0);
+            setNumber(receivedInput, 0); setNumber(adjustmentInput, 0); setNumber(expectedInput, 0); setNumber(currentOfficialInput, 0);
             setNumber(actualInput, 0);
             if (endingInput) endingInput.value = "";
             setNumber(lossInput, 0);
@@ -132,6 +149,13 @@
             const data = await response.json();
             setNumber(beginningInput, data.beginning ?? data.Beginning);
             setNumber(soldInput, data.sold ?? data.Sold);
+            setNumber(receivedInput, data.received ?? data.Received);
+            setNumber(transferInInput, data.transferIn ?? data.TransferIn);
+            setNumber(transferOutInput, data.transferOut ?? data.TransferOut);
+            setNumber(adjustmentInput, data.adjustment ?? data.Adjustment);
+            setNumber(expectedInput, data.expected ?? data.Expected);
+            setNumber(currentOfficialInput, data.currentOfficial ?? data.CurrentOfficial);
+            if (capacityInput) setNumber(capacityInput, data.capacity ?? data.Capacity);
             if (fuelInput && (data.fuelName || data.FuelName)) {
                 fuelInput.value = data.fuelName ?? data.FuelName;
             }
@@ -161,6 +185,7 @@
             if (tankInput) tankInput.value = valueOf(option, "Id") || "";
             if (tankDisplay) tankDisplay.value = `${tankNo || "-"} - ${fuelName || "-"}`;
             if (fuelInput) fuelInput.value = fuelName;
+            if (capacityInput) setNumber(capacityInput, valueOf(option, "Capacity"));
             showTankMessage(false);
             loadDefault();
             closeSelector(selectorBody);

@@ -1413,6 +1413,11 @@ textarea.form-control {
   white-space: nowrap;
 }
 
+.admin-table.daily-stock-history-table {
+  min-width: 1500px;
+  table-layout: auto;
+}
+
 .admin-table td:last-child,
 .admin-table th:last-child {
   text-align: center;

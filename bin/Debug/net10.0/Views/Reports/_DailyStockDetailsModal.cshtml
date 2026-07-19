@@ -1,0 +1,27 @@
+@model gpos.Models.ViewModels.DailyStockPageViewModel
+@if (Model.Details is { } record)
+{
+    var unit = record.StockType == "Tank" ? " Liters" : string.Empty;
+    <div class="modal fade" id="dailyStockDetailsModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-xl modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header"><h2 class="modal-title fs-5">Daily Stock @record.RecordNo</h2><button class="btn-close" type="button" data-bs-dismiss="modal"></button></div>
+                <div class="modal-body">
+                    <dl class="row daily-stock-details-grid">
+                        <dt class="col-md-2">Date</dt><dd class="col-md-4">@record.StockDate.ToString("yyyy-MM-dd")</dd>
+                        <dt class="col-md-2">Status</dt><dd class="col-md-4"><span class="badge @(record.Status == "Draft" ? "text-bg-warning" : "text-bg-success")">@record.Status</span></dd>
+                        <dt class="col-md-2">Branch</dt><dd class="col-md-4">@(record.Branch?.Name ?? "-")</dd>
+                        @if (record.StockType == "Tank") { <dt class="col-md-2">Tank / Fuel</dt><dd class="col-md-4">@record.Tank?.TankNo / @record.Tank?.Fuel?.Name</dd> }
+                        else { <dt class="col-md-2">Product / Batch</dt><dd class="col-md-4">@record.Product?.Name / @record.Batch?.BatchNo</dd> }
+                    </dl>
+                    <div class="table-responsive"><table class="table table-sm align-middle"><thead><tr><th>Beginning</th><th>Received</th>@if(record.StockType != "Tank"){<th>Transfer In</th><th>Transfer Out</th>}<th>@(record.StockType == "Tank" ? "Dispensed" : "Sold")</th><th>Adjustment</th><th>Expected</th><th>Current Official</th><th>Ending</th><th>Variance</th><th>Loss</th><th>Reconciliation</th><th>New Official</th></tr></thead><tbody><tr><td>@record.Beginning.ToString("N2")</td><td>@record.Received.ToString("N2")</td>@if(record.StockType != "Tank"){<td>@record.TransferIn.ToString("N2")</td><td>@record.TransferOut.ToString("N2")</td>}<td>@record.Sold.ToString("N2")</td><td>@record.Adjustment.ToString("N2")</td><td>@record.Expected.ToString("N2")</td><td>@record.CurrentOfficialQuantity.ToString("N2")</td><td>@record.Ending.ToString("N2")</td><td>@record.Variance.ToString("N2")</td><td>@record.Loss.ToString("N2")</td><td>@record.ReconciliationAdjustment.ToString("N2")</td><td>@record.NewOfficialQuantity.ToString("N2")</td></tr></tbody></table></div>
+                    <h3 class="fs-6 mt-3">Adjustment breakdown</h3>
+                    <div class="table-responsive"><table class="table table-sm"><thead><tr><th>Date</th><th>Type</th><th>Direction</th><th>Quantity</th><th>Reason</th><th>Reference</th></tr></thead><tbody>@if(Model.AdjustmentBreakdown.Count == 0){<tr><td colspan="6" class="text-center text-muted">No adjustment records.</td></tr>}@foreach(var item in Model.AdjustmentBreakdown){<tr><td>@item.Date.ToString("yyyy-MM-dd HH:mm")</td><td>@item.Type</td><td>@item.Direction</td><td>@item.Quantity.ToString("N2")</td><td>@item.Reason</td><td>@item.Reference</td></tr>}</tbody></table></div>
+                    <dl class="row mt-3"><dt class="col-md-2">Remarks</dt><dd class="col-md-10">@(record.Remarks ?? "-")</dd><dt class="col-md-2">Recorded By</dt><dd class="col-md-4">@(record.CreatedByUser?.FullName ?? record.CreatedByUser?.Username ?? "System")</dd><dt class="col-md-2">Recorded At</dt><dd class="col-md-4">@record.CreatedAt?.ToString("yyyy-MM-dd HH:mm")</dd><dt class="col-md-2">Confirmed By</dt><dd class="col-md-4">@(record.ConfirmedByUser?.FullName ?? record.ConfirmedByUser?.Username ?? "-")</dd><dt class="col-md-2">Confirmed At</dt><dd class="col-md-4">@record.ConfirmedAt?.ToString("yyyy-MM-dd HH:mm")</dd></dl>
+                    @if (record.Status == "Draft") { <div class="alert alert-warning"><strong>Warning:</strong> Confirming changes official inventory to the physical Ending and cannot be normally edited afterward.</div> }
+                </div>
+                <div class="modal-footer"><button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Close</button>@if(record.Status == "Draft"){<form asp-action="ConfirmDailyStock" method="post">@Html.AntiForgeryToken()<input name="id" value="@record.Id" type="hidden" /><input name="stockType" value="@record.StockType" type="hidden" /><input name="search" value="@Model.Search" type="hidden" /><input name="filterBranchId" value="@Model.BranchId" type="hidden" /><button class="btn btn-danger" type="submit">Confirm and Adjust Inventory</button></form>}</div>
+            </div>
+        </div>
+    </div>
+}

@@ -31,7 +31,14 @@ namespace gpos.Models.ViewModels
         [Range(0, double.MaxValue, ErrorMessage = "Beginning must be 0 or greater.")]
         public decimal? Beginning { get; set; }
 
+        public decimal? Received { get; set; }
+        public decimal? TransferIn { get; set; }
+        public decimal? TransferOut { get; set; }
+
         public decimal? Sold { get; set; }
+
+        public decimal? Adjustment { get; set; }
+        public decimal? Expected { get; set; }
 
         public decimal? Actual { get; set; }
 
@@ -40,6 +47,10 @@ namespace gpos.Models.ViewModels
         public decimal? Ending { get; set; }
 
         public decimal? Loss { get; set; }
+        public decimal? Variance { get; set; }
+        public decimal? CurrentOfficialQuantity { get; set; }
+        public decimal? ReconciliationAdjustment { get; set; }
+        public decimal? NewOfficialQuantity { get; set; }
         public string? Remarks { get; set; }
     }
 
@@ -73,6 +84,8 @@ namespace gpos.Models.ViewModels
         public int? BranchId { get; set; }
         public string FormBranchName { get; set; } = string.Empty;
         public string ActiveModalId { get; set; } = string.Empty;
+        public DailyStockRecord? Details { get; set; }
+        public List<DailyStockAdjustmentBreakdownRow> AdjustmentBreakdown { get; set; } = new();
         public DailyStockForm Form { get; set; } = new();
         public List<DailyStockRecord> Records { get; set; } = new();
         public List<SelectListItem> ProductOptions { get; set; } = new();
@@ -80,5 +93,15 @@ namespace gpos.Models.ViewModels
         public List<SelectListItem> TankOptions { get; set; } = new();
         public List<SelectListItem> BranchOptions { get; set; } = new();
         public List<DailyStockOption> StockOptions { get; set; } = new();
+    }
+
+    public class DailyStockAdjustmentBreakdownRow
+    {
+        public DateTime Date { get; set; }
+        public string Type { get; set; } = string.Empty;
+        public string Direction { get; set; } = string.Empty;
+        public decimal Quantity { get; set; }
+        public string Reason { get; set; } = string.Empty;
+        public string Reference { get; set; } = string.Empty;
     }
 }

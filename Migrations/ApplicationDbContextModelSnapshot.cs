@@ -805,6 +805,11 @@ namespace gpos.Migrations
                         .HasColumnType("decimal(18,2)")
                         .HasColumnName("actual_quantity");
 
+                    b.Property<decimal>("Adjustment")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("adjustment_quantity");
+
                     b.Property<int?>("BatchId")
                         .HasColumnType("int")
                         .HasColumnName("batch_id");
@@ -818,6 +823,14 @@ namespace gpos.Migrations
                         .HasColumnType("int")
                         .HasColumnName("branch_id");
 
+                    b.Property<DateTime?>("ConfirmedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("confirmed_at");
+
+                    b.Property<int?>("ConfirmedBy")
+                        .HasColumnType("int")
+                        .HasColumnName("confirmed_by");
+
                     b.Property<DateTime?>("CreatedAt")
                         .HasColumnType("datetime(6)")
                         .HasColumnName("created_at");
@@ -826,10 +839,24 @@ namespace gpos.Migrations
                         .HasColumnType("int")
                         .HasColumnName("created_by");
 
+                    b.Property<decimal>("CurrentOfficialQuantity")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("current_official_quantity");
+
+                    b.Property<int?>("DisplayStockId")
+                        .HasColumnType("int")
+                        .HasColumnName("display_stock_id");
+
                     b.Property<decimal>("Ending")
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)")
                         .HasColumnName("ending_quantity");
+
+                    b.Property<decimal>("Expected")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("expected_quantity");
 
                     b.Property<int?>("FuelId")
                         .HasColumnType("int")
@@ -840,9 +867,30 @@ namespace gpos.Migrations
                         .HasColumnType("decimal(18,2)")
                         .HasColumnName("loss_quantity");
 
+                    b.Property<decimal>("NewOfficialQuantity")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("new_official_quantity");
+
                     b.Property<int?>("ProductId")
                         .HasColumnType("int")
                         .HasColumnName("product_id");
+
+                    b.Property<decimal>("Received")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("received_quantity");
+
+                    b.Property<decimal>("ReconciliationAdjustment")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("reconciliation_adjustment");
+
+                    b.Property<string>("RecordNo")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("varchar(30)")
+                        .HasColumnName("record_no");
 
                     b.Property<string>("Remarks")
                         .HasMaxLength(255)
@@ -853,6 +901,12 @@ namespace gpos.Migrations
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)")
                         .HasColumnName("sold_quantity");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("varchar(20)")
+                        .HasColumnName("status");
 
                     b.Property<DateTime>("StockDate")
                         .HasColumnType("date")
@@ -868,9 +922,28 @@ namespace gpos.Migrations
                         .HasColumnType("int")
                         .HasColumnName("tank_id");
 
+                    b.Property<decimal>("TransferIn")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("transfer_in_quantity");
+
+                    b.Property<decimal>("TransferOut")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("transfer_out_quantity");
+
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime(6)")
                         .HasColumnName("updated_at");
+
+                    b.Property<decimal>("Variance")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("variance_quantity");
+
+                    b.Property<int?>("WarehouseStockId")
+                        .HasColumnType("int")
+                        .HasColumnName("warehouse_stock_id");
 
                     b.HasKey("Id");
 
@@ -878,9 +951,16 @@ namespace gpos.Migrations
 
                     b.HasIndex("BranchId");
 
+                    b.HasIndex("ConfirmedBy");
+
+                    b.HasIndex("CreatedBy");
+
                     b.HasIndex("FuelId");
 
                     b.HasIndex("ProductId");
+
+                    b.HasIndex("RecordNo")
+                        .IsUnique();
 
                     b.HasIndex("StockDate");
 
@@ -5815,6 +5895,16 @@ namespace gpos.Migrations
                         .HasForeignKey("BranchId")
                         .OnDelete(DeleteBehavior.Restrict);
 
+                    b.HasOne("gpos.Models.User", "ConfirmedByUser")
+                        .WithMany()
+                        .HasForeignKey("ConfirmedBy")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("gpos.Models.User", "CreatedByUser")
+                        .WithMany()
+                        .HasForeignKey("CreatedBy")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("gpos.Models.Fuel", "Fuel")
                         .WithMany()
                         .HasForeignKey("FuelId")
@@ -5833,6 +5923,10 @@ namespace gpos.Migrations
                     b.Navigation("Batch");
 
                     b.Navigation("Branch");
+
+                    b.Navigation("ConfirmedByUser");
+
+                    b.Navigation("CreatedByUser");
 
                     b.Navigation("Fuel");
 

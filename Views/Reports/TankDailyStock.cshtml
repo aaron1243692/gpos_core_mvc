@@ -18,6 +18,8 @@
         <p class="page-subtitle">@Model.Description</p>
     </div>
 </div>
+@if (TempData["DailyStockMessage"] is string message) { <div class="alert alert-success">@message</div> }
+@if (TempData["DailyStockError"] is string error) { <div class="alert alert-danger">@error</div> }
 
 <section class="content-card setup-crud-card setup-table-card">
     <div class="table-actions fuel-toolbar">
@@ -36,20 +38,18 @@
     </div>
 
     <div class="setup-table-scroll">
-        <table class="table app-table table-sm align-middle admin-table mb-0">
+        <table class="table app-table table-sm align-middle admin-table daily-stock-history-table mb-0">
             <thead>
                 <tr>
-                    <th class="text-nowrap">No</th>
+                    <th class="text-nowrap">Record No.</th>
                     <th class="text-nowrap">Date</th>
                     <th class="text-nowrap">Branch</th>
                     <th class="text-nowrap">Tank</th>
                     <th class="text-nowrap">Fuel</th>
                     <th class="text-nowrap">Beginning Liters</th>
-                    <th class="text-nowrap">Sold Liters</th>
-                    <th class="text-nowrap">Actual Liters</th>
-                    <th class="text-nowrap">Ending Liters</th>
+                    <th class="text-nowrap">Expected Liters</th><th class="text-nowrap">Ending Liters</th><th class="text-nowrap">Variance Liters</th>
                     <th class="text-nowrap">Loss Liters</th>
-                    <th class="text-nowrap">Remarks</th>
+                    <th class="text-nowrap">Status</th>
                     <th class="text-nowrap">Recorded By</th>
                     <th class="text-nowrap">Action</th>
                 </tr>
@@ -63,19 +63,17 @@
                 {
                     var record = Model.Records[i];
                     <tr>
-                        <td>@(i + 1)</td>
+                        <td class="text-nowrap">@record.RecordNo</td>
                         <td class="text-nowrap">@record.StockDate.ToString("yyyy-MM-dd")</td>
                         <td>@(record.Branch?.Name ?? "Unassigned")</td>
                         <td>@(record.Tank?.TankNo ?? "-")</td>
                         <td>@(record.Tank?.Fuel?.Name ?? "-")</td>
                         <td>@record.Beginning.ToString("N2")</td>
-                        <td>@record.Sold.ToString("N2")</td>
-                        <td>@record.Actual.ToString("N2")</td>
-                        <td>@record.Ending.ToString("N2")</td>
+                        <td>@record.Expected.ToString("N2")</td><td>@record.Ending.ToString("N2")</td><td>@record.Variance.ToString("N2")</td>
                         <td>@record.Loss.ToString("N2")</td>
-                        <td>@(record.Remarks ?? "-")</td>
-                        <td class="text-nowrap">@(record.CreatedBy == 1 ? "admin" : record.CreatedBy?.ToString() ?? "System")</td>
-                        <td class="col-action"><a class="btn btn-sm btn-outline-primary" asp-action="@Model.PageAction" asp-route-editId="@record.Id" asp-route-search="@Model.Search" asp-route-filterBranchId="@Model.BranchId">Edit</a></td>
+                        <td><span class="badge @(record.Status == "Draft" ? "text-bg-warning" : "text-bg-success")">@record.Status</span></td>
+                        <td class="text-nowrap">@(record.CreatedByUser?.FullName ?? record.CreatedByUser?.Username ?? "System")</td>
+                        <td class="col-action"><div class="d-flex gap-1 justify-content-center">@if(record.Status == "Draft"){<a class="btn btn-sm btn-outline-primary" asp-action="@Model.PageAction" asp-route-editId="@record.Id" asp-route-search="@Model.Search" asp-route-filterBranchId="@Model.BranchId">Edit</a><a class="btn btn-sm btn-outline-success" asp-action="@Model.PageAction" asp-route-detailsId="@record.Id" asp-route-search="@Model.Search" asp-route-filterBranchId="@Model.BranchId">Review</a>}else{<a class="btn btn-sm btn-outline-primary" asp-action="@Model.PageAction" asp-route-detailsId="@record.Id" asp-route-search="@Model.Search" asp-route-filterBranchId="@Model.BranchId">View Details</a>}</div></td>
                     </tr>
                 }
             </tbody>
@@ -131,23 +129,42 @@
                             <input class="form-control" data-daily-stock-fuel readonly />
                         </div>
                         <div class="col-md-6">
+                            <label class="form-label">Capacity Liters</label>
+                            <input class="form-control" data-daily-stock-capacity readonly />
+                        </div>
+                        <div class="col-md-6">
                             <label asp-for="Form.Beginning" class="form-label">Beginning Liters</label>
-                            <input asp-for="Form.Beginning" class="form-control" type="number" min="0" step="0.01" data-daily-stock-beginning />
+                            <input asp-for="Form.Beginning" class="form-control" type="number" step="0.01" readonly data-daily-stock-beginning />
                             <span asp-validation-for="Form.Beginning" class="text-danger"></span>
                         </div>
                         <div class="col-md-6">
-                            <label asp-for="Form.Sold" class="form-label">Sold Liters</label>
+                            <label asp-for="Form.Received" class="form-label">Received Liters</label>
+                            <input asp-for="Form.Received" class="form-control" readonly data-daily-stock-received />
+                        </div>
+                        <div class="col-md-6">
+                            <label asp-for="Form.Sold" class="form-label">Dispensed Liters</label>
                             <input asp-for="Form.Sold" class="form-control" type="number" step="0.01" readonly data-daily-stock-sold />
                         </div>
                         <div class="col-md-6">
-                            <label asp-for="Form.Actual" class="form-label">Actual Liters</label>
-                            <input asp-for="Form.Actual" class="form-control" type="number" step="0.01" readonly data-daily-stock-actual />
+                            <label asp-for="Form.Adjustment" class="form-label">Adjustment Liters</label>
+                            <input asp-for="Form.Adjustment" class="form-control" readonly data-daily-stock-adjustment />
+                        </div>
+                        <div class="col-md-6">
+                            <label asp-for="Form.Expected" class="form-label">Expected Liters</label>
+                            <input asp-for="Form.Expected" class="form-control" readonly data-daily-stock-expected />
+                        </div>
+                        <div class="col-md-6">
+                            <label asp-for="Form.Variance" class="form-label">Variance Liters</label>
+                            <input asp-for="Form.Variance" class="form-control" readonly data-daily-stock-variance />
                         </div>
                         <div class="col-md-6">
                             <label asp-for="Form.Ending" class="form-label">Ending Liters</label>
                             <input asp-for="Form.Ending" class="form-control" type="number" min="0" step="0.01" data-daily-stock-ending />
                             <span asp-validation-for="Form.Ending" class="text-danger"></span>
                         </div>
+                        <div class="col-md-4"><label class="form-label">Current Official Liters</label><input asp-for="Form.CurrentOfficialQuantity" class="form-control" readonly data-daily-stock-current-official /></div>
+                        <div class="col-md-4"><label class="form-label">Reconciliation Adjustment Liters</label><input asp-for="Form.ReconciliationAdjustment" class="form-control" readonly data-daily-stock-reconciliation /></div>
+                        <div class="col-md-4"><label class="form-label">New Official Liters</label><input asp-for="Form.NewOfficialQuantity" class="form-control" readonly data-daily-stock-new-official /></div>
                         <div class="col-md-6">
                             <label asp-for="Form.Loss" class="form-label">Loss Liters</label>
                             <input asp-for="Form.Loss" class="form-control" type="number" step="0.01" readonly data-daily-stock-loss />
@@ -160,7 +177,7 @@
                 </div>
                 <div class="modal-footer">
                     <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button>
-                    <button class="btn btn-primary" type="submit">Save</button>
+                    <button class="btn btn-primary" type="submit">Save Draft</button>
                 </div>
             </form>
         </div>
@@ -197,6 +214,7 @@
         </div>
     </div>
 </div>
+<partial name="_DailyStockDetailsModal" model="Model" />
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />

@@ -1980,22 +1980,37 @@ namespace gpos.Data
                 entity.HasKey(record => record.Id);
 
                 entity.Property(record => record.Id).HasColumnName("id");
+                entity.Property(record => record.RecordNo).HasColumnName("record_no").HasMaxLength(30).IsRequired();
                 entity.Property(record => record.StockType).HasColumnName("stock_type").HasMaxLength(50).IsRequired();
+                entity.Property(record => record.Status).HasColumnName("status").HasMaxLength(20).IsRequired();
                 entity.Property(record => record.BranchId).HasColumnName("branch_id");
                 entity.Property(record => record.StockDate).HasColumnName("record_date").HasColumnType("date");
                 entity.Property(record => record.ProductId).HasColumnName("product_id");
                 entity.Property(record => record.BatchId).HasColumnName("batch_id");
                 entity.Property(record => record.TankId).HasColumnName("tank_id");
                 entity.Property(record => record.FuelId).HasColumnName("fuel_id");
+                entity.Property(record => record.WarehouseStockId).HasColumnName("warehouse_stock_id");
+                entity.Property(record => record.DisplayStockId).HasColumnName("display_stock_id");
                 entity.Property(record => record.Beginning).HasColumnName("beginning_quantity").HasPrecision(18, 2);
+                entity.Property(record => record.Received).HasColumnName("received_quantity").HasPrecision(18, 2);
+                entity.Property(record => record.TransferIn).HasColumnName("transfer_in_quantity").HasPrecision(18, 2);
+                entity.Property(record => record.TransferOut).HasColumnName("transfer_out_quantity").HasPrecision(18, 2);
                 entity.Property(record => record.Sold).HasColumnName("sold_quantity").HasPrecision(18, 2);
+                entity.Property(record => record.Adjustment).HasColumnName("adjustment_quantity").HasPrecision(18, 2);
+                entity.Property(record => record.Expected).HasColumnName("expected_quantity").HasPrecision(18, 2);
                 entity.Property(record => record.Actual).HasColumnName("actual_quantity").HasPrecision(18, 2);
                 entity.Property(record => record.Ending).HasColumnName("ending_quantity").HasPrecision(18, 2);
+                entity.Property(record => record.Variance).HasColumnName("variance_quantity").HasPrecision(18, 2);
                 entity.Property(record => record.Loss).HasColumnName("loss_quantity").HasPrecision(18, 2);
+                entity.Property(record => record.CurrentOfficialQuantity).HasColumnName("current_official_quantity").HasPrecision(18, 2);
+                entity.Property(record => record.ReconciliationAdjustment).HasColumnName("reconciliation_adjustment").HasPrecision(18, 2);
+                entity.Property(record => record.NewOfficialQuantity).HasColumnName("new_official_quantity").HasPrecision(18, 2);
                 entity.Property(record => record.Remarks).HasColumnName("remarks").HasMaxLength(255);
                 entity.Property(record => record.CreatedBy).HasColumnName("created_by");
                 entity.Property(record => record.CreatedAt).HasColumnName("created_at");
                 entity.Property(record => record.UpdatedAt).HasColumnName("updated_at");
+                entity.Property(record => record.ConfirmedBy).HasColumnName("confirmed_by");
+                entity.Property(record => record.ConfirmedAt).HasColumnName("confirmed_at");
 
                 entity.HasIndex(record => record.StockDate);
                 entity.HasIndex(record => record.StockType);
@@ -2004,11 +2019,14 @@ namespace gpos.Data
                 entity.HasIndex(record => record.BatchId);
                 entity.HasIndex(record => record.TankId);
                 entity.HasIndex(record => record.FuelId);
+                entity.HasIndex(record => record.RecordNo).IsUnique();
                 entity.HasOne(record => record.Branch).WithMany().HasForeignKey(record => record.BranchId).OnDelete(DeleteBehavior.Restrict);
                 entity.HasOne(record => record.Product).WithMany().HasForeignKey(record => record.ProductId).OnDelete(DeleteBehavior.Restrict);
                 entity.HasOne(record => record.Batch).WithMany().HasForeignKey(record => record.BatchId).OnDelete(DeleteBehavior.Restrict);
                 entity.HasOne(record => record.Tank).WithMany().HasForeignKey(record => record.TankId).OnDelete(DeleteBehavior.Restrict);
                 entity.HasOne(record => record.Fuel).WithMany().HasForeignKey(record => record.FuelId).OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne(record => record.CreatedByUser).WithMany().HasForeignKey(record => record.CreatedBy).OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne(record => record.ConfirmedByUser).WithMany().HasForeignKey(record => record.ConfirmedBy).OnDelete(DeleteBehavior.Restrict);
             });
 
             modelBuilder.Entity<SaleVoid>(entity =>
