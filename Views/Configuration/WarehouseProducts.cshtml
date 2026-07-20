@@ -82,7 +82,7 @@
                         <td class="status-cell"><span class="badge @(summary.IsActive ? "text-bg-success" : "text-bg-secondary")">@summary.StatusText</span></td>
                         <td class="col-action action-cell">
                             <div class="setup-row-actions">
-                                <a class="btn btn-sm btn-outline-primary" asp-action="ProductBatches" asp-route-search="@summary.ProductName">View Batches</a>
+                                <a class="btn btn-sm btn-outline-primary" asp-action="WarehouseBatches" asp-route-search="@summary.ProductName" asp-route-filterBranchId="@summary.BranchId">View Batches</a>
                                 @if (summary.IsActive)
                                 {
                                     <button class="btn btn-sm btn-outline-danger product-deactivate-button" type="button" data-bs-toggle="modal" data-bs-target="#productStatusModal" data-product-id="@summary.ProductId" data-product-name="@summary.ProductName" data-action-url="@Url.Action("DeactivateProductFromStock", "Configuration")">Deactivate</button>

@@ -2,6 +2,35 @@
 
 <script>
     document.addEventListener("DOMContentLoaded", () => {
+        const confirmForm = document.querySelector("[data-daily-stock-confirm-form]");
+        confirmForm?.addEventListener("submit", async event => {
+            event.preventDefault();
+            const button = confirmForm.querySelector('button[type="submit"]');
+            const feedback = document.querySelector("[data-daily-stock-confirm-error]");
+            if (feedback) {
+                feedback.textContent = "";
+                feedback.classList.add("d-none");
+            }
+            if (button) button.disabled = true;
+            try {
+                const response = await fetch(confirmForm.action, {
+                    method: "POST",
+                    body: new FormData(confirmForm),
+                    headers: { "Accept": "application/json", "X-Requested-With": "XMLHttpRequest" }
+                });
+                const contentType = response.headers.get("content-type") || "";
+                const result = contentType.includes("application/json") ? await response.json() : null;
+                if (!response.ok || !result?.success) throw new Error(result?.message || "Daily Stock confirmation failed.");
+                window.location.reload();
+            } catch (error) {
+                if (feedback) {
+                    feedback.textContent = error instanceof Error ? error.message : "Daily Stock confirmation failed.";
+                    feedback.classList.remove("d-none");
+                }
+                if (button) button.disabled = false;
+            }
+        });
+
         const activeModalId = "@Model.ActiveModalId";
         const modal = activeModalId ? document.getElementById(activeModalId) : null;
         if (modal && window.bootstrap) {

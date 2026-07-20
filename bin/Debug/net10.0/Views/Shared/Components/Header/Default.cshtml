@@ -16,7 +16,6 @@
                         <button class="dropdown-item eg-rb-dropdown-group-toggle" type="button">Config</button>
                         <div class="dropdown-menu eg-rb-submenu">
                             <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Configuration.Branch" ? "active" : "")" asp-controller="Configuration" asp-action="Branch">Branch</a>
-                            <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Configuration.Department" ? "active" : "")" asp-controller="Configuration" asp-action="Department">Department</a>
                             <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Suppliers.Index" ? "active" : "")" asp-controller="Suppliers" asp-action="Index">Suppliers</a>
                             <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Configuration.Vat" ? "active" : "")" asp-controller="Configuration" asp-action="Vat">VAT</a>
                             <a class="dropdown-item eg-rb-dropdown-link @(Model.ActivePage == "Configuration.Shift" ? "active" : "")" asp-controller="Configuration" asp-action="Shift">Shift</a>

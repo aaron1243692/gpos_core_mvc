@@ -76,7 +76,7 @@ namespace gpos.ViewComponents
                 return "Reports";
             }
 
-            if (Is(controller, "Users") || Is(controller, "Suppliers") || Is(controller, "Operations") || Is(controller, "Branches") || Is(controller, "Departments") || Is(controller, "Shift") || Is(controller, "Roles") || Is(controller, "Permissions") || IsLegacySetupUsers(action))
+            if (Is(controller, "Users") || Is(controller, "Suppliers") || Is(controller, "Operations") || Is(controller, "Branches") || Is(controller, "Shift") || Is(controller, "Roles") || Is(controller, "Permissions") || IsLegacySetupUsers(action))
             {
                 return "Configuration";
             }
@@ -121,7 +121,7 @@ namespace gpos.ViewComponents
                 return $"Shift.{action}";
             }
 
-            if (Is(controller, "Users") || Is(controller, "Customers") || Is(controller, "Suppliers") || Is(controller, "Operations") || Is(controller, "Branches") || Is(controller, "Departments") || Is(controller, "Roles") || Is(controller, "Permissions"))
+            if (Is(controller, "Users") || Is(controller, "Customers") || Is(controller, "Suppliers") || Is(controller, "Operations") || Is(controller, "Branches") || Is(controller, "Roles") || Is(controller, "Permissions"))
             {
                 return $"{controller}.Index";
             }
@@ -159,7 +159,6 @@ namespace gpos.ViewComponents
                     "Suppliers" => "Suppliers.Index",
                     "Operations" => "Operations.Index",
                     "Branches" => "Branches.Index",
-                    "Departments" => "Departments.Index",
                     "Roles" => "Roles.Index",
                     "Permissions" => "Permissions.Index",
                     "RolePermissions" => "Configuration.RolePermissions",
@@ -192,7 +191,7 @@ namespace gpos.ViewComponents
 
         private static bool IsLegacySetupConfiguration(string action) => action is "Fuels" or "FuelTypes" or "Pumps" or "Nozzles" or "FuelDeliveries" or "PumpMeterReadings" or "PumpUnits" or "Discounts" or "Members" or "Rebate" or "PointsLedger" or "DiscountRules" or "Position" or "Branch" or "RolePermissions" or "ActivityLogs";
 
-        private static bool IsLegacySetupUsers(string action) => action is "Users" or "Suppliers" or "Operations" or "Branches" or "Departments" or "Roles" or "Permissions";
+        private static bool IsLegacySetupUsers(string action) => action is "Users" or "Suppliers" or "Operations" or "Branches" or "Roles" or "Permissions";
 
         private static bool Is(string left, string right) => string.Equals(left, right, StringComparison.OrdinalIgnoreCase);
     }

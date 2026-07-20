@@ -1396,7 +1396,6 @@ namespace gpos.Controllers
                 BranchOptions = await BuildBranchFilterOptionsAsync(),
                 CategoryOptions = await BuildCategoryOptionsAsync(),
                 WarehouseStockSummaries = await query
-                    .Where(stock => stock.Quantity > 0)
                     .GroupBy(stock => new
                     {
                         stock.BranchId,

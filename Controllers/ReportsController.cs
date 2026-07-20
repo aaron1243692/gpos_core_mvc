@@ -18,10 +18,12 @@ namespace gpos.Controllers
         private const string DailyStockModalId = "dailyStockModal";
 
         private readonly ApplicationDbContext _db;
+        private readonly ILogger<ReportsController>? _logger;
 
-        public ReportsController(ApplicationDbContext db)
+        public ReportsController(ApplicationDbContext db, ILogger<ReportsController>? logger = null)
         {
             _db = db;
+            _logger = logger;
         }
 
         public IActionResult DailySalesReport() => View();
@@ -785,8 +787,7 @@ namespace gpos.Controllers
 
                 var selectedStock = await LoadDailyStockTargetAsync(record) ?? throw new InvalidOperationException("The selected stock item no longer exists.");
                 var components = await BuildDailyStockComponentsAsync(stockType, record.StockDate, record.BranchId ?? 0, record.ProductId, record.BatchId, record.TankId, selectedStock);
-                if (components.CurrentOfficial != record.CurrentOfficialQuantity
-                    || components.Beginning != record.Beginning || components.Received != record.Received
+                if (components.Beginning != record.Beginning || components.Received != record.Received
                     || components.TransferIn != record.TransferIn || components.TransferOut != record.TransferOut
                     || components.Sold != record.Sold || components.Adjustment != record.Adjustment)
                     throw new InvalidOperationException("Inventory or source movements changed after this Draft was reviewed. Reopen and save the Draft to recalculate it.");
@@ -797,6 +798,7 @@ namespace gpos.Controllers
                 record.Actual = components.Expected;
                 record.Variance = record.Ending - record.Expected;
                 record.Loss = Math.Max(record.Expected - record.Ending, 0m);
+                record.CurrentOfficialQuantity = components.CurrentOfficial;
                 record.ReconciliationAdjustment = record.Ending - components.CurrentOfficial;
                 record.NewOfficialQuantity = record.Ending;
                 if (record.ReconciliationAdjustment != 0m)
@@ -809,14 +811,20 @@ namespace gpos.Controllers
                 record.ConfirmedBy = userId;
                 record.ConfirmedAt = DateTime.UtcNow;
                 record.UpdatedAt = record.ConfirmedAt;
-                await _db.SaveChangesAsync();
+                var affectedRows = await _db.SaveChangesAsync();
                 await VerifyDailyStockInventoryPersistedAsync(record);
                 await transaction.CommitAsync();
+                _logger?.LogInformation("Confirmed Daily Stock {RecordId} ({RecordNo}); stock type {StockType}, branch {BranchId}, target W:{WarehouseStockId} D:{DisplayStockId} T:{TankId}, current {CurrentOfficial}, ending {Ending}, reconciliation {Reconciliation}, SaveChanges entries {AffectedRows}.", record.Id, record.RecordNo, record.StockType, record.BranchId, record.WarehouseStockId, record.DisplayStockId, record.TankId, record.CurrentOfficialQuantity, record.Ending, record.ReconciliationAdjustment, affectedRows);
+                if (Request.GetTypedHeaders().Accept?.Any(x => x.MediaType.HasValue && x.MediaType.Value.Equals("application/json", StringComparison.OrdinalIgnoreCase)) == true)
+                    return Json(new { success = true, message = $"{record.RecordNo} was confirmed and inventory was reconciled.", affectedRows });
                 TempData["DailyStockMessage"] = $"{record.RecordNo} was confirmed and inventory was reconciled.";
             }
             catch (Exception ex)
             {
                 await transaction.RollbackAsync();
+                _logger?.LogError(ex, "Daily Stock confirmation failed for record {RecordId}, requested stock type {StockType}, filter branch {FilterBranchId}.", id, stockType, filterBranchId);
+                if (Request.GetTypedHeaders().Accept?.Any(x => x.MediaType.HasValue && x.MediaType.Value.Equals("application/json", StringComparison.OrdinalIgnoreCase)) == true)
+                    return BadRequest(new { success = false, message = ex.Message });
                 TempData["DailyStockError"] = ex.Message;
             }
             return RedirectToAction(redirectAction, new { search, filterBranchId });
