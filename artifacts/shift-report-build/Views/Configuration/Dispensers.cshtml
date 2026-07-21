@@ -1,0 +1,43 @@
+@model gpos.Models.ViewModels.FuelEquipmentPageViewModel
+<div class="page-header"><div class="page-heading"><h1>Dispensers</h1><p class="page-subtitle">Manage branch fuel dispensers.</p></div></div>
+<section class="content-card setup-crud-card setup-table-card">
+    <div class="table-actions fuel-toolbar align-items-start">
+        <form asp-action="Dispensers" method="get" class="row g-2 align-items-center flex-grow-1">
+            <div class="col-12 col-md-4"><input class="form-control" name="search" value="@Model.Search" placeholder="Search code or name"/></div>
+            <div class="col-12 col-sm-6 col-md-3"><select class="form-select" name="filterBranchId" asp-items="Model.BranchOptions"></select></div>
+            <div class="col-12 col-sm-6 col-md-2"><select class="form-select" name="status"><option value="">All status</option><option selected="@(Model.Status=="Active")">Active</option><option selected="@(Model.Status=="Inactive")">Inactive</option></select></div>
+            <div class="col-auto"><button class="btn btn-outline-primary" type="submit">Search</button></div>
+            <div class="col-auto"><a class="btn btn-outline-secondary" asp-action="Dispensers">Clear</a></div>
+        </form>
+        <button class="btn btn-primary flex-shrink-0" id="addDispenserButton" type="button">Add Dispenser</button>
+    </div>
+    <div class="setup-table-scroll"><table class="table app-table table-sm align-middle admin-table mb-0"><thead><tr><th>No</th><th>Branch</th><th>Dispenser Code</th><th>Name</th><th>Location</th><th>Status</th><th>Action</th></tr></thead><tbody>
+    @if(Model.Dispensers.Count==0){<tr><td colspan="7" class="text-center text-muted">No dispensers yet.</td></tr>}
+    @for(var i=0;i<Model.Dispensers.Count;i++){var x=Model.Dispensers[i];<tr><td>@(i+1)</td><td>@x.Branch?.Name</td><td>@x.DispenserCode</td><td>@x.Name</td><td>@(x.Location??"-")</td><td><span class="badge @(x.Status==1?"text-bg-success":"text-bg-secondary")">@(x.Status==1?"Active":"Inactive")</span></td><td><div class="setup-row-actions"><a class="btn btn-sm btn-outline-primary" asp-action="Dispensers" asp-route-editId="@x.Id" asp-route-search="@Model.Search" asp-route-filterBranchId="@Model.BranchId" asp-route-status="@Model.Status">Edit</a><form asp-action="SetDispenserStatus" method="post">@Html.AntiForgeryToken()<input name="id" value="@x.Id" type="hidden"/><input name="status" value="@(x.Status==1?0:1)" type="hidden"/><button class="btn btn-sm @(x.Status==1?"btn-outline-danger":"btn-outline-success")" type="submit">@(x.Status==1?"Deactivate":"Activate")</button></form></div></td></tr>}
+    </tbody></table></div>
+</section>
+
+<div class="modal fade" id="dispenserModal" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-dialog-centered modal-lg"><div class="modal-content"><form asp-action="SaveDispenser" method="post" id="dispenserForm">@Html.AntiForgeryToken()
+    <input asp-for="DispenserForm.Id" id="dispenserFormId" type="hidden"/>
+    <div class="modal-header"><h2 class="modal-title fs-5" id="dispenserModalTitle">@(Model.DispenserForm.Id > 0 ? "Edit Dispenser" : "Add Dispenser")</h2><button class="btn-close" type="button" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body"><div asp-validation-summary="ModelOnly" class="text-danger"></div><div class="row g-3">
+        <div class="col-md-6"><label class="form-label">Branch</label><input asp-for="DispenserForm.BranchId" id="dispenserBranchId" type="hidden"/><div class="input-group" data-branch-selector data-branch-hidden="#dispenserBranchId" data-branch-display="#dispenserBranchName" data-branch-empty-text="Select branch"><input asp-for="DispenserForm.BranchName" id="dispenserBranchName" class="form-control" placeholder="Select branch" readonly/><button class="btn btn-outline-secondary branch-select-btn" type="button" data-branch-open><img src="/icons/search.png" alt="Search" width="16" height="16"/></button></div><span asp-validation-for="DispenserForm.BranchId" class="text-danger"></span></div>
+        <div class="col-md-6"><label class="form-label">Dispenser Code</label><input asp-for="DispenserForm.DispenserCode" class="form-control"/><span asp-validation-for="DispenserForm.DispenserCode" class="text-danger"></span></div>
+        <div class="col-md-6"><label class="form-label">Name</label><input asp-for="DispenserForm.Name" class="form-control"/><span asp-validation-for="DispenserForm.Name" class="text-danger"></span></div>
+        <div class="col-md-6"><label class="form-label">Location / Island</label><input asp-for="DispenserForm.Location" class="form-control"/></div>
+        <div class="col-12"><label class="form-label">Remarks</label><textarea asp-for="DispenserForm.Remarks" class="form-control"></textarea></div>
+    </div><input asp-for="DispenserForm.Status" id="dispenserFormStatus" type="hidden"/></div>
+    <div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button><button class="btn btn-primary" id="dispenserSubmitButton" type="submit">@(Model.DispenserForm.Id > 0 ? "Update" : "Save")</button></div>
+</form></div></div></div>
+
+@section Scripts {<partial name="_ValidationScriptsPartial"/><script>
+document.addEventListener('DOMContentLoaded',()=>{
+ const modalElement=document.getElementById('dispenserModal'),modal=bootstrap.Modal.getOrCreateInstance(modalElement),form=document.getElementById('dispenserForm');
+ const clearErrors=()=>{form.querySelectorAll('.field-validation-error,.validation-summary-errors').forEach(x=>{x.textContent='';x.classList.remove('field-validation-error','validation-summary-errors');x.classList.add('field-validation-valid','validation-summary-valid')});form.querySelectorAll('.input-validation-error').forEach(x=>x.classList.remove('input-validation-error'))};
+ const cleanUrl=()=>{const url=new URL(location.href);url.searchParams.delete('editId');history.replaceState({},'',url.pathname+(url.searchParams.size?'?'+url.searchParams.toString():''))};
+ function initializeAdd(){form.reset();document.getElementById('dispenserFormId').value='0';['dispenserBranchId','dispenserBranchName','DispenserForm_DispenserCode','DispenserForm_Name','DispenserForm_Location','DispenserForm_Remarks'].forEach(id=>{const element=document.getElementById(id);if(element)element.value=''});document.getElementById('dispenserFormStatus').value='1';document.getElementById('dispenserModalTitle').textContent='Add Dispenser';document.getElementById('dispenserSubmitButton').textContent='Save';clearErrors();cleanUrl()}
+ document.getElementById('addDispenserButton').addEventListener('click',()=>{initializeAdd();modal.show()});
+ modalElement.addEventListener('hidden.bs.modal',initializeAdd);
+ const active='@Model.ActiveModalId';if(active==='dispenserModal')modal.show();
+});
+</script>}

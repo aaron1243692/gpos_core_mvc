@@ -1,0 +1,86 @@
+@model gpos.Models.ViewModels.DailyStockPageViewModel
+
+<div class="page-header">
+    <div class="page-heading">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item">GPOS</li>
+                <li class="breadcrumb-item">Reports</li>
+                <li class="breadcrumb-item">Daily Stock</li>
+                <li class="breadcrumb-item active" aria-current="page">Display</li>
+            </ol>
+        </nav>
+        <h1>@Model.PageTitle</h1>
+        <p class="page-subtitle">@Model.Description</p>
+    </div>
+</div>
+@if (TempData["DailyStockMessage"] is string message) { <div class="alert alert-success">@message</div> }
+@if (TempData["DailyStockError"] is string error) { <div class="alert alert-danger">@error</div> }
+
+<section class="content-card setup-crud-card setup-table-card">
+    <div class="table-actions fuel-toolbar">
+        <form asp-action="@Model.PageAction" method="get" class="setup-search-form fuel-toolbar-search flex-wrap">
+            <input class="form-control" name="search" value="@Model.Search" placeholder="Search display daily stock" />
+            <select class="form-select" name="filterBranchId">
+                @foreach (var branch in Model.BranchOptions)
+                {
+                    <option value="@branch.Value" selected="@((Model.BranchId?.ToString() ?? string.Empty) == branch.Value ? "selected" : null)">@branch.Text</option>
+                }
+            </select>
+            <button class="btn btn-outline-primary" type="submit">Search</button>
+            <a class="btn btn-outline-secondary" asp-action="@Model.PageAction">Clear</a>
+        </form>
+        <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#dailyStockModal">Add Record</button>
+    </div>
+
+    <div class="setup-table-scroll">
+        <table class="table app-table table-sm align-middle admin-table daily-stock-history-table mb-0">
+            <thead>
+                <tr>
+                    <th class="text-nowrap">Record No.</th>
+                    <th class="text-nowrap">Date</th>
+                    <th class="text-nowrap">Branch</th>
+                    <th class="text-nowrap">Product</th>
+                    <th class="text-nowrap">Batch</th>
+                    <th class="text-nowrap">Beginning</th>
+                    <th class="text-nowrap">Expected</th><th class="text-nowrap">Ending</th><th class="text-nowrap">Variance</th>
+                    <th class="text-nowrap">Loss</th>
+                    <th class="text-nowrap">Status</th>
+                    <th class="text-nowrap">Recorded By</th>
+                    <th class="text-nowrap">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model.Records.Count == 0)
+                {
+                    <tr><td class="text-center text-muted fw-bold" colspan="13">No records yet.</td></tr>
+                }
+                @for (var i = 0; i < Model.Records.Count; i += 1)
+                {
+                    var record = Model.Records[i];
+                    <tr>
+                        <td class="text-nowrap">@record.RecordNo</td>
+                        <td class="text-nowrap">@record.StockDate.ToString("yyyy-MM-dd")</td>
+                        <td>@(record.Branch?.Name ?? "Unassigned")</td>
+                        <td>@(record.Product?.Name ?? "-")</td>
+                        <td>@(record.Batch?.BatchNo ?? "-")</td>
+                        <td>@record.Beginning.ToString("N2")</td>
+                        <td>@record.Expected.ToString("N2")</td><td>@record.Ending.ToString("N2")</td><td>@record.Variance.ToString("N2")</td>
+                        <td>@record.Loss.ToString("N2")</td>
+                        <td><span class="badge @(record.Status == "Draft" ? "text-bg-warning" : "text-bg-success")">@record.Status</span></td>
+                        <td class="text-nowrap">@(record.CreatedByUser?.FullName ?? record.CreatedByUser?.Username ?? "System")</td>
+                        <td class="col-action"><div class="d-flex gap-1 justify-content-center">@if(record.Status == "Draft"){<a class="btn btn-sm btn-outline-primary" asp-action="@Model.PageAction" asp-route-editId="@record.Id" asp-route-search="@Model.Search" asp-route-filterBranchId="@Model.BranchId">Edit</a><a class="btn btn-sm btn-outline-success" asp-action="@Model.PageAction" asp-route-detailsId="@record.Id" asp-route-search="@Model.Search" asp-route-filterBranchId="@Model.BranchId">Review</a>}else{<a class="btn btn-sm btn-outline-primary" asp-action="@Model.PageAction" asp-route-detailsId="@record.Id" asp-route-search="@Model.Search" asp-route-filterBranchId="@Model.BranchId">View Details</a>}</div></td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<partial name="_ProductDailyStockModal" model="Model" />
+<partial name="_DailyStockDetailsModal" model="Model" />
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <partial name="_DailyStockScripts" model="Model" />
+}

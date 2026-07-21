@@ -208,7 +208,27 @@ namespace gpos.Controllers
             return RedirectToAction(nameof(ReturnManagement), new { detailsId = id });
         }
         public IActionResult ShiftSalesReport() => View();
-        public IActionResult ShiftReport() => View();
+        [HttpGet]
+        public async Task<IActionResult> ShiftReport(string? search, int? branchId, int? shiftId, int? userId, DateTime? dateFrom, DateTime? dateTo, string? status)
+        {
+            return View(await BuildShiftReportAsync(search, branchId, shiftId, userId, dateFrom, dateTo, status));
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> ExportShiftReportCsv(string? search, int? branchId, int? shiftId, int? userId, DateTime? dateFrom, DateTime? dateTo, string? status)
+        {
+            var model = await BuildShiftReportAsync(search, branchId, shiftId, userId, dateFrom, dateTo, status);
+            var csv = new StringBuilder("Business Date,Branch,Shift,Cashier,Opening Time,Opening Cash,Gross Sales,Cash Sales,Non-cash Sales,Cash In,Cash Out,Expected Cash,Actual Cash,Drawer Difference,Remitted Amount,Remittance Difference,Session Status\r\n");
+            foreach (var row in model.Rows)
+            {
+                string Number(decimal value) => value.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture);
+                csv.AppendLine(string.Join(',', row.BusinessDate.ToString("yyyy-MM-dd"), Csv(row.BranchName), Csv(row.ShiftName), Csv(row.CashierName),
+                    Csv(row.OpeningTime?.ToLocalTime().ToString("yyyy-MM-dd HH:mm") ?? string.Empty), Number(row.OpeningCash), Number(row.GrossSales), Number(row.CashSales),
+                    Number(row.NonCashSales), Number(row.CashIn), Number(row.CashOut), Number(row.ExpectedCash), Number(row.ActualCash), Number(row.DrawerDifference),
+                    Number(row.RemittedAmount), Number(row.RemittanceDifference), Csv(row.SessionStatus)));
+            }
+            return File(new UTF8Encoding(true).GetBytes(csv.ToString()), "text/csv", $"shift-report-{DateTime.Today:yyyyMMdd}.csv");
+        }
         public IActionResult FuelSalesReport() => View();
         public IActionResult FuelSales() => View();
         public IActionResult ProductSalesReport() => View();
@@ -1455,6 +1475,65 @@ namespace gpos.Controllers
         }
 
         private static string Csv(string? value) => $"\"{(value ?? string.Empty).Replace("\"", "\"\"")}\"";
+
+        private async Task<ShiftReportPageViewModel> BuildShiftReportAsync(string? search, int? branchId, int? shiftId, int? userId, DateTime? dateFrom, DateTime? dateTo, string? status)
+        {
+            var term = (search ?? string.Empty).Trim();
+            status = (status ?? string.Empty).Trim();
+            if (status is not ("" or "Open" or "Remitted")) status = string.Empty;
+            if (dateFrom.HasValue && dateTo.HasValue && dateFrom.Value.Date > dateTo.Value.Date)
+                ModelState.AddModelError(string.Empty, "From date cannot be later than To date.");
+
+            var query = _db.DailyCashRecords.AsNoTracking().AsQueryable();
+            if (branchId.HasValue) query = query.Where(x => x.BranchId == branchId.Value);
+            if (shiftId.HasValue) query = query.Where(x => x.ShiftId == shiftId.Value);
+            if (userId.HasValue) query = query.Where(x => x.UserId == userId.Value);
+            if (dateFrom.HasValue) query = query.Where(x => x.BusinessDate >= dateFrom.Value.Date);
+            if (dateTo.HasValue) { var until = dateTo.Value.Date.AddDays(1); query = query.Where(x => x.BusinessDate < until); }
+            if (status == "Open") query = query.Where(x => x.Status == 1);
+            if (status == "Remitted") query = query.Where(x => x.Status != 1);
+            if (term.Length > 0)
+                query = query.Where(x => (x.Branch != null && x.Branch.Name.Contains(term))
+                    || (x.Shift != null && x.Shift.Name.Contains(term))
+                    || (x.User != null && ((x.User.FullName != null && x.User.FullName.Contains(term)) || x.User.Username.Contains(term))));
+
+            var rows = await query.OrderByDescending(x => x.BusinessDate).ThenByDescending(x => x.Id)
+                .Select(x => new ShiftReportRowViewModel
+                {
+                    DailyCashId = x.Id, BusinessDate = x.BusinessDate,
+                    BranchName = x.Branch != null ? x.Branch.Name : "Unknown",
+                    ShiftName = x.Shift != null ? x.Shift.Name : "Unknown",
+                    CashierName = x.User != null ? (x.User.FullName ?? x.User.Username) : "Unknown",
+                    OpeningTime = x.OpenedAt, OpeningCash = x.OpeningCash,
+                    GrossSales = x.Sales.Where(s => s.Status == "Completed").Sum(s => (decimal?)s.GrossTotal) ?? 0m,
+                    CashSales = x.CashSales,
+                    NonCashSales = x.Sales.Where(s => s.Status == "Completed")
+                        .SelectMany(s => s.Payments).Where(p => p.Status == "Completed" && p.PaymentType != "Cash")
+                        .Sum(p => (decimal?)(p.AppliedAmount ?? p.Amount)) ?? 0m,
+                    CashIn = x.TotalCashIn, CashOut = x.TotalCashOut,
+                    ExpectedCash = x.ExpectedCash, ActualCash = x.ActualCash, DrawerDifference = x.Difference,
+                    RemittedAmount = x.RemittedAmount,
+                    RemittanceDifference = x.CashRemittances.Where(r => r.Status == 1).Select(r => (decimal?)r.RemittanceDifference).FirstOrDefault() ?? 0m,
+                    SessionStatus = x.Status == 1 ? "Open" : "Remitted"
+                }).ToListAsync();
+
+            var model = new ShiftReportPageViewModel
+            {
+                Search = term, BranchId = branchId, ShiftId = shiftId, UserId = userId,
+                DateFrom = dateFrom, DateTo = dateTo, Status = status, Rows = rows,
+                BranchOptions = await BuildBranchFilterOptionsAsync(),
+                ShiftOptions = await _db.ShiftSettings.AsNoTracking().Where(x => x.Status == 1).OrderBy(x => x.Name)
+                    .Select(x => new SelectListItem { Value = x.Id.ToString(), Text = x.Name }).ToListAsync(),
+                UserOptions = await _db.Users.AsNoTracking().Where(x => x.Status == 1).OrderBy(x => x.FullName ?? x.Username)
+                    .Select(x => new SelectListItem { Value = x.Id.ToString(), Text = x.FullName ?? x.Username }).ToListAsync()
+            };
+            model.ShiftOptions.Insert(0, new SelectListItem { Value = "", Text = "All Shifts" });
+            model.UserOptions.Insert(0, new SelectListItem { Value = "", Text = "All Cashiers" });
+            foreach (var option in model.BranchOptions) option.Selected = option.Value == branchId?.ToString();
+            foreach (var option in model.ShiftOptions) option.Selected = option.Value == shiftId?.ToString();
+            foreach (var option in model.UserOptions) option.Selected = option.Value == userId?.ToString();
+            return model;
+        }
 
         private async Task<string> BranchNameAsync(int branchId)
         {

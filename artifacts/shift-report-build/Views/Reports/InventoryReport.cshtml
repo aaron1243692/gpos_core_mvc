@@ -1,0 +1,55 @@
+@model gpos.Models.ViewModels.InventoryReportPageViewModel
+@using System.Globalization
+@{
+    ViewData["Title"] = "Inventory Report";
+}
+
+<div class="page-header inventory-report-controls">
+    <div class="page-heading">
+        <nav aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item">GPOS</li><li class="breadcrumb-item">Reports</li><li class="breadcrumb-item active" aria-current="page">Inventory Report</li></ol></nav>
+        <h1 class="mb-0">Inventory Report</h1>
+        <p class="page-subtitle text-muted mt-2">Current stock quantities and cost valuations of products and fuels across warehouse, display, and storage tanks.</p>
+    </div>
+    <div class="page-actions">
+        <a class="btn btn-outline-secondary" asp-action="ExportInventoryReportCsv" asp-route-search="@Model.Search" asp-route-branchId="@Model.BranchId" asp-route-type="@Model.Type" asp-route-status="@Model.Status">Export CSV</a>
+        <button class="btn btn-outline-secondary" type="button" onclick="window.print()">Print</button>
+    </div>
+</div>
+
+<section class="reports-ui-page">
+    <div class="content-card mb-3 inventory-report-controls">
+        <form asp-action="InventoryReport" method="get" class="row g-2 align-items-center">
+            <div class="col-md-3"><input class="form-control" name="search" value="@Model.Search" type="search" placeholder="Search inventory..." /></div>
+            <div class="col-md-3"><select class="form-select" name="branchId" asp-items="Model.BranchOptions"></select></div>
+            <div class="col-md-2"><select class="form-select" name="type"><option value="">All Types</option><option value="Warehouse" selected="@(Model.Type == "Warehouse")">Warehouse</option><option value="Display" selected="@(Model.Type == "Display")">Display</option><option value="Tank" selected="@(Model.Type == "Tank")">Tank</option></select></div>
+            <div class="col-md-2"><select class="form-select" name="status"><option value="">All Statuses</option><option value="Active" selected="@(Model.Status == "Active")">Active</option><option value="Low Stock" selected="@(Model.Status == "Low Stock")">Low Stock</option><option value="Out of Stock" selected="@(Model.Status == "Out of Stock")">Out of Stock</option></select></div>
+            <div class="col-md-2 d-flex gap-1"><button class="btn btn-primary w-100" type="submit">Search</button><a class="btn btn-outline-secondary" asp-action="InventoryReport">Clear</a></div>
+        </form>
+    </div>
+
+    <div class="content-card transaction-ui-card">
+        <div class="table-responsive transaction-ui-table-wrap">
+            <table class="table app-table table-sm align-middle mb-0">
+                <thead><tr><th>No</th><th>Branch</th><th>Type</th><th>Product/Tank</th><th>Fuel</th><th>Total Quantity/Liters</th><th>Value</th><th>Status</th></tr></thead>
+                <tbody>
+                @if (Model.Rows.Count == 0)
+                {
+                    <tr><td class="text-center text-muted fw-bold" colspan="8">No records found.</td></tr>
+                }
+                @for (var i = 0; i < Model.Rows.Count; i++)
+                {
+                    var row = Model.Rows[i];
+                    var badge = row.Status == "Active" ? "bg-success" : row.Status == "Low Stock" ? "bg-warning text-dark" : "bg-danger";
+                    <tr><td>@(i + 1)</td><td>@row.BranchName</td><td>@row.Type</td><td>@row.ProductOrTankName</td><td>@row.FuelName</td><td>@row.Quantity.ToString("N2") @row.Unit</td><td>@row.Value.ToString("C2", CultureInfo.GetCultureInfo("en-PH"))</td><td><span class="badge @badge text-nowrap">@row.Status</span></td></tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</section>
+
+<style media="print">
+    .inventory-report-controls, header, nav, .sidebar, footer { display: none !important; }
+    .content-card { border: 0 !important; box-shadow: none !important; }
+    .table-responsive { overflow: visible !important; }
+</style>

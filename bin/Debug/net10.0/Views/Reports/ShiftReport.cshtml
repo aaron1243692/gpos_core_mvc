@@ -1,122 +1,57 @@
+@model gpos.Models.ViewModels.ShiftReportPageViewModel
+@using System.Globalization
 @{
     ViewData["Title"] = "Shift Report";
+    string Money(decimal value) => value.ToString("C2", CultureInfo.GetCultureInfo("en-PH"));
 }
 
-<div class="page-header">
+<div class="page-header shift-report-controls">
     <div class="page-heading">
-        <nav aria-label="breadcrumb">
-            <ol class="breadcrumb">
-                <li class="breadcrumb-item">GPOS</li>
-                <li class="breadcrumb-item">Reports</li>
-                <li class="breadcrumb-item active" aria-current="page">Shift Report</li>
-            </ol>
-        </nav>
-        <div class="d-flex align-items-center gap-2 flex-wrap">
-            <h1 class="mb-0">Shift Report</h1>
-            <span class="badge bg-warning text-dark">UI Preview Only</span>
-            <span class="badge bg-secondary">Backend not connected yet</span>
-        </div>
-        <p class="page-subtitle text-muted mt-2">Reconciliation of shifts, sales totals, opening/closing times, and cash counts.</p>
+        <nav aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item">GPOS</li><li class="breadcrumb-item">Reports</li><li class="breadcrumb-item active" aria-current="page">Shift Report</li></ol></nav>
+        <h1 class="mb-0">Shift Report</h1>
+        <p class="page-subtitle text-muted mt-2">Read-only Daily Cash session summaries, sales totals, drawer balances, and remittance differences.</p>
     </div>
     <div class="page-actions">
-        <button class="btn btn-outline-secondary" type="button" onclick="alert('Export backend not connected yet.');">Export CSV</button>
-        <button class="btn btn-outline-secondary" type="button" onclick="alert('Print backend not connected yet.');">Print</button>
+        <a class="btn btn-outline-secondary" asp-action="ExportShiftReportCsv" asp-route-search="@Model.Search" asp-route-branchId="@Model.BranchId" asp-route-shiftId="@Model.ShiftId" asp-route-userId="@Model.UserId" asp-route-dateFrom="@Model.DateFrom?.ToString("yyyy-MM-dd")" asp-route-dateTo="@Model.DateTo?.ToString("yyyy-MM-dd")" asp-route-status="@Model.Status">Export CSV</a>
+        <button class="btn btn-outline-secondary" type="button" onclick="window.print()">Print</button>
     </div>
 </div>
 
 <section class="reports-ui-page">
-    <div class="content-card mb-3">
-        <form class="row g-2 align-items-center" onsubmit="return false;">
-            <div class="col-md-3">
-                <input class="form-control" type="search" placeholder="Search shift logs..." id="shiftReportSearch" />
-            </div>
-            <div class="col-md-2">
-                <select class="form-select" id="shiftReportBranch">
-                    <option value="">All Branches</option>
-                    <option>Main Branch</option>
-                    <option>Branch 2</option>
-                </select>
-            </div>
-            <div class="col-md-2">
-                <input class="form-control" type="date" value="2026-07-09" id="shiftReportDateFrom" />
-            </div>
-            <div class="col-md-2">
-                <input class="form-control" type="date" value="2026-07-09" id="shiftReportDateTo" />
-            </div>
-            <div class="col-md-1">
-                <select class="form-select" id="shiftReportStatus">
-                    <option value="">All Statuses</option>
-                    <option>Open</option>
-                    <option>Closed</option>
-                    <option>Reconciled</option>
-                </select>
-            </div>
-            <div class="col-md-2 d-flex gap-1">
-                <button class="btn btn-primary w-100" type="button">Search</button>
-                <button class="btn btn-outline-secondary" type="button">Clear</button>
-            </div>
+    <div class="content-card mb-3 shift-report-controls">
+        <form asp-action="ShiftReport" method="get" class="row g-2 align-items-end">
+            <div class="col-md-2"><label class="form-label">Search</label><input class="form-control" name="search" value="@Model.Search" type="search" placeholder="Cashier, branch, shift" /></div>
+            <div class="col-md-2"><label class="form-label">Branch</label><select class="form-select" name="branchId" asp-items="Model.BranchOptions"></select></div>
+            <div class="col-md-2"><label class="form-label">Shift</label><select class="form-select" name="shiftId" asp-items="Model.ShiftOptions"></select></div>
+            <div class="col-md-2"><label class="form-label">Cashier</label><select class="form-select" name="userId" asp-items="Model.UserOptions"></select></div>
+            <div class="col-md-2"><label class="form-label">Date From</label><input class="form-control" name="dateFrom" value="@Model.DateFrom?.ToString("yyyy-MM-dd")" type="date" /></div>
+            <div class="col-md-2"><label class="form-label">Date To</label><input class="form-control" name="dateTo" value="@Model.DateTo?.ToString("yyyy-MM-dd")" type="date" /></div>
+            <div class="col-md-2"><label class="form-label">Status</label><select class="form-select" name="status"><option value="">All Statuses</option><option value="Open" selected="@(Model.Status == "Open")">Open</option><option value="Remitted" selected="@(Model.Status == "Remitted")">Remitted</option></select></div>
+            <div class="col-md-auto d-flex gap-1"><button class="btn btn-primary" type="submit">Search</button><a class="btn btn-outline-secondary" asp-action="ShiftReport">Clear</a></div>
         </form>
+        <div asp-validation-summary="ModelOnly" class="text-danger mt-2"></div>
     </div>
 
     <div class="content-card transaction-ui-card">
         <div class="table-responsive transaction-ui-table-wrap">
-            <table class="table app-table table-sm align-middle mb-0" id="shiftReportTable">
-                <thead>
-                    <tr>
-                        <th class="text-nowrap">No</th>
-                        <th class="text-nowrap">Date</th>
-                        <th class="text-nowrap">Branch</th>
-                        <th class="text-nowrap">Shift</th>
-                        <th class="text-nowrap">Cashier</th>
-                        <th class="text-nowrap">Opening Time</th>
-                        <th class="text-nowrap">Closing Time</th>
-                        <th class="text-nowrap">Sales</th>
-                        <th class="text-nowrap">Cash In</th>
-                        <th class="text-nowrap">Cash Out</th>
-                        <th class="text-nowrap">Expected Cash</th>
-                        <th class="text-nowrap">Actual Cash</th>
-                        <th class="text-nowrap">Difference</th>
-                        <th class="text-nowrap">Status</th>
-                    </tr>
-                </thead>
+            <table class="table app-table table-sm align-middle mb-0">
+                <thead><tr><th>No</th><th>Business Date</th><th>Branch</th><th>Shift</th><th>Cashier</th><th>Opening Time</th><th>Opening Cash</th><th>Gross Sales</th><th>Cash Sales</th><th>Non-cash Sales</th><th>Cash In</th><th>Cash Out</th><th>Expected Cash</th><th>Actual Cash</th><th>Drawer Difference</th><th>Remitted Amount</th><th>Remittance Difference</th><th>Status</th></tr></thead>
                 <tbody>
-                    <tr>
-                        <td>1</td>
-                        <td class="text-nowrap">2026-07-09</td>
-                        <td>Main Branch</td>
-                        <td>Morning Shift</td>
-                        <td>cashier_01</td>
-                        <td>06:00 AM</td>
-                        <td>02:00 PM</td>
-                        <td>₱45,600.00</td>
-                        <td>₱500.00</td>
-                        <td>₱10,000.00</td>
-                        <td>₱41,100.00</td>
-                        <td>₱41,050.00</td>
-                        <td>₱-50.00</td>
-                        <td><span class="badge bg-success text-nowrap">Closed</span></td>
-                    </tr>
-                    <tr>
-                        <td>2</td>
-                        <td class="text-nowrap">2026-07-09</td>
-                        <td>Main Branch</td>
-                        <td>Afternoon Shift</td>
-                        <td>cashier_02</td>
-                        <td>02:00 PM</td>
-                        <td>10:00 PM</td>
-                        <td>₱52,300.00</td>
-                        <td>₱1,000.00</td>
-                        <td>₱200.00</td>
-                        <td>₱58,100.00</td>
-                        <td>₱58,100.00</td>
-                        <td>₱0.00</td>
-                        <td><span class="badge bg-primary text-nowrap">Open</span></td>
-                    </tr>
-                    <tr class="d-none">
-                        <td class="text-center text-muted fw-bold" colspan="14">No records found.</td>
-                    </tr>
+                @if (Model.Rows.Count == 0) { <tr><td class="text-center text-muted fw-bold" colspan="18">No records found.</td></tr> }
+                @for (var i = 0; i < Model.Rows.Count; i++)
+                {
+                    var row = Model.Rows[i];
+                    <tr><td>@(i + 1)</td><td class="text-nowrap">@row.BusinessDate.ToString("yyyy-MM-dd")</td><td>@row.BranchName</td><td>@row.ShiftName</td><td>@row.CashierName</td><td class="text-nowrap">@(row.OpeningTime?.ToLocalTime().ToString("yyyy-MM-dd hh:mm tt") ?? "-")</td><td>@Money(row.OpeningCash)</td><td>@Money(row.GrossSales)</td><td>@Money(row.CashSales)</td><td>@Money(row.NonCashSales)</td><td>@Money(row.CashIn)</td><td>@Money(row.CashOut)</td><td>@Money(row.ExpectedCash)</td><td>@Money(row.ActualCash)</td><td>@Money(row.DrawerDifference)</td><td>@Money(row.RemittedAmount)</td><td>@Money(row.RemittanceDifference)</td><td><span class="badge @(row.SessionStatus == "Open" ? "bg-primary" : "bg-success") text-nowrap">@row.SessionStatus</span></td></tr>
+                }
                 </tbody>
             </table>
         </div>
     </div>
 </section>
+
+<style media="print">
+    .shift-report-controls, header, nav, .sidebar, footer { display: none !important; }
+    .content-card { border: 0 !important; box-shadow: none !important; }
+    .table-responsive { overflow: visible !important; }
+    table { font-size: 8pt; }
+</style>

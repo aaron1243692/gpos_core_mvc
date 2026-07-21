@@ -1,0 +1,460 @@
+@model gpos.Models.ViewModels.LowStockSettingsPageViewModel
+
+@{
+    var isFuel = Model.StockType == "Fuel";
+    var isWarehouse = Model.StockType == "Warehouse";
+    var isDisplay = Model.StockType == "Display";
+    var isProductStock = isWarehouse || isDisplay;
+    var isBranchScoped = isProductStock || isFuel;
+    var isEdit = Model.Form.Id > 0;
+}
+
+<div class="page-header">
+    <div class="page-heading">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item">GPOS</li>
+                <li class="breadcrumb-item">Inventory</li>
+                <li class="breadcrumb-item">Low Stock Settings</li>
+                <li class="breadcrumb-item active" aria-current="page">@Model.StockType</li>
+            </ol>
+        </nav>
+        <h1>@Model.PageTitle</h1>
+        <p class="page-subtitle">@Model.Description</p>
+    </div>
+</div>
+
+<section class="content-card setup-crud-card setup-table-card">
+    <div class="table-actions fuel-toolbar">
+        <form asp-action="@Model.PageAction" method="get" class="setup-search-form fuel-toolbar-search flex-wrap">
+            <input class="form-control" name="search" value="@Model.Search" placeholder="Search low stock settings" />
+            @if (isBranchScoped)
+            {
+                <select class="form-select" name="filterBranchId">
+                    @foreach (var branch in Model.BranchOptions)
+                    {
+                        <option value="@branch.Value" selected="@((Model.BranchId?.ToString() ?? string.Empty) == branch.Value ? "selected" : null)">@branch.Text</option>
+                    }
+                </select>
+                <button class="btn btn-outline-primary" type="submit">Search</button>
+                <a class="btn btn-outline-secondary" asp-action="@Model.PageAction">Clear</a>
+            }
+        </form>
+        <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#lowStockSettingModal">Settings</button>
+    </div>
+
+    <div class="setup-table-scroll gpos-table-wrap">
+        <table class="table app-table table-sm align-middle admin-table gpos-table inventory-low-stock-table mb-0">
+            <colgroup>
+                <col class="col-no" />
+                @if (isBranchScoped)
+                {
+                    <col class="col-normal" />
+                }
+                <col class="col-name" />
+                @if (isFuel)
+                {
+                    <col class="col-normal" />
+                }
+                <col class="col-normal" />
+                <col class="col-normal" />
+                @if (isProductStock)
+                {
+                    <col class="col-normal" />
+                }
+                <col class="col-status" />
+                <col class="col-normal" />
+                <col class="col-action" />
+            </colgroup>
+            <thead>
+                <tr>
+                    <th scope="col">No</th>
+                    @if (isBranchScoped)
+                    {
+                        <th scope="col">Branch</th>
+                    }
+                    <th scope="col">@(isFuel ? "Tank" : "Product")</th>
+                    @if (isFuel)
+                    {
+                        <th scope="col">Fuel</th>
+                    }
+                    <th class="number-cell" scope="col">@Model.QuantityLabel</th>
+                    <th class="number-cell" scope="col">Threshold</th>
+                    @if (isProductStock || isFuel)
+                    {
+                        <th class="number-cell" scope="col">Difference</th>
+                    }
+                    <th class="status-cell" scope="col">Status</th>
+                    <th class="number-cell" scope="col">Updated</th>
+                    <th scope="col">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model.Settings.Count == 0)
+                {
+                    <tr>
+                        <td class="text-center text-muted fw-bold" colspan="@(isFuel ? 9 : isProductStock ? 9 : 7)">@Model.EmptyMessage</td>
+                    </tr>
+                }
+                @for (var i = 0; i < Model.Settings.Count; i += 1)
+                {
+                    var row = Model.Settings[i];
+                    <tr>
+                        <td>@(i + 1)</td>
+                        @if (isBranchScoped)
+                        {
+                            <td class="text-cell">@row.BranchName</td>
+                        }
+                        <td class="text-cell">@(isFuel ? row.TankName : row.ProductName)</td>
+                        @if (isFuel)
+                        {
+                            <td class="text-cell">@row.FuelName</td>
+                        }
+                        <td class="number-cell">@row.CurrentQuantity.ToString("#,0.##")</td>
+                        <td class="number-cell">@row.Threshold.ToString("#,0.##")</td>
+                        @if (isProductStock || isFuel)
+                        {
+                            <td class="number-cell">@Math.Max(row.Difference, 0m).ToString("#,0.##")</td>
+                        }
+                        <td class="status-cell">
+                            <span class="badge @(row.Status == "Out of Stock" ? "text-bg-danger" : row.Status == "Low Stock" ? "text-bg-warning" : "text-bg-success")">@row.Status</span>
+                        </td>
+                        <td class="number-cell">@(row.UpdatedAt?.ToString("yyyy-MM-dd HH:mm") ?? "-")</td>
+                        <td class="col-action action-cell">
+                            <a class="btn btn-sm btn-outline-primary" asp-action="@Model.PageAction" asp-route-editId="@row.Id" asp-route-search="@Model.Search" asp-route-filterBranchId="@Model.BranchId">Edit</a>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<div class="modal fade" id="lowStockSettingModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <form asp-action="@Model.SaveAction" method="post">
+                @Html.AntiForgeryToken()
+                <input asp-for="Form.Id" type="hidden" />
+                <input asp-for="Form.StockType" type="hidden" />
+                <input name="search" type="hidden" value="@Model.Search" />
+                <input name="filterBranchId" type="hidden" value="@Model.BranchId" />
+
+                <div class="modal-header">
+                    <h2 class="modal-title fs-5">@(isEdit ? "Edit Low Stock Setting" : "Add Low Stock Setting")</h2>
+                    <button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    @if (isBranchScoped)
+                    {
+                        <div class="mb-3">
+                            <label asp-for="Form.BranchId" class="form-label">Branch</label>
+                            <input asp-for="Form.BranchId" type="hidden" id="lowStockBranchId" />
+                            <div class="input-group" data-branch-selector data-branch-hidden="#lowStockBranchId" data-branch-display="#lowStockBranchDisplay" data-branch-empty-text="Select branch">
+                                <input class="form-control" id="lowStockBranchDisplay" value="@Model.Form.BranchName" placeholder="Select branch" readonly />
+                                <button type="button" class="btn btn-outline-secondary branch-select-btn">
+                                    <img src="/icons/search.png" alt="Search" style="width:16px;height:16px;" />
+                                </button>
+                            </div>
+                            <span asp-validation-for="Form.BranchId" class="text-danger"></span>
+                        </div>
+                    }
+                    @if (isProductStock)
+                    {
+                        <div class="mb-3">
+                            <label asp-for="Form.ProductId" class="form-label">Product</label>
+                            <input asp-for="Form.ProductId" type="hidden" id="lowStockProductId" />
+                            <div class="input-group">
+                                <input class="form-control" id="lowStockProductDisplay" value="@Model.Form.SelectedProductName" placeholder="Select product" readonly />
+                                <button type="button" class="btn btn-outline-secondary low-stock-product-select-btn" data-bs-toggle="modal" data-bs-target="#lowStockProductSelectorModal">
+                                    <img src="/icons/search.png" alt="Search" style="width:16px;height:16px;" />
+                                </button>
+                            </div>
+                            <span asp-validation-for="Form.ProductId" class="text-danger"></span>
+                        </div>
+                    }
+                    @if (isFuel)
+                    {
+                        <div class="mb-3">
+                            <label asp-for="Form.TankId" class="form-label">Tank</label>
+                            <input asp-for="Form.TankId" type="hidden" id="lowStockTankId" />
+                            <div class="input-group">
+                                <input class="form-control" id="lowStockTankDisplay" value="@Model.Form.SelectedTankName" placeholder="Select tank" readonly />
+                                <button type="button" class="btn btn-outline-secondary low-stock-tank-select-btn" data-bs-toggle="modal" data-bs-target="#lowStockTankSelectorModal">
+                                    <img src="/icons/search.png" alt="Search" style="width:16px;height:16px;" />
+                                </button>
+                            </div>
+                            <span asp-validation-for="Form.TankId" class="text-danger"></span>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" for="lowStockFuelDisplay">Fuel</label>
+                            <input class="form-control" id="lowStockFuelDisplay" value="@Model.Form.SelectedFuelName" placeholder="Fuel from selected tank" readonly />
+                        </div>
+                    }
+
+                    <div class="mb-3">
+                        <label asp-for="Form.Threshold" class="form-label">Threshold</label>
+                        <input asp-for="Form.Threshold" class="form-control" type="number" min="0" step="0.01" />
+                        <span asp-validation-for="Form.Threshold" class="text-danger"></span>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button>
+                    <button class="btn btn-primary" type="submit">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@if (isProductStock)
+{
+    <div class="modal fade" id="lowStockProductSelectorModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 class="modal-title fs-5">Select Product</h2>
+                    <button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="input-group mb-3">
+                        <input class="form-control" id="lowStockProductSearchInput" type="search" placeholder="Search product, category, or unit" />
+                        <button class="btn btn-outline-primary" id="lowStockProductSearchButton" type="button">Search</button>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table app-table table-sm align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th>No</th>
+                                    <th>Product</th>
+                                    <th>Category</th>
+                                    <th>Unit</th>
+                                    <th>Current Total @(isWarehouse ? "Warehouse" : "Display") Quantity</th>
+                                    <th>Current Low Stock Threshold</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="lowStockProductSelectorResults">
+                                <tr><td class="text-center text-muted fw-bold" colspan="7">Search for a product.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@if (isFuel)
+{
+    <div class="modal fade" id="lowStockTankSelectorModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 class="modal-title fs-5">Select Tank</h2>
+                    <button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="input-group mb-3">
+                        <input class="form-control" id="lowStockTankSearchInput" type="search" placeholder="Search tank, fuel, or branch" />
+                        <button class="btn btn-outline-primary" id="lowStockTankSearchButton" type="button">Search</button>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table app-table table-sm align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th>No</th>
+                                    <th>Branch</th>
+                                    <th>Tank</th>
+                                    <th>Fuel</th>
+                                    <th>Current Liters</th>
+                                    <th>Current Threshold Liters</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="lowStockTankSelectorResults">
+                                <tr><td class="text-center text-muted fw-bold" colspan="7">Search for a tank.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            const id = "@Model.ActiveModalId";
+            const el = id ? document.getElementById(id) : null;
+            if (el && window.bootstrap) {
+                bootstrap.Modal.getOrCreateInstance(el).show();
+            }
+
+            const isProductStock = "@isProductStock".toLowerCase() === "true";
+            const isWarehouse = "@isWarehouse".toLowerCase() === "true";
+            const isFuel = "@isFuel".toLowerCase() === "true";
+            const branchInput = document.querySelector("[name='Form.BranchId']");
+
+            const escapeHtml = value => String(value ?? "")
+                .replaceAll("&", "&amp;")
+                .replaceAll("<", "&lt;")
+                .replaceAll(">", "&gt;")
+                .replaceAll('"', "&quot;")
+                .replaceAll("'", "&#039;");
+
+            function renderProductRows(rows) {
+                const results = document.getElementById("lowStockProductSelectorResults");
+                const productInput = document.getElementById("lowStockProductId");
+                const displayInput = document.getElementById("lowStockProductDisplay");
+                const selectorModal = document.getElementById("lowStockProductSelectorModal");
+                if (!results) return;
+                results.innerHTML = "";
+                if (!rows.length) {
+                    results.innerHTML = '<tr><td class="text-center text-muted fw-bold" colspan="7">No products found.</td></tr>';
+                    return;
+                }
+
+                rows.forEach((row, index) => {
+                    const total = row.totalWarehouseQuantity ?? row.totalDisplayQuantity ?? 0;
+                    const tr = document.createElement("tr");
+                    tr.innerHTML = `
+                        <td>${index + 1}</td>
+                        <td>${escapeHtml(row.productName || "-")}</td>
+                        <td>${escapeHtml(row.categoryName || "-")}</td>
+                        <td>${escapeHtml(row.unitName || "-")}</td>
+                        <td>${Number(total || 0).toFixed(2)}</td>
+                        <td>${row.thresholdQuantity == null ? "-" : Number(row.thresholdQuantity).toFixed(2)}</td>
+                        <td><button class="btn btn-sm btn-outline-primary" type="button">Select</button></td>
+                    `;
+                    tr.querySelector("button").addEventListener("click", () => {
+                        if (productInput) productInput.value = row.productId || "";
+                        if (displayInput) displayInput.value = row.productName || "";
+                        productInput?.dispatchEvent(new Event("change", { bubbles: true }));
+                        if (selectorModal && window.bootstrap) {
+                            bootstrap.Modal.getOrCreateInstance(selectorModal).hide();
+                        }
+                    });
+                    results.appendChild(tr);
+                });
+            }
+
+            async function searchProducts() {
+                const results = document.getElementById("lowStockProductSelectorResults");
+                const searchInput = document.getElementById("lowStockProductSearchInput");
+                if (!results) return;
+                results.innerHTML = '<tr><td class="text-center text-muted fw-bold" colspan="7">Loading products...</td></tr>';
+                const query = encodeURIComponent(searchInput?.value || "");
+                const branch = encodeURIComponent(branchInput?.value || "");
+                const endpoint = isWarehouse ? "/Inventory/SearchWarehouseLowStockProducts" : "/Inventory/SearchDisplayLowStockProducts";
+                const response = await fetch(`${endpoint}?search=${query}&branchId=${branch}`, {
+                    headers: { "Accept": "application/json" }
+                });
+                if (!response.ok) {
+                    results.innerHTML = '<tr><td class="text-center text-danger fw-bold" colspan="7">Unable to load products.</td></tr>';
+                    return;
+                }
+                renderProductRows(await response.json());
+            }
+
+            function renderTankRows(rows) {
+                const results = document.getElementById("lowStockTankSelectorResults");
+                const tankInput = document.getElementById("lowStockTankId");
+                const tankDisplay = document.getElementById("lowStockTankDisplay");
+                const fuelDisplay = document.getElementById("lowStockFuelDisplay");
+                const selectorModal = document.getElementById("lowStockTankSelectorModal");
+                if (!results) return;
+                results.innerHTML = "";
+                if (!rows.length) {
+                    results.innerHTML = '<tr><td class="text-center text-muted fw-bold" colspan="7">No tanks found.</td></tr>';
+                    return;
+                }
+
+                rows.forEach((row, index) => {
+                    const tr = document.createElement("tr");
+                    tr.innerHTML = `
+                        <td>${index + 1}</td>
+                        <td>${escapeHtml(row.branchName || "-")}</td>
+                        <td>${escapeHtml(row.tankName || "-")}</td>
+                        <td>${escapeHtml(row.fuelName || "-")}</td>
+                        <td>${Number(row.currentLiters || 0).toFixed(2)}</td>
+                        <td>${row.thresholdLiters == null ? "-" : Number(row.thresholdLiters).toFixed(2)}</td>
+                        <td><button class="btn btn-sm btn-outline-primary" type="button">Select</button></td>
+                    `;
+                    tr.querySelector("button").addEventListener("click", () => {
+                        if (tankInput) tankInput.value = row.tankId || "";
+                        if (tankDisplay) tankDisplay.value = row.tankName || "";
+                        if (fuelDisplay) fuelDisplay.value = row.fuelName || "";
+                        tankInput?.dispatchEvent(new Event("change", { bubbles: true }));
+                        if (selectorModal && window.bootstrap) {
+                            bootstrap.Modal.getOrCreateInstance(selectorModal).hide();
+                        }
+                    });
+                    results.appendChild(tr);
+                });
+            }
+
+            async function searchTanks() {
+                const results = document.getElementById("lowStockTankSelectorResults");
+                const searchInput = document.getElementById("lowStockTankSearchInput");
+                if (!results) return;
+                results.innerHTML = '<tr><td class="text-center text-muted fw-bold" colspan="7">Loading tanks...</td></tr>';
+                const query = encodeURIComponent(searchInput?.value || "");
+                const branch = encodeURIComponent(branchInput?.value || "");
+                const response = await fetch(`/Inventory/SearchLowStockTanks?search=${query}&branchId=${branch}`, {
+                    headers: { "Accept": "application/json" }
+                });
+                if (!response.ok) {
+                    results.innerHTML = '<tr><td class="text-center text-danger fw-bold" colspan="7">Unable to load tanks.</td></tr>';
+                    return;
+                }
+                renderTankRows(await response.json());
+            }
+
+            branchInput?.addEventListener("change", () => {
+                const productInput = document.getElementById("lowStockProductId");
+                const productDisplay = document.getElementById("lowStockProductDisplay");
+                const tankInput = document.getElementById("lowStockTankId");
+                const tankDisplay = document.getElementById("lowStockTankDisplay");
+                const fuelDisplay = document.getElementById("lowStockFuelDisplay");
+                if (productInput) productInput.value = "";
+                if (productDisplay) productDisplay.value = "";
+                if (tankInput) tankInput.value = "";
+                if (tankDisplay) tankDisplay.value = "";
+                if (fuelDisplay) fuelDisplay.value = "";
+            });
+
+            if (isProductStock) {
+                const productSearchInput = document.getElementById("lowStockProductSearchInput");
+                document.querySelector(".low-stock-product-select-btn")?.addEventListener("click", searchProducts);
+                document.getElementById("lowStockProductSearchButton")?.addEventListener("click", searchProducts);
+                productSearchInput?.addEventListener("keydown", event => {
+                    if (event.key === "Enter") {
+                        event.preventDefault();
+                        searchProducts();
+                    }
+                });
+            }
+
+            if (isFuel) {
+                const tankSearchInput = document.getElementById("lowStockTankSearchInput");
+                document.querySelector(".low-stock-tank-select-btn")?.addEventListener("click", searchTanks);
+                document.getElementById("lowStockTankSearchButton")?.addEventListener("click", searchTanks);
+                tankSearchInput?.addEventListener("keydown", event => {
+                    if (event.key === "Enter") {
+                        event.preventDefault();
+                        searchTanks();
+                    }
+                });
+            }
+        });
+    </script>
+}
