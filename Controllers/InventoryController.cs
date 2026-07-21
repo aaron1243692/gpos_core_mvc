@@ -707,6 +707,14 @@ namespace gpos.Controllers
             _ => nameof(LowStockWarehouse)
         };
 
-        private static string StatusFor(decimal currentQuantity, decimal threshold) => currentQuantity <= threshold ? "Low Stock" : "OK";
+        private static string StatusFor(decimal currentQuantity, decimal threshold)
+        {
+            if (currentQuantity <= 0m)
+            {
+                return "Out of Stock";
+            }
+
+            return currentQuantity <= threshold ? "Low Stock" : "Active";
+        }
     }
 }

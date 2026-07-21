@@ -117,7 +117,7 @@
                             <td class="number-cell">@Math.Max(row.Difference, 0m).ToString("#,0.##")</td>
                         }
                         <td class="status-cell">
-                            <span class="badge @(row.Status == "Low Stock" ? "text-bg-warning" : "text-bg-success")">@row.Status</span>
+                            <span class="badge @(row.Status == "Out of Stock" ? "text-bg-danger" : row.Status == "Low Stock" ? "text-bg-warning" : "text-bg-success")">@row.Status</span>
                         </td>
                         <td class="number-cell">@(row.UpdatedAt?.ToString("yyyy-MM-dd HH:mm") ?? "-")</td>
                         <td class="col-action action-cell">

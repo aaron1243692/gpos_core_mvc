@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
+using System.Text;
 
 namespace gpos.Controllers
 {
@@ -15,6 +16,7 @@ namespace gpos.Controllers
         private const string WarehouseStockType = "Warehouse";
         private const string DisplayStockType = "Display";
         private const string TankStockType = "Tank";
+        private const string FuelLowStockType = "Fuel";
         private const string DailyStockModalId = "dailyStockModal";
 
         private readonly ApplicationDbContext _db;
@@ -217,7 +219,25 @@ namespace gpos.Controllers
         public IActionResult DiscountReport() => View();
         public IActionResult PointsReport() => View();
         public IActionResult CustomerReport() => View();
-        public IActionResult InventoryReport() => View();
+        [HttpGet]
+        public async Task<IActionResult> InventoryReport(string? search, int? branchId, string? type, string? status)
+        {
+            return View(await BuildInventoryReportAsync(search, branchId, type, status));
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> ExportInventoryReportCsv(string? search, int? branchId, string? type, string? status)
+        {
+            var model = await BuildInventoryReportAsync(search, branchId, type, status);
+            var csv = new StringBuilder("Branch,Type,Product/Tank,Fuel,Quantity/Liters,Unit,Value,Status\r\n");
+            foreach (var row in model.Rows)
+            {
+                csv.AppendLine(string.Join(',', Csv(row.BranchName), Csv(row.Type), Csv(row.ProductOrTankName),
+                    Csv(row.FuelName), row.Quantity.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture),
+                    Csv(row.Unit), row.Value.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture), Csv(row.Status)));
+            }
+            return File(new UTF8Encoding(true).GetBytes(csv.ToString()), "text/csv", $"inventory-report-{DateTime.Today:yyyyMMdd}.csv");
+        }
         public IActionResult PurchaseHistory() => View();
         public IActionResult FuelTankReport() => View();
         public IActionResult FuelBatchReport() => View();
@@ -1358,6 +1378,83 @@ namespace gpos.Controllers
             options.Insert(0, new SelectListItem { Value = "", Text = "All Branches" });
             return options;
         }
+
+        private async Task<InventoryReportPageViewModel> BuildInventoryReportAsync(string? search, int? branchId, string? type, string? status)
+        {
+            var term = (search ?? string.Empty).Trim();
+            type = (type ?? string.Empty).Trim();
+            status = (status ?? string.Empty).Trim();
+            if (type is not ("" or WarehouseStockType or DisplayStockType or TankStockType)) type = string.Empty;
+            if (status is not ("" or "Active" or "Low Stock" or "Out of Stock")) status = string.Empty;
+
+            var rows = new List<InventoryReportRowViewModel>();
+            if (type is "" or WarehouseStockType)
+            {
+                var query = _db.WarehouseStocks.AsNoTracking().AsQueryable();
+                if (branchId.HasValue) query = query.Where(x => x.BranchId == branchId.Value);
+                if (term.Length > 0) query = query.Where(x => (x.Branch != null && x.Branch.Name.Contains(term)) || (x.Product != null && x.Product.Name.Contains(term)));
+                rows.AddRange(await query.GroupBy(x => new { x.BranchId, BranchName = x.Branch != null ? x.Branch.Name : "Unassigned", x.ProductId, ProductName = x.Product != null ? x.Product.Name : "Unknown" })
+                    .Select(g => new InventoryReportRowViewModel
+                    {
+                        BranchId = g.Key.BranchId, ProductId = g.Key.ProductId, BranchName = g.Key.BranchName, Type = WarehouseStockType,
+                        ProductOrTankName = g.Key.ProductName, FuelName = "-", Quantity = g.Sum(x => x.Quantity), Unit = "Units",
+                        Value = g.Sum(x => x.Quantity * (x.Batch != null ? x.Batch.CostPrice : 0m))
+                    }).ToListAsync());
+            }
+
+            if (type is "" or DisplayStockType)
+            {
+                var query = _db.DisplayStocks.AsNoTracking().AsQueryable();
+                if (branchId.HasValue) query = query.Where(x => x.BranchId == branchId.Value);
+                if (term.Length > 0) query = query.Where(x => (x.Branch != null && x.Branch.Name.Contains(term)) || (x.Product != null && x.Product.Name.Contains(term)));
+                rows.AddRange(await query.GroupBy(x => new { x.BranchId, BranchName = x.Branch != null ? x.Branch.Name : "Unassigned", x.ProductId, ProductName = x.Product != null ? x.Product.Name : "Unknown" })
+                    .Select(g => new InventoryReportRowViewModel
+                    {
+                        BranchId = g.Key.BranchId, ProductId = g.Key.ProductId, BranchName = g.Key.BranchName, Type = DisplayStockType,
+                        ProductOrTankName = g.Key.ProductName, FuelName = "-", Quantity = g.Sum(x => x.Quantity), Unit = "Units",
+                        Value = g.Sum(x => x.Quantity * (x.Batch != null ? x.Batch.CostPrice : 0m))
+                    }).ToListAsync());
+            }
+
+            if (type is "" or TankStockType)
+            {
+                var query = _db.Tanks.AsNoTracking().AsQueryable();
+                if (branchId.HasValue) query = query.Where(x => x.BranchId == branchId.Value);
+                if (term.Length > 0) query = query.Where(x => (x.Branch != null && x.Branch.Name.Contains(term)) || x.TankNo.Contains(term) || (x.Fuel != null && x.Fuel.Name.Contains(term)));
+                rows.AddRange(await query.Select(x => new InventoryReportRowViewModel
+                {
+                    BranchId = x.BranchId, TankId = x.Id, BranchName = x.Branch != null ? x.Branch.Name : "Unassigned", Type = TankStockType,
+                    ProductOrTankName = x.TankNo, FuelName = x.Fuel != null ? x.Fuel.Name : "Unknown", Quantity = x.CurrentLiters, Unit = "Liters",
+                    Value = x.FuelBatches.Where(b => b.Status == 1 && b.IsActive).Sum(b => (decimal?)(b.RemainingLiters * b.CostPricePerLiter)) ?? 0m
+                }).ToListAsync());
+            }
+
+            var settings = await _db.LowStockSettings.AsNoTracking()
+                .Where(x => x.Status == 1 && (x.Location == WarehouseStockType || x.Location == DisplayStockType || x.Location == FuelLowStockType))
+                .Select(x => new { x.Location, x.BranchId, x.ProductId, x.TankId, x.MinimumQuantity })
+                .ToListAsync();
+
+            foreach (var row in rows)
+            {
+                var setting = row.Type == TankStockType
+                    ? settings.FirstOrDefault(x => x.Location == FuelLowStockType && x.TankId == row.TankId && (!x.BranchId.HasValue || x.BranchId == row.BranchId))
+                    : settings.FirstOrDefault(x => x.Location == row.Type && x.BranchId == row.BranchId && x.ProductId == row.ProductId);
+                row.Threshold = setting?.MinimumQuantity;
+                row.Status = row.Quantity <= 0m ? "Out of Stock" : row.Threshold.HasValue && row.Quantity <= row.Threshold.Value ? "Low Stock" : "Active";
+            }
+
+            if (status.Length > 0) rows = rows.Where(x => x.Status == status).ToList();
+            var model = new InventoryReportPageViewModel
+            {
+                Search = term, BranchId = branchId, Type = type, Status = status,
+                Rows = rows.OrderBy(x => x.BranchName).ThenBy(x => x.Type).ThenBy(x => x.ProductOrTankName).ToList(),
+                BranchOptions = await BuildBranchFilterOptionsAsync()
+            };
+            foreach (var option in model.BranchOptions) option.Selected = option.Value == branchId?.ToString();
+            return model;
+        }
+
+        private static string Csv(string? value) => $"\"{(value ?? string.Empty).Replace("\"", "\"\"")}\"";
 
         private async Task<string> BranchNameAsync(int branchId)
         {
